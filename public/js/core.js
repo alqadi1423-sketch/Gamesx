@@ -66,24 +66,24 @@ function loadSaved(){try{return JSON.parse(localStorage.getItem(LS)||'null');}ca
 let roomP=null;
 function getRoom(){
   if(!roomP)roomP=(async()=>{
-    for(let k=0;k<(window.FB&&FB.ready()?0:40)&&!(window.claude&&window.claude.use);k++)await new Promise(r=>setTimeout(r,100));
+    for(let k=0;k<(window.WSROOM&&WSROOM.available()?5:40)&&!(window.claude&&window.claude.use);k++)await new Promise(r=>setTimeout(r,100));
     if(window.claude&&window.claude.use){try{const r=await window.claude.use('room');if(r)return r;}catch(e){}}
-    if(window.FB&&FB.ready())return FB.room();
+    if(window.WSROOM&&WSROOM.available())return WSROOM.room();
     return null;
   })();
   return roomP;
 }
-function genCode(){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<4;i++)c+=A[rnd(A.length)];return c;}
+function genCode(){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<6;i++)c+=A[rnd(A.length)];return c;}
 let lastPeers=[];
 function takenRoles(){const t=new Set();for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(typeof r==='number')t.add(r);}return t;}
 function pickRole(pref){const t=takenRoles();if(typeof pref==='number'&&pref>=0&&pref<MAXP&&!t.has(pref))return pref;for(let r=1;r<MAXP;r++)if(!t.has(r))return r;return t.has(0)?null:0;}
 async function enterRoom(code,host,restore){
   S.joining=true;S.roomErr=null;render();
   const room=await getRoom();
-  if(!room){S.joining=false;S.roomErr=window.FB&&FB.configured()?'لازم تسجّل دخول أول.':'اللعب أونلاين يحتاج ربط الموقع بخدمة الاتصال، أو تفتح الصفحة من claude.ai.';render();return;}
+  if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
   try{nr=await room.join('g-'+code.toLowerCase());}
-  catch(e){S.joining=false;S.roomErr='ما قدرت أدخل الغرفة، جرّب مرة ثانية.';render();return;}
+  catch(e){S.joining=false;S.roomErr='ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
   S.mode='online';S.code=code;S.nr=nr;S.joining=false;S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();lastPeers=[];
   if(restore&&restore.st){S.st=restore.st;if(!Array.isArray(S.st.sc)||S.st.sc.length<MAXP)S.st.sc=Array(MAXP).fill(0);}
   else S.st={g:null,s:host?1:0,d:null,sc:Array(MAXP).fill(0)};
@@ -146,16 +146,10 @@ function statusHTML(d,G,ctx){
 
 /* ================= screens ================= */
 function render(){
-  if(window.FB&&FB.configured()&&!FB.ready())return renderLogin();
   if(S.mode===null)return renderHome();
   if(S.mode==='lobby')return renderLobby();
   if(!S.st.g||!GAMES[S.st.g]||!S.st.d)return renderGrid();
   renderGame();
-}
-function renderLogin(){
-  app.innerHTML=`<div class="hero">${LOGO}<h1>ألعابنا</h1><p>موقع خاص</p></div>
-  ${FB.state()==='denied'?`<p class="err">الحساب ${FB.email()} مو مسموح له يدخل. اطلب من صاحب الموقع يضيفه.</p><button class="big navy" data-a="signout">دخول بحساب ثاني</button>`:
-   FB.state()==='loading'?'<p class="note">جاري التحقق…</p>':'<button class="big red" data-a="signin">دخول بحساب قوقل</button>'}`;
 }
 function renderHome(){
   app.innerHTML=`<div class="hero">${LOGO}<h1>ألعابنا</h1><p>من لاعبين اثنين إلى ${MAXP} لاعبين</p></div>
@@ -165,8 +159,8 @@ function renderHome(){
 function renderLobby(){
   const sv=loadSaved();
   app.innerHTML=`<div class="top"><button class="ib" data-a="home">${BACK}</button><h1>أونلاين</h1></div>
-  <div class="panel"><h3>أنشئ غرفة</h3><p>تاخذ رمز وترسله لأصحابك، وتكون أنت الأحمر</p><button class="big red" data-a="create" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
-  <div class="panel"><h3>ادخل غرفة</h3><p>اكتب الرمز اللي وصلك</p><input class="code" id="code" maxlength="4" autocomplete="off" placeholder="····"><button class="big blue" data-a="join" ${S.joining?'disabled':''}>ادخل</button></div>
+  <div class="panel"><h3>أنشئ غرفة</h3><p>تاخذ رمز خاص وترسله لأصحابك، وما يدخلها إلا اللي معه الرمز. وتكون أنت الأحمر</p><button class="big red" data-a="create" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
+  <div class="panel"><h3>ادخل غرفة</h3><p>اكتب الرمز اللي وصلك</p><input class="code" id="code" maxlength="6" autocomplete="off" placeholder="······"><button class="big blue" data-a="join" ${S.joining?'disabled':''}>ادخل</button></div>
   ${sv&&sv.code?`<button class="link" data-a="resume">ارجع لغرفتك ${sv.code}</button>`:''}
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
 }
@@ -210,8 +204,6 @@ app.addEventListener('click',e=>{
   if(t.dataset.ga){const G=GAMES[S.st.g];if(G&&S.st.d)G.click(t.dataset.ga,i,S.st.d,mkCtx());return;}
   switch(t.dataset.a){
     case 'home':S.mode=null;render();break;
-    case 'signin':FB.signIn();break;
-    case 'signout':FB.signOut();break;
     case 'local':S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0)};S.priv=Array(MAXP).fill(null);S.seen=null;render();break;
     case 'inc':S.localN=Math.min(MAXP,S.localN+1);render();break;
     case 'dec':S.localN=Math.max(2,S.localN-1);render();break;
@@ -219,7 +211,7 @@ app.addEventListener('click',e=>{
     case 'create':enterRoom(genCode(),true,null);break;
     case 'join':{
       const c=(document.getElementById('code').value||'').trim().toUpperCase();
-      if(!/^[A-Z0-9]{4}$/.test(c)){S.roomErr='اكتب الرمز كامل (4 خانات)';render();return;}
+      if(!/^[A-Z0-9]{4,6}$/.test(c)){S.roomErr='اكتب رمز الغرفة كامل';render();return;}
       const sv=loadSaved();const same=sv&&sv.code===c;
       if(same&&sv.me===0)enterRoom(c,true,sv);else enterRoom(c,false,same?sv:null);break;}
     case 'resume':{const sv=loadSaved();if(sv)enterRoom(sv.code,sv.me===0,sv);break;}
@@ -256,4 +248,4 @@ const SHP=[
 const shape=r=>`<svg viewBox="0 0 40 40">${SHP[r](COLS[r])}</svg>`;
 
 
-function boot(){if(window.FB&&FB.configured())FB.init(()=>render());render();}
+function boot(){render();}
