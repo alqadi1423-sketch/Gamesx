@@ -17,7 +17,7 @@ function nextSeat(d,from,out){out=out||d.out;const n=d.pl.length;for(let k=1;k<=
 const aliveSeats=(d,out)=>{out=out||d.out;return d.pl.map((_,s)=>s).filter(s=>out[s]!=='1');};
 
 /* ================= state ================= */
-const S={mode:null,localN:2,st:{g:null,s:0,d:null,sc:Array(MAXP).fill(0)},me:null,myPeer:null,code:null,nr:null,roles:new Set(),priv:Array(MAXP).fill(null),seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false};
+const S={draft:{},sel:[],mode:null,localN:2,st:{g:null,s:0,d:null,sc:Array(MAXP).fill(0)},me:null,myPeer:null,code:null,nr:null,roles:new Set(),priv:Array(MAXP).fill(null),seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false};
 const GAMES={};
 
 function players(){
@@ -33,7 +33,7 @@ function setGame(g){
 }
 function newRound(){const d=S.st.d;const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
   const st=d?(d.st||0)+1:0;S.st={...S.st,s:S.st.s+1,d:newD(S.st.g,st,pl)};S.seen=null;resetUI();afterChange();}
-function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];}
+function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];S.draft={};S.sel=[];S.simon=null;}
 function act(nd){S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number')sc[nd.pl[nd.win]]++;S.st={...S.st,s:S.st.s+1,d:nd,sc};afterChange();}
 function setPriv(role,p){S.priv[role]=p;afterChange();}
 function afterChange(){ensurePriv();publish();render();queueSimul();}
@@ -52,7 +52,7 @@ const hasPicked=(d,seat)=>{const p=S.priv[d.pl[seat]];return !!(p&&p.gid===d.gid
 function ensurePriv(){
   const {g,d}=S.st;if(!g||!d)return;const G=GAMES[g];if(!G||!(G.privInit||G.resolve))return;
   const roles=S.mode==='local'?d.pl:(S.me==null||!d.pl.includes(S.me)?[]:[S.me]);
-  for(const r of roles){const p=S.priv[r];if(!p||p.gid!==d.gid)S.priv[r]={...(G.privInit?G.privInit(d):{}),gid:d.gid};}
+  for(const r of roles){const p=S.priv[r];if(!p||p.gid!==d.gid||(G.privStale&&G.privStale(d,p,r)))S.priv[r]={...(G.privInit?G.privInit(d,r):{}),gid:d.gid};}
 }
 function publish(){
   save();if(S.mode!=='online'||!S.nr)return;
@@ -198,7 +198,10 @@ function renderGame(){
       body=`<div class="cover" style="background:${col(d,v)}">${m?`<div class="msg">${m}</div>`:''}<p>الجهاز الحين لـ</p><h2>${nm(d,v)}</h2><p>خل الباقين ما يشوفون الشاشة</p><button class="big" data-a="reveal" data-i="${v}">أنا ${nm(d,v)}، ورّني</button></div>`;}
   }
   if(!body){try{body=G.render(d,ctx);}catch(e){console.error(e);body='<p class="err">صار خطأ في عرض اللعبة.</p><button class="sm go" data-a="again">جولة جديدة</button>';}}
+  const ae=document.activeElement,fid=ae&&ae.dataset&&ae.dataset.draft,cs=fid&&ae.selectionStart;
   app.innerHTML=`<div class="top"><button class="ib" data-a="grid">${BACK}</button><h1>${G.name}</h1></div>${roomBar()}${scoreBar(sc,d)}<div class="status">${cover?'':statusHTML(d,G,ctx)}</div><div class="board">${body}</div>`;
+  if(fid){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus();try{el.setSelectionRange(cs,cs);}catch(e){}}}
+  if(G.after)G.after(d,ctx);
 }
 
 app.addEventListener('click',e=>{
@@ -230,6 +233,7 @@ app.addEventListener('click',e=>{
     case 'copy':try{navigator.clipboard.writeText(S.code).then(()=>toast('انسخ الرمز: '+S.code)).catch(()=>toast('الرمز: '+S.code));}catch(err){toast('الرمز: '+S.code);}break;
   }
 });
+app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.draft;if(k){S.draft=S.draft||{};S.draft[k]=e.target.value;}});
 app.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}});
 
 /* target picker used by sea battle and guess the person */
