@@ -2,7 +2,8 @@
 /* Room transport for the private site on Cloudflare: one WebSocket per room code.
    It offers the same calls the engine uses from Claude rooms: join(name) -> presence / onPeers / leave. */
 window.WSROOM={
-  available:()=>/^https?:$/.test(location.protocol)&&!/github\.io$/.test(location.hostname),
+  // the Cloudflare address (workers.dev) or a local test server; add your own domain here if you link one
+  available:()=>/(\.workers\.dev|^localhost|^127\.0\.0\.1)$/.test(location.hostname),
   room(){return {join:name=>new Promise((ok,no)=>{
     const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
     let ws=null,me=null,mine={},peers={},hs=[],closed=false,opened=false,ping=null;
