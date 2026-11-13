@@ -79,7 +79,7 @@ const CHP={
   q:'<path d="M9 13l4 13h14l4-13-6 6-5-10-5 10z"/><circle cx="9" cy="12" r="2.2"/><circle cx="31" cy="12" r="2.2"/><circle cx="20" cy="8" r="2.2"/><rect x="11" y="27" width="18" height="8" rx="2"/>',
   k:'<path d="M18.5 3h3v3h3v3h-3v3h-3V9h-3V6h3z"/><path d="M10 18c0-4 4-6 10-6s10 2 10 6l-3 9H13z"/><rect x="11" y="27" width="18" height="8" rx="2"/>'};
 const chPiece=p=>{const s=chSide(p),t=p.toLowerCase();return `<svg viewBox="0 0 40 40" class="chp ${s?'bk':'wh'}">${CHP[t]}</svg>`;};
-GAMES.chess={name:'شطرنج',cat:'board',lbc:'#5B4632',
+GAMES.chess={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:'شطرنج',cat:'board',lbc:'#5B4632',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9A66B"/>${[0,1,2,3].map(r=>[0,1,2,3].map(c=>(r+c)%2?`<rect x="${c*25}" y="${r*25}" width="25" height="25" fill="#8B6B43"/>`:'').join('')).join('')}<g transform="translate(18 14) scale(1.6)" fill="#fff" stroke="#2D4763" stroke-width="1.6" stroke-linejoin="round">${CHP.k}</g></svg>`,
   init:n=>({b:CH0,sd:0,cr:'KQkq',ep:-1,hm:0,hist:[],tr:[0,0],lm:null,offer:null,last:''}),
   onTimeout(d){const ms=chLegal(d,d.sd);return chMove(d,ms[rnd(ms.length)]);},
@@ -145,7 +145,7 @@ function dmMoves(b,s){let caps=[];for(let f=0;f<64;f++){const p=b[f];if(dmSide(p
 function dmApply(d,m){const b=[...d.b];const p=b[m.f];b[m.f]='.';m.caps.forEach(x=>b[x]='.');const to=m.path[m.path.length-1];
   const s=dmSide(p),row=to>>3;b[to]=(!dmKing(p)&&row===(s?7:0))?(s?'B':'A'):p;return {b:b.join(''),crown:b[to]!==p};}
 const dmCount=(b,s)=>[...b].filter(p=>dmSide(p)===s).length;
-GAMES.dama={name:'داما',cat:'board',lbc:'#7A3B2E',
+GAMES.dama={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:'داما',cat:'board',lbc:'#7A3B2E',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8C994"/>${[1,2,3].map(k=>`<path d="M${k*25} 0V100M0 ${k*25}H100" stroke="#A97D45" stroke-width="2"/>`).join('')}<circle cx="37.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="62.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="37.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="4" fill="#EDB02F"/></svg>`,
   init:()=>({b:DM0,sd:0,tr:[0,0],lm:null,quiet:0,last:''}),
   onTimeout(d){const ms=dmMoves(d.b,d.sd);return dmDo(d,ms[rnd(ms.length)]);},

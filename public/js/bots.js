@@ -6,6 +6,7 @@
 function botDo(d,s,a,i){const G=GAMES[S.st.g];ACT_CAP={v:null};const hold=S.holdRender;S.holdRender=true;
   try{G.click(a,i,d,botCtx(d,s));}finally{S.holdRender=hold;}const v=ACT_CAP.v;ACT_CAP=null;return v;}
 const pickR=a=>a[rnd(a.length)];
+const foesOf=(d,s)=>aliveSeats(d).filter(o=>o!==s&&!sameTeam(d,o,s));
 const lvRand=lv=>Math.random()<[0,.55,.2,.04][lv];   // how often a bot just plays at random
 const numPts=(d,G,s)=>{try{const p=G.points?G.points(d):d.pts;const v=p?String(p[s]).match(/-?\d+/):null;return v?+v[0]:0;}catch(e){return 0;}};
 // tries every button the bot can press and keeps the one that leaves it best placed
@@ -39,7 +40,7 @@ GAMES.gomoku.bot=(d,s,lv)=>{const z=d.z;let cells=[...d.b].map((c,i)=>c==='.'?i:
 GAMES.c4.bot=(d,s,lv)=>{const C=d.C,R=d.R;const cols=[],cells=[];for(let c=0;c<C;c++){for(let r=R-1;r>=0;r--)if(d.b[r*C+c]==='.'){cols.push(c);cells.push(r*C+c);break;}}
   let pick=lineBot(d,s,lv,R,C,4,cells);
   // do not hand the cell above to someone who wins there
-  if(lv>=2){const safe=cells.filter(i=>{const up=i-C;if(up<0)return true;const b2=setAt(d.b,i,String(s));return !d.pl.some((_,o)=>o!==s&&lineScore(b2,R,C,4,up,o)>=1e7);});
+  if(lv>=2){const safe=cells.filter(i=>{const up=i-C;if(up<0)return true;const b2=setAt(d.b,i,String(s));return !d.pl.some((_,o)=>!sameTeam(d,o,s)&&lineScore(b2,R,C,4,up,o)>=1e7);});
     if(safe.length&&!safe.includes(pick)&&lineScore(d.b,R,C,4,pick,s)<1e6)pick=lineBot(d,s,lv,R,C,4,safe);}
   const col=cols[cells.indexOf(pick)];return botDo(d,s,'m',col)||botDo(d,s,'c',col)||GAMES.c4.onTimeout&&GAMES.c4.onTimeout(d);};
 
@@ -249,14 +250,14 @@ GAMES.memory.bot=(d,s,lv)=>{const K=memOf(d,s);const op=(d.open||[]).length===2?
 GAMES.simon.bot=(d,s,lv)=>{const n=d.seq.length;const okP=Math.pow([0,.9,.96,.99][lv],n);
   if(Math.random()<okP)return {...d,seq:d.seq+rnd(4),turn:nextSeat(d,s),last:`${nm(d,s)} كرر ${n} وزاد لون`};
   const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);return {...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,s,out),last:`${nm(d,s)} غلط وطلع`};};
-GAMES.tanks.bot=(d,s,lv)=>{let best=null;const foes=aliveSeats(d).filter(x=>x!==s);
-  for(let a=5;a<180&&!best;a+=lv===3?2:5)for(let pw=20;pw<=100;pw+=lv===3?2:6){const r=tkFire(d,s,a,pw);if(r.hits.some(h=>foes.includes(h.s)&&h.dmg>=10)&&!r.hits.some(h=>h.s===s)){best=[a,pw];break;}}
+GAMES.tanks.bot=(d,s,lv)=>{let best=null;const foes=foesOf(d,s);
+  for(let a=5;a<180&&!best;a+=lv===3?2:5)for(let pw=20;pw<=100;pw+=lv===3?2:6){const r=tkFire(d,s,a,pw);if(r.hits.some(h=>foes.includes(h.s)&&h.dmg>=10)&&!r.hits.some(h=>h.s===s||sameTeam(d,h.s,s))){best=[a,pw];break;}}
   const noise=[0,18,8,2][lv];const a=best?best[0]+rnd(noise*2+1)-noise:rnd(180),pw=best?best[1]+rnd(noise+1)-noise/2:40+rnd(60);
   S.draft.angs=String(180-Math.max(1,Math.min(179,a)));S.draft.pow=String(Math.max(10,Math.min(100,pw)));return botDo(d,s,'fire',null);};
-GAMES.dwars.bot=(d,s,lv)=>{const ts=String(s);const o=[];for(let i=0;i<d.own.length;i++)if(d.own[i]===ts&&+d.dice[i]>1)for(const b of dwNb(i))if(d.own[b]!=='.'&&d.own[b]!==ts&&+d.dice[i]>=+d.dice[b]+(lv===3?1:0))o.push([i,b]);
+GAMES.dwars.bot=(d,s,lv)=>{const ts=String(s);const o=[];for(let i=0;i<d.own.length;i++)if(d.own[i]===ts&&+d.dice[i]>1)for(const b of dwNb(i))if(d.own[b]!=='.'&&d.own[b]!==ts&&!sameTeam(d,+d.own[b],s)&&+d.dice[i]>=+d.dice[b]+(lv===3?1:0))o.push([i,b]);
   if(!o.length||(lv===1&&Math.random()<.3)){return dwEnd(d);}const [a,b]=lv===1?pickR(o):o.sort((x,y)=>(+d.dice[y[0]]-+d.dice[y[1]])-(+d.dice[x[0]]-+d.dice[x[1]]))[0];
   const n1=botDo(d,s,'cell',a);if(!n1){S.dwSel=a;}const n2=botDo(n1||d,s,'cell',b);return n2||dwEnd(d);};
-GAMES.arena.botPick=(d,s,lv)=>{const foes=aliveSeats(d).filter(x=>x!==s);const weak=foes.sort((a,b)=>d.hp[a]-d.hp[b])[0];
+GAMES.arena.botPick=(d,s,lv)=>{const foes=foesOf(d,s);const weak=foes.sort((a,b)=>d.hp[a]-d.hp[b])[0];
   if(lvRand(lv))return {a:pickR(['atk','def','heal','spc'].filter(k=>k!=='spc'||d.en[s]>=3)),t:pickR(foes)};
   if(d.hp[s]<35&&lv>1&&Math.random()<.7)return {a:Math.random()<.6?'heal':'def',t:weak};if(d.en[s]>=3)return {a:'spc',t:weak};return {a:'atk',t:weak};};
 GAMES.tapwar.botPick=(d,s,lv)=>({ok:true,ms:[0,18,27,35][lv]+rnd(8)});
@@ -279,9 +280,9 @@ GAMES.ludo.bot=(d,s,lv)=>{if(d.roll==null)return luRoll(d,true);const r=d.roll,m
   if(lvRand(lv))return luApply(d,s,pickR(mv),r);const n=d.pl.length,T=luT(d),F=T+4,K=d.T;
   const cell=(o,q)=>(armOf(n,o)*13+8+q)%T;
   const danger=(tk,q)=>{if(q<0||q>T-2)return 0;const g=cell(s,q);if(g%13===3||g%13===8)return 0;let x=0;// opponents up to six cells behind
-    for(let o=0;o<n;o++){if(o===s)continue;for(let kk=0;kk<K;kk++){const p=tk[o*K+kk];if(p<0||p>T-2)continue;const dist=(g-cell(o,p)+T)%T;if(dist>=1&&dist<=6&&p+dist<=T-2)x++;}}return x;};
+    for(let o=0;o<n;o++){if(sameTeam(d,o,s))continue;for(let kk=0;kk<K;kk++){const p=tk[o*K+kk];if(p<0||p>T-2)continue;const dist=(g-cell(o,p)+T)%T;if(dist>=1&&dist<=6&&p+dist<=T-2)x++;}}return x;};
   const val=k=>{const nd=luApply(d,s,k,r);if(nd.win===s)return 1e9;const i=s*K+k,p0=d.tk[i],p1=nd.tk[i];let v=0;
-    v+=nd.mv.cap.length*60;if(p0<0)v+=35;v+=(p1-Math.max(0,p0))*.6;if(p1===F)v+=45;else if(p1>T-2)v+=20;
+    v+=nd.mv.cap.reduce((a,c)=>a+(sameTeam(d,c[0],s)?-40:60),0);if(p0<0)v+=35;v+=(p1-Math.max(0,p0))*.6;if(p1===F)v+=45;else if(p1>T-2)v+=20;
     if(lv===3){v-=danger(nd.tk,p1)*28;v+=danger(d.tk,p0)*22;}return v+Math.random();};
   return luApply(d,s,mv.sort((a,b)=>val(b)-val(a))[0],r);};
 GAMES.ludo.botDelay=(d,s,lv)=>d.roll==null?700+rnd(400):900+rnd(500);
@@ -329,7 +330,7 @@ GAMES.cw.bot=(d,s,lv)=>botGreedy(GAMES.cw,d,s,lv);
 GAMES.uxo.bot=(d,s,lv)=>{const legal=[];for(let i=0;i<81;i++){const k=Math.floor(i/9);if(d.b[i]==='.'&&d.w[k]==='.'&&(d.nb<0||d.nb===k))legal.push(i);}
   if(!legal.length)return;if(lvRand(lv))return botDo(d,s,'m',pickR(legal));const me=String(s);
   const winsAt=(str,ch)=>[...str].map((c,i)=>c==='.'&&line3(setAt(str,i,ch))===ch?i:-1).filter(i=>i>=0);
-  const others=d.pl.map((_,o)=>String(o)).filter(o=>o!==me);
+  const others=d.pl.map((_,o)=>o).filter(o=>!sameTeam(d,o,s)).map(String);
   const val=i=>{const k=Math.floor(i/9),j=i%9;const b=setAt(d.b,i,me),sm=small(b,k);let v=0,w=d.w;
     if(line3(sm)===me){w=setAt(w,k,me);v+=60;if(line3(w)===me)return 1e9;v+=winsAt(w,me).length*25;}
     if(others.some(o=>winsAt(small(d.b,k),o).includes(j)))v+=45;// block
@@ -343,7 +344,7 @@ GAMES.uxo.bot=(d,s,lv)=>{const legal=[];for(let i=0;i<81;i++){const k=Math.floor
 GAMES.bingo.bot=(d,s,lv)=>{const open=[];for(let n=1;n<=25;n++)if(d.called[n-1]==='0')open.push(n);if(lvRand(lv))return botDo(d,s,'m',pickR(open));
   const L5=[];for(let r=0;r<5;r++){L5.push([0,1,2,3,4].map(c=>r*5+c));L5.push([0,1,2,3,4].map(c=>c*5+r));}L5.push([0,6,12,18,24],[4,8,12,16,20]);
   const gain=(card,n)=>{const p=card.indexOf(n);let v=0;for(const L of L5)if(L.includes(p)){const c=L.filter(q=>d.called[card[q]-1]==='1').length;v+=c===4?100:(c+1)*(c+1);}return v;};
-  const mine=bingoCard(d,s),opp=aliveSeats(d).filter(o=>o!==s).map(o=>bingoCard(d,o));
+  const mine=bingoCard(d,s),opp=foesOf(d,s).map(o=>bingoCard(d,o));
   const val=n=>gain(mine,n)-(lv===3?Math.max(0,...opp.map(c=>gain(c,n)))*.6:0)+Math.random();
   return botDo(d,s,'m',open.sort((a,b)=>val(b)-val(a))[0]);};
 

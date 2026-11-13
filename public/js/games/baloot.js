@@ -158,7 +158,7 @@ function bNext(d){const k=d.k+1,ctl=bCtl(d.pl.length,k);return {...bDeal({...d,k
 // whose screen shows which hand
 function bMine(d,v){return [0,1,2,3].filter(h=>d.ctl[h]===v);}
 function bActHand(d){if(d.ph==='bid')return bBidHand(d);if(d.ph==='dbl')return bDblHand(d);if(d.ph==='play')return (d.tl+cardsOf(d.tk).length)%4;return null;}
-GAMES.baloot={name:'بلوت',cat:'cards',lbc:'#1E6B52',noTimer:false,
+GAMES.baloot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:'بلوت',cat:'cards',lbc:'#1E6B52',noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E7A5C"/><ellipse cx="50" cy="56" rx="40" ry="30" fill="#249170"/><g transform="rotate(-14 38 52)"><rect x="22" y="26" width="32" height="46" rx="5" fill="#fff"/><text x="38" y="56" font-size="22" font-weight="800" text-anchor="middle" fill="#2D4763">J♠</text></g><g transform="rotate(12 62 52)"><rect x="46" y="26" width="32" height="46" rx="5" fill="#fff"/><text x="62" y="56" font-size="22" font-weight="800" text-anchor="middle" fill="#D43C33">9♥</text></g></svg>`,
   init:n=>bInit(n),
   viewer:d=>d.win!=null?null:d.turn,

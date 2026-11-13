@@ -18,7 +18,7 @@ const BARA=[
 ].map(([t,w])=>[t,w.split(' ').map(x=>x.replace(/_/g,' '))]);
 const baraWord=d=>BARA[d.cat][1][d.w];
 function baraPairs(n){const p=shuffle([...Array(n).keys()]);return p.map((a,i)=>[a,p[(i+1)%n]]);}
-GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer:false,
+GAMES.bara={teams:'none',name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D9573A"/><circle cx="30" cy="40" r="11" fill="#fff"/><circle cx="50" cy="40" r="11" fill="#fff"/><circle cx="70" cy="40" r="11" fill="#2D4763"/><path d="M14 80c0-12 7-18 16-18s16 6 16 18zM34 80c0-12 7-18 16-18s16 6 16 18z" fill="#fff"/><path d="M54 80c0-12 7-18 16-18s16 6 16 18z" fill="#2D4763"/><text x="70" y="45" font-size="13" font-weight="800" text-anchor="middle" fill="#fff">؟</text></svg>`,
   init:n=>({ph:'cat',cat:-1,w:-1,bo:-1,pr:[],qi:0,q2:false,rd:0,votes:null,opts:null,res:'',last:''}),
   simulNow:d=>d.ph==='see'||d.ph==='vote',
@@ -79,7 +79,7 @@ function mfCheck(d){const al=aliveSeats(d);const m=al.filter(s=>d.roles[s]==='m'
   if(!m){const w=team('t');return {...d,win:w[0],wins:w,side:'t'};}
   if(m>=o){const w=team('m');return {...d,win:w[0],wins:w,side:'m'};}
   return d;}
-GAMES.mafia={name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
+GAMES.mafia={teams:'none',name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2B2F45"/><circle cx="78" cy="22" r="10" fill="#F2E3A0"/><circle cx="82" cy="19" r="9" fill="#2B2F45"/><path d="M26 44h48l-6-16H32z" fill="#111"/><rect x="18" y="42" width="64" height="7" rx="3" fill="#111"/><path d="M30 52c0 14 9 24 20 24s20-10 20-24z" fill="#E9C9A6"/><rect x="34" y="56" width="32" height="7" rx="3" fill="#111"/></svg>`,
   init:n=>({roles:mfRoles(n),ph:'role',rd:0,night:1,last:'',res:'',ls:-1,inv:null,log:[]}),
   simulNow:()=>true,
