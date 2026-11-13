@@ -6,19 +6,19 @@ const tbtn=(label,ga,i,on,extra)=>`<button class="btn ${extra||''}" data-ga="${g
 /* ---------- card war (everyone holds 1 to 7, bid on a prize) ---------- */
 GAMES.war={name:'حرب الأوراق',cat:'cards',lbc:'#3A5F8F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4F7FBF"/><rect x="14" y="26" width="30" height="44" rx="6" fill="#fff" transform="rotate(-14 29 48)"/><rect x="56" y="26" width="30" height="44" rx="6" fill="#fff" transform="rotate(14 71 48)"/><text x="29" y="56" font-size="20" font-weight="800" fill="#D43C33" text-anchor="middle" transform="rotate(-14 29 48)">7</text><text x="71" y="56" font-size="20" font-weight="800" fill="#2D4763" text-anchor="middle" transform="rotate(14 71 48)">5</text><text x="50" y="92" font-size="18" text-anchor="middle">⚔️</text></svg>`,
-  init:n=>{const pr=shuffle([1,2,3,4,5,6,7]);return {rd:0,prizes:pr,pts:Array(n).fill(0),res:''};},
+  init:n=>{const pr=1+rnd(7);return {rd:0,prize:pr,left:[1,2,3,4,5,6,7].filter(x=>x!==pr),pts:Array(n).fill(0),res:''};},
   privInit:()=>({used:[]}),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
   status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)),
   winExtra:d=>d.res,
   render(d,ctx){if(d.win!=null)return '';const v=ctx.v;const p=v!=null&&v>=0?ctx.priv[d.pl[v]]:null;const used=(p&&p.used)||[];
-    return pickedChips(d)+`<div class="qbox">الجائزة: <span class="big-num" style="color:#B8860B">${d.prizes[d.rd]}</span> <small style="font-size:14px">(جولة ${d.rd+1} من 7)</small></div>
+    return pickedChips(d)+`<div class="qbox">الجائزة: <span class="big-num" style="color:#B8860B">${d.prize}</span> <small style="font-size:14px">(جولة ${d.rd+1} من 7)</small></div>
     <div class="hand">${[1,2,3,4,5,6,7].map(c=>used.includes(c)?`<div class="card dim">${c}</div>`:`<button class="card ${ctx.my?'pick':''} big" data-ga="m" data-i="${c}" ${ctx.my?'':'disabled'}>${c}</button>`).join('')}</div>`;},
   click(a,c,d,ctx){if(!ctx.my)return;const r=d.pl[ctx.v];const p=S.priv[r]||{used:[]};if((p.used||[]).includes(c))return;setPriv(r,{...p,gid:d.gid,used:[...(p.used||[]),c],rd:d.rd,pick:c});},
-  resolve(d,picks){const pr=d.prizes[d.rd];const v=picks.map(x=>x==null?-1:x);const mx=Math.max(...v);const top=v.map((x,s)=>x===mx&&x>0?s:-1).filter(s=>s>=0);const pts=[...d.pts];
+  resolve(d,picks){const pr=d.prize;const v=picks.map(x=>x==null?-1:x);const mx=Math.max(...v);const top=v.map((x,s)=>x===mx&&x>0?s:-1).filter(s=>s>=0);const pts=[...d.pts];
     if(top.length===1)pts[top[0]]+=pr;
     const res=`جائزة ${pr}: `+d.pl.map((r,s)=>picks[s]==null?'':`${nm(d,s)} ${picks[s]}`).filter(Boolean).join('، ')+(top.length===1?`، أخذها ${nm(d,top[0])}`:'، تعادل وراحت');
-    const rd=d.rd+1;return {...d,pts,rd,res,win:rd>=7?mostPts(pts):null};}
+    const rd=d.rd+1;const nx=d.left.length?d.left[rnd(d.left.length)]:null;return {...d,pts,rd,res,prize:nx,left:d.left.filter(x=>x!==nx),win:rd>=7?mostPts(pts):null};}
 };
 
 /* ---------- lowest unique number ---------- */
@@ -45,8 +45,8 @@ GAMES.two3={name:'ثلثين المتوسط',cat:'quiz',lbc:'#5D4E9E',
   render(d,ctx){if(d.win!=null)return '';const v=+((S.draft||{}).t23??50);
     return pickedChips(d)+(ctx.my?`<div class="qbox"><span class="big-num">${v}</span></div><input type="range" min="0" max="100" value="${v}" data-draft="t23" style="width:100%;max-width:420px"><button class="btn red wide" data-ga="go">ثبّت رقمي</button>`:'');},
   click(a,i,d,ctx){if(!ctx.my)return;const v=Math.max(0,Math.min(100,Math.round(+((S.draft||{}).t23??50))));delete S.draft.t23;simulPick(d,ctx.v,v);},
-  resolve(d,picks){const vals=picks.filter(x=>x!=null);const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;const tg=Math.round(avg*2/3*10)/10;
-    const diff=picks.map(x=>x==null?Infinity:Math.abs(x-tg));const mn=Math.min(...diff);const pts=[...d.pts];const w=[];diff.forEach((x,s)=>{if(x===mn&&isFinite(x)){pts[s]++;w.push(nm(d,s));}});
+  resolve(d,picks){const vals=picks.filter(x=>x!=null);const sum=vals.reduce((a,b)=>a+b,0);const avg=vals.length?sum/vals.length:0;const tg=Math.round(avg*2/3*10)/10;
+    const diff=picks.map(x=>x==null?Infinity:Math.abs(3*vals.length*x-2*sum));const mn=Math.min(...diff);const pts=[...d.pts];const w=[];diff.forEach((x,s)=>{if(x===mn&&isFinite(x)){pts[s]++;w.push(nm(d,s));}});
     const rd=d.rd+1;return {...d,pts,rd,res:`المتوسط ${Math.round(avg*10)/10}، والهدف ${tg}. `+d.pl.map((r,s)=>picks[s]==null?'':`${nm(d,s)} ${picks[s]}`).filter(Boolean).join('، ')+`. الأقرب: ${w.join('، ')}`,win:rd>=d.rounds?mostPts(pts):null};}
 };
 
@@ -73,19 +73,24 @@ GAMES.uxo={name:'إكس أو المضاعفة',cat:'board',lbc:'#8E3B46',
 
 /* ---------- proverbs ---------- */
 const PROV=[['الصبر مفتاح…','الفرج'],['من جد…','وجد'],['العلم في الصغر كالنقش في…','الحجر'],['القناعة كنز لا…','يفنى'],['الوقت كالسيف إن لم تقطعه…','قطعك'],['رب أخ لك لم…','تلده أمك'],['في التأني السلامة وفي العجلة…','الندامة'],['الجار قبل…','الدار'],['الرفيق قبل…','الطريق'],['إذا كان الكلام من فضة فالسكوت من…','ذهب'],['اللي ما يعرف الصقر…','يشويه'],['عصفور في اليد ولا عشرة على…','الشجرة'],['يا غريب كن…','أديب'],['درهم وقاية خير من قنطار…','علاج'],['الطيور على أشكالها…','تقع'],['لكل جواد…','كبوة'],['خير الكلام ما قل…','ودل'],['من حفر حفرة لأخيه…','وقع فيها'],['اتق شر من…','أحسنت إليه'],['إن غدًا لناظره…','قريب'],['الكتاب يبان من…','عنوانه'],['كل إناء بما فيه…','ينضح'],['يد وحدة ما…','تصفق'],['القرد في عين أمه…','غزال'],['مد رجولك على قد…','لحافك'],['الحركة…','بركة'],['اللي فات…','مات'],['الشق أكبر من…','الرقعة'],['ما طار طير وارتفع إلا كما طار…','وقع'],['اسأل مجرب ولا تسأل…','حكيم'],["ما كل ما يتمنى المرء…", "يدركه"],["تجري الرياح بما لا…", "تشتهي السفن"],["الصديق وقت…", "الضيق"],["لا تؤجل عمل اليوم إلى…", "الغد"],["من شب على شيء…", "شاب عليه"],["العقل السليم في…", "الجسم السليم"],["لكل مقام…", "مقال"],["رب ضارة…", "نافعة"],["الوحدة خير من جليس…", "السوء"],["على قدر أهل العزم تأتي…", "العزائم"],["خير الأمور…", "أوسطها"],["ليس كل ما يلمع…", "ذهبًا"],["السكوت علامة…", "الرضا"],["بلغ السيل…", "الزبى"],["سبق السيف…", "العذل"],["عند الامتحان يُكرم المرء أو…", "يُهان"],["ما حك جلدك مثل…", "ظفرك"],["أول الغيث…", "قطرة"],["الحاجة أم…", "الاختراع"],["كل ممنوع…", "مرغوب"],["القافلة تسير والكلاب…", "تنبح"],["لكل داء…", "دواء"],["لا يُلدغ المؤمن من جحر…", "مرتين"],["من راقب الناس مات…", "همًّا"],["يداك أوكتا وفوك…", "نفخ"],["وافق شنٌّ…", "طبقة"],["جنت على نفسها…", "براقش"],["عادت حليمة لعادتها…", "القديمة"],["رجع بخفي…", "حنين"],["أعطِ الخبز…", "لخبازه"],["الشمس ما تتغطى…", "بغربال"],["اللي ما يطول العنب يقول عنه…", "حامض"],["الباب اللي يجيك منه الريح…", "سده واستريح"],["إذا حضر الماء بطل…", "التيمم"],["اللي في القدر يطلعه…", "الملاس"],["من طق الباب سمع…", "الجواب"],["ما يمدح السوق إلا من…", "ربح فيه"],["الكلام اللين يغلب…", "الحق البين"],["اللي ما له أول ما له…", "تالي"],["كلٌّ يغني على…", "ليلاه"],["إن كنت ريحًا فقد لاقيت…", "إعصارًا"],["ومن الحب ما…", "قتل"],["الضرب في الميت…", "حرام"],["فاقد الشيء لا…", "يعطيه"],["لسانك حصانك إن صنته…", "صانك"],["ما كل بيضاء…", "شحمة"],["الدنيا يوم لك ويوم…", "عليك"],["لا يفلّ الحديد إلا…", "الحديد"],["الحر تكفيه…", "الإشارة"],["العين ما تعلى على…", "الحاجب"],["اللي ما يشوف من الغربال…", "أعمى"],["الطمع ضرّ ما…", "نفع"],["خذوا الحكمة من أفواه…", "المجانين"],["العجلة من…", "الشيطان"],["الكلمة الطيبة…", "صدقة"],["ابن الوز…", "عوام"],["حبل الكذب…", "قصير"],["التكرار يعلّم…", "الشطار"],["يا ما تحت السواهي…", "دواهي"],["مصائب قوم عند قوم…", "فوائد"],["كما تدين…", "تُدان"],["اللي يبي الدح ما يقول…", "أح"],["شين وقوي…", "عين"],["لكل زمان دولة…", "ورجال"],["إن كان صاحبك عسل لا…", "تلحسه كله"],["اللي ما يعرفك ما…", "يثمنك"],["المكتوب على الجبين لازم تشوفه…", "العين"],["كثرة الطق تفك…", "اللحام"],["اللي يتلفت ما…", "يوصل"],["كل شي بالغصب إلا…", "المحبة"],["الصيت ولا…", "الغنى"],["المال السايب يعلّم…", "السرقة"],["اربط الحمار مكان ما يبي…", "صاحبه"]];
+// near twins (ذهب/ذهبًا، عين/العين، وقع/وقع فيها) never sit together as options
+const pvN=s=>s.replace(/[\u064B-\u0652]/g,'').split(' ')[0].replace(/^ال/,'').replace(/ا$/,'');
 GAMES.prov=makeQuiz({name:'أكمل المثل',lbc:'#7A5230',icon:iconE('#A06B3E','📜'),
   gen(d,rd){const R=srng(d,'pv');const ord=[...PROV.keys()];for(let i=ord.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}
-    const k=ord[rd%ord.length];const R2=srng(d,'pv'+rd);const w=new Set();while(w.size<3){const x=Math.floor(R2()*PROV.length);if(x!==k)w.add(PROV[x][1]);}
+    const k=ord[rd%ord.length];const R2=srng(d,'pv'+rd);const w=new Set();while(w.size<3){const x=Math.floor(R2()*PROV.length);if(x!==k&&![PROV[k][1],...w].some(y=>pvN(y)===pvN(PROV[x][1])))w.add(PROV[x][1]);}
     return {q:PROV[k][0],...withOptions(R2,PROV[k][1],[...w])};}});
 
 /* ---------- number sequences ---------- */
-GAMES.seq=makeQuiz({name:'أكمل التسلسل',lbc:'#2F6F4F',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F9468"/><text x="50" y="58" font-size="20" font-weight="800" fill="#fff" text-anchor="middle" direction="ltr">2 4 8 ?</text></svg>`,
-  gen(d,rd){const R=srng(d,'sq'+rd);const ty=Math.floor(R()*5);let a=[];
+const seqA=R=>{const ty=Math.floor(R()*5);let a=[];
     if(ty===0){let x=1+Math.floor(R()*9),k=2+Math.floor(R()*8);for(let i=0;i<6;i++)a.push(x+k*i);}
-    else if(ty===1){let x=1+Math.floor(R()*4),k=2+Math.floor(R()*2);for(let i=0;i<6;i++)a.push(x*Math.pow(k,i));}
-    else if(ty===2){let o=1+Math.floor(R()*4);for(let i=0;i<6;i++)a.push((i+o)*(i+o));}
+    else if(ty===1){let x=1+Math.floor(R()*5),k=2+Math.floor(R()*3);for(let i=0;i<6;i++)a.push(x*Math.pow(k,i));}
+    else if(ty===2){let o=1+Math.floor(R()*9);for(let i=0;i<6;i++)a.push((i+o)*(i+o));}
     else if(ty===3){let x=1+Math.floor(R()*3),y=x+1+Math.floor(R()*3);a=[x,y];for(let i=2;i<6;i++)a.push(a[i-1]+a[i-2]);}
     else{let x=50+Math.floor(R()*50),k=3+Math.floor(R()*7);for(let i=0;i<6;i++)a.push(x-k*i);}
+    return a;};
+GAMES.seq=makeQuiz({name:'أكمل التسلسل',lbc:'#2F6F4F',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F9468"/><text x="50" y="58" font-size="20" font-weight="800" fill="#fff" text-anchor="middle" direction="ltr">2 4 8 ?</text></svg>`,
+  // replay the earlier rounds so a sequence never comes back in the same match
+  gen(d,rd){let R,a;const seen=new Set();for(let r=0;r<=rd;r++){R=srng(d,'sq'+r);for(let t=0;t<30;t++){a=seqA(R);if(!seen.has(a.slice(0,5).join()))break;}seen.add(a.slice(0,5).join());}
     const ans=a[5];const w=new Set();const del=[1,-1,2,-2,a[5]-a[4],3,-3,10];while(w.size<3){const x=ans+del[Math.floor(R()*del.length)];if(x!==ans)w.add(x);}
     return {q:`<span dir="ltr">${a.slice(0,5).join(' ، ')} ، ؟</span>`,rq:a.slice(0,5).join(' ، ')+' ، ؟',...withOptions(R,String(ans),[...w].map(String))};}});
 
@@ -93,8 +98,8 @@ GAMES.seq=makeQuiz({name:'أكمل التسلسل',lbc:'#2F6F4F',icon:`<svg view
 const STC=[['أحمر','#E5483F'],['أزرق','#3D8FD8'],['أخضر','#3FAE5C'],['أصفر','#E9B21C'],['بنفسجي','#9C5BC7'],['برتقالي','#F07D2C']];
 GAMES.stroop={name:'لون الكلمة',cat:'quiz',lbc:'#A33C77',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><text x="50" y="40" font-size="22" font-weight="800" fill="#3D8FD8" text-anchor="middle">أحمر</text><text x="50" y="74" font-size="22" font-weight="800" fill="#3FAE5C" text-anchor="middle">أصفر</text></svg>`,
-  ...(()=>{const q=makeQuiz({name:'',lbc:'',icon:'',gen(d,rd){const R=srng(d,'st'+rd);const w=Math.floor(R()*STC.length);let c=Math.floor(R()*(STC.length-1));if(c>=w)c++;
-    const ws=new Set([w]);while(ws.size<3)ws.add(Math.floor(R()*STC.length));ws.delete(c);const wr=[...ws].slice(0,3).map(k=>STC[k][0]);
+  ...(()=>{const q=makeQuiz({name:'',lbc:'',icon:'',gen(d,rd){let R,w,c;const seen=new Set();for(let r=0;r<=rd;r++){R=srng(d,'st'+r);for(let t=0;t<30;t++){w=Math.floor(R()*STC.length);c=Math.floor(R()*(STC.length-1));if(c>=w)c++;if(!seen.has(w*8+c))break;}seen.add(w*8+c);}
+    const ws=new Set([w]);while(ws.size<3){const x=Math.floor(R()*STC.length);if(x!==c)ws.add(x);}const wr=[...ws].map(k=>STC[k][0]);
     return {q:`<span style="font-size:46px;color:${STC[c][1]}">${STC[w][0]}</span><br><small style="font-size:16px">وش لون الخط؟ (مو الكلمة)</small>`,rq:'لون الخط',...withOptions(R,STC[c][0],wr)};}});delete q.name;delete q.lbc;delete q.icon;delete q.cat;return q;})()
 };
 
@@ -102,20 +107,31 @@ GAMES.stroop={name:'لون الكلمة',cat:'quiz',lbc:'#A33C77',
 const WC=['#E5483F','#3D8FD8','#3FAE5C','#F0B429','#9C7BD6','#F2874B','#E57AAE','#2FB3AA','#8B5A2B','#555','#C0C0C0','#1F7A8C'];
 GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A4A4A"/><circle cx="50" cy="56" r="26" fill="#1d1d1d"/><path d="M60 30q10-12 22-8" stroke="#E8C38E" stroke-width="4" fill="none"/><circle cx="83" cy="22" r="5" fill="#F0B429"/>${['#E5483F','#3D8FD8','#3FAE5C'].map((c,k)=>`<path d="M30 ${50+k*7}H70" stroke="${c}" stroke-width="4"/>`).join('')}</svg>`,
-  init:n=>({k:n+3,bomb:rnd(n+3),cut:'',last:''}),
+  init:n=>({k:n+3,cut:'',last:''}),
+  // no bomb is stored: each cut explodes with chance 1/uncut wires (the same odds as a hidden bomb), and when time runs out a random wire is cut
+  onTimeout:d=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(String.fromCharCode(97+i)));return GAMES.wires.cut(d,left[rnd(left.length)]);},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){return `<div class="bomb">💣</div><div style="width:100%;max-width:420px">${Array(d.k).fill(0).map((_,i)=>d.cut.includes(String.fromCharCode(97+i))?`<div class="wire cut" style="--c:${WC[i]}"></div>`:`<button class="wire" style="--c:${WC[i]}" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}></button>`).join('')}</div>`;},
-  click(a,i,d,ctx){if(!ctx.my)return;const ch=String.fromCharCode(97+i);if(d.cut.includes(ch))return;const t=d.turn;
-    if(i===d.bomb){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);const k=al.length+3;
-      act({...d,out,k,bomb:rnd(k),cut:'',win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),last:`💥 ${nm(d,t)} قص السلك الغلط وطلع. قنبلة جديدة!`});return;}
-    act({...d,cut:d.cut+ch,turn:nextSeat(d,t),last:`${nm(d,t)} قص سلك وسلم`});}
+  cut(d,i){const ch=String.fromCharCode(97+i);const t=d.turn;
+    if(Math.random()*(d.k-d.cut.length)<1){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);const k=al.length+3;
+      return {...d,out,k,cut:'',win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),last:`💥 ${nm(d,t)} قص السلك الغلط وطلع. قنبلة جديدة!`};}
+    return {...d,cut:d.cut+ch,turn:nextSeat(d,t),last:`${nm(d,t)} قص سلك وسلم`};},
+  click(a,i,d,ctx){if(!ctx.my||!(i>=0&&i<d.k)||d.cut.includes(String.fromCharCode(97+i)))return;act(GAMES.wires.cut(d,i));}
 };
 
 /* ---------- go fish ---------- */
 const rk=c=>c[0];const RKN=r=>r==='T'?'10':r;
+// draw a random card from what is left, so the stored pile order tells nothing
+const dkPick=dk=>{const j=rnd(dk.length/2)*2;return [dk.slice(j,j+2),dk.slice(0,j)+dk.slice(j+2)];};
+const fishBk=h=>{const by={};cardsOf(h).forEach(c=>{by[rk(c)]=(by[rk(c)]||0)+1;});let got='';for(const r in by)if(by[r]===4)got+=r;return [cardsOf(h).filter(c=>!got.includes(rk(c))).join(''),got];};
+// out seats hold no cards and never win on books
+const fishEnd=nd=>{const total=nd.books.reduce((x,b)=>x+b.length,0);
+  if(total>=13||!nd.dk.length&&nd.hands.every((h,s)=>!h.length||nd.out[s]==='1'))nd.win=mostPts(nd.books.map((b,s)=>nd.out[s]==='1'?-1:b.length));return nd;};
 GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',
   icon:iconE('#2E8FB3','🎣'),
-  init:n=>{let dk=shuffle(deck52());const k=n<=3?7:5;const hands=[];for(let s=0;s<n;s++){hands.push(dk.slice(0,k).join(''));dk=dk.slice(k);}return {hands,dk:dk.join(''),books:Array(n).fill(''),last:''};},
+  init:n=>{let dk=shuffle(deck52());const k=n<=3?7:5;const hands=[],books=[];for(let s=0;s<n;s++){const [h,b]=fishBk(dk.slice(0,k).join(''));hands.push(h);books.push(b);dk=dk.slice(k);}return {hands,dk:dk.join(''),books,last:''};},
+  // a player who left puts their cards back in the pile, so nobody waits on a book they hold
+  onSkip(nd){let dk=nd.dk;const hands=nd.hands.map((h,s)=>{if(nd.out[s]==='1'&&h){dk+=h;return '';}return h;});const r={...nd,hands,dk};return r.win!=null?r:fishEnd(r);},
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',noTimer:false,
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),points:d=>d.books.map(b=>b.length),
   winExtra:d=>'المجموعات: '+d.books.map((b,s)=>`${nm(d,s)} ${b.length}`).join('، '),
@@ -130,17 +146,15 @@ GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',
   click(a,i,d,ctx){
     if(a==='tgt'){S.tgt=i;render();return;}if(!ctx.my)return;const t=d.turn;
     const hands=[...d.hands],books=[...d.books];let dk=d.dk;
-    const mkBooks=s=>{const h=cardsOf(hands[s]);const by={};h.forEach(c=>{(by[rk(c)]=by[rk(c)]||[]).push(c);});let got='';for(const r in by)if(by[r].length===4){got+=r;hands[s]=h.filter(c=>rk(c)!==r).join('');}books[s]+=got;return got;};
-    const finish=nd=>{const total=nd.books.reduce((x,b)=>x+b.length,0);if(total>=13)nd.win=mostPts(nd.books.map(b=>b.length));
-      else if(!nd.dk.length&&nd.hands.every(h=>!h.length))nd.win=mostPts(nd.books.map(b=>b.length));return nd;};
-    if(a==='draw'){let last=`${nm(d,t)} مرّر`;if(dk.length){hands[t]+=dk.slice(0,2);dk=dk.slice(2);last=`${nm(d,t)} سحب ورقة`;mkBooks(t);}
-      act(finish({...d,hands,books,dk,turn:nextSeat(d,t),last}));return;}
+    const mkBooks=s=>{const [h,got]=fishBk(hands[s]);hands[s]=h;books[s]+=got;return got;};
+    if(a==='draw'){let last=`${nm(d,t)} مرّر`;if(dk.length){let c;[c,dk]=dkPick(dk);hands[t]+=c;last=`${nm(d,t)} سحب ورقة`;mkBooks(t);}
+      act(fishEnd({...d,hands,books,dk,turn:nextSeat(d,t),last}));return;}
     const r=RANKS[i],tg=S.tgt;if(tg==null||!cardsOf(hands[t]).some(c=>rk(c)===r))return;
     const th=cardsOf(hands[tg]);const got=th.filter(c=>rk(c)===r);let last,again=false;
     if(got.length){hands[tg]=th.filter(c=>rk(c)!==r).join('');hands[t]+=got.join('');again=true;last=`${nm(d,t)} طلب ${RKN(r)} من ${nm(d,tg)} وأخذ ${got.length}`;}
-    else{last=`${nm(d,t)} طلب ${RKN(r)} من ${nm(d,tg)}، روح اصطد! 🎣`;if(dk.length){const c=dk.slice(0,2);hands[t]+=c;dk=dk.slice(2);if(rk(c)===r){again=true;last+=' وطلع له نفس الرقم';}}}
+    else{last=`${nm(d,t)} طلب ${RKN(r)} من ${nm(d,tg)}، روح اصطد! 🎣`;if(dk.length){let c;[c,dk]=dkPick(dk);hands[t]+=c;if(rk(c)===r){again=true;last+=' وطلع له نفس الرقم';}}}
     const b=mkBooks(t);if(b)last+=`، وكمّل مجموعة ${[...b].map(RKN).join(' و')}`;
-    act(finish({...d,hands,books,dk,turn:again&&hands[t].length?t:nextSeat(d,t),last}));
+    act(fishEnd({...d,hands,books,dk,turn:again&&hands[t].length?t:nextSeat(d,t),last}));
   }
 };
 
@@ -151,6 +165,8 @@ GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7D3C98"/><text x="50" y="64" font-size="40" font-weight="800" fill="#fff" text-anchor="middle">99</text></svg>`,
   init:n=>{let dk=shuffle(deck52(n>5?2:1));const hands=[];for(let s=0;s<n;s++){hands.push(dk.slice(0,3).join(''));dk=dk.slice(3);}return {hands,dk:dk.join(''),tot:0,dir:1,last:''};},
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  // skipping the player on turn follows the current direction (a 4 may have reversed it)
+  onSkip:(nd,d)=>d&&nd.win==null&&d.out[d.turn]!=='1'&&nd.out[d.turn]==='1'?{...nd,turn:uStep(nd,d.turn,1,nd.dir)}:nd,
   onTimeout:d=>{const t=d.turn;const h=cardsOf(d.hands[t]);const ok=h.map((c,i)=>v99(c,d.tot)<=99?i:-1).filter(i=>i>=0);return GAMES.n99.play(d,ok.length?ok[0]:-1);},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
@@ -162,7 +178,7 @@ GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',
     return s;},
   play(d,i){const t=d.turn;const h=cardsOf(d.hands[t]);
     if(i<0){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);return {...d,out,win:al.length===1?al[0]:null,turn:uStep(d,t,1,d.dir,out),last:`${nm(d,t)} ما عنده ورقة وطلع 😵`};}
-    const c=h.splice(i,1)[0];const tot=v99(c,d.tot);let dk=d.dk;if(dk.length){h.push(dk.slice(0,2));dk=dk.slice(2);}
+    const c=h.splice(i,1)[0];const tot=v99(c,d.tot);let dk=d.dk;if(dk.length){let c2;[c2,dk]=dkPick(dk);h.push(c2);}
     const hands=[...d.hands];hands[t]=h.join('');const dir=c[0]==='4'?-d.dir:d.dir;
     return {...d,hands,dk,tot,dir,turn:uStep(d,t,1,dir),last:`${nm(d,t)} نزّل ${RKN(c[0])} والمجموع ${tot}`};},
   click(a,i,d,ctx){if(!ctx.my)return;if(i>=0){const c=cardsOf(d.hands[d.turn])[i];if(!c||v99(c,d.tot)>99)return;}act(this.play(d,i));}
