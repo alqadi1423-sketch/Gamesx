@@ -3,9 +3,11 @@
    It offers the same calls the engine uses from Claude rooms: join(name) -> presence / onPeers / leave. */
 window.WSROOM={
   // the Cloudflare address (workers.dev) or a local test server; add your own domain here if you link one
-  available:()=>/(\.workers\.dev|^localhost|^127\.0\.0\.1)$/.test(location.hostname),
+  available:()=>WSROOM.app()||/(\.workers\.dev|^localhost|^127\.0\.0\.1)$/.test(location.hostname),
+  // inside the Android app the pages come from the phone, so rooms go to the Cloudflare address
+  app:()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()),
   room(){return {join:name=>new Promise((ok,no)=>{
-    const url=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
+    const url=WSROOM.app()?'wss://gamesx.alqadi1423.workers.dev/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
     let ws=null,me=null,mine={},peers={},hs=[],closed=false,opened=false,ping=null;
     const emit=()=>{const arr=[{peer:me||'me',sameTab:true,isMe:true,kind:'viewer',presence:mine}];
       for(const k in peers)arr.push({peer:k,sameTab:false,isMe:false,kind:'viewer',presence:peers[k]});hs.forEach(h=>h({peers:arr}));};

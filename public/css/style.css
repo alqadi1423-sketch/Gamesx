@@ -513,3 +513,14 @@ html,body{overflow-x:hidden}
 .gcard{position:relative}
 .newb{position:absolute;top:10px;left:-30px;transform:rotate(-40deg);background:#E5483F;color:#fff;font-style:normal;font-weight:900;font-size:12px;padding:2px 34px;box-shadow:0 2px 4px rgba(0,0,0,.2);z-index:2}
 .gcard{overflow:hidden}
+/* ===== android app: nearby rooms and updates ===== */
+.green{background:#3FAE5C}
+.upd{display:block;text-align:center;background:#FFF4C9;color:#7a5a00;font-weight:800;border-radius:16px;padding:12px;margin:6px 0;text-decoration:none;box-shadow:0 3px 0 var(--line)}
+.nlist{display:flex;flex-direction:column;gap:8px}
+.nroom{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:16px;padding:12px 14px;color:var(--ink);font-size:18px;box-shadow:0 3px 0 var(--line)}
+.nroom b{flex:1;text-align:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nroom span{font-family:monospace;letter-spacing:2px;color:var(--mut);font-size:15px}
+.nroom i{font-style:normal;background:#3FAE5C;color:#fff;border-radius:12px;padding:4px 14px;font-weight:800}
+.scan{display:flex;align-items:center;gap:10px;color:var(--mut);font-weight:700}
+.scan i{width:18px;height:18px;border-radius:50%;border:3px solid var(--line);border-top-color:#3FAE5C;animation:rot 1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}

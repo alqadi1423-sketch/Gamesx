@@ -1,0 +1,8 @@
+{
+  "appId": "com.alaabna.games",
+  "appName": "ألعابنا",
+  "webDir": "../public",
+  "android": {
+    "backgroundColor": "#E9F1FA"
+  }
+}

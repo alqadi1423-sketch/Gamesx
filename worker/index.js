@@ -51,6 +51,14 @@ export default {
       if (req.headers.get('Upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
       return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(req);
     }
+    if (url.pathname === '/version.json') {
+      // the Android app asks this from its own pages, so it needs to be readable from any origin
+      const r = await env.ASSETS.fetch(req);
+      const h = new Headers(r.headers);
+      h.set('Access-Control-Allow-Origin', '*');
+      h.set('Cache-Control', 'no-store');
+      return new Response(r.body, { status: r.status, headers: h });
+    }
     return env.ASSETS.fetch(req);
   }
 };

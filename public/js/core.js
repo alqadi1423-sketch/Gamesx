@@ -85,7 +85,7 @@ function publish(rx){
 }
 function save(){
   if(S.mode==='local')lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames}));
-  if(S.mode!=='online'||!S.code)return;lsSet(LSK.room,JSON.stringify({code:S.code,me:S.me,st:S.st,priv:S.me==null?null:S.priv[S.me]}));}
+  if(S.mode!=='online'||!S.code)return;lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',me:S.me,st:S.st,priv:S.me==null?null:S.priv[S.me]}));}
 function loadSaved(){try{return JSON.parse(lsGet(LSK.room)||'null');}catch(e){return null;}}
 
 /* ================= turn timer ================= */
@@ -137,23 +137,23 @@ function pickRole(pref){const t=takenRoles(),c=cfg(),k=c.kick||[];
   const okRole=r=>r>=0&&r<MAXP&&!t.has(r)&&!k.includes(r);
   if(c.lock)return typeof pref==='number'&&(c.members||[]).includes(pref)&&okRole(pref)?pref:null;
   if(typeof pref==='number'&&okRole(pref))return pref;for(let r=1;r<MAXP;r++)if(okRole(r))return r;return okRole(0)?0:null;}
-async function enterRoom(code,host,restore){
+async function enterRoom(code,host,restore,given){
   S.joining=true;S.roomErr=null;render();
-  const room=await getRoom();
+  const room=given||await getRoom();
   if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
   try{nr=await room.join('g-'+code.toLowerCase());}
-  catch(e){S.joining=false;S.roomErr='ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
-  S.mode='online';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
+  catch(e){S.joining=false;S.roomErr=given?'ما قدرت أدخل الغرفة القريبة، قرّب من صاحب الغرفة وجرّب مرة ثانية.':'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
+  S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
   if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st};if(!Array.isArray(S.st.sc)||S.st.sc.length<MAXP)S.st.sc=Array(MAXP).fill(0);}
   else S.st={g:null,s:host?1:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};
   if(host){S.me=0;S.pending=false;if(!restore)S.modal='settings';}
   else{S.me=null;S.pending=true;
     setTimeout(()=>{if(S.nr!==nr)return;S.me=pickRole(restore?restore.me:null);if(S.me!=null&&restore&&restore.me===S.me)S.priv[S.me]=restore.priv||null;S.pending=false;recomputeRoles();afterChange();},1500);}
-  nr.onPeers(onPeers,()=>{S.roomErr='انقطع الاتصال بالغرفة.';render();});
+  nr.onPeers(onPeers,()=>{toast('انقطع الاتصال، نحاول نرجع…');});
   afterChange();
 }
-function leaveRoom(msg){if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.mode=null;S.modal=null;if(msg)toast(msg);render();}
+function leaveRoom(msg){if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;if(msg)toast(msg);render();}
 function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(typeof r==='number')s.add(r);}S.roles=s;}
 function onPeers(ch){
   if(S.mode!=='online')return;
@@ -217,6 +217,7 @@ function render(){
   const ae=document.activeElement,fid=ae&&ae.dataset&&ae.dataset.draft,cs=fid&&ae.selectionStart;
   if(S.mode===null)renderHome();
   else if(S.mode==='lobby')renderLobby();
+  else if(S.mode==='near')renderNear();
   else if(!S.st.g||!GAMES[S.st.g]||!S.st.d||S.browse)renderGrid();
   else renderGame();
   if(S.modal)app.insertAdjacentHTML('beforeend',modalHTML());
@@ -230,22 +231,36 @@ function topBar(title,back,extra){
 function renderHome(){
   app.innerHTML=`<div class="hero">${LOGO}<h1>ألعابنا</h1><p>${Object.keys(GAMES).length} لعبة، من لاعبين اثنين إلى ${MAXP}</p></div>
   <button class="big red" data-a="local">على نفس الجهاز<small>كلكم على جوال واحد</small></button>
-  <button class="big blue" data-a="lobby">أونلاين<small>كل واحد من جهازه بغرفة خاصة</small></button>`;
+  <button class="big blue" data-a="lobby">أونلاين<small>كل واحد من جهازه بغرفة خاصة</small></button>
+  ${window.NEARROOM&&NEARROOM.available()?'<button class="big green" data-a="near">قريب بدون إنترنت<small>بلوتوث، وكلكم في نفس المكان</small></button>':''}
+  ${S.update?`<a class="upd" href="${S.update.apk}" target="_blank" rel="noopener">⬇️ فيه نسخة أحدث من التطبيق، اضغط وحمّلها</a>`:''}`;
 }
+function renderNear(){
+  const L=S.nearList||[];
+  app.innerHTML=`${topBar('قريب بدون إنترنت','home')}
+  <div class="panel"><h3>اسمك</h3><input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off"></div>
+  <div class="panel"><h3>أنشئ غرفة قريبة</h3><p>أصحابك اللي جنبك يشوفون غرفتك عندهم ويدخلون بضغطة، بدون إنترنت</p><button class="big red" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
+  <div class="panel"><h3>الغرف القريبة</h3>${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><span>${f.code}</span><i>ادخل</i></button>`).join('')}</div>`:`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`}
+  <p class="note">خل البلوتوث شغّال، ووافق على صلاحية الأجهزة القريبة لو طلبها الجوال</p></div>
+  ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
+}
+async function startNear(){S.mode='near';S.roomErr=null;S.nearList=[];render();
+  const ok=await NEARROOM.scan(list=>{S.nearList=list;if(S.mode==='near')render();});
+  if(!ok&&S.mode==='near'){S.roomErr='ما قدرت أدوّر على الغرف القريبة. وافق على صلاحية الأجهزة القريبة وشغّل البلوتوث، وبعدها ارجع وادخل مرة ثانية.';render();}}
 function renderLobby(){
   const sv=loadSaved();
   app.innerHTML=`${topBar('أونلاين','home')}
   <div class="panel"><h3>اسمك</h3><input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off"></div>
   <div class="panel"><h3>أنشئ غرفة</h3><p>تاخذ رمز خاص وترسله لأصحابك، وما يدخلها إلا اللي معه الرمز. وتقدر تحدد قواعدها</p><button class="big red" data-a="create" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
   <div class="panel"><h3>ادخل غرفة</h3><p>اكتب الرمز اللي وصلك</p><input class="code" id="code" maxlength="6" autocomplete="off" placeholder="······"><button class="big blue" data-a="join" ${S.joining?'disabled':''}>ادخل</button></div>
-  ${sv&&sv.code?`<button class="link" data-a="resume">ارجع لغرفتك ${sv.code}</button>`:''}
+  ${sv&&sv.code&&sv.via!=='near'?`<button class="link" data-a="resume">ارجع لغرفتك ${sv.code}</button>`:''}
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
 }
 function roomBar(){
   if(S.mode!=='online')return '';
   const pl=players(),h=actingHost();
   const me=S.pending?'<span class="chip" style="background:var(--mut)">جاري اختيار لونك…</span>':S.me==null?'<span class="chip" style="background:var(--mut)">تتفرج</span>':'';
-  return `<div class="roombar"><span>الغرفة</span><b class="code">${S.code}</b>${cfg().lock?'<span title="مقفلة">🔒</span>':''}<span class="sp"></span><button class="sm" data-a="copy">نسخ الرمز</button><button class="sm" data-a="m-settings">⚙️</button>
+  return `<div class="roombar"><span>${S.via==='near'?'📶 غرفة قريبة':'الغرفة'}</span><b class="code">${S.code}</b>${cfg().lock?'<span title="مقفلة">🔒</span>':''}<span class="sp"></span>${S.via==='near'?'':'<button class="sm" data-a="copy">نسخ الرمز</button>'}<button class="sm" data-a="m-settings">⚙️</button>
   <div class="rbp">${me}${pl.map(r=>`<span class="chip" data-r="${r}" style="background:${COLS[r]}">${r===h?'👑 ':''}${r===S.me?'أنت':pname(r)}</span>`).join('')}<span class="note" style="margin:0 4px">${pl.length} من ${MAXP}</span></div></div>`;
 }
 const NEWG=['mono','ludo','jakaro','arena','tanks','dwars','duel','tapwar'];
@@ -355,7 +370,10 @@ app.addEventListener('click',e=>{
   const i=t.dataset.i!=null?+t.dataset.i:null;
   if(t.dataset.ga){const G=GAMES[S.st.g];if(G&&S.st.d)G.click(t.dataset.ga,i,S.st.d,mkCtx());return;}
   switch(t.dataset.a){
-    case 'home':S.mode=null;render();break;
+    case 'home':if(S.mode==='near'&&window.NEARROOM)NEARROOM.stopAll();S.mode=null;render();break;
+    case 'near':startNear();break;
+    case 'ncreate':{const c=genCode();enterRoom(c,true,null,NEARROOM.room('host',{code:c,name:S.myName}));break;}
+    case 'njoin':{const f=(S.nearList||[])[i];if(f)enterRoom(f.code,false,null,NEARROOM.room('join',{id:f.id,code:f.code,name:S.myName}));break;}
     case 'local':S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();break;
     case 'inc':S.localN=Math.min(MAXP,S.localN+1);save();render();break;
     case 'dec':S.localN=Math.max(2,S.localN-1);save();render();break;
@@ -422,4 +440,17 @@ const SHP=[
  c=>`<path d="M20 5L33 12.5V27.5L20 35L7 27.5V12.5Z" fill="${c}"/>`];
 const shape=r=>`<svg viewBox="0 0 40 40">${SHP[r](COLS[r])}</svg>`;
 
-function boot(){render();}
+const SERVER='https://gamesx.alqadi1423.workers.dev';
+const isApp=()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+function appSetup(){
+  const A=Capacitor.Plugins&&Capacitor.Plugins.App;let lastBack=0;
+  if(A)A.addListener('backButton',()=>{
+    if(S.modal){S.modal=null;render();return;}
+    const b=app.querySelector('.top .ib');const act=b&&b.dataset.a;
+    if(S.mode===null||act==='leave'){if(Date.now()-lastBack<2000){if(act==='leave')leaveRoom();else A.exitApp();return;}lastBack=Date.now();toast(act==='leave'?'اضغط رجوع مرة ثانية للخروج من الغرفة':'اضغط رجوع مرة ثانية للخروج');return;}
+    if(b)b.click();});
+  // tell the player when a newer app build is out
+  const el=document.querySelector('script[src*="core.js"]');const mine=+((el&&/v=(\d+)/.exec(el.src)||[])[1]||0);
+  fetch(SERVER+'/version.json',{cache:'no-store'}).then(r=>r.json()).then(j=>{if(j&&+j.v>mine&&j.apk){S.update=j;if(S.mode===null)render();}}).catch(()=>{});
+}
+function boot(){render();if(isApp())appSetup();}
