@@ -154,6 +154,12 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   // bots keep the random fleet they are dealt, so a game against bots only waits for the people
   privInit:(d,r)=>{const s=d.pl.indexOf(r);return {f:randFleet(),ready:s>=0&&isBot(d,s)};},
   canAct:(d,pr)=>allReady(d,pr),
+  // online, the others see a fleet only as «ready» plus the ships already sunk (all of it once its owner is out or the game ends); shots are checked on the host
+  privShow:(d,seat,role,p,own)=>{const s=d.pl.indexOf(role);if(own||d.win!=null||s<0||d.out[s]==='1'||typeof p.f!=='string')return p;
+    const sh=d.sh[s]||'',f=[...p.f],sunk=L=>f.every((c,k)=>c!==L||sh[k]==='o');return {gid:p.gid,ready:!!p.ready,f:f.map(c=>c!=='.'&&sunk(c)?c:'.').join('')};},
+  // a fleet is five whole ships, and it stays as it was once its owner said ready
+  privOk:(d,r,o,p)=>typeof p.f==='string'&&/^[.a-e]{64}$/.test(p.f)&&SHIPS.every((L,k)=>p.f.split(SL[k]).length-1===L)&&!(o&&o.gid===d.gid&&o.ready&&(!p.ready||o.f!==p.f)),
+  net:{host:['fire','gone'],local:['tgt']},
   // online, time ran out while placing ships: fleets laid out so far are locked in, and a seat with no fleet at all (its player never came) is out.
   // On one phone everybody is here, so nobody is pushed: the turn just moves on (a bot's turn passes to the people, see 'ready')
   onTimeout(d){const pr=S.priv;if(S.mode!=='online'||allReady(d,pr))return {...d,turn:nextSeat(d,d.turn)};let out=d.out;
@@ -254,10 +260,12 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B4FA0"/>${[[4,4,0],[36,4,1],[68,4,2],[4,36,3],[36,36,4],[68,36,6],[4,68,9],[36,68,10],[68,68,13]].map(([x,y,k])=>`<g transform="translate(${x} ${y}) scale(.47)"><rect width="60" height="66" rx="8" fill="#fff"/>${FACES[k].replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g>`).join('')}</svg>`,
   init:n=>({el:Array(n).fill('0'.repeat(24*n)),last:'',qa:[]}),
   privInit:()=>({sec:rnd(24)}),
+  // online, the secret people stay with the host and their owners: questions and guesses are answered on the host
+  net:{host:['ask','guess'],local:['tgt','gmode']},privOk:()=>false,
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   status(d,ctx){return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);},
-  winExtra(d,ctx){const p=ctx.priv;return `${d.last}<br>`+d.pl.map((r,s)=>`${nm(d,s)}: ${p[r]&&p[r].gid===d.gid?PEOPLE[p[r].sec].name:'؟'}`).join('، ');},
+  winExtra(d,ctx){const p=ctx.priv;return `${d.last}<br>`+d.pl.map((r,s)=>`${nm(d,s)}: ${p[r]&&p[r].gid===d.gid&&PEOPLE[p[r].sec]?PEOPLE[p[r].sec].name:'؟'}`).join('، ');},
   render(d,ctx){
     let v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;
     const spect=v<0;if(spect)v=d.turn;

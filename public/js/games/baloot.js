@@ -169,11 +169,21 @@ const bSuitKey=d=>[d.gid,d.k,d.dl,d.pub,d.bd&&d.bd.r,d.bd&&d.bd.st,d.bd&&d.bd.i]
 // whose screen shows which hand
 function bMine(d,v){return [0,1,2,3].filter(h=>d.ctl[h]===v);}
 function bActHand(d){if(d.ph==='bid')return bBidHand(d);if(d.ph==='dbl')return bDblHand(d);if(d.ph==='play')return (d.tl+cardsOf(d.tk).length)%4;return null;}
+/* online, what seat v sees (v −1 = a spectator): only the hands it plays this deal; the rest of the pack, the note of who holds K and Q of trumps
+   and the cards behind other hands' projects stay hidden (the team that wins the projects shows them after the first trick, as at a real table).
+   Lengths stay, so the backs still count right. All of it opens at the win; at the deal summary every hand is already empty */
+const bHide=x=>typeof x==='string'?'?'.repeat(x.length):x;
+function bMask(d,v){if(!d||d.win!=null||!Array.isArray(d.hands)||!Array.isArray(d.ctl))return d;const own=k=>v>=0&&d.ctl[k]===v;
+  return {...d,hands:d.hands.map((x,k)=>own(k)?x:bHide(x)),rest:bHide(d.rest),bq:Array.isArray(d.bq)?d.bq.map((x,k)=>own(k)?x:false):d.bq,
+    pj:Array.isArray(d.pj)?d.pj.map((ps,k)=>own(k)||(d.pjw!=null&&bTeam(k)===d.pjw)||!Array.isArray(ps)?ps:ps.map(p=>({k:p.k,q:0,top:'?',cards:(p.cards||[]).map(bHide)}))):d.pj};}
 GAMES.baloot={name:'بلوت',cat:'cards',lbc:'#1E6B52',noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E7A5C"/><ellipse cx="50" cy="56" rx="40" ry="30" fill="#249170"/><g transform="rotate(-14 38 52)"><rect x="22" y="26" width="32" height="46" rx="5" fill="#fff"/><text x="38" y="56" font-size="22" font-weight="800" text-anchor="middle" fill="#2D4763">J♠</text></g><g transform="rotate(12 62 52)"><rect x="46" y="26" width="32" height="46" rx="5" fill="#fff"/><text x="62" y="56" font-size="22" font-weight="800" text-anchor="middle" fill="#D43C33">9♥</text></g></svg>`,
   init:n=>bInit(n),
   start:(d,base)=>({...d,turn:base.turn}),// the first bidder is the dealer's right, as bDeal set
   onSkip:nd=>bSkip(nd),
+  mask:(d,v)=>bMask(d,v),
+  // the room's host left with nobody holding the hidden cards: this deal is dealt again, the score and who plays which hand stay
+  redeal:d=>d.win!=null||d.ph==='sum'?d:{...bDeal(d),last:'انعادت التوزيعة من جديد'},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   points:d=>d.pl.map((_,s)=>`${d.sc[s%2]}`),

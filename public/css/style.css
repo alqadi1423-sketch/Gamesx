@@ -874,3 +874,11 @@ svg.tvb{width:min(100%,460px);display:block;border-radius:12px;box-shadow:0 6px 
  .cupb{transition-duration:400ms!important}
 }
 @keyframes rmfade{0%,75%{opacity:1}100%{opacity:0}}
+/* online: a move waiting for the room's host, and a room that needs a newer app */
+.board.wait{pointer-events:none;opacity:.85;transition:opacity .2s}
+.status.pend{position:relative}
+.status.pend::after{content:'';position:absolute;top:10px;left:10px;width:14px;height:14px;border-radius:50%;border:3px solid var(--line);border-top-color:#4AB1E8;animation:pspin .8s linear infinite}
+@keyframes pspin{to{transform:rotate(360deg)}}
+.updb{background:#FDECC8;color:#7A4B00;border-radius:14px;padding:10px 14px;margin:0 0 10px;text-align:center;font-weight:800}
+@media (prefers-color-scheme:dark){.updb{background:#4A3510;color:#FFE2A8}}
+@media (prefers-reduced-motion:reduce){.status.pend::after{animation-duration:2.4s}}

@@ -25,6 +25,9 @@ GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D9573A"/><circle cx="30" cy="40" r="11" fill="#fff"/><circle cx="50" cy="40" r="11" fill="#fff"/><circle cx="70" cy="40" r="11" fill="#2D4763"/><path d="M14 80c0-12 7-18 16-18s16 6 16 18zM34 80c0-12 7-18 16-18s16 6 16 18z" fill="#fff"/><path d="M54 80c0-12 7-18 16-18s16 6 16 18z" fill="#2D4763"/><text x="70" y="45" font-size="13" font-weight="800" text-anchor="middle" fill="#fff">؟</text></svg>`,
   init:n=>({ph:'cat',cat:-1,w:-1,bo:-1,pr:[],qi:0,q2:false,rd:0,votes:null,opts:null,res:'',last:''}),
   simulNow:d=>d.ph==='see'||d.ph==='vote',
+  // online: until the guess only the one out of the loop knows it is them, and only the others get the word
+  mask:(d,seat)=>d.ph==='guess'||d.ph==='end'||d.win!=null?d:{...d,bo:seat>=0&&seat===d.bo?d.bo:-1,w:seat>=0&&d.bo>=0&&seat!==d.bo?d.w:-1},
+  net:{local:['ok','v']},
   viewer:d=>d.win!=null?null:(d.ph==='see'||d.ph==='vote')?simulViewer(d):d.ph==='guess'?d.bo:null,
   coverMsg:d=>d.res||'',
   winText(d){if(d.bo<0)return null;return d.win===d.bo?`${nm(d,d.bo)} كان برة السالفة وفاز!`:d.out[d.bo]==='1'&&d.guess==null?`${nm(d,d.bo)} طلع وهو برة السالفة`:`كشفتوا ${nm(d,d.bo)}، كان برة السالفة!`;},
@@ -91,6 +94,10 @@ GAMES.mafia={name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2B2F45"/><circle cx="78" cy="22" r="10" fill="#F2E3A0"/><circle cx="82" cy="19" r="9" fill="#2B2F45"/><path d="M26 44h48l-6-16H32z" fill="#111"/><rect x="18" y="42" width="64" height="7" rx="3" fill="#111"/><path d="M30 52c0 14 9 24 20 24s20-10 20-24z" fill="#E9C9A6"/><rect x="34" y="56" width="32" height="7" rx="3" fill="#111"/></svg>`,
   init:n=>({roles:mfRoles(n),ph:'role',rd:0,night:1,last:'',res:'',ls:-1,inv:null,log:[]}),
   simulNow:()=>true,
+  // online: you see your own role, your fellow mafia and the ones who are out; the doctor's last save and the detective's answer stay with them
+  mask(d,seat){if(d.win!=null)return d;const me=seat>=0?d.roles[seat]:null;
+    return {...d,roles:[...d.roles].map((c,s)=>s===seat||d.out[s]==='1'||(me==='m'&&c==='m')?c:'?').join(''),ls:me==='d'?d.ls:-1,inv:d.inv&&d.inv.s===seat?d.inv:null};},
+  net:{local:['ok','p']},
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
   winText:d=>d.side==='m'?'فازت المافيا 🕵️':'فاز أهل المدينة 🎉',
   winExtra:d=>d.pl.map((_,s)=>`${nm(d,s)} ${MFR[d.roles[s]]}`).join('، '),
@@ -144,27 +151,32 @@ function wKnown(w){w=WNORM(w);if(WASLA.some(x=>WNORM(x)===w))return true;if(!WDI
   const r={};const L='ءؤئابتثجحخدذرزسشصضطظعغفقكلمنهوي',A='abcdefghijklmnopqrstuvwxyzABCDE';const enc=[...w].map(c=>A[L.indexOf(c)]||'?').join('');
   let lo=0,hi=WDICT.n-1;while(lo<=hi){const mid=(lo+hi)>>1;const x=WDICT.s.substr(mid*5,5);if(x===enc)return true;if(x<enc)lo=mid+1;else hi=mid-1;}return false;}
 function wEnd(nd){if(nd.out.includes('0'))return nd;const sv=nd.pl.map((_,s)=>(nd.solved||[])[s]||99);const mn=Math.min(...sv);if(mn===99)return {...nd,win:'d'};const w=sv.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);return {...nd,win:w[0],wins:w};}
+// the colours of seat s's try r: stored when the round resolved (a view online has no answer), worked out for an older state
+const wSc=(d,s,r)=>{const c=d.gsc&&d.gsc[s]&&d.gsc[s][r];if(typeof c==='string'&&c.length===5)return [...c].map(Number);const g=d.gs&&d.gs[s]&&d.gs[s][r];return g&&d.ans>=0?wScore(g,WNORM(WASLA[d.ans])):null;};
 function wScore(g,a){const res=Array(5).fill(0);const left={};for(let i=0;i<5;i++){if(g[i]===a[i])res[i]=2;else left[a[i]]=(left[a[i]]||0)+1;}
   for(let i=0;i<5;i++)if(res[i]!==2&&left[g[i]]){res[i]=1;left[g[i]]--;}return res;}
 GAMES.wasla={name:'وصلة',cat:'mind',lbc:'#2E7D5B',noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E8B63"/>${[0,1,2].map(r=>[0,1,2,3,4].map(c=>`<rect x="${9+c*17}" y="${18+r*22}" width="15" height="18" rx="3" fill="${r===2?'#4CB97F':(r+c)%3===0?'#EDB02F':'#fff'}" opacity="${r===2||(r+c)%3===0?1:.35}"/>`).join('')).join('')}</svg>`,
-  init:()=>({ans:rnd(WASLA.length),gs:null,rd:0,solved:null}),
+  init:()=>({ans:rnd(WASLA.length),gs:null,gsc:null,rd:0,solved:null}),
   simulNow:()=>true,viewer:d=>simulViewer(d),coverMsg:()=>'',
+  // online: the word stays hidden till the end and you only see your own tries; the others' colours come from gsc
+  mask:(d,seat)=>d.win!=null?d:{...d,ans:-1,gs:d.gs&&d.gs.map((x,s)=>s===seat?x:x.map(w=>'?'.repeat(w.length)))},
+  net:{local:['k','del','ent']},
   points:d=>d.pl.map((_,s)=>{const g=(d.gs||[])[s]||[];return d.solved&&d.solved[s]?`✓ ${g.length}`:`${g.length}/6`;}),
   winText(d){return d.win==='d'?`ما أحد عرفها! الكلمة: ${WASLA[d.ans]}`:null;},
   winExtra:d=>`الكلمة: ${WASLA[d.ans]}`,
   status(d,ctx){return `<small>كلمة من 5 حروف</small><br>المحاولة ${Math.min(6,(d.rd||0)+1)} من 6`;},
   outDone:true,
-  render(d,ctx){const v=ctx.v;const ans=WNORM(WASLA[d.ans]);const gs=d.gs||d.pl.map(()=>[]);
+  render(d,ctx){const v=ctx.v;const gs=d.gs||d.pl.map(()=>[]);const sc=(s,r)=>wSc(d,s,r);
     const row=(w,sc,hide)=>`<div class="wrow">${[...Array(5)].map((_,i)=>`<i class="${sc?'w'+sc[i]:''} ${w&&w[i]&&!sc?'typed':''}">${hide?'':(w&&w[i])||''}</i>`).join('')}</div>`;
     if(v==null||v<0)return '<p class="note">ننتظر الباقين…</p>';
     const mine=gs[v]||[];const draft=ctx.my?(S.draft.wl||''):'';
-    let h=`<div class="wgrid">`;for(let r=0;r<6;r++){if(r<mine.length)h+=row(mine[r],wScore(mine[r],ans));else if(r===mine.length&&ctx.my)h+=row(draft);else h+=row('');}h+='</div><div class="wleg"><span><i class="w2"></i>بمكانه</span><span><i class="w1"></i>بمكان ثاني</span><span><i class="w0"></i>مو موجود</span></div>';
+    let h=`<div class="wgrid">`;for(let r=0;r<6;r++){if(r<mine.length)h+=row(mine[r],sc(v,r));else if(r===mine.length&&ctx.my)h+=row(draft);else h+=row('');}h+='</div><div class="wleg"><span><i class="w2"></i>بمكانه</span><span><i class="w1"></i>بمكان ثاني</span><span><i class="w0"></i>مو موجود</span></div>';
     // the others: colours only
     const others=d.pl.map((_,s)=>s).filter(s=>s!==v&&!ctx.local);
-    if(others.length)h+=`<div class="wothers">${others.map(s=>`<div class="wo"><b style="color:${col(d,s)}">${nm(d,s)}</b>${(gs[s]||[]).map(g=>row(g,wScore(g,ans),true)).join('')||'<small>…</small>'}</div>`).join('')}</div>`;
+    if(others.length)h+=`<div class="wothers">${others.map(s=>`<div class="wo"><b style="color:${col(d,s)}">${nm(d,s)}</b>${(gs[s]||[]).map((g,r)=>row(g,sc(s,r),true)).join('')||'<small>…</small>'}</div>`).join('')}</div>`;
     if(!ctx.my)return h+'<p class="note">ننتظر الباقين…</p>';
-    const st={};for(const g of mine){const sc=wScore(g,ans);[...g].forEach((c,i)=>{st[c]=Math.max(st[c]??-1,sc[i]);});}
+    const st={};mine.forEach((g,r)=>{const x=sc(v,r);if(x)[...g].forEach((c,i)=>{st[c]=Math.max(st[c]??-1,x[i]);});});
     h+=`<div class="wkb">${WKEYS.map((r,ri)=>`<div>${ri===2?'<button class="wk wide" data-ga="ent">إدخال</button>':''}${[...r].map(c=>`<button class="wk ${st[WNORM(c)]!=null?'w'+st[WNORM(c)]:''}" data-ga="k" data-i="${'ضصثقفغعهخحجشسيبلاتنمكطءئؤرذدزظوة'.indexOf(c)}">${c}</button>`).join('')}${ri===2?'<button class="wk wide" data-ga="del">⌫</button>':''}</div>`).join('')}</div>`;
     return h;},
   after(){wLoad();},
@@ -174,7 +186,7 @@ GAMES.wasla={name:'وصلة',cat:'mind',lbc:'#2E7D5B',noTimer:false,
     if(a==='ent'){if(w.length<5){toast('الكلمة لازم 5 حروف');return;}if(!wKnown(w)){toast('هذي الكلمة مو بالقاموس');return;}S.draft.wl='';simulPick(d,ctx.v,w);}},
   resolve(d,picks){const ans=WNORM(WASLA[d.ans]);const gs=(d.gs||d.pl.map(()=>[])).map(x=>[...x]);const solved=[...(d.solved||d.pl.map(()=>0))];let out=d.out;
     picks.forEach((p,s)=>{if(p===null&&d.out[s]==='1')return;gs[s].push(p?WNORM(p):'؟؟؟؟؟');if(p&&WNORM(p)===ans){solved[s]=gs[s].length;out=setAt(out,s,'1');}else if(gs[s].length>=6)out=setAt(out,s,'1');});
-    return wEnd({...d,gs,solved,out,rd:d.rd+1});},
+    return wEnd({...d,gs,gsc:gs.map(x=>x.map(g=>wScore(g,ans).join(''))),solved,out,rd:d.rd+1});},
   // d.out also marks the ones who finished, so the engine's "last one left wins" does not apply here
   onSkip:nd=>wEnd({...nd,win:null,wins:undefined})
 };

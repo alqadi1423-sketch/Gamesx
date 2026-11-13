@@ -5,7 +5,8 @@ const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],
 const RANKS='A23456789TJQK',SUITS='shdc',SUITCH={s:'♠',h:'♥',d:'♦',c:'♣'};
 const deck52=(k=1)=>{const a=[];for(let n=0;n<k;n++)for(const s of SUITS)for(const r of RANKS)a.push(r+s);return a;};
 const rv=c=>RANKS.indexOf(c[0])+1;
-const cardHTML=(c,big,extra)=>c==='??'?`<div class="card back ${big?'big':''}"></div>`:
+// '??' is a card nobody may see (a masked card online keeps its length): drawn face down, still clickable when extra makes it a button
+const cardHTML=(c,big,extra)=>c==='??'?`<div class="card back ${big?'big':''} ${extra||''}"></div>`:
   `<div class="card ${'hd'.includes(c[1])?'red':'blk'} ${big?'big':''} ${extra||''}"><span class="ci">${c[0]==='T'?'10':c[0]}<br>${SUITCH[c[1]]}</span>${'JQK'.includes(c[0])?`<span class="fc">${c[0]}<small>${SUITCH[c[1]]}</small></span>`:`<span class="cs">${SUITCH[c[1]]}</span>`}<span class="ci b">${c[0]==='T'?'10':c[0]}<br>${SUITCH[c[1]]}</span></div>`;
 const cardsOf=s=>s.match(/.{2}/g)||[];
 
@@ -145,6 +146,9 @@ function uStep(d,from,k,dir,out){out=out||d.out;const n=d.pl.length;let s=from;f
 // each card is drawn at random from the pile, so the pile's order in the shared state tells nobody what comes next
 function uDraw(d,k){let dr=d.draw,disc=d.disc,got='';for(let m=0;m<k;m++){if(!dr.length){const top=disc.slice(-2);dr=disc.slice(0,-2);disc=top;}if(!dr.length)break;const j=rnd(dr.length/2)*2;got+=dr.slice(j,j+2);dr=dr.slice(0,j)+dr.slice(j+2);}return [got,{...d,draw:dr,disc}];}
 GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.hands.map(h=>h.length/2+' ورق'),
+  // online each phone sees only its own hand and not the pile; the card just drawn (drew) is shown only to the one who drew it
+  hide:{seat:['hands'],all:['draw']},
+  mask:(d,seat)=>{const v=viewOf({hide:GAMES.uno.hide},d,seat);return v!==d&&typeof d.drew==='string'&&seat!==d.turn?{...v,drew:maskVal(d.drew)}:v;},
   // a 'said UNO' on this phone belongs to the player whose turn just ended, never to the next one
   onTimeout:d=>{S.unoSaid=null;return {...d,drew:false,uno:-1,turn:uStep(d,d.turn,1,d.dir)};},
   // a player who leaves mid-turn takes a drawn card's turn with them, and the turn goes on in the game's direction
@@ -163,7 +167,7 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
     s+=`<div class="row" style="align-items:center">${uCard(top,'big')}<div class="card big back"></div></div>`;
     if(v<0)return s;
     const my=ctx.my&&d.turn===v;const hand=cardsOf(d.hands[v]);
-    if(my&&S.wild!=null)s+=`<p class="lbl" style="text-align:center">اختر اللون</p><div class="row">${'rgby'.split('').map((c,k)=>`<button class="btn swatch" style="background:${UC[c]}" data-ga="wc" data-i="${k}"></button>`).join('')}</div>`;
+    if(my&&S.wild!=null&&(hand[S.wild]||'')[0]==='k')s+=`<p class="lbl" style="text-align:center">اختر اللون</p><div class="row">${'rgby'.split('').map((c,k)=>`<button class="btn swatch" style="background:${UC[c]}" data-ga="wc" data-i="${k}"></button>`).join('')}</div>`;
     if(d.uno>=0&&d.win==null&&(ctx.local||ctx.v!==d.uno))s+=`<div class="row"><button class="btn red" data-ga="catch">${nm(d,d.uno)} ما قال أونو! امسكه (+2)</button></div>`;
     s+=`<p class="lbl" style="text-align:center">أوراقك</p><div class="hand">${hand.map((c,i)=>my&&uPlayable(c,d,hand)?uCard(c,'pick',`data-ga="play" data-i="${i}"`):uCard(c,my?'dim':'')).join('')}</div>`;
     if(my)s+=`<div class="row">${d.drew?'<button class="btn navy" data-ga="pass">مرّر الدور</button>':'<button class="btn blue" data-ga="draw">اسحب ورقة</button>'}${hand.length===2?`<button class="btn ${S.unoSaid===d.gid+':'+d.disc.length?'green':'red'}" data-ga="say">أونو!</button>`:''}</div>`;
@@ -177,7 +181,8 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
     if(a==='pass'){S.unoSaid=null;act({...d,drew:false,uno:-1,turn:uStep(d,t,1,d.dir),last:`${nm(d,t)} مرّر`});return;}
     let idx=i,color=null;
     if(a==='play'){const c=cardsOf(d.hands[t])[i];if(!c||!uPlayable(c,d,cardsOf(d.hands[t])))return;if(c[0]==='k'){S.wild=i;render();return;}}
-    if(a==='wc'){if(S.wild==null)return;idx=S.wild;color='rgby'[i];}
+    // a colour choice left over from an earlier turn (that turn ended on the timer) no longer points at a wild card
+    if(a==='wc'){const w=cardsOf(d.hands[t])[S.wild];if(S.wild==null||!w||w[0]!=='k'||!'rgby'[i]){S.wild=null;render();return;}idx=S.wild;color='rgby'[i];}
     S.wild=null;const said=S.unoSaid===d.gid+':'+d.disc.length;const hand=cardsOf(d.hands[t]);const c=hand.splice(idx,1)[0];let nd={...d,hands:[...d.hands],disc:d.disc+c,color:color||c[0],drew:false,uno:hand.length===1&&!said?t:-1};nd.hands[t]=hand.join('');
     let msg=`${nm(d,t)} لعب ${c[0]==='k'?(c[1]==='F'?'+4':'ورقة ألوان')+' واختار '+UCN[nd.color]:uLabel(c[1])}`;
     const alive=aliveSeats(d).length;let turn;
@@ -199,7 +204,7 @@ const halfV=(n,y)=>PIP[n].map(([a,b])=>`<circle cx="${a}" cy="${b+y}" r="1.9" fi
 const domV=(t,h)=>`<svg viewBox="0 0 20 40" height="${h||84}"><line x1="3" y1="20" x2="17" y2="20" stroke="#2D4763" stroke-width="1"/>${halfV(+t[0],0)}${halfV(+t[1],20)}</svg>`;
 function domEnds(d){if(!d.ch)return null;return [d.ch[0],d.ch[d.ch.length-1]];}
 const domFits=(t,d)=>{const e=domEnds(d);if(!e)return [true,true];return [t.includes(e[0]),t.includes(e[1])];};
-GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',
+GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',hide:{seat:['hands'],all:['bone']},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7A5C45"/><g transform="rotate(-20 50 50)"><rect x="18" y="36" width="64" height="32" rx="6" fill="#fff" stroke="#2D4763" stroke-width="3"/><line x1="50" y1="40" x2="50" y2="64" stroke="#2D4763" stroke-width="2.5"/>${[[28,44],[40,60],[34,52]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.6" fill="#2D4763"/>`).join('')}${[[60,44],[72,44],[60,60],[72,60]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.6" fill="#2D4763"/>`).join('')}</g></svg>`,
   init:n=>{const all=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)all.push(''+a+b);const s=shuffle(all);const k=DOMH[n]||3;const hands=[];for(let p=0;p<n;p++)hands.push(s.slice(p*k,p*k+k).join(''));
     return {hands,bone:s.slice(n*k).join(''),ch:'',pass:0,last:''};},
@@ -239,25 +244,28 @@ GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',
 
 /* ---------- bingo ---------- */
 function seedOf(str){let h=2166136261;for(const ch of String(str)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
-function bingoCard(d,s){const R=mulberry(seedOf(d.gid+':'+d.pl[s]));const a=[...Array(25).keys()].map(x=>x+1);for(let i=24;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+// each seat's card comes from its own random seed (d.bs), hidden online; old states without bs fall back to gid and role
+function bingoCard(d,s){const R=mulberry(seedOf(d.bs?d.bs[s]:d.gid+':'+d.pl[s]));const a=[...Array(25).keys()].map(x=>x+1);for(let i=24;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 const BLINES=(()=>{const L=[];for(let k=0;k<5;k++){L.push([0,1,2,3,4].map(c=>k*5+c));L.push([0,1,2,3,4].map(r=>r*5+k));}L.push([0,6,12,18,24]);L.push([4,8,12,16,20]);return L;})();
 const bingoLines=(card,called)=>BLINES.filter(L=>L.every(i=>called[card[i]-1]==='1')).length;
-GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:nextSeat(d,d.turn)}),
+GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:nextSeat(d,d.turn)}),hide:{seat:['bs']},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D45D87"/>${[0,1,2,3,4].map(r=>[0,1,2,3,4].map(c=>`<rect x="${12+c*16}" y="${12+r*16}" width="14" height="14" rx="3" fill="${(r===c)?'#ffd84d':'#fff'}"/>`).join('')).join('')}<path d="M14 14L86 86" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
-  init:()=>({called:'0'.repeat(25),last:''}),
+  // ln: lines each seat has made, kept in the state so the scores show without the hidden cards
+  init:n=>({called:'0'.repeat(25),bs:Array(n).fill(0).map(()=>rid()+rid()),ln:Array(n).fill(0),last:''}),
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
-  points:d=>d.pl.map((r,s)=>bingoLines(bingoCard(d,s),d.called)+'/5'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
+  points:d=>d.pl.map((r,s)=>(d.ln?d.ln[s]:bingoLines(bingoCard(d,s),d.called))+'/5'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;if(v<0)return '';
     const card=bingoCard(d,v);const lines=BLINES.filter(L=>L.every(i=>d.called[card[i]-1]==='1')).flat();
     const ln=bingoLines(card,d.called);return `<div class="bprog"><div><i style="width:${ln*20}%;background:${col(d,v)}"></i></div></div>
     <div class="cellgrid" style="grid-template-columns:repeat(5,minmax(0,1fr));background:${col(d,v)};max-width:360px">${card.map((n,i)=>{const c=d.called[n-1]==='1';
       return c?`<div class="cg" style="background:${lines.includes(i)?'#ffd84d':lit(d,v)};text-decoration:line-through;font-size:22px">${n}</div>`:`<button class="cg" style="font-size:22px" data-ga="m" data-i="${n}" ${ctx.my?'':'disabled'}>${n}</button>`;}).join('')}</div>`;},
   click(a,n,d,ctx){
-    if(!ctx.my||d.called[n-1]==='1')return;const t=d.turn;const called=setAt(d.called,n-1,'1');
-    const done=d.pl.map((r,s)=>d.out[s]!=='1'&&bingoLines(bingoCard(d,s),called)>=5?s:-1).filter(s=>s>=0);
+    if(!ctx.my||!(n>=1&&n<=25)||d.called[n-1]==='1')return;const t=d.turn;const called=setAt(d.called,n-1,'1');
+    const ln=d.pl.map((r,s)=>bingoLines(bingoCard(d,s),called));
+    const done=d.pl.map((r,s)=>d.out[s]!=='1'&&ln[s]>=5?s:-1).filter(s=>s>=0);
     let win=null;if(done.length)win=done.includes(t)?t:done.length===1?done[0]:'d';
-    act({...d,called,win,turn:nextSeat(d,t),last:`${nm(d,t)} اختار ${n}`});
+    act({...d,called,ln,win,turn:nextSeat(d,t),last:`${nm(d,t)} اختار ${n}`});
   }
 };
 

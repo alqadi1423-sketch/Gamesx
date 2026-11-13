@@ -7,7 +7,7 @@ const ROOM_PATH = /^\/ws\/(g-[a-z0-9]{4,6})$/;
 // the biggest real message is a drawing game near its end (about 15 KB); nearby rooms stop at 32 KB too
 const MAX_MSG = 32768;
 // a phone sends about one message per move (fast test play peaks at 40 in 10 s); more than this is a script
-const RATE_MAX = 60, RATE_MS = 10000;
+const RATE_MAX = 120, RATE_MS = 10000;
 
 export class Room {
   constructor(ctx, env) { this.ctx = ctx; this.rate = new Map(); } // peer -> {t0, n, cut}; only lives while the room is awake

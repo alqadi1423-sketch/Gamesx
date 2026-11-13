@@ -14,9 +14,11 @@ const onceSet=new Set();const once=k=>{if(onceSet.has(k))return false;onceSet.ad
 const escH=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BACK='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const PERSON='<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="5" fill="#fff"/><path d="M3 23c0-6 4-9 9-9s9 3 9 9z" fill="#fff"/></svg>';
-const LSK={room:'alaabna.v3',name:'alaabna.name',mute:'alaabna.mute',local:'alaabna.local',lgame:'alaabna.lgame'};
+const LSK={room:'alaabna.v4',name:'alaabna.name',mute:'alaabna.mute',local:'alaabna.local',lgame:'alaabna.lgame'};
 const lsGet=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
+// rooms saved by the app before seats were tied to device keys cannot be resumed
+try{localStorage.removeItem('alaabna.v3');}catch(e){}
 
 /* ================= players and names ================= */
 /* a game has d.pl = list of roles (colours) taking part; seat i plays role d.pl[i] */
@@ -48,30 +50,37 @@ const cfg=()=>S.st.cfg||CFG0;
 function players(){
   if(S.mode==='local')return [...Array(S.localN).keys()];
   const k=cfg().kick||[];
-  return [...S.roles].filter(r=>isRole(r)&&!k.includes(r)).sort((a,b)=>a-b);
+  return [...S.roles].filter(r=>isRole(r)&&S.ids[r]&&!k.includes(S.ids[r])).sort((a,b)=>a-b);
 }
-function actingHost(){if(S.mode!=='online')return null;const r=[...S.roles].filter(isRole).sort((a,b)=>a-b);return r.length?r[0]:null;}
-const isHost=()=>S.mode==='local'||(S.me!=null&&S.me===actingHost());
+// the role (colour) of the device that publishes the room's game, see net.js
+function actingHost(){if(S.mode!=='online')return null;const r=roleOfFp(S.hostFp);return r<0?null:r;}
+const isHost=()=>S.mode==='local'||amHost();
 const canPick=()=>S.mode==='local'||isHost()||(cfg().pick==='all'&&S.me!=null);
 
 /* a game may set its own first mover with start(d,base): e.g. chess always opens with seat 0 (white) */
 function newD(g,starter,pl){const n=pl.length;starter=starter%n;const G=GAMES[g],base=G.init(n);const d={...base,gid:rid(),st:starter,turn:starter,pl,out:'0'.repeat(n),win:null};return G.start?G.start(d,base):d;}
 function setGame(g){if(netDown())return;
+  if(S.mode==='online'&&!amHost()){if(g&&cfg().pick==='all'&&S.me!=null)queueIntent({t:'game',g});return;}
   if(g){const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
     if(GAMES[g].minP&&pl.length<GAMES[g].minP){toast(`${GAMES[g].name} تحتاج ${GAMES[g].minP} لاعبين أو أكثر`);return;}
     S.st={...S.st,g,s:S.st.s+1,d:newD(g,0,pl),sc:matchSc()};}
   else S.st={...S.st,g:null,s:S.st.s+1,d:null,sc:matchSc()};
   S.seen=null;S.browse=false;S.showResult=false;resetUI();afterChange();
 }
-function newRound(){if(netDown())return;const d=S.st.d;const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
+function newRound(){if(netDown())return;if(S.mode==='online'&&!amHost()){queueIntent({t:'new'});return;}const d=S.st.d;const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
   const G0=GAMES[S.st.g];if(G0&&G0.minP&&pl.length<G0.minP){toast(`${G0.name} تحتاج ${G0.minP} لاعبين أو أكثر`);return;}
   if(d&&d.mw!=null)toast('مباراة جديدة! النقاط رجعت صفر');
   const st=d?(d.st||0)+1:0;S.st={...S.st,s:S.st.s+1,d:newD(S.st.g,st,pl),sc:matchSc()};S.seen=null;S.showResult=false;resetUI();afterChange();}
 function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];S.draft={...(S.draft.q!=null?{q:S.draft.q}:{})};S.sel=[];S.simon=null;S.lq=null;S.lf=null;S.sp=null;S.mcell=null;S.mprops=false;S.jk=null;S.arA=null;S.dwSel=null;S.rolling=false;}
 let ACT_CAP=null;
-function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}if(netDown())return;if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number'){(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));nd=matchEnd(nd,sc);}S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
-function setCfg(patch){if(netDown())return;S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
-function setPriv(role,p){if(netDown())return;S.priv[role]=p;afterChange();}
+function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}if(NET_CAP){NET_CAP.v=nd;return;}if(netDown())return;
+  // online, only the acting host changes the game: a player's move goes to it (net.js)
+  if(S.mode==='online'&&!amHost()){propose(nd);return;}
+  if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}if(!S.inIntent){S.wild=null;S.dside=null;}const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number'){(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));nd=matchEnd(nd,sc);}S.st={...S.st,s:S.st.s+1,d:nd,sc};if(!S.inIntent)sfx('tap');afterChange();}
+function setCfg(patch){if(netDown())return;if(S.mode==='online'&&!amHost())return;S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
+function setPriv(role,p){if(NET_CAP){NET_CAP.pv={role,p};return;}if(netDown())return;
+  if(S.mode==='online'&&!amHost()){if(role!==S.me||S.me==null)return;S.priv[role]=p;queueIntent({t:'pv',p});render();return;}
+  S.priv[role]=p;afterChange();}
 function afterChange(){ensurePriv();publish();render();queueSimul();}
 
 /* simultaneous rounds: every alive seat stores {rd,pick} in its private part; one resolver applies G.resolve.
@@ -82,32 +91,26 @@ function queueSimul(){if(simulT)return;simulT=setTimeout(()=>{simulT=null;trySim
 // NOPICK marks a seat that chose to give no answer, so the round does not wait for it
 const NOPICK='~';
 function simulPicks(d){return d.pl.map((r,s)=>{if(d.out[s]==='1')return null;const p=S.priv[r];return p&&p.gid===d.gid&&p.rd===d.rd&&p.pick!=null?(p.pick===NOPICK?null:p.pick):undefined;});}
-const isEnforcer=()=>S.mode==='local'||(S.me!=null&&S.me===actingHost()&&!S.offline);
+const isEnforcer=()=>S.mode==='local'||(amHost()&&!S.offline);
 function trySimul(){
   const {g,d}=S.st;if(!g||!d||d.win!=null)return;const G=GAMES[g];if(!G||!isSimul(G,d))return;
   const picks=simulPicks(d);if(picks.some(x=>x===undefined))return;
-  if(S.mode==='online'){if(S.offline)return;const present=d.pl.filter((r,s)=>d.out[s]!=='1'&&S.roles.has(r));if(!present.length||Math.min(...present)!==S.me)return;}
+  if(S.mode==='online'&&(!amHost()||S.offline))return;
   act(G.resolve(d,picks));
 }
 function simulPick(d,seat,pick){const r=d.pl[seat];const p=S.priv[r]||{gid:d.gid};setPriv(r,{...p,gid:d.gid,rd:d.rd,pick});}
 const hasPicked=(d,seat)=>{const p=S.priv[d.pl[seat]];return !!(p&&p.gid===d.gid&&p.rd===d.rd&&p.pick!=null);};
 function ensurePriv(){
   const {g,d}=S.st;if(!g||!d)return;const G=GAMES[g];if(!G||!(G.privInit||G.resolve))return;
-  const roles=S.mode==='local'?d.pl:(S.me==null||!d.pl.includes(S.me)?[]:[S.me]);
+  // online the host makes every seat's part (dice, secrets, first fleets); the players get theirs sealed from it
+  const roles=S.mode==='local'||amHost()?d.pl:[];
   for(const r of roles){const p=S.priv[r];if(!p||p.gid!==d.gid||(G.privStale&&G.privStale(d,p,r)))S.priv[r]={...(G.privInit?G.privInit(d,r):{}),gid:d.gid};}
 }
-function publish(rx){
-  save();if(S.mode!=='online'||!S.nr)return;
-  const o={g:S.st.g,s:S.st.s,d:S.st.d,sc:S.st.sc,cfg:S.st.cfg,r:S.me,p:S.me==null?null:S.priv[S.me],n:S.myName.slice(0,14),ch:S.myChat.slice(-10)};
-  if(rx)o.rx=rx;
-  // Claude rooms take 4 KB per player: drop the oldest chat lines first if the game state is large (our own rooms say how much they take: nr.max)
-  const max=S.nr.max||3800;let size;while((size=new Blob([JSON.stringify(o)]).size)>max&&o.ch.length)o.ch=o.ch.slice(1);
-  if(size>max&&!S.bigWarn){S.bigWarn=true;console.warn('presence over the room limit',size,max);toast('اللعبة صارت أكبر من حد الغرفة، يمكن ما توصل للباقين');}
-  S.nr.presence(o).catch(e=>console.warn('presence',e));
-}
+function publish(rx){save();if(S.mode!=='online'||!S.nr)return;schedulePublish(rx);}
 function save(){
   if(S.mode==='local'){lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames,bots:S.bots}));if(S.st.g&&S.st.d)lsSet(LSK.lgame,JSON.stringify({st:S.st,priv:S.priv,n:S.localN,names:S.localNames,bots:S.bots}));}
-  if(S.mode!=='online'||!S.code)return;lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',me:S.me,st:S.st,priv:S.me==null?null:S.priv[S.me]}));}
+  if(S.mode!=='online'||!S.code)return;const h=amHost();
+  lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',ep:S.epoch,host:h,me:S.me,st:h?S.st:(S.hst||S.st),priv:h?S.priv:(S.me!=null?{[S.me]:S.priv[S.me]}:{}),ids:S.ids,lastN:h?S.lastN:{},n:S.sentN}));}
 function loadSaved(){try{return JSON.parse(lsGet(LSK.room)||'null');}catch(e){return null;}}
 // a local game that was not finished when the app closed or went home
 function loadLocal(){try{const l=JSON.parse(lsGet(LSK.lgame)||'null');const d=l&&l.st&&l.st.d;return d&&d.win==null&&Array.isArray(d.pl)&&GAMES[l.st.g]?l:null;}catch(e){return null;}}
@@ -191,36 +194,37 @@ function getRoom(){
 }
 function genCode(){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<6;i++)c+=A[rnd(A.length)];return c;}
 let lastPeers=[];
-function takenRoles(){const t=new Set();for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(isRole(r))t.add(r);}return t;}
-function pickRole(pref){const t=takenRoles(),c=cfg(),k=c.kick||[];
-  const okRole=r=>r>=0&&r<MAXP&&!t.has(r)&&!k.includes(r);
-  if(c.lock)return typeof pref==='number'&&(c.members||[]).includes(pref)&&okRole(pref)?pref:null;
-  if(typeof pref==='number'&&okRole(pref))return pref;for(let r=1;r<MAXP;r++)if(okRole(r))return r;return okRole(0)?0:null;}
 async function enterRoom(code,host,restore,given){
   S.joining=true;S.roomErr=null;render();
+  await SEAL.ready;
+  if(!SEAL.ok){S.joining=false;S.roomErr='هذا المتصفح ما يدعم الاتصال الآمن، حدّثه أو جرّب متصفح ثاني عشان تلعب أونلاين.';render();return;}
   const room=given||await getRoom();
   if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
   try{nr=await room.join('g-'+code.toLowerCase());}
   catch(e){S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
+  netReset();
   S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
-  S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();S.fresh=!host||!!restore;
-  if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st};if(!Array.isArray(S.st.sc)||S.st.sc.length<MAXP)S.st.sc=Array(MAXP).fill(0);}
+  S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();
+  // a saved room: its state, the seat table and the epoch it was at; a saved host takes the room back only if nobody else did (net.js)
+  if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st,cfg:cleanCfg(restore.st.cfg)};if(!cleanSc(S.st.sc))S.st.sc=Array(MAXP).fill(0);
+    S.ids=validIds(restore.ids)||S.ids;S.epoch=Number.isInteger(restore.ep)?restore.ep:0;S.sentN=+restore.n||0;
+    if(restore.host)S.restore=restore;else{S.hst={...S.st};const r=S.ids.indexOf(SEAL.fp),p=restore.priv&&restore.priv[r];if(r>=0&&p)S.priv[r]=p;}}
   else S.st={g:null,s:host?1:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};
-  if(host){S.me=0;S.pending=false;if(!restore)S.modal='settings';}
+  if(host&&!restore){S.me=0;S.pending=false;S.ids[0]=SEAL.fp;S.epoch=1;S.hostFp=SEAL.fp;S.hostK=SEAL.k;S.hostSince=Date.now();S.lostAt=0;S.modal='settings';}
   else{S.me=null;S.pending=true;
-    setTimeout(()=>{if(S.nr!==nr)return;S.me=pickRole(restore?restore.me:null);if(S.me!=null&&restore&&restore.me===S.me)S.priv[S.me]=restore.priv||null;S.pending=false;recomputeRoles();afterChange();},1500);
     // a mistyped code opens a new empty room: say so instead of waiting there for nobody
     setTimeout(()=>{if(S.nr===nr&&!lastPeers.some(p=>!p.sameTab)){S.roomEmpty=true;render();}},3500);}
   S.unsub=nr.onPeers(onPeers,st=>{if(S.nr===nr)netState(st);});
   setTimeout(()=>{if(S.nr===nr)render();},GRACE+200);
   afterChange();
 }
-function leaveRoom(msg){if(S.unsub)try{S.unsub();}catch(e){}S.unsub=null;if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;S.offline=false;S.roomEmpty=false;lastPeers=[];S.roles=new Set();if(msg)toast(msg);render();}
+function leaveRoom(msg){if(S.unsub)try{S.unsub();}catch(e){}S.unsub=null;if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;S.offline=false;S.roomEmpty=false;lastPeers=[];S.roles=new Set();netReset();S.me=null;if(msg)toast(msg);render();}
 /* what the room transport says about the connection: 'lost' / 'back', 'full' while it tries to get back in,
    and for a nearby room 'gone' (the room's phone is no longer around) or 'bye' (its owner closed it) */
 function netState(st){
-  if(st==='back'){if(S.offline){S.offline=false;toast('رجع الاتصال 👍');}publish();render();return;}
+  S.lostAt=Date.now();
+  if(st==='back'){if(S.offline){S.offline=false;toast('رجع الاتصال 👍');}reseal();render();return;}
   if(st==='gone'||st==='bye'){leaveRoom(st==='bye'?'صاحب الغرفة قفلها':'ما عاد نلقى جوال صاحب الغرفة');return;}
   // Claude rooms only report trouble, never that it is over: there it stays a toast
   if(st!=='lost'&&st!=='full'){toast('انقطع الاتصال، نحاول نرجع…');return;}
@@ -229,7 +233,8 @@ function netState(st){
 function netDown(){if(S.mode!=='online'||!S.offline)return false;if(Date.now()-(S.offT||0)>1500){S.offT=Date.now();toast('انقطع الاتصال، استنى لين يرجع');}return true;}
 // a player who dropped out gets GRACE ms before the others can skip them, so a short network cut does not cost the game
 const GRACE=15000;
-function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(isRole(r))s.add(r);}
+// the roles in the room: seats whose device key is here
+function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(let r=0;r<MAXP;r++)if(S.ids[r]&&S.peersByFp[S.ids[r]])s.add(r);
   const now=Date.now();S.goneAt=S.goneAt||{};for(const r of S.roles)if(!s.has(r)&&S.goneAt[r]==null){S.goneAt[r]=now;setTimeout(()=>{if(S.mode==='online')render();},GRACE+200);}for(const r of s)delete S.goneAt[r];
   S.roles=s;}
 
@@ -238,9 +243,10 @@ function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(const 
    the room settings and the session scores follow the acting host only, and every string in the game state keeps only the
    few tags the games write themselves (a name in its colour, small notes, line breaks); anything else shows as plain text. */
 function isRole(r){return Number.isInteger(r)&&r>=0&&r<MAXP;}
-const roleList=a=>Array.isArray(a)&&a.length<=16&&a.every(isRole);
+// kicked players and the members of a locked room are device keys (fp), so leaving and coming back does not undo them
+const fpList=a=>Array.isArray(a)&&a.length<=16&&a.every(x=>typeof x==='string'&&/^[\w-]{12}$/.test(x));
 // only the values the settings sheet offers
-const CFGOK={pick:v=>v==='host'||v==='all',timer:v=>[0,15,30,60].includes(v),target:v=>[0,3,5,10].includes(v),lock:v=>typeof v==='boolean',kick:roleList,members:roleList};
+const CFGOK={pick:v=>v==='host'||v==='all',timer:v=>[0,15,30,60].includes(v),target:v=>[0,3,5,10].includes(v),lock:v=>typeof v==='boolean',kick:fpList,members:fpList};
 function cleanCfg(c,base){const o={...CFG0,...base};if(c&&typeof c==='object')for(const k in CFGOK)if(CFGOK[k](c[k]))o[k]=Array.isArray(c[k])?[...new Set(c[k])]:c[k];return o;}
 const cleanSc=sc=>Array.isArray(sc)&&sc.length===MAXP&&sc.every(x=>typeof x==='number'&&isFinite(x))?sc.slice():null;
 const TAGOK=/^<(?:\/(?:b|small|span|em|i|u|strong|bdi)|br\s*\/?|(?:b|small|span|em|i|u|strong|bdi)(?:\s+(?:class="[\w -]{0,40}"|dir="(?:ltr|rtl|auto)"|style="(?:(?:color|background|font-size|font-weight|--c):(?:#[0-9A-Fa-f]{3,8}|var\(--[\w-]+\)|\d{1,3}(?:px|%)?|bold);?)+"))*)\s*>$/;
@@ -256,67 +262,22 @@ function cleanD(d){
   return cleanVal(d,0);}
 // a peer's {g,d} made safe, or null when it is not a state this app could have made
 function cleanSt(pr){try{const g=pr.g==null?null:pr.g;if(g!==null&&!(typeof g==='string'&&Object.prototype.hasOwnProperty.call(GAMES,g)))return null;return {g,d:g==null?null:cleanD(pr.d)};}catch(e){return null;}}
-const stKey=st=>JSON.stringify([st.g??null,st.d??null]);
-// session points for a win this device sees in an adopted state (the same rule as act())
-function winCredit(sc,od,nd){if(!nd||typeof nd.win!=='number'||od&&od.gid===nd.gid&&od.win!=null)return sc;sc=[...sc];(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));return sc;}
-function onPeers(ch){
-  if(S.mode!=='online')return;
-  const peers=ch&&Array.isArray(ch.peers)?ch.peers:[];lastPeers=peers;
-  // who holds each role: when two peers claim one, the lower peer id keeps it and the other picks again
-  const hold={};
-  for(const p of peers){if(p.sameTab){S.myPeer=p.peer;continue;}const r=p.kind==='viewer'&&p.presence?p.presence.r:null;if(isRole(r)&&(!hold[r]||String(p.peer)<String(hold[r].peer)))hold[r]=p;}
-  if(S.me!=null&&hold[S.me]&&String(hold[S.me].peer)<String(S.myPeer))S.me=pickRole(null);
-  let adopt=null,myKey=null;
-  for(const p of peers){
-    if(p.sameTab||p.kind!=='viewer')continue;const pr=p.presence;
-    if(!pr||typeof pr!=='object'||pr.r!=null&&!isRole(pr.r))continue;
-    // a peer speaks only for the role it really holds, and never for this device's own role
-    const r=isRole(pr.r)&&hold[pr.r]===p&&pr.r!==S.me?pr.r:null,n=typeof pr.n==='string'?pr.n.slice(0,14):'';
-    if(r!=null){
-      if(pr.p!=null&&typeof pr.p==='object')try{S.priv[r]=cleanVal(pr.p,0);}catch(e){}
-      if(typeof pr.n==='string')S.names[r]=n;
-      const rx=pr.rx;if(rx&&Number.isInteger(rx.e)&&typeof rx.t==='number'&&rx.t>(S.rxSeen[r]||0)){S.rxSeen[r]=rx.t;if(Date.now()-rx.t<8000)setTimeout(()=>floatRx(r,rx.e),0);}}
-    // chat from everybody in the room, spectators too (kept with role -1)
-    if(Array.isArray(pr.ch))for(const m of pr.ch.slice(-10)){if(!m||typeof m.i!=='string'||m.i.length>40||typeof m.x!=='string')continue;const o=S.chat[m.i];
-      if(o){if(o.r===-1&&r!=null)o.r=r;continue;}
-      S.chat[m.i]={i:m.i,r:r??-1,n,t:typeof m.t==='number'&&isFinite(m.t)?m.t:Date.now(),x:m.x.slice(0,200)};if(S.chatReady&&S.modal!=='chat'&&!(S.browse||!S.st.g))chatPop(S.chat[m.i]);}
-    // the newest state wins; at the same number every device picks the same copy, whoever is in the room
-    // (a jump far beyond the room's number would leave no room to count past it)
-    if(!Number.isInteger(pr.s)||pr.s<(adopt?adopt.s:S.st.s)||pr.s>S.st.s+1e5&&!S.fresh)continue;
-    if(myKey==null)myKey=stKey(S.st);
-    if(!adopt&&pr.s===S.st.s&&JSON.stringify([pr.g??null,pr.d??null])===myKey)continue;
-    const c=cleanSt(pr);if(!c)continue;const k=stKey(c);
-    if(pr.s>(adopt?adopt.s:S.st.s)||k>(adopt?adopt.k:myKey))adopt={...c,s:pr.s,k,pr};
-  }
-  recomputeRoles();S.chatReady=true;if(peers.some(p=>!p.sameTab))S.roomEmpty=false;
-  // the room settings and the session scores belong to the acting host: other peers' copies are not taken
-  const h=actingHost(),hp=h!=null&&h!==S.me&&hold[h]?hold[h].presence:null;let synced=false;
-  if(adopt){
-    const oldGid=S.st.d&&S.st.d.gid,oldG=S.st.g,hsc=adopt.pr===hp||S.fresh?cleanSc(adopt.pr.sc):null;
-    S.st={g:adopt.g,s:adopt.s,d:adopt.d,sc:hsc||winCredit(S.st.d&&S.st.d.mw!=null&&(adopt.d&&adopt.d.gid)!==oldGid?Array(MAXP).fill(0):S.st.sc,S.st.d,adopt.d),cfg:S.st.cfg};S.fresh=false;
-    if(S.st.g!==oldG){resetUI();S.browse=false;S.showResult=false;}else if((S.st.d&&S.st.d.gid)!==oldGid){resetUI();S.showResult=false;}
-  }
-  if(hp){const c=cleanCfg(hp.cfg,S.st.cfg),sc=Number.isInteger(hp.s)&&hp.s>=S.st.s&&cleanSc(hp.sc);
-    if(JSON.stringify(c)!==JSON.stringify(S.st.cfg)){S.st={...S.st,cfg:c};synced=true;}
-    if(sc&&JSON.stringify(sc)!==JSON.stringify(S.st.sc)){S.st={...S.st,sc};synced=true;}}
-  // a kick counts only from the acting host's settings, and never against the acting host itself
-  if(S.me!=null&&S.me!==h&&(cfg().kick||[]).includes(S.me)){try{localStorage.removeItem(LSK.room);}catch(e){}leaveRoom('صاحب الغرفة طلّعك منها');return;}
-  if(adopt){ensurePriv();publish();}else if(synced)save();
-  render();queueSimul();
-}
+// onPeers (reading the room) is in net.js
 
 /* ================= helpers ================= */
 function toast(t){const el=document.createElement('div');el.className='toast';el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),2000);}
-function mySeat(d){return S.mode==='local'?null:d.pl.indexOf(S.me);}
-function mkCtx(){
-  const d=S.st.d,G=GAMES[S.st.g],local=S.mode==='local';
+function mySeat(d){d=d||S.st.d;return S.mode==='local'||!d?null:d.pl.indexOf(S.me);}
+// d and priv are what this phone may see (online: its own view, net.js dView/privView)
+function mkCtx(d=dView(),priv=privView()){
+  const G=GAMES[S.st.g],local=S.mode==='local';
   if(local&&hasBots()){const hs=humanSeats(d),sim=isSimul(G,d);let v;
     if(sim)v=hs.find(s=>d.out[s]!=='1'&&!hasPicked(d,s));else if(!isBot(d,d.turn))v=d.turn;
     if(v==null)v=hs.includes(S.lastHuman)?S.lastHuman:hs[0];if(v==null)v=-1;S.lastHuman=v;
     const extra=G.canAct?G.canAct(d,S.priv):true;
     if(sim)return {local:false,v,priv:S.priv,my:v>=0&&d.out[v]!=='1'&&d.win==null&&!hasPicked(d,v)&&extra,simul:true,bots:true};
     return {local:false,v,priv:S.priv,my:d.win==null&&extra&&d.turn===v,bots:true};}
-  const v=local?(G.viewer?G.viewer(d,S.priv):d.turn):d.pl.indexOf(S.me);
+  if(!local)return ctxFor(d,d.pl.indexOf(S.me),priv);
+  const v=G.viewer?G.viewer(d,S.priv):d.turn;
   const extra=G.canAct?G.canAct(d,S.priv):true;
   if(isSimul(G,d)){const ok=v!=null&&v>=0&&d.out[v]!=='1'&&d.win==null&&!hasPicked(d,v);return {local,v,priv:S.priv,my:ok&&extra,simul:true};}
   return {local,v,priv:S.priv,my:d.win==null&&extra&&(local||d.turn===v)};
@@ -328,6 +289,9 @@ function turnTxt(d,ctx){
 // seats whose player is not in the room; with all=false only those gone for longer than GRACE (they can be skipped)
 function absentSeats(d,G,all){if(S.mode!=='online'||d.win!=null)return [];const off=s=>{const r=d.pl[s];return !S.roles.has(r)&&(all||Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE);};
   if(isSimul(G,d))return aliveSeats(d).filter(s=>off(s)&&!hasPicked(d,s));return off(d.turn)?[d.turn]:[];}
+// the host (or the one phone) takes the players who are gone out of the round
+function skipAbsent(){const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];const gone=absentSeats(d,G);if(!gone.length)return;let out=d.out;for(const x of gone)out=setAt(out,x,'1');const al=aliveSeats(d,out);
+  const nd={...d,out,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}
 function winTitle(d,G,ctx){if(Array.isArray(d.wins)&&d.wins.length>1&&!(G.winText&&G.winText(d)))return !ctx.local&&d.wins.includes(ctx.v)?'فزتوا! 🎉':`فاز ${d.wins.map(w=>nm(d,w)).join(' و')}!`;return G.winText&&G.winText(d)||(d.win==='d'?'تعادل!':(!ctx.local&&d.win===ctx.v?'فزت! 🎉':`فاز ${nm(d,d.win)}!`));}
 function statusHTML(d,G,ctx){try{
   if(d.win!=null){
@@ -336,6 +300,7 @@ function statusHTML(d,G,ctx){try{
   }
   let s=G.status?G.status(d,ctx):turnTxt(d,ctx);
   if(!ctx.local&&ctx.v<0)s+='<br><small>تتفرج الحين، وتدخل معهم في الجولة الجاية</small>';
+  if(S.mode==='online'&&!hostHere())s+='<br><span class="gone">صاحب الغرفة طلع، ننتظر…</span>';
   const gone=absentSeats(d,G),wait=gone.length?[]:absentSeats(d,G,true);
   if(!ctx.local&&gone.length)s+=`<br><span class="gone">${gone.map(x=>nm(d,x)).join('، ')} طلع <button class="sm" data-a="skip">تخطّاه</button></span>`;
   else if(!ctx.local&&wait.length)s+=`<br><span class="gone">${wait.map(x=>nm(d,x)).join('، ')} انقطع، ننتظره شوي…</span>`;
@@ -401,7 +366,7 @@ function render(){
   const nm_=chatList().length;app.querySelectorAll('.msgs').forEach(b=>{if(b._n!==nm_||!b._s){b.scrollTop=b.scrollHeight;b._n=nm_;b._s=1;}});
   if(fid&&document.activeElement!==app.querySelector(`[data-draft="${fid}"]`)){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(cs,cs);}catch(e){}}}
   const strip=app.querySelector('.players');if(strip&&strip.scrollWidth>strip.clientWidth+2){const on=strip.querySelector('.pt.on');const k=S.st.g+':'+(S.st.d&&S.st.d.turn);if(on&&S.stripKey!==k){S.stripKey=k;const c=strip.getBoundingClientRect(),e=on.getBoundingClientRect();strip.scrollBy({left:(e.left+e.width/2)-(c.left+c.width/2),behavior:'smooth'});}}
-  const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(S.st.d,mkCtx());}catch(e){console.error(e);}
+  const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(dView(),mkCtx());}catch(e){console.error(e);}
 }
 function topBar(title,back,extra){
   return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="الصوت">${S.mute?'🔇':'🔊'}</button></div>`;
@@ -470,6 +435,7 @@ function roomBar(full){try{
   const av=pl.map(r=>`<span class="av ${r===S.me?'me':''}" data-r="${r}" style="--c:${COLS[r]}">${shapeW(r)}${r===h?'<em>👑</em>':''}</span>`).join('');
   let s=`<div class="roombar"><div class="rb-code"><small>${near?'📶 غرفة قريبة':'رمز الغرفة'}${cfg().lock?' 🔒':''}</small><b class="code">${S.code}</b></div>${near?'':'<button class="rbb" data-a="copy" aria-label="نسخ الرمز">نسخ</button>'}<div class="rb-av">${av}</div><button class="rbb" data-a="m-settings" aria-label="الإعدادات">⚙️</button></div>`;
   // the connection is down, or nobody else is in this room (most likely a mistyped code): say it where everyone looks
+  if(S.needUpd)s+='<p class="updb" role="status">حدّث التطبيق عشان تلعب في هالغرفة</p>';
   if(S.offline)s+=`<p class="err" role="status">${S.offline==='full'?'الغرفة مليانة، نحاول ندخل مرة ثانية…':'انقطع الاتصال، نحاول نرجع…'}</p>`;
   else if(S.roomEmpty&&pl.length<2)s+=`<div class="panel"><p class="err">ما لقينا أحد في هذي الغرفة، تأكد من الرمز</p><div class="acts"><button class="btn" data-a="recode">عدّل الرمز</button><button class="btn navy" data-a="leave">اطلع</button></div></div>`;
   if(full){const me=S.pending?'<p class="note">جاري اختيار لونك…</p>':S.me==null?'<p class="note">تتفرج الحين</p>':'';
@@ -516,7 +482,7 @@ function scoreBar(sc,d){try{
     return `<div class="pt ${on?'on':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}"><i>${shapeW(r)}${sc[r]?`<b>${escH(sc[r])}</b>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${escH(pts[s])}</em>`:''}</div>${pk}</div>`;}).join('')}</div>`;}catch(e){console.error(e);return '';}
 }
 function renderGame(){
-  const {g,d,sc}=S.st,G=GAMES[g];const ctx=mkCtx();let body=null,cover=false;
+  const {g,sc}=S.st,G=GAMES[g],d=dView();const ctx=mkCtx(d);let body=null,cover=false;
   if(S.mode==='local'&&G.viewer&&hasBots()){const hs=humanSeats(d);const v=d.win==null&&hs.length>1&&ctx.v>=0?ctx.v:null;
     if(v!=null&&S.seen!==v){cover=true;body=`<div class="cover" style="background:${col(d,v)}"><p>الجهاز الحين لـ</p><h2>${nm(d,v)}</h2><p>خل الباقين ما يشوفون الشاشة</p><button class="big" data-a="reveal" data-i="${v}">أنا ${nm(d,v)}، ورّني</button></div>`;}}
   else if(S.mode==='local'&&G.viewer){
@@ -534,7 +500,7 @@ function renderGame(){
   const left=timeLeft();
   OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid','<button class="ib" data-a="m-help" aria-label="القواعد">؟</button>')}${roomBar()}${scoreBar(sc,d)}
   <div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div>
-  <div class="status ${ctx.my&&!cover&&S.mode==='online'?'mine':''}">${cover?'':statusBox(statusHTML(d,G,ctx))}</div><div class="board ${enter?'enter':''}">${body}</div>
+  <div class="status ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}">${cover?'':statusBox(statusHTML(d,G,ctx))}</div><div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>
   ${S.mode==='online'?fabs():''}
   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
 }
@@ -570,7 +536,7 @@ function modalHTML(){
   }
   return `<div class="sheet-bg" data-a="closemodal"><div class="sheet"><div class="sh-head"><span></span><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div>${inner}${m==='settings'?'<button class="big navy" data-a="closemodal">تم</button>':''}</div></div>`;
 }
-function chatList(){return Object.values(S.chat).sort((a,b)=>a.t-b.t).slice(-60);}
+function chatList(){return Object.values(S.chat).filter(m=>m.s!==1).sort((a,b)=>a.t-b.t).slice(-60);}
 function unread(){return Object.values(S.chat).filter(m=>m.t>S.chatSeen&&m.r!==S.me).length;}
 function chatName(m){if(m.r===S.me)return 'أنت';const n=escH(((isRole(m.r)&&S.names[m.r])||m.n||'').slice(0,14));return m.r===-1?(n?n+' (متفرج)':'متفرج'):n||NAMES[m.r]||'لاعب';}
 const hhmm=t=>{const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');};
@@ -593,7 +559,10 @@ app.addEventListener('click',e=>{
   const t=e.target.closest('[data-a],[data-ga]');if(!t||t.disabled)return;
   if(t.classList.contains('sheet-bg')&&e.target!==t)return;
   const i=t.dataset.i!=null?+t.dataset.i:null;
-  if(t.dataset.ga){if(netDown())return;const G=GAMES[S.st.g];if(G&&S.st.d)G.click(t.dataset.ga,i,S.st.d,mkCtx());return;}
+  if(t.dataset.ga){if(netDown())return;if(S.needUpd){toast('حدّث التطبيق عشان تلعب في هالغرفة');return;}const G=GAMES[S.st.g],a=t.dataset.ga;if(!G||!S.st.d)return;
+    // a secret game online: the host plays on the whole state, the others ask the host (net.js)
+    if(S.mode==='online'&&isSecretG(G)){if(amHost())G.click(a,i,S.st.d,mkCtx(S.st.d,S.priv));else netClick(G,a,i);return;}
+    G.click(a,i,S.st.d,mkCtx());return;}
   switch(t.dataset.a){
     case 'home':if(S.mode==='near'&&window.NEARROOM)NEARROOM.stopAll();S.mode=null;render();break;
     case 'near':startNear();break;
@@ -613,8 +582,8 @@ app.addEventListener('click',e=>{
       if(!/^[A-Z0-9]{4,6}$/.test(c)){S.roomErr='اكتب رمز الغرفة كامل';render();return;}
       if(/[^A-HJKMNP-Z2-9]/.test(c)){S.roomErr='الرموز ما فيها O ولا 0 ولا I ولا 1 ولا L، تأكد من الرمز';render();return;}
       const sv=loadSaved();const same=sv&&sv.code===c;
-      if(same&&sv.me===0)enterRoom(c,true,sv);else enterRoom(c,false,same?sv:null);break;}
-    case 'resume':{const sv=loadSaved();if(sv)enterRoom(sv.code,sv.me===0,sv);break;}
+      enterRoom(c,false,same?sv:null);break;}
+    case 'resume':{const sv=loadSaved();if(sv)enterRoom(sv.code,false,sv);break;}
     case 'leave':leaveRoom();break;
     case 'grid':if(S.mode==='local'&&S.st.d&&S.st.d.win==null&&!S.browse){S.browse=true;S.showResult=false;render();break;}setGame(null);break;
     case 'lresume':localResume();break;
@@ -628,8 +597,7 @@ app.addEventListener('click',e=>{
     case 'again':if(matchOver()&&!isHost())return;newRound();break;
     case 'reveal':S.seen=i;S.tgt=null;render();break;
     case 'closeres':S.showResult=false;render();break;
-    case 'skip':{const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];let out=d.out;for(const x of absentSeats(d,G))out=setAt(out,x,'1');const al=aliveSeats(d,out);
-      const nd={...d,out,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);break;}
+    case 'skip':if(S.mode==='online'&&!amHost()){if(!netDown())queueIntent({t:'skip'});break;}skipAbsent();break;
     case 'copy':try{navigator.clipboard.writeText(S.code).then(()=>toast('انسخ الرمز: '+S.code)).catch(()=>toast('الرمز: '+S.code));}catch(err){toast('الرمز: '+S.code);}break;
     case 'mute':S.mute=!S.mute;lsSet(LSK.mute,S.mute?'1':'0');if(!S.mute)sfx('pop');render();break;
     case 'm-settings':S.modal='settings';render();break;
@@ -639,8 +607,8 @@ app.addEventListener('click',e=>{
     case 'send':sendChat();break;
     case 'closemodal':S.modal=null;render();break;
     case 'rx':{S.modal=null;const rx={e:i,t:Date.now()};S.rxSeen[S.me]=rx.t;render();floatRx(S.me,i);publish(rx);break;}
-    case 'cfg':{if(!isHost())return;let v=t.dataset.v;v=v==='true'?true:v==='false'?false:/^\d+$/.test(v)?+v:v;const p={[t.dataset.k]:v};if(t.dataset.k==='lock'&&v)p.members=players();setCfg(p);break;}
-    case 'kick':{if(!isHost())return;const r=i;setCfg({kick:[...new Set([...(cfg().kick||[]),r])]});const d=S.st.d;if(d&&d.win==null&&d.pl.includes(r)){const s=d.pl.indexOf(r);const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);const G=GAMES[S.st.g];
+    case 'cfg':{if(!isHost())return;let v=t.dataset.v;v=v==='true'?true:v==='false'?false:/^\d+$/.test(v)?+v:v;const p={[t.dataset.k]:v};if(t.dataset.k==='lock'&&v)p.members=players().map(r=>S.ids[r]).filter(Boolean);setCfg(p);break;}
+    case 'kick':{if(!isHost())return;const r=i,fp=S.ids[r];if(!fp||fp===SEAL.fp)return;S.ids[r]=null;recomputeRoles();setCfg({kick:[...new Set([...(cfg().kick||[]),fp])]});const d=S.st.d;if(d&&d.win==null&&d.pl.includes(r)){const s=d.pl.indexOf(r);const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);const G=GAMES[S.st.g];
       const nd={...d,out,turn:d.turn===s?nextSeat(d,s,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}toast(pnameText(r)+' طلع من الغرفة');break;}
     case 'unkick':if(!isHost())return;setCfg({kick:[]});break;
     case 'recode':{const c=S.code;leaveRoom();S.mode='lobby';render();const el=document.getElementById('code');if(el){el.value=c;el.focus();}break;}

@@ -86,6 +86,10 @@ function hLay(d,groups){const t=d.turn;let hc=cardsOf(d.hands[t]);const melds=[.
 GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#6A3A96"/>${[0,1,2,3].map(k=>`<g transform="rotate(${-24+k*16} 50 92)"><rect x="36" y="24" width="28" height="42" rx="4" fill="#fff" stroke="#4A2370" stroke-width="1.5"/><text x="50" y="${50}" font-size="15" font-weight="800" text-anchor="middle" fill="${k%2?'#D43C33':'#2D4763'}">${['7','8','9','🃏'][k]}</text></g>`).join('')}</svg>`,
   init:n=>({...hDealCore(n),tot:Array(n).fill(0),r:1,last:'الجولة 1 من 5'}),
+  // online: each player sees only his own hand, nobody sees the stock; all opens at the win (the round summary shows no hands, so it stays hidden there)
+  hide:{seat:['hands'],all:['stock']},
+  // the room's host left with nobody holding the hidden cards: this round is dealt again, the totals stay
+  redeal:d=>d.win!=null||d.ph==='sum'?d:{...hNewRound(d),last:`انعادت الجولة ${d.r} من جديد`},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   points:d=>d.pl.map((_,s)=>`${cardsOf(d.hands[s]).length} ورقة${d.tot[s]?` • ${d.tot[s]}`:''}`),

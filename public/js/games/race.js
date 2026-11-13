@@ -174,6 +174,11 @@ GAMES.jakaro={name:'جكارو',cat:'board',lbc:'#7B4A2A',
   status(d,ctx){const s=d.turn;let t=(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);
     return t;},
   onTimeout:d=>jkAuto(d),
+  // online: each player sees only his own cards (a team mate's too stay hidden) and nobody sees the pile; all opens at the win
+  hide:{seat:['hd'],all:['deck']},
+  // the room's host left with nobody holding the hidden cards: the marbles stay where they are and everyone still in gets four new cards
+  redeal(d){if(d.win!=null)return d;let deck=deck52().join('');const hd=d.hd.map(()=>'');for(const x of aliveSeats(d))[hd[x],deck]=jkDraw(deck,4);
+    return {...jkNext({...d,hd,deck,deal:(d.deal||0)+1},d.turn),last:'وزّعنا ورق جديد 🃏'};},
   render(d,ctx){const n=d.pl.length,A=starArms(n),G=starGeo(A),L=13*A,s0=d.turn,my=ctx.my,cs=jkCtl(d,s0);
     const v0=ctx.local?s0:ctx.v;const sel=jkSel(d);const cards=v0>=0?cardsOf(d.hd[v0]||''):[];
     const optsAll=my?cards.map(c=>jkOpts(d,cs,c)):[];const burn=my&&optsAll.every(o=>!o.length);

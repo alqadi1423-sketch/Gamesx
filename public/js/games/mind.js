@@ -14,6 +14,8 @@ const ALPHA='ابتثجحخدذرزسشصضطظعغفقكلمنهوي';
 GAMES.word={name:'خمّن الكلمة',cat:'mind',lbc:'#3E7C59',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#58A777"/>${[0,1,2,3].map(k=>`<rect x="${10+k*21}" y="34" width="17" height="24" rx="4" fill="#fff"/><rect x="${10+k*21}" y="58" width="17" height="4" fill="#2D4763"/>`).join('')}<text x="39" y="53" font-size="17" font-weight="800" fill="#2D4763" text-anchor="middle">م</text><text x="81" y="53" font-size="17" font-weight="800" fill="#2D4763" text-anchor="middle">ج</text></svg>`,
   init:n=>{const cats=Object.keys(WORDS);const cat=cats[rnd(cats.length)];const list=WORDS[cat];return {cat,w:list[rnd(list.length)],g:'',pts:Array(n).fill(0),last:''};},
+  // online, the other players see only the letters already found (the host checks each guess)
+  mask:(d,seat)=>d.win!=null?d:{...d,w:[...d.w].map(ch=>d.g.includes(ch)?ch:'·').join('')},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>`الكلمة: ${d.w}`,
   render(d,ctx){
@@ -30,6 +32,7 @@ GAMES.word={name:'خمّن الكلمة',cat:'mind',lbc:'#3E7C59',
 GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
   icon:iconE('#8C6CC4','🔢'),
   init:()=>({sec:1+rnd(100),lo:1,hi:100,last:''}),
+  hide:{all:['sec']},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>الرقم السري بين ${d.lo} و ${d.hi}</small>`,
   winExtra:d=>`الرقم كان ${d.sec}`,
   render(d,ctx){let s='<div class="cellgrid" style="grid-template-columns:repeat(10,minmax(0,1fr));background:#6B4FA0;gap:3px">';
@@ -57,17 +60,20 @@ GAMES.nim={name:'أعواد الكبريت',cat:'mind',lbc:'#9C4A2F',
 /* ---------- code breaker ---------- */
 const MMC=['#E5483F','#3D8FD8','#3FAE5C','#F0B429','#9C7BD6','#F2874B'];
 const mmScore=(code,g)=>{let b=0,w=0;const cc={},gc={};for(let k=0;k<4;k++){if(code[k]===g[k])b++;else{cc[code[k]]=(cc[code[k]]||0)+1;gc[g[k]]=(gc[g[k]]||0)+1;}}for(const k in gc)w+=Math.min(gc[k],cc[k]||0);return [b,w];};
+// each try keeps its own feedback, so it shows while the code itself stays hidden
+const mmFb=(d,x)=>x.b!=null?[x.b,x.w]:mmScore(d.code,x.g);
 const pegs=(g)=>[...g].map(c=>`<span class="peg" style="background:${MMC[+c]}"></span>`).join('');
 GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F5D80"/>${[0,1,2].map(r=>[0,1,2,3].map(c=>`<circle cx="${20+c*17}" cy="${28+r*22}" r="7" fill="${MMC[(r*2+c*3)%6]}" stroke="#fff" stroke-width="2"/>`).join('')+`<circle cx="88" cy="${24+r*22}" r="3" fill="#fff"/><circle cx="88" cy="${33+r*22}" r="3" fill="#1d2f44"/>`).join('')}</svg>`,
   init:()=>({code:Array(4).fill(0).map(()=>rnd(6)).join(''),h:[],last:''}),
-  status:(d,ctx)=>{const x=d.h[d.h.length-1];if(!x)return turnTxt(d,ctx);const [b,w]=mmScore(d.code,x.g);return `<small>${nm(d,x.s)}: ${b} بمكانها و${w} بغير مكانها</small><br>`+turnTxt(d,ctx);},
+  hide:{all:['code']},net:{local:['add','clr']},
+  status:(d,ctx)=>{const x=d.h[d.h.length-1];if(!x)return turnTxt(d,ctx);const [b,w]=mmFb(d,x);return `<small>${nm(d,x.s)}: ${b} بمكانها و${w} بغير مكانها</small><br>`+turnTxt(d,ctx);},
   winExtra:()=>'الشفرة ظاهرة تحت',
   render(d,ctx){S.mm=S.mm||[];
     const fb=(b,w)=>`<span class="fb">${Array(4).fill(0).map((_,k)=>`<i class="${k<b?'b':k<b+w?'w':''}"></i>`).join('')}</span>`;
     let s=`<div class="mmb">`;
     s+=`<div class="mmr code">${d.win!=null?pegs(d.code):'<span class="peg pq">؟</span>'.repeat(4)}<span class="fbl">الشفرة</span></div>`;
-    s+=`<div class="mmh">${d.h.length?d.h.map(x=>{const [b,w]=mmScore(d.code,x.g);return `<div class="mmr"><i class="who" style="background:${col(d,x.s)}"></i>${pegs(x.g)}${fb(b,w)}</div>`;}).join(''):'<p class="mme">ما فيه محاولات للحين</p>'}</div>`;
+    s+=`<div class="mmh">${d.h.length?d.h.map(x=>{const [b,w]=mmFb(d,x);return `<div class="mmr"><i class="who" style="background:${col(d,x.s)}"></i>${pegs(x.g)}${fb(b,w)}</div>`;}).join(''):'<p class="mme">ما فيه محاولات للحين</p>'}</div>`;
     if(ctx.my)s+=`<div class="mmr cur"><i class="who" style="background:${col(d,d.turn)}"></i>${[0,1,2,3].map(k=>S.mm[k]!=null?`<span class="peg" style="background:${MMC[S.mm[k]]}"></span>`:'<span class="peg e"></span>').join('')}<span class="fb"></span></div>`;
     s+='</div>';
     if(ctx.my)s+=`<div class="mmpal">${MMC.map((c,k)=>`<button class="peg pbig" style="background:${c}" data-ga="add" data-i="${k}" ${S.mm.length>=4?'disabled':''} aria-label="لون"></button>`).join('')}</div>
@@ -77,8 +83,8 @@ GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
     if(!ctx.my)return;S.mm=S.mm||[];
     if(a==='add'){if(S.mm.length<4)S.mm.push(i);render();return;}
     if(a==='clr'){S.mm=[];render();return;}
-    if(S.mm.length!==4)return;const g=S.mm.join('');S.mm=[];const t=d.turn;const [b]=mmScore(d.code,g);
-    act({...d,h:[...d.h,{s:t,g}].slice(-30),win:b===4?t:null,turn:nextSeat(d,t)});
+    if(S.mm.length!==4)return;const g=S.mm.join('');S.mm=[];const t=d.turn;const [b,w]=mmScore(d.code,g);
+    act({...d,h:[...d.h,{s:t,g,b,w}].slice(-30),win:b===4?t:null,turn:nextSeat(d,t)});
   }
 };
 

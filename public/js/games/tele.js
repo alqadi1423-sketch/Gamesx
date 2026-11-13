@@ -6,7 +6,10 @@ const DRC=['#2D4763','#E5483F','#3D8FD8','#3FAE5C','#F0B429','#8E44AD'];
 const DALP='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const DMAX=700; // points per drawing, keeps every message small
 // every drawing stays in its maker's private part until the album, so all of them together must fit the ~4 KB a Claude room gives each player
-const teleMax=d=>Math.min(DMAX,Math.floor(1200/Math.max(1,Math.floor(d.R/2))));
+// online in a Claude room the host's own story shares its message with the room's settings, so all drawings together get a bit less;
+// with sealed views each drawing also travels to the next player inside the host's message, next to everyone else's
+const teleMax=d=>{const B=S.mode==='online'&&S.nr?S.nr.max||3800:0;const m=Math.min(DMAX,Math.floor((B&&B<8000?1000:1200)/Math.max(1,Math.floor(d.R/2))));
+  return B>=8000?Math.min(m,Math.max(60,Math.floor((B-2500)/Math.max(1,d.pl.length-1)/3))):m;};
 // a point that sits on a straight line between its neighbours adds nothing to the picture
 const teleThin=p=>p.filter((q,i)=>{if(!i||i===p.length-1)return true;const a=p[i-1],b=p[i+1],ux=q[0]-a[0],uy=q[1]-a[1],vx=b[0]-q[0],vy=b[1]-q[1];return ux*vy!==uy*vx||ux*vx+uy*vy<0;});
 const encDraw=st=>st.filter(s=>s.p.length).map(s=>s.c+s.p.map(([x,y])=>DALP[x]+DALP[y]).join('')).join('.');
@@ -14,7 +17,17 @@ const decDraw=str=>!str?[]:String(str).split('.').map(t=>({c:+t[0]||0,p:(t.slice
 const strokeSVG=s=>s.p.length===1?`<circle cx="${s.p[0][0]}" cy="${s.p[0][1]}" r="0.9" fill="${DRC[s.c]}"/>`:`<polyline points="${s.p.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${DRC[s.c]}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;
 const drawSVG=str=>`<svg viewBox="0 0 63 63" class="drw">${decDraw(str).map(strokeSVG).join('')}</svg>`;
 const teleRounds=n=>n<=3?4:Math.min(n,8);
-const teleHist=(d,seat,r)=>{const p=S.priv[d.pl[seat]];return p&&p.gid===d.gid&&p.hist?p.hist[r]:undefined;};
+/* online the room carries only what each player may see: the host hands each one the entry of the player before them (sealed),
+   and every player keeps all they made in their own store till the album. A Claude room (~4 KB a player) can't carry everyone's
+   entry in the host's message, so there each player shows their latest entry in their own message (the screen still shows it only to the next one) */
+const teleOpen=()=>S.mode==='online'&&!!S.nr&&(S.nr.max||3800)<8000;
+let TELE_MINE;
+function teleOwn(d,role){if(S.mode!=='online'||role!==S.me||!d)return null;
+  if(TELE_MINE===undefined)try{TELE_MINE=JSON.parse(lsGet('alaabna.tele')||'null');}catch(e){TELE_MINE=null;}
+  return TELE_MINE&&TELE_MINE.gid===d.gid&&TELE_MINE.hist&&typeof TELE_MINE.hist==='object'?TELE_MINE.hist:null;}
+function teleKeep(d,rd,x){TELE_MINE={gid:d.gid,hist:{...(teleOwn(d,S.me)||{}),[rd]:x}};lsSet('alaabna.tele',JSON.stringify(TELE_MINE));}
+const teleMk=p=>({gid:p.gid,rd:p.rd,...(p.pick!=null?{pick:1}:{})});
+const teleHist=(d,seat,r,priv=S.priv)=>{const role=d.pl[seat],p=priv[role];const x=p&&p.gid===d.gid&&p.hist?p.hist[r]:undefined;if(x!=null)return x;const m=teleOwn(d,role);return m?m[r]:undefined;};
 // the drawing in progress, one slot per seat: showing the pad to someone else (the next player, a bot) never wipes yours
 function teleDraw(d,v){const k=d.gid+':'+d.rd;if(!S.dr||S.dr.key!==k)S.dr={key:k,seat:{}};return S.dr.seat[v]||(S.dr.seat[v]={strokes:[],c:0});}
 /* bots write a short sentence, draw a simple doodle or guess, straight into their own private part: never through the human's draft or pad */
@@ -33,14 +46,26 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E67E22"/><rect x="14" y="16" width="72" height="56" rx="8" fill="#fff"/><path d="M24 58c8-20 16-22 22-8s14 10 20-12" stroke="#2D4763" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="66" cy="32" r="6" fill="#F0B429"/><path d="M60 80l22-22 6 6-22 22h-6z" fill="#2D4763"/></svg>`,
   init:n=>({rd:0,R:teleRounds(n),res:''}),
   privInit:()=>({hist:{}}),
+  /* who sees a player's part: the next seat gets only the entry it works from now, the album shows all.
+     The owner is not sent their own part back (it would cost every player's whole story in the host's message): they keep it in teleOwn */
+  privShow(d,seat,role,p,own){if(p.gid!==d.gid)return teleMk(p);const hist={...(teleOwn(d,role)||{}),...(p.hist&&typeof p.hist==='object'?p.hist:{})};
+    if(d.win!=null)return {...teleMk(p),hist};
+    const s=d.pl.indexOf(role),k=d.rd-1;
+    if(d.rd>0&&s>=0&&hist[k]!=null&&(teleOpen()||seat===(s+1)%d.pl.length))return {...teleMk(p),hist:{[k]:hist[k]}};
+    return teleMk(p);},
+  selfPub:true,
+  // the host keeps every entry a player sent: each message carries only the newest one
+  privOk(d,role,old,p){if(!p||typeof p!=='object'||p.gid!==d.gid||(p.hist!=null&&typeof p.hist!=='object'))return false;
+    if(old&&old.gid===p.gid&&old.hist&&typeof old.hist==='object')p.hist={...old.hist,...(p.hist||{})};return true;},
+  net:{local:['col','undo','clr','send']},
   viewer:d=>simulViewer(d),coverMsg:()=>'',
   winText:()=>'خلصت! شوفوا وش صار للجمل 😂',
   status(d,ctx){if(d.win!=null)return '';const r=d.rd;const what=r===0?'اكتب جملة':r%2?'ارسم الجملة':'خمّن الرسمة';
     return simulStatus(d,ctx,`<small>خطوة ${r+1} من ${d.R}: ${what}</small><br>`);},
   render(d,ctx){
-    if(d.win!=null)return this.album(d);
+    if(d.win!=null)return this.album(d,ctx.priv);
     if(!ctx.my)return ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="spd"><div class="spdt">✓ أرسلت</div><p class="note">ننتظر الباقين</p></div>':'';
-    const r=d.rd,n=d.pl.length,v=ctx.v,prevSeat=(v-1+n)%n,prev=r>0?teleHist(d,prevSeat,r-1):null;
+    const r=d.rd,n=d.pl.length,v=ctx.v,prevSeat=(v-1+n)%n,prev=r>0?teleHist(d,prevSeat,r-1,ctx.priv):null;
     if(r===0)return `<div class="qbox" style="font-size:20px">اكتب جملة، واللي بعدك بيرسمها ✏️</div><input class="field" data-draft="tw" maxlength="80" value="${escH(S.draft.tw||'')}" placeholder="مثلًا: قطوة تشرب شاي على القمر" autocomplete="off"><button class="btn red wide" data-ga="send">أرسل</button>`;
     if(r%2){const st=teleDraw(d,v);
       return `<div class="qbox" style="font-size:20px"><small style="font-size:14px;color:var(--mut)">ارسم هذي الجملة:</small><br>${prev?escH(prev):'(ما وصلت جملة، ارسم أي شي يعجبك)'}</div>
@@ -50,9 +75,9 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     return `<div class="qbox" style="font-size:20px">وش هذي الرسمة؟ 🤔</div>${prev?drawSVG(prev):'<p class="note">(ما وصلت رسمة، اكتب أي جملة)</p>'}
       <input class="field" data-draft="tw" maxlength="80" value="${escH(S.draft.tw||'')}" placeholder="اكتب تخمينك" autocomplete="off"><button class="btn red wide" data-ga="send">أرسل</button>`;
   },
-  album(d){const n=d.pl.length;let s='<div class="album">';
+  album(d,priv){const n=d.pl.length;let s='<div class="album">';
     for(let c=0;c<n;c++){s+=`<div class="chainc"><h3>قصة ${nameTag(d,c)}</h3>`;
-      for(let r=0;r<d.R;r++){const seat=(c+r)%n;const x=teleHist(d,seat,r);
+      for(let r=0;r<d.R;r++){const seat=(c+r)%n;const x=teleHist(d,seat,r,priv);
         s+=`<div class="step"><small style="color:${col(d,seat)}">${nm(d,seat)} ${r===0?'كتب':r%2?'رسم':'خمّن'}</small>${r%2?(x?drawSVG(x):'<p class="note">(ما رسم)</p>'):`<div class="bub">${x?escH(x):'…'}</div>`}</div>`;}
       s+='</div>';}
     return s+'</div>';},
@@ -64,7 +89,10 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     if(a!=='send')return;let content;
     if(d.rd%2){const st=teleDraw(d,v);if(!st.strokes.length)return;content=encDraw(st.strokes);}
     else{content=String(S.draft.tw||'').trim().slice(0,80);if(!content){toast('اكتب شي أول');return;}delete S.draft.tw;}
-    const r=d.pl[v];const p=S.priv[r]||{};setPriv(r,{...p,gid:d.gid,rd:d.rd,pick:1,hist:{...(p.gid===d.gid&&p.hist||{}),[d.rd]:content}});
+    const r=d.pl[v];const p=S.priv[r]||{};if(S.mode==='online')teleKeep(d,d.rd,content);
+    // a player who is not the host sends only the new entry: the host adds it to what it has (privOk)
+    const lean=S.mode==='online'&&typeof amHost==='function'&&!amHost();
+    setPriv(r,{gid:d.gid,rd:d.rd,pick:1,hist:lean?{[d.rd]:content}:{...(p.gid===d.gid&&p.hist||{}),...(teleOwn(d,r)||{}),[d.rd]:content}});
   },
   resolve(d,picks){const rd=d.rd+1;return {...d,rd,win:rd>=d.R?'d':null};},
   botPick(d,s,lv){const r=d.rd,n=d.pl.length,prev=r>0?teleHist(d,(s-1+n)%n,r-1):null;let c;

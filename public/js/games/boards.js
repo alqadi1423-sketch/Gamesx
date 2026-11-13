@@ -71,22 +71,24 @@ function mineCount(m,z,i){const r=Math.floor(i/z),c=i%z;let n=0;for(let dr=-1;dr
 GAMES.mines={name:'حقل الألغام',cat:'mind',lbc:'#4E6A57',
   icon:iconE('#6E8F77','💣','rgba(255,255,255,.3)'),
   init:n=>{const [z,k]=MNS[n]||[10,20];const m=Array(z*z).fill('0');let p=0;while(p<k){const i=rnd(z*z);if(m[i]==='0'){m[i]='1';p++;}}
-    return {z,m:m.join(''),rv:'.'.repeat(z*z),pts:Array(n).fill(0),last:''};},
+    return {z,m:m.join(''),rv:'.'.repeat(z*z),k:'.'.repeat(z*z),pts:Array(n).fill(0),last:''};},
+  // online, the mines stay with the host until the end: the others see only opened cells and their counts (k)
+  mask:(d,seat)=>d.win!=null?d:{...d,m:[...d.m].map((c,i)=>d.rv[i]!=='.'?c:'?').join('')},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
   render(d,ctx){const z=d.z;
     return `<div class="cellgrid" style="grid-template-columns:repeat(${z},minmax(0,1fr));background:#4E6A57;gap:3px">${[...d.rv].map((v,i)=>{
       if(v==='.')return `<button class="cg" style="background:${d.win!=null&&d.m[i]==='1'?'#c9d3cb':'#A9C3AE'}" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>${d.win!=null&&d.m[i]==='1'?'💣':''}</button>`;
       if(d.m[i]==='1')return `<div class="cg" style="background:${col(d,+v)}">💥</div>`;
-      const k=mineCount(d.m,z,i);return `<div class="cg" style="background:${lit(d,+v)};color:${['transparent','#2F6FB5','#2E8B57','#D43C33','#6A3FA0','#9A3B1D','#1F8A8A','#333','#777'][k]}">${k||''}</div>`;}).join('')}</div>`;},
+      const k=d.k&&d.k[i]!=='.'?+d.k[i]:mineCount(d.m,z,i);return `<div class="cg" style="background:${lit(d,+v)};color:${['transparent','#2F6FB5','#2E8B57','#D43C33','#6A3FA0','#9A3B1D','#1F8A8A','#333','#777'][k]}">${k||''}</div>`;}).join('')}</div>`;},
   click(a,i,d,ctx){
-    if(!ctx.my||d.rv[i]!=='.')return;const z=d.z,t=d.turn,ts=String(t);let rv=d.rv,out=d.out;const pts=[...d.pts];let last;
+    if(!ctx.my||d.rv[i]!=='.')return;const z=d.z,t=d.turn,ts=String(t);let rv=d.rv,out=d.out,kk=d.k||'.'.repeat(z*z);const pts=[...d.pts];let last;
     if(d.m[i]==='1'){rv=setAt(rv,i,ts);out=setAt(out,t,'1');last=`${nm(d,t)} داس على لغم وطلع 💥`;}
-    else{const st=[i];let got=0;while(st.length){const k=st.pop();if(rv[k]!=='.'||d.m[k]==='1')continue;rv=setAt(rv,k,ts);got++;
-        if(mineCount(d.m,z,k)===0){const r=Math.floor(k/z),c=k%z;for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=r+dr,cc=c+dc;if(rr>=0&&rr<z&&cc>=0&&cc<z)st.push(rr*z+cc);}}}
+    else{const st=[i];let got=0;while(st.length){const k=st.pop();if(rv[k]!=='.'||d.m[k]==='1')continue;rv=setAt(rv,k,ts);got++;const mc=mineCount(d.m,z,k);kk=setAt(kk,k,String(mc));
+        if(mc===0){const r=Math.floor(k/z),c=k%z;for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=r+dr,cc=c+dc;if(rr>=0&&rr<z&&cc>=0&&cc<z)st.push(rr*z+cc);}}}
       pts[t]+=got;last=`${nm(d,t)} فتح ${got} خانة`;}
     const al=aliveSeats(d,out);const safeLeft=[...rv].some((v,k)=>v==='.'&&d.m[k]==='0');let win=null;
     if(al.length===1)win=al[0];else if(!al.length)win='d';else if(!safeLeft)win=mostPts(pts.map((x,s)=>out[s]==='1'?-1:x));
-    act({...d,rv,out,pts,last,win,turn:nextSeat(d,t,out)});
+    act({...d,rv,k:kk,out,pts,last,win,turn:nextSeat(d,t,out)});
   }
 };

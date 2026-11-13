@@ -127,7 +127,7 @@ const fishBk=h=>{const by={};cardsOf(h).forEach(c=>{by[rk(c)]=(by[rk(c)]||0)+1;}
 // out seats hold no cards and never win on books
 const fishEnd=nd=>{const total=nd.books.reduce((x,b)=>x+b.length,0);
   if(total>=13||!nd.dk.length&&nd.hands.every((h,s)=>!h.length||nd.out[s]==='1'))nd.win=mostPts(nd.books.map((b,s)=>nd.out[s]==='1'?-1:b.length));return nd;};
-GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',
+GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',hide:{seat:['hands'],all:['dk']},
   icon:iconE('#2E8FB3','🎣'),
   init:n=>{let dk=shuffle(deck52());const k=n<=3?7:5;const hands=[],books=[];for(let s=0;s<n;s++){const [h,b]=fishBk(dk.slice(0,k).join(''));hands.push(h);books.push(b);dk=dk.slice(k);}return {hands,dk:dk.join(''),books,last:''};},
   // a player who left puts their cards back in the pile, so nobody waits on a book they hold
@@ -161,7 +161,7 @@ GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',
 /* ---------- 99 ---------- */
 const v99=(c,tot)=>{const r=c[0];if(r==='K')return 99;if(r==='T')return tot>=10?tot-10:tot+10;if(r==='4'||r==='9')return tot;if(r==='J'||r==='Q')return tot+10;if(r==='A')return tot+1;return tot+(+r);};
 const lab99={K:'= 99',T:'±10','4':'عكس',9:'+0',J:'+10',Q:'+10'};
-GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',
+GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',hide:{seat:['hands'],all:['dk']},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7D3C98"/><text x="50" y="64" font-size="40" font-weight="800" fill="#fff" text-anchor="middle">99</text></svg>`,
   init:n=>{let dk=shuffle(deck52(n>5?2:1));const hands=[];for(let s=0;s<n;s++){hands.push(dk.slice(0,3).join(''));dk=dk.slice(3);}return {hands,dk:dk.join(''),tot:0,dir:1,last:''};},
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',

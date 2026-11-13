@@ -57,6 +57,8 @@ GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map
   init:n=>({r:0,n:Array(n).fill(n>4?4:5),bid:null,last:''}),
   privInit:(d,r)=>{const s=d.pl.indexOf(r);const k=s>=0?d.n[s]:0;return {r:d.r,dice:Array(k).fill(0).map(()=>1+rnd(6)).join('')};},
   privStale:(d,p)=>p.r!==d.r,
+  // online, the dice stay with the host and their owner: «كذاب» and «بالضبط» count them on the host; nobody sets their own dice
+  net:{host:['call','calza'],local:['qu','qd','f']},privOk:()=>false,
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
