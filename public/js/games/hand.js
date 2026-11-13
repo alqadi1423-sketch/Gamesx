@@ -39,6 +39,7 @@ function hAdd(m,card){
   if(m.t==='g'){if(card[0]!==m.c[0][0])return null;const nat=m.c.filter((_,i)=>i!==m.jk);if(nat.some(c=>c[1]===card[1]))return null;
     if(m.jk>=0&&m.c[m.jk][1]===card[1])return null;// that is a swap, not an add
     if(m.c.length>=4)return null;return {...m,c:[...m.c,card]};}
+  if(m.jk>=0&&card===m.c[m.jk])return null;// that is a swap, not an add
   const nat=m.c.map((c,i)=>i===m.jk?'XX':c);const r=hRunTry([...nat,card]);
   if(!r||r.c.length!==m.c.length+1)return null;return r;}
 const hRunTry=cards=>{const x=hMeld(cards);return x&&x.t==='r'?x:null;};
@@ -53,12 +54,12 @@ function hSwap(m,cards){if(m.jk<0)return null;const rep=m.c[m.jk];
 // everyone gets 14; the starter opens by drawing (that is the 15th card) and then throws one
 function hDealCore(n){const dk=hDeck(n);const hands=[];let k=0;for(let s=0;s<n;s++){hands.push(hSortHand(dk.slice(k,k+14).join('')));k+=14;}
   return {hands,stock:dk.slice(k).join(''),disc:'',melds:[],op:'0'.repeat(n),req:51,ph:'draw',took:null,tm:0,lo:false,op0:null,sum:null};}
-function hNewRound(d){const n=d.pl.length;const st=(d.st+d.r-1)%n;
+function hNewRound(d){const n=d.pl.length;let st=(d.st+d.r-1)%n;if(d.out[st]==='1')st=nextSeat(d,st);
   return {...d,...hDealCore(n),turn:st,last:`الجولة ${d.r} من 5: ${nm(d,st)} يبدأ`};}
 function hEndRound(d,w,full){const n=d.pl.length;const pts=d.pl.map((_,s)=>{if(s===w)return full?-60:-30;
     if(d.op[s]!=='1')return full?200:100;const v=cardsOf(d.hands[s]).reduce((x,c)=>x+hPen(c),0);return full?v*2:v;});
   const tot=d.tot.map((x,s)=>x+pts[s]);const nd={...d,tot,ph:'sum',sum:{w,full,pts},turn:w,last:`${nm(d,w)} خلّص${full?' هند كامل! 🔥':''}`};
-  if(d.r>=5){const mn=Math.min(...tot);const ws=tot.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);return {...nd,win:ws[0],wins:ws};}
+  if(d.r>=5){const mn=Math.min(...tot.filter((_,s)=>d.out[s]!=='1'));const ws=tot.map((x,s)=>x===mn&&d.out[s]!=='1'?s:-1).filter(s=>s>=0);return {...nd,win:ws[0],wins:ws};}
   return nd;}
 function hDraw(d,fromDisc){const t=d.turn;let stock=d.stock,disc=d.disc,last;
   if(fromDisc){const c=disc.slice(-2);disc=disc.slice(0,-2);const hands=[...d.hands];hands[t]=hSortHand(hands[t]+c);return {...d,hands,disc,ph:'play',took:c,last:`${nm(d,t)} أخذ ${hJ(c)?'الجوكر':'ورقة الأرض'}`};}
@@ -68,7 +69,7 @@ function hDraw(d,fromDisc){const t=d.turn;let stock=d.stock,disc=d.disc,last;
 function hDiscard(d,c){const t=d.turn,n=d.pl.length;const hc=cardsOf(d.hands[t]);const i=hc.indexOf(c);if(i<0)return null;hc.splice(i,1);
   const hands=[...d.hands];hands[t]=hc.join('');const nd={...d,hands,disc:d.disc+c,took:null};
   if(!hc.length)return hEndRound(nd,t,d.op0===false&&!d.lo);
-  return {...nd,ph:'draw',turn:(t+1)%n,tm:0,lo:false,op0:null,last:`${nm(d,t)} رمى ${hJ(c)?'جوكر':''}`.trim()};}
+  return {...nd,ph:'draw',turn:nextSeat(d,t),tm:0,lo:false,op0:null,last:`${nm(d,t)} رمى ${hJ(c)?'جوكر':''}`.trim()};}
 // meld cards from the hand: list of card groups, all checked; opening rules applied
 function hLay(d,groups){const t=d.turn;let hc=cardsOf(d.hands[t]);const melds=[...d.melds];let val=0;
   for(const g of groups){for(const c of g){const i=hc.indexOf(c);if(i<0)return {err:'الورق مو عندك'};hc.splice(i,1);}
@@ -76,7 +77,7 @@ function hLay(d,groups){const t=d.turn;let hc=cardsOf(d.hands[t]);const melds=[.
   if(!hc.length)return {err:'لازم تخلي ورقة ترميها'};
   const opening=d.op[t]!=='1';
   if(opening&&val<d.req&&hc.length>1)return {err:`أول نزول لازم يكون ${d.req} أو أكثر (مجموعك ${val})`};
-  if(d.took&&!groups.some(g=>g.includes(d.took))&&opening)return {err:'لازم تنزّل ورقة الأرض اللي أخذتها'};
+  if(d.took&&!groups.some(g=>g.includes(d.took)))return {err:'لازم تنزّل ورقة الأرض اللي أخذتها'};
   const hands=[...d.hands];hands[t]=hc.join('');
   const nd={...d,hands,melds,op:setAt(d.op,t,'1'),tm:d.tm+1,op0:d.op0==null?!opening:d.op0,
     took:d.took&&groups.some(g=>g.includes(d.took))?null:d.took,last:`${nm(d,t)} نزّل ${groups.length===1?'مجموعة':groups.length+' مجموعات'}${opening?` بـ ${val}`:''}`};
@@ -93,12 +94,16 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
   onTimeout(d){
     if(d.ph==='sum')return {...hNewRound({...d,r:d.r+1})};
     let x=d;if(x.ph==='draw')x=hDraw(x,false);
-    if(x.took){const back=[...x.hands];const hc=cardsOf(back[x.turn]);hc.splice(hc.indexOf(x.took),1);back[x.turn]=hc.join('');x={...x,hands:back,disc:x.disc+x.took,took:null};}
+    if(x.took){const back=[...x.hands];const hc=cardsOf(back[x.turn]);const i=hc.indexOf(x.took);if(i>=0){hc.splice(i,1);back[x.turn]=hc.join('');x={...x,hands:back,disc:x.disc+x.took};}x={...x,took:null};}
     const hc=cardsOf(x.hands[x.turn]);const c=hc.find(c=>!hJ(c))||hc[0];return hDiscard(x,c);},
+  // the absent player's half-done turn: the discard he took goes back to the pile and the next player starts by drawing
+  onSkip(nd,d){if(nd.win!=null||nd.turn===d.turn||d.ph==='sum')return nd;const t=d.turn,hands=[...nd.hands];let disc=nd.disc;
+    if(d.took){const hc=cardsOf(hands[t]);const i=hc.indexOf(d.took);if(i>=0){hc.splice(i,1);hands[t]=hc.join('');disc+=d.took;}}
+    return {...nd,hands,disc,ph:'draw',took:null,tm:0,lo:false,op0:null,last:`${nm(d,t)} طلع`};},
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
     if(d.ph==='sum')return s+`انتهت الجولة ${d.r}`;
     s+=`${who}: ${d.ph==='draw'?'اسحب من الكومة أو خذ ورقة الأرض':d.took?'نزّل ورقة الأرض بمجموعة، وبعدها ارمِ ورقة':'نزّل أو أضف، وبعدها ارمِ ورقة'}`;
-    s+=`<br><small>الجولة ${d.r} من 5 • أول نزول لازم ${d.req} أو أكثر</small>`;return s;},
+    s+=`<br><small>${String(d.last||'').startsWith(`الجولة ${d.r} `)?'':`الجولة ${d.r} من 5 • `}أول نزول لازم ${d.req} أو أكثر</small>`;return s;},
   render(d,ctx){
     const v=ctx.local?d.turn:ctx.v,my=ctx.my;const k=d.gid+':'+d.r+':'+d.turn+':'+d.hands[d.turn]+d.melds.length;
     if(!S.hd||S.hd.k!==k)S.hd={k,sel:[],pend:[]};const U=S.hd;
@@ -110,7 +115,7 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
     h+=`<div class="hpile"><button class="hstock" data-ga="stock" ${canDraw?'':'disabled'}><div class="card back"></div><small>${d.stock.length/2}</small></button>
       <${canDraw&&top?'button':'div'} class="hdisc" ${canDraw&&top?'data-ga="take"':''}>${top?hCard(top):'<div class="card hempty"></div>'}<small>الأرض</small></${canDraw&&top?'button':'div'}></div>`;
     // melds on the table
-    if(d.melds.length){const selC=U.sel.map(i=>cardsOf(d.hands[d.turn])[i]);const canAdd=my&&d.ph==='play'&&d.op[d.turn]==='1'&&selC.length;
+    if(d.melds.length){const selC=U.sel.map(i=>cardsOf(d.hands[d.turn])[i]);const canAdd=my&&d.ph==='play'&&d.op[d.turn]==='1'&&!d.took&&selC.length;
       h+=`<div class="hmelds">${d.melds.map((m,i)=>{const ok=canAdd&&((selC.length===1&&hAdd(m,selC[0]))||hSwap(m,selC));
         return `<${ok?'button':'div'} class="hm ${ok?'can':''}" style="--c:${col(d,m.o)}" ${ok?`data-ga="add" data-i="${i}"`:''}>${m.c.map((c,j)=>hMini(j===m.jk?'XX':c)).join('')}</${ok?'button':'div'}>`;}).join('')}</div>`;}
     // what this player is building before opening
@@ -133,14 +138,14 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
     if(a==='take'&&d.ph==='draw'&&d.disc){act(hDraw(d,true));return;}
     if(d.ph!=='play'||!U)return;const all=cardsOf(d.hands[t]);
     if(a==='sel'){const j=U.sel.indexOf(i);if(j>=0)U.sel.splice(j,1);else U.sel.push(i);render();return;}
-    if(a==='back'&&d.took&&d.tm===0){const hands=[...d.hands];const hc=cardsOf(hands[t]);hc.splice(hc.indexOf(d.took),1);hands[t]=hc.join('');S.hd=null;act({...d,hands,disc:d.disc+d.took,took:null,ph:'draw',last:`${nm(d,t)} رجّع ورقة الأرض`});return;}
+    if(a==='back'&&d.took&&d.tm===0){const hands=[...d.hands];const hc=cardsOf(hands[t]);if(hc.indexOf(d.took)<0)return;hc.splice(hc.indexOf(d.took),1);hands[t]=hc.join('');S.hd=null;act({...d,hands,disc:d.disc+d.took,took:null,ph:'draw',last:`${nm(d,t)} رجّع ورقة الأرض`});return;}
     if(a==='cancel'){U.pend=[];U.sel=[];render();return;}
     if(a==='meld'){const sel=U.sel.map(x=>all[x]);if(!hMeld(sel))return;
       if(d.op[t]==='1'){const r=hLay(d,[sel]);if(r.err){toast(r.err);return;}S.hd=null;act(r.d);return;}
       U.pend.push(sel);U.sel=[];render();return;}
     if(a==='confirm'){const r=hLay(d,U.pend);if(r.err){toast(r.err);return;}S.hd=null;act(r.d);return;}
     if(a==='add'){const sel=U.sel.map(x=>all[x]);const m=d.melds[i];if(!m||d.op[t]!=='1')return;
-      if(d.took&&sel.includes(d.took)){toast('ورقة الأرض تنزل بمجموعة جديدة، ما تنضاف');return;}
+      if(d.took){toast(sel.includes(d.took)?'ورقة الأرض تنزل بمجموعة جديدة، ما تنضاف':'نزّل ورقة الأرض أول');return;}
       let nm2=sel.length===1?hAdd(m,sel[0]):null;let gain=[];if(!nm2){nm2=hSwap(m,sel);if(nm2)gain=['XX'];}
       if(!nm2)return;const hc=[...all];for(const c of sel)hc.splice(hc.indexOf(c),1);hc.push(...gain);
       if(!hc.length){toast('لازم تخلي ورقة ترميها');return;}

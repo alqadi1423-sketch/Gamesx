@@ -20,8 +20,13 @@ function yOpts(card,dice){const free=[...Array(13).keys()].filter(k=>card[k]<0);
   const f=+dice[0]-1;if(card[f]<0)return [[f,yScore(f,dice)]];
   const low=free.filter(k=>k>=6);if(low.length)return low.map(k=>[k,k===8?25:k===9?30:k===10?40:yScore(k,dice)]);
   return free.map(k=>[k,0]);}
+// the game ends when every seat still playing has filled all 13 boxes; seats that left never win
+const yWin=(d,cards)=>cards.every((c,s)=>d.out[s]==='1'||c.slice(0,13).every(x=>x>=0))?mostPts(cards.map((c,s)=>d.out[s]==='1'?-1:yTotal(c))):null;
 function yPut(card,k,dice){const c=[...card];const o=yOpts(card,dice).find(x=>x[0]===k);if(!o)return null;if(yIsY(dice)&&card[11]===50)c[13]=(c[13]||0)+1;c[k]=o[1];return c;}
-GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{const t=d.turn;const cards=d.cards.map(c=>[...c]);const empty=cards[t].map((v,k)=>k<13&&v<0?k:-1).filter(k=>k>=0);let best=empty[0];if(d.rolls){const o=yOpts(cards[t],d.dice);const b=o.reduce((x,y)=>y[1]>x[1]?y:x);cards[t]=yPut(cards[t],b[0],d.dice);}else cards[t][best]=0;const done=cards.every((c,s)=>d.out[s]==='1'||c.slice(0,13).every(x=>x>=0));return {...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:done?mostPts(cards.map((c,s)=>d.out[s]==='1'?-1:yTotal(c))):null};},
+GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{const t=d.turn;const cards=d.cards.map(c=>[...c]);const empty=cards[t].map((v,k)=>k<13&&v<0?k:-1).filter(k=>k>=0);let best=empty[0];if(!empty.length)return {...d,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:yWin(d,cards)};if(d.rolls){const o=yOpts(cards[t],d.dice);const b=o.reduce((x,y)=>y[1]>x[1]?y:x);cards[t]=yPut(cards[t],b[0],d.dice);}else cards[t][best]=0;return {...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:yWin(d,cards)};},
+  // a player who leaves takes his roll with him, and if he was the last one still playing the game ends
+  onSkip(nd,d){let x=nd.turn!==d.turn?{...nd,dice:'00000',held:'00000',rolls:0}:nd;if(x.win!=null)return x;const win=yWin(x,x.cards);if(win!=null)return {...x,win};
+    if(x.cards[x.turn].slice(0,13).every(v=>v>=0))x={...x,turn:nextSeat(x,x.turn,x.out.split('').map((c,s)=>c==='1'||x.cards[s].slice(0,13).every(v=>v>=0)?'1':'0').join(''))};return x;},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D5505F"/>${[[14,16],[52,12],[30,50],[64,48],[22,78]].map(([x,y],k)=>`<rect x="${x}" y="${y}" width="26" height="26" rx="6" fill="#fff" transform="rotate(${k*9-18} ${x+13} ${y+13})"/><circle cx="${x+13}" cy="${y+13}" r="4" fill="#2D4763"/>`).join('')}</svg>`,
   init:n=>({dice:'00000',held:'00000',rolls:0,cards:Array(n).fill(0).map(()=>Array(13).fill(-1))}),
   points:d=>d.cards.map(yTotal),status:(d,ctx)=>turnTxt(d,ctx),
@@ -39,8 +44,7 @@ GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{co
     if(a==='hold'){if(!d.rolls||d.rolls>=3)return;act({...d,held:setAt(d.held,i,d.held[i]==='1'?'0':'1')});return;}
     if(a==='roll'){if(d.rolls>=3)return;S.rolled=true;const dice=[...d.dice].map((x,k)=>d.held[k]==='1'&&d.rolls?x:String(1+rnd(6))).join('');act({...d,dice,rolls:d.rolls+1});return;}
     if(a==='score'){if(!d.rolls||d.cards[t][i]>=0)return;const cards=d.cards.map(c=>[...c]);const nc=yPut(cards[t],i,d.dice);if(!nc)return;cards[t]=nc;
-      const done=cards.every((c,s)=>d.out[s]==='1'||c.slice(0,13).every(x=>x>=0));
-      act({...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:done?mostPts(cards.map((c,s)=>d.out[s]==='1'?-1:yTotal(c))):null});}
+      act({...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:yWin(d,cards)});}
   }
 };
 
@@ -61,7 +65,7 @@ GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map
     s+=d.bid?`<div class="qbox">المزايدة: ${d.bid.q} × ${diceSVG(d.bid.f).replace('<svg ','<svg style="width:34px;height:34px;vertical-align:middle;background:#fff;border-radius:6px" ')}<br><small style="font-size:14px">من ${nm(d,d.bid.s)}</small></div>`:'<div class="qbox">ما فيه مزايدة للحين</div>';
     if(v<0)return s;const p=ctx.priv[d.pl[v]];
     if(p&&p.r===d.r)s+=`<p class="lbl">زهراتك</p><div class="row">${[...p.dice].map(x=>dieBtn(+x)).join('')}</div>`;
-    if(ctx.my){const total=d.n.reduce((a,b,i)=>a+(d.out[i]==='1'?0:b),0);const minQ=d.bid?(d.bid.f===1?d.bid.q:Math.ceil(d.bid.q/2)):1;S.lq=Math.max(S.lq||minQ,minQ);S.lq=Math.min(S.lq,total);S.lf=S.lf||(d.bid?d.bid.f:1);
+    if(ctx.my){const total=d.n.reduce((a,b,i)=>a+(d.out[i]==='1'?0:b),0);const minQ=d.bid?(d.bid.f===1?d.bid.q:Math.ceil(d.bid.q/2)):1;S.lq=Math.max(S.lq||minQ,minQ);S.lq=Math.min(S.lq,total);S.lf=S.lf||(d.bid?d.bid.f:2);
       s+=`<div class="stepper"><span>العدد</span><button data-ga="qd">−</button><b>${S.lq}</b><button data-ga="qu">+</button></div><div class="row">${[1,2,3,4,5,6].map(f=>`<button class="dice" style="width:46px;height:46px;${S.lf===f?'box-shadow:0 0 0 4px #ffd84d':''}" data-ga="f" data-i="${f}">${diceSVG(f).replace('<svg ','<svg style="width:36px;height:36px" ')}</button>`).join('')}</div>
       <div class="acts"><button class="btn blue" data-ga="bid">زايد</button>${d.bid?'<button class="btn red" data-ga="call">كذاب!</button><button class="btn navy" data-ga="calza">بالضبط!</button>':''}</div><p class="note">الواحد جوكر يحسب مع أي وجه</p>`;}
     return s;},
@@ -84,7 +88,13 @@ GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map
 /* ---------- shut the box ---------- */
 function canMake(open,sum){const a=[];for(let k=1;k<=9;k++)if(open[k-1]==='1')a.push(k);const f=(i,s)=>s===0||(i<a.length&&s>0&&(f(i+1,s-a[i])||f(i+1,s)));return f(0,sum);}
 const boxScore=b=>[...b].reduce((x,c,k)=>x+(c==='1'?k+1:0),0);
-GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',onTimeout:d=>{const t=d.turn;const done=setAt(d.done,t,'1');const fin=d.pl.every((r,s)=>d.out[s]==='1'||done[s]==='1');const o2=d.out.split('').map((c,s)=>c==='1'||done[s]==='1'?'1':'0').join('');let win=null;if(fin){const sc=d.boxes.map((bb,s)=>d.out[s]==='1'?99:boxScore(bb));const mn=Math.min(...sc);const top=sc.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);win=top.length===1?top[0]:'d';}return {...d,done,roll:0,dice:'',turn:nextSeat(d,t,o2),win};},
+// everyone has finished: lowest box wins, seats that left count as 99
+const shutWin=d=>{const sc=d.boxes.map((bb,s)=>d.out[s]==='1'?99:boxScore(bb));const mn=Math.min(...sc);const top=sc.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);return top.length===1?top[0]:'d';};
+const shutOut=(d,done)=>d.out.split('').map((c,s)=>c==='1'||done[s]==='1'?'1':'0').join('');
+GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',onTimeout:d=>{const t=d.turn;const done=setAt(d.done,t,'1');const o2=shutOut(d,done);return {...d,done,roll:0,dice:'',turn:nextSeat(d,t,o2),win:o2.includes('0')?null:shutWin(d)};},
+  // the next player never inherits the roll of a player who left, finished players get no extra turn, and the game ends when nobody is left to play
+  onSkip(nd,d){let x=nd.turn!==d.turn?{...nd,roll:0,dice:''}:nd;if(x.win!=null)return x;const o2=shutOut(x,x.done);if(!o2.includes('0'))return {...x,roll:0,dice:'',win:shutWin(x)};
+    if(o2[x.turn]==='1')x={...x,roll:0,dice:'',turn:nextSeat(x,x.turn,o2)};return x;},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8C5A34"/><rect x="8" y="30" width="84" height="40" rx="6" fill="#5B3A20"/>${[1,2,3,4,5,6,7,8,9].map(k=>`<rect x="${10+(k-1)*9}" y="${k%3?34:44}" width="7.5" height="${k%3?30:20}" rx="2" fill="${k%3?'#F3D9AE':'#C9A15B'}"/>`).join('')}</svg>`,
   init:n=>({boxes:Array(n).fill('111111111'),done:'0'.repeat(n),roll:0,dice:'',last:''}),
   points:d=>d.boxes.map((b,s)=>d.done[s]==='1'?boxScore(b):'…'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
@@ -100,9 +110,8 @@ GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',onTimeout:d
     if(!ctx.my)return;const t=d.turn,b=d.boxes[t];
     if(a==='tile'){S.sel=S.sel||[];S.sel=S.sel.includes(i)?S.sel.filter(x=>x!==i):[...S.sel,i];render();return;}
     if(a==='roll'||a==='roll1'){if(d.roll)return;S.rolled=true;S.sel=[];const dice=a==='roll'?String(1+rnd(6))+String(1+rnd(6)):String(1+rnd(6));const roll=[...dice].reduce((x,c)=>x+ +c,0);
-      if(!canMake(b,roll)){const done=setAt(d.done,t,'1');const fin=d.pl.every((r,s)=>d.out[s]==='1'||done[s]==='1');
-        act({...d,dice,roll:0,done,turn:nextSeat(d,t,d.out.split('').map((c,s)=>c==='1'||done[s]==='1'?'1':'0').join('')),last:`${nm(d,t)} طلع ${roll} وما يقدر يقفل، نتيجته ${boxScore(b)}`,
-          win:fin?(()=>{const sc=d.boxes.map((bb,s)=>d.out[s]==='1'?99:boxScore(bb));const mn=Math.min(...sc);const top=sc.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);return top.length===1?top[0]:'d';})():null});return;}
+      if(!canMake(b,roll)){const done=setAt(d.done,t,'1');const o2=shutOut(d,done);
+        act({...d,dice,roll:0,done,turn:nextSeat(d,t,o2),last:`${nm(d,t)} طلع ${roll} وما يقدر يقفل، نتيجته ${boxScore(b)}`,win:o2.includes('0')?null:shutWin(d)});return;}
       act({...d,dice,roll});return;}
     if(a==='ok'){S.sel=S.sel||[];if(S.sel.reduce((x,y)=>x+y,0)!==d.roll)return;let nb=b;S.sel.forEach(k=>nb=setAt(nb,k-1,'0'));S.sel=[];const boxes=[...d.boxes];boxes[t]=nb;
       if(nb==='000000000'){act({...d,boxes,roll:0,dice:'',win:t,last:`${nm(d,t)} قفل الصندوق كامل!`});return;}
@@ -131,16 +140,21 @@ GAMES.camel={name:'سباق الهجن',cat:'cards',lbc:'#B8860B',
 /* ---------- lucky boxes ---------- */
 GAMES.luck={name:'صناديق الحظ',cat:'cards',lbc:'#A5373F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9464F"/>${[[14,20],[54,20],[14,58],[54,58]].map(([x,y],k)=>`<rect x="${x}" y="${y}" width="32" height="26" rx="4" fill="${k===3?'#2D4763':'#F2C14E'}"/><rect x="${x+13}" y="${y}" width="6" height="26" fill="${k===3?'#1d2f44':'#D9A441'}"/>`).join('')}<text x="70" y="78" font-size="16" text-anchor="middle">💣</text></svg>`,
-  init:n=>{const k=10+2*n,b=Math.max(1,Math.floor(n/2));const a=[];for(let i=0;i<k;i++)a.push(i<b?'b':String(1+rnd(5)));return {box:shuffle(a).join(''),op:'.'.repeat(k),pts:Array(n).fill(0),last:''};},
+  // what is inside a box is decided only when it is opened (nb bombs are still hidden among the closed boxes), so the shared state never holds the bomb positions
+  init:n=>{const k=10+2*n;return {box:'?'.repeat(k),nb:Math.max(1,Math.floor(n/2)),op:'.'.repeat(k),pts:Array(n).fill(0),last:''};},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
   render(d,ctx){const k=d.box.length,c=k<=16?4:k<=20?5:6;
     return `<div class="cellgrid" style="grid-template-columns:repeat(${c},minmax(0,1fr));background:#7A2B31">${[...d.box].map((v,i)=>{const o=d.op[i];
       if(o==='.')return `<button class="cg" style="background:#F2C14E;font-size:24px" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>${d.win!=null&&v==='b'?'💣':'🎁'}</button>`;
       return `<div class="cg" style="background:${lit(d,+o)};font-size:${v==='b'?24:22}px;box-shadow:inset 0 0 0 3px ${col(d,+o)}">${v==='b'?'💥':'<span class="ltr">+'+v+'</span>'}</div>`;}).join('')}</div>`;},
-  click(a,i,d,ctx){if(!ctx.my||d.op[i]!=='.')return;const t=d.turn,v=d.box[i];const op=setAt(d.op,i,String(t));let out=d.out,pts=[...d.pts],last;
+  click(a,i,d,ctx){if(!ctx.my||d.op[i]!=='.')return;const t=d.turn,shut=[...d.op].filter(c=>c==='.').length;
+    const v=d.nb==null?d.box[i]:rnd(shut)<d.nb?'b':String(1+rnd(5));let nb=d.nb==null?null:d.nb-(v==='b'?1:0),box=setAt(d.box,i,v);
+    const op=setAt(d.op,i,String(t));let out=d.out,pts=[...d.pts],last;
     if(v==='b'){out=setAt(out,t,'1');last=`${nm(d,t)} فتح صندوق 💣 وطلع`;}else{pts[t]+=+v;last=`${nm(d,t)} أخذ ${v} نقاط`;}
-    const al=aliveSeats(d,out);const left=[...d.box].some((x,k)=>op[k]==='.'&&x!=='b');let win=null;
+    const al=aliveSeats(d,out);const left=nb==null?[...box].some((x,k)=>op[k]==='.'&&x!=='b'):shut-1>nb;let win=null;
     if(al.length===1)win=al[0];else if(!left)win=mostPts(pts.map((x,s)=>out[s]==='1'?-1:x));
-    act({...d,op,out,pts,last,win,turn:nextSeat(d,t,out)});}
+    // at the end the closed boxes show where the remaining bombs were
+    if(win!=null&&nb!=null){const cl=shuffle([...op].map((c,k)=>c==='.'?k:-1).filter(k=>k>=0));cl.forEach((k,j)=>{box=setAt(box,k,j<nb?'b':String(1+rnd(5)));});nb=0;}
+    act({...d,box,nb,op,out,pts,last,win,turn:nextSeat(d,t,out)});}
 };

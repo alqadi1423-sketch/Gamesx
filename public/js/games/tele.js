@@ -5,13 +5,29 @@
 const DRC=['#2D4763','#E5483F','#3D8FD8','#3FAE5C','#F0B429','#8E44AD'];
 const DALP='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const DMAX=700; // points per drawing, keeps every message small
+// every drawing stays in its maker's private part until the album, so all of them together must fit the ~4 KB a Claude room gives each player
+const teleMax=d=>Math.min(DMAX,Math.floor(1200/Math.max(1,Math.floor(d.R/2))));
+// a point that sits on a straight line between its neighbours adds nothing to the picture
+const teleThin=p=>p.filter((q,i)=>{if(!i||i===p.length-1)return true;const a=p[i-1],b=p[i+1],ux=q[0]-a[0],uy=q[1]-a[1],vx=b[0]-q[0],vy=b[1]-q[1];return ux*vy!==uy*vx||ux*vx+uy*vy<0;});
 const encDraw=st=>st.filter(s=>s.p.length).map(s=>s.c+s.p.map(([x,y])=>DALP[x]+DALP[y]).join('')).join('.');
 const decDraw=str=>!str?[]:String(str).split('.').map(t=>({c:+t[0]||0,p:(t.slice(1).match(/../g)||[]).map(q=>[DALP.indexOf(q[0]),DALP.indexOf(q[1])])}));
 const strokeSVG=s=>s.p.length===1?`<circle cx="${s.p[0][0]}" cy="${s.p[0][1]}" r="0.9" fill="${DRC[s.c]}"/>`:`<polyline points="${s.p.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${DRC[s.c]}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;
 const drawSVG=str=>`<svg viewBox="0 0 63 63" class="drw">${decDraw(str).map(strokeSVG).join('')}</svg>`;
 const teleRounds=n=>n<=3?4:Math.min(n,8);
 const teleHist=(d,seat,r)=>{const p=S.priv[d.pl[seat]];return p&&p.gid===d.gid&&p.hist?p.hist[r]:undefined;};
-function teleDraw(d,v){const k=d.gid+':'+d.rd+':'+v;if(!S.dr||S.dr.key!==k)S.dr={key:k,strokes:[],c:0};return S.dr;}
+// the drawing in progress, one slot per seat: showing the pad to someone else (the next player, a bot) never wipes yours
+function teleDraw(d,v){const k=d.gid+':'+d.rd;if(!S.dr||S.dr.key!==k)S.dr={key:k,seat:{}};return S.dr.seat[v]||(S.dr.seat[v]={strokes:[],c:0});}
+/* bots write a short sentence, draw a simple doodle or guess, straight into their own private part: never through the human's draft or pad */
+const TELE_SAY=['قطوة تشرب شاي على القمر','جمل يسوق سيارة','بيت فوق شجرة','شمس لابسة نظارة','سمكة تطير في السما','رجل ثلج في الصحرا','ديك ياكل بيتزا','فيل يلعب كورة','نخلة تحت المطر','قلب مكسور','صاروخ رايح للقمر','نجمة تنام على الغيم'];
+const teleRing=(x,y,r,c)=>({c,p:[...Array(13).keys()].map(i=>[Math.round(x+r*Math.cos(i*Math.PI/6)),Math.round(y+r*Math.sin(i*Math.PI/6))])});
+const TELE_DD=[[/شمس|نهار|صيف/,'شمس',[teleRing(32,32,11,4),...[0,1,2,3,4,5,6,7].map(k=>({c:4,p:[[32+Math.round(15*Math.cos(k*Math.PI/4)),32+Math.round(15*Math.sin(k*Math.PI/4))],[32+Math.round(21*Math.cos(k*Math.PI/4)),32+Math.round(21*Math.sin(k*Math.PI/4))]]}))]],
+  [/بيت|قصر|غرفة/,'بيت',[{c:0,p:[[16,56],[16,30],[48,30],[48,56],[16,56]]},{c:1,p:[[11,33],[32,12],[53,33]]},{c:5,p:[[28,56],[28,44],[36,44],[36,56]]}]],
+  [/شجر|نخل|غابة|ورد/,'شجرة',[{c:0,p:[[30,58],[30,38]]},{c:0,p:[[34,58],[34,38]]},teleRing(32,26,13,3)]],
+  [/قلب|حب/,'قلب',[{c:1,p:[[32,52],[14,32],[13,22],[20,15],[27,15],[32,22],[37,15],[44,15],[51,22],[50,32],[32,52]]}]],
+  [/قط|بسة|بسه/,'قطوة',[teleRing(32,36,15,0),{c:0,p:[[21,26],[19,12],[29,22]]},{c:0,p:[[35,22],[45,12],[43,26]]},{c:0,p:[[26,34]]},{c:0,p:[[38,34]]},{c:1,p:[[29,42],[32,45],[35,42]]}]],
+  [/سمك|حوت|بحر/,'سمكة',[{c:2,p:[[10,32],[20,22],[36,22],[46,32],[36,42],[20,42],[10,32]]},{c:2,p:[[46,32],[57,22],[57,42],[46,32]]},{c:0,p:[[20,30]]}]],
+  [/نجم|ليل|سما/,'نجمة',[{c:4,p:[...Array(11).keys()].map(i=>{const r=i%2?9:22,a=-Math.PI/2+i*Math.PI/5;return [Math.round(32+r*Math.cos(a)),Math.round(32+r*Math.sin(a))];})}]],
+  [/ضحك|فرح|وجه/,'وجه يضحك',[teleRing(32,32,20,0),{c:0,p:[[25,26]]},{c:0,p:[[39,26]]},{c:1,p:[[22,38],[27,43],[32,44],[37,43],[42,38]]}]]];
 
 GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E67E22"/><rect x="14" y="16" width="72" height="56" rx="8" fill="#fff"/><path d="M24 58c8-20 16-22 22-8s14 10 20-12" stroke="#2D4763" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="66" cy="32" r="6" fill="#F0B429"/><path d="M60 80l22-22 6 6-22 22h-6z" fill="#2D4763"/></svg>`,
@@ -40,7 +56,7 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
         s+=`<div class="step"><small style="color:${col(d,seat)}">${nm(d,seat)} ${r===0?'كتب':r%2?'رسم':'خمّن'}</small>${r%2?(x?drawSVG(x):'<p class="note">(ما رسم)</p>'):`<div class="bub">${x?escH(x):'…'}</div>`}</div>`;}
       s+='</div>';}
     return s+'</div>';},
-  click(a,i,d,ctx){if(!ctx.my)return;const v=ctx.v;
+  click(a,i,d,ctx){if(!ctx.my||ctx.bot)return;const v=ctx.v;
     if(d.rd%2){const st=teleDraw(d,v);
       if(a==='col'){st.c=i;render();return;}
       if(a==='undo'){st.strokes.pop();render();return;}
@@ -51,16 +67,24 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     const r=d.pl[v];const p=S.priv[r]||{};setPriv(r,{...p,gid:d.gid,rd:d.rd,pick:1,hist:{...(p.gid===d.gid&&p.hist||{}),[d.rd]:content}});
   },
   resolve(d,picks){const rd=d.rd+1;return {...d,rd,win:rd>=d.R?'d':null};},
-  after(d,ctx){const pad=document.getElementById('pad');if(!pad||!ctx.my||pad._on)return;pad._on=1;const st=teleDraw(d,ctx.v);
-    const total=()=>st.strokes.reduce((a,s)=>a+s.p.length,0);
+  botPick(d,s,lv){const r=d.rd,n=d.pl.length,prev=r>0?teleHist(d,(s-1+n)%n,r-1):null;let c;
+    if(r===0)c=TELE_SAY[rnd(TELE_SAY.length)];
+    else if(r%2)c=encDraw((TELE_DD.find(x=>x[0].test(prev||''))||TELE_DD[rnd(TELE_DD.length)])[2]);
+    else{const m=TELE_DD.find(x=>encDraw(x[2])===prev),src=r>1?teleHist(d,(s-2+n)%n,r-2):null;// a bot doodle is easy to read; a human drawing sometimes
+      c=m?m[1]:src&&Math.random()<[0,.2,.45,.7][lv]?src.split(' ').slice(0,2+rnd(2)).join(' '):TELE_SAY[rnd(TELE_SAY.length)];}
+    const role=d.pl[s],p=S.priv[role]||{};S.priv[role]={...p,gid:d.gid,hist:{...(p.gid===d.gid&&p.hist||{}),[r]:c}};return 1;},
+  after(d,ctx){const pad=document.getElementById('pad');if(!pad||!ctx.my)return;pad._v=ctx.v;if(pad._on)return;pad._on=1;
+    // the slot is looked up on every event, for whoever the pad shows now
+    const st=()=>teleDraw(S.st.d,pad._v);
+    const total=()=>st().strokes.reduce((a,s)=>a+s.p.length+1,0);
     const pt=e=>{const b=pad.getBoundingClientRect();return [Math.max(0,Math.min(63,Math.round((e.clientX-b.left)/b.width*63))),Math.max(0,Math.min(63,Math.round((e.clientY-b.top)/b.height*63)))];};
     let cur=null,el=null;
-    pad.addEventListener('pointerdown',e=>{if(total()>=DMAX){toast('الرسمة وصلت حدها');return;}e.preventDefault();pad.setPointerCapture(e.pointerId);S.holdRender=true;
-      cur={c:st.c,p:[pt(e)]};st.strokes.push(cur);el=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    pad.addEventListener('pointerdown',e=>{if(total()>=teleMax(S.st.d)){toast('الرسمة وصلت حدها');return;}e.preventDefault();pad.setPointerCapture(e.pointerId);S.holdRender=true;
+      cur={c:st().c,p:[pt(e)]};st().strokes.push(cur);el=document.createElementNS('http://www.w3.org/2000/svg','polyline');
       el.setAttribute('fill','none');el.setAttribute('stroke',DRC[cur.c]);el.setAttribute('stroke-width','1.4');el.setAttribute('stroke-linecap','round');el.setAttribute('stroke-linejoin','round');
       el.setAttribute('points',cur.p.map(p=>p.join(',')).join(' '));pad.appendChild(el);});
-    pad.addEventListener('pointermove',e=>{if(!cur)return;const p=pt(e),l=cur.p[cur.p.length-1];if(p[0]===l[0]&&p[1]===l[1])return;if(total()>=DMAX)return;cur.p.push(p);el.setAttribute('points',cur.p.map(q=>q.join(',')).join(' '));});
-    const end=()=>{if(!cur)return;cur=null;el=null;S.holdRender=false;render();};
+    pad.addEventListener('pointermove',e=>{if(!cur)return;const p=pt(e),l=cur.p[cur.p.length-1];if(p[0]===l[0]&&p[1]===l[1])return;if(total()>=teleMax(S.st.d))return;cur.p.push(p);el.setAttribute('points',cur.p.map(q=>q.join(',')).join(' '));});
+    const end=()=>{if(!cur)return;cur.p=teleThin(cur.p);cur=null;el=null;S.holdRender=false;render();};
     pad.addEventListener('pointerup',end);pad.addEventListener('pointercancel',end);
   }
 };
@@ -72,7 +96,7 @@ GAMES.cups={...spdBase({name:'وين شخصيتك؟',lbc:'#6C3483',icon:`<svg vi
   view(d,ctx,st){const P=GAMES.cups.plan(d);const m=P.m;const me=ctx.v;
     const pos=st.phase==='go'?P.end:P.start;
     return `<div class="cupsw"><div class="cups" id="cups">${Array(m).fill(0).map((_,k)=>{const ch=k<d.pl.length?d.pl[k]:-1;
-      return `<button class="cupb" data-ga="pick" data-i="${k}" style="left:${pos[k]*(100/m)}%;width:${100/m}%" ${st.phase==='go'?'':'disabled'}><span class="cupc">${ch>=0?`<i style="background:${COLS[ch]}">${pname(ch).replace(/&[^;]+;/g,'').charAt(0)}</i>`:''}</span><span class="cup"></span></button>`;}).join('')}</div></div>
+      return `<button class="cupb" data-ga="pick" data-i="${k}" style="left:${pos[k]*(100/m)}%;width:${100/m}%" ${st.phase==='go'?'':'disabled'}><span class="cupc">${ch>=0?`<i style="background:${COLS[ch]}">${shapeW(ch).replace('<svg ','<svg style="width:18px;height:18px" ')}</i>`:''}</span><span class="cup"></span></button>`;}).join('')}</div></div>
       <p class="note">${st.phase==='go'?'اختار الكوب اللي تحته شخصيتك':'ركّز على شخصيتك'} <b style="color:${col(d,me)}">●</b></p>`;},
   click(a,k,d,ctx,st){if(a!=='pick'||st.phase!=='go')return;const P=GAMES.cups.plan(d);spdSubmit(d,ctx,k===ctx.v);}}),
   plan(d){const m=d.pl.length+1+(d.rd>2?1:0);const R=srng(d,'cup'+d.rd);const start=[...Array(m).keys()];const pos=[...start];const swaps=[];
