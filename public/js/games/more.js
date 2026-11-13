@@ -100,15 +100,35 @@ GAMES.stroop={name:'لون الكلمة',cat:'quiz',lbc:'#A33C77',
 
 /* ---------- bomb wires ---------- */
 const WC=['#E5483F','#3D8FD8','#3FAE5C','#F0B429','#9C7BD6','#F2874B','#E57AAE','#2FB3AA','#8B5A2B','#555','#C0C0C0','#1F7A8C'];
+const WCOL=[['#E5483F','الأحمر'],['#3D8FD8','الأزرق'],['#3FAE5C','الأخضر'],['#F0B429','الأصفر'],['#8E44AD','البنفسجي'],['#F2874B','البرتقالي'],['#E57AAE','الوردي'],['#1ABC9C','الفيروزي'],['#ECF0F1','الأبيض'],['#8B5A2B','البني'],['#95A5A6','الرمادي'],['#2D4763','الكحلي']];
+// a new bomb: one deadly wire, and two safe wires whispered to each player still in the game
+function wNewBomb(d,n,alive){const k=Math.min(12,alive.length+5),bomb=rnd(k);const safe=[...Array(k).keys()].filter(i=>i!==bomb);
+  const kn=[...Array(n).keys()].map(s=>alive.includes(s)?shuffle([...safe]).slice(0,2).sort((a,b)=>a-b):[]);
+  return {...d,k,bomb,cut:[],kn,ps:'0'.repeat(n),nb:(d.nb||0)+1};}
+function wCut(d,i){const t=d.turn;
+  if(i===d.bomb){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);const nd={...d,out,turn:nextSeat(d,t,out),last:`💥 ${nm(d,t)} قص السلك ${WCOL[i][1]} وانفجرت القنبلة!`};
+    if(al.length<=1)return {...nd,cut:[...d.cut,i],win:al.length?al[0]:'d'};return wNewBomb(nd,d.pl.length,al);}
+  return {...d,cut:[...d.cut,i],turn:nextSeat(d,t),last:`${nm(d,t)} قص ${WCOL[i][1]} وسلم ✂️`};}
 GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A4A4A"/><circle cx="50" cy="56" r="26" fill="#1d1d1d"/><path d="M60 30q10-12 22-8" stroke="#E8C38E" stroke-width="4" fill="none"/><circle cx="83" cy="22" r="5" fill="#F0B429"/>${['#E5483F','#3D8FD8','#3FAE5C'].map((c,k)=>`<path d="M30 ${50+k*7}H70" stroke="${c}" stroke-width="4"/>`).join('')}</svg>`,
-  init:n=>({k:n+3,bomb:rnd(n+3),cut:'',last:''}),
+  /* every bomb has one deadly wire; each player secretly knows two wires that are safe.
+     On your turn cut a wire, or pass once per bomb. Cut the deadly one and you are out, then a new bomb arrives. */
+  init:n=>wNewBomb({last:''},n,[...Array(n).keys()]),
+  viewer:d=>d.win==null?d.turn:null,
+  coverMsg:d=>d.last||'',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){return `<div class="bomb">💣</div><div style="width:100%;max-width:420px">${Array(d.k).fill(0).map((_,i)=>d.cut.includes(String.fromCharCode(97+i))?`<div class="wire cut" style="--c:${WC[i]}"></div>`:`<button class="wire" style="--c:${WC[i]}" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}></button>`).join('')}</div>`;},
-  click(a,i,d,ctx){if(!ctx.my)return;const ch=String.fromCharCode(97+i);if(d.cut.includes(ch))return;const t=d.turn;
-    if(i===d.bomb){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);const k=al.length+3;
-      act({...d,out,k,bomb:rnd(k),cut:'',win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),last:`💥 ${nm(d,t)} قص السلك الغلط وطلع. قنبلة جديدة!`});return;}
-    act({...d,cut:d.cut+ch,turn:nextSeat(d,t),last:`${nm(d,t)} قص سلك وسلم`});}
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v;const my=ctx.my&&d.win==null;const kn=v>=0&&d.kn[v]?d.kn[v]:[];
+    const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const fresh=d.nb>1&&once('wb'+d.gid+':'+d.nb);
+    let s=`<div class="wbomb ${fresh?'blast':''}"><div class="wled"><b>${left.length}</b><small>أسلاك باقية</small></div><div class="bwires">${[...Array(d.k).keys()].map(i=>{const cut=d.cut.includes(i);const known=kn.includes(i)&&!cut;
+      return `<${my&&!cut?'button':'div'} class="bw ${cut?'cut':''} ${known?'known':''}" style="--c:${WCOL[i][0]}" ${my&&!cut?`data-ga="cut" data-i="${i}"`:''}><i></i><i></i>${known?'<s>سليم ✓</s>':''}</${my&&!cut?'button':'div'}>`;}).join('')}</div></div>`;
+    if(v>=0&&d.out[v]!=='1'&&d.win==null){const k2=kn.filter(i=>!d.cut.includes(i));
+      s+=`<p class="note" style="text-align:center">${k2.length?`سر بينك وبين نفسك: ${k2.map(i=>`<b style="color:${WCOL[i][0]}">${WCOL[i][1]}</b>`).join(' و')} سليم 🤫`:'الأسلاك اللي تعرفها انقصت، الحين حظك'}</p>`;}
+    if(my&&d.ps[d.turn]!=='1')s+=`<div class="acts"><button class="btn navy" data-ga="pass">⏭ مرّر الدور (مرة وحدة لكل قنبلة)</button></div>`;
+    return s;},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
+    if(a==='pass'){if(d.ps[t]==='1')return;act({...d,ps:setAt(d.ps,t,'1'),turn:nextSeat(d,t),last:`${nm(d,t)} مرّر دوره ⏭`});return;}
+    if(a==='cut'&&!d.cut.includes(i))act(wCut(d,i));},
+  onTimeout:d=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const safe=left.filter(i=>i!==d.bomb);return wCut(d,safe.length?safe[rnd(safe.length)]:d.bomb);}
 };
 
 /* ---------- go fish ---------- */

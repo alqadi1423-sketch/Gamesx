@@ -375,3 +375,27 @@ function seaFoe(d,s,lv){const ts=targets(d,s);if(lv===1||ts.length<2)return pick
 GAMES.sea.bot=(d,s,lv)=>{if(!allReady(d,S.priv)||seaSalvo(d))return d;const o=seaFoe(d,s,lv);if(o==null)return;S.tgt=o;const i=seaAim(d,s,o,lv,[]);return i==null?undefined:botDo(d,s,'fire',i);};
 GAMES.sea.botPick=(d,s,lv)=>{const k=seaAfloat(seaFleet(d,s),d.sh[s]);const out=[],av={};
   for(let j=0;j<k;j++){const o=seaFoe(d,s,lv);if(o==null)break;const i=seaAim(d,s,o,lv,av[o]||[]);if(i==null)continue;(av[o]=av[o]||[]).push(i);out.push([o,i]);}return out;};
+
+/* ---------- camel race: hard bots play out the rest of the leg many times before betting ---------- */
+function camelOdds(d,runs){const win=[0,0,0,0,0],sec=[0,0,0,0,0];
+  for(let k=0;k<runs;k++){let cam=d.cam.map(x=>[...x]);const left=shuffle([0,1,2,3,4].filter(c=>d.dl[c]==='0'));
+    for(const c of left){cam=cMove(cam,c,1+rnd(3));if(cam[c][0]>=CTRACK)break;}const rk=cRank(cam);win[rk[0]]++;sec[rk[1]]++;}
+  return {win:win.map(x=>x/runs),sec:sec.map(x=>x/runs)};}
+GAMES.camel.bot=(d,s,lv)=>{const open=[0,1,2,3,4].filter(c=>CTILES[d.tk[c]]);
+  if(lv===1){if(open.length&&Math.random()<.45)return botDo(d,s,'bet',pickR(open));return botDo(d,s,'roll',0);}
+  const od=camelOdds(d,lv===3?400:60);let best=-1,bv=lv===3?1.05:1.5;
+  for(const c of open){const v=CTILES[d.tk[c]];const ev=od.win[c]*v+od.sec[c]*1-(1-od.win[c]-od.sec[c]);if(ev>bv){bv=ev;best=c;}}
+  return best>=0?botDo(d,s,'bet',best):botDo(d,s,'roll',0);};
+
+/* ---------- lucky boxes: stop while the bag is worth more than the risk ---------- */
+GAMES.luck.bot=(d,s,lv)=>{const {safe,bomb}=luckLeft(d);const p=bomb/(safe+bomb);
+  if(d.bag>0){let stop;if(lv===1)stop=d.bag>=4+rnd(10);else if(lv===2)stop=d.bag>=9||p>.3;else{const gain=3.5*(1-p)*(safe-2)/Math.max(1,safe)+d.bag*(1-p)*2/Math.max(1,safe);stop=p*d.bag>gain;}
+    if(stop)return botDo(d,s,'bank',0);}
+  const closed=[...d.op].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);return botDo(d,s,'m',pickR(closed));};
+
+/* ---------- bomb wires: cut what you know is safe, pass when the odds turn bad ---------- */
+GAMES.wires.bot=(d,s,lv)=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const known=(d.kn[s]||[]).filter(i=>left.includes(i));
+  if(known.length&&(lv>1||Math.random()<.5))return botDo(d,s,'cut',pickR(known));
+  if(d.ps[s]!=='1'&&lv>1&&1/left.length>(lv===3?.25:.4))return botDo(d,s,'pass',0);
+  // wires that other players are known to know about are not marked, so guess among the rest
+  return botDo(d,s,'cut',pickR(left));};
