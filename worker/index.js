@@ -22,7 +22,12 @@ export class Room {
   }
 
   async fetch(req) {
-    if (this.ctx.getWebSockets().length >= 16) return new Response('room is full', { status: 429 });
+    if (this.ctx.getWebSockets().length >= 16) {
+      // a browser can't read an HTTP error on a WebSocket upgrade, so accept it, say why, and close
+      const [c, s] = Object.values(new WebSocketPair());
+      s.accept(); s.send('{"t":"full"}'); s.close(4001, 'full');
+      return new Response(null, { status: 101, webSocket: c });
+    }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     const peer = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
