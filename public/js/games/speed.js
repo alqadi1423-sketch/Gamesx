@@ -42,7 +42,7 @@ GAMES.nmem=spdBase({name:'تذكّر الرقم',lbc:'#2C6E8F',icon:iconE('#3A8D
   start(d,st){st.phase='show';setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},2200+d.rd*350);},
   view(d,ctx,st){if(st.phase==='show')return `<div class="spd"><div class="memnum">${GAMES.nmem.num(d)}</div><p class="note">احفظه</p></div>`;
     return `<div class="spd"><div class="spdt">وش كان الرقم؟</div><input class="code" inputmode="numeric" data-draft="nm" value="${escH(S.draft.nm||'')}" autocomplete="off" style="letter-spacing:4px"><button class="btn red wide" data-ga="go">أرسل</button></div>`;},
-  click(a,i,d,ctx,st){if(a!=='go'||st.phase!=='go')return;const v=String(S.draft.nm||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).trim();delete S.draft.nm;spdSubmit(d,ctx,v===GAMES.nmem.num(d));}});
+  click(a,i,d,ctx,st){if(a!=='go'||st.phase!=='go')return;const v=String(S.draft.nm||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[,٬\s]/g,'');delete S.draft.nm;spdSubmit(d,ctx,v===GAMES.nmem.num(d));}});
 
 /* ---------- count the shapes ---------- */
 const CNTE=['🍎','🍋','⭐','🐟','🎈','🌙'];
@@ -66,13 +66,15 @@ function sudo4(d){const R=srng(d,'su'+d.rd);let g=[[1,2,3,4],[3,4,1,2],[2,1,4,3]
   const p=[1,2,3,4];for(let i=3;i>0;i--){const j=Math.floor(R()*(i+1));[p[i],p[j]]=[p[j],p[i]];}g=g.map(r=>r.map(x=>p[x-1]));
   if(R()<.5)g=[g[1],g[0],g[2],g[3]];if(R()<.5)g=g.map(r=>[r[1],r[0],r[2],r[3]]);if(R()<.5)g=[g[2],g[3],g[0],g[1]];
   const sol=g.flat();const holes=new Set();while(holes.size<7+Math.min(d.rd,3))holes.add(Math.floor(R()*16));return {sol,holes:[...holes]};}
+// every row, column and 2x2 box holds 1 to 4 once (a puzzle can have more than one right answer)
+const sudoOk=b=>[0,1,2,3].every(k=>[[0,1,2,3].map(j=>b[k*4+j]),[0,4,8,12].map(j=>b[k+j]),[0,1,4,5].map(j=>b[(k>>1)*8+(k&1)*2+j])].every(g=>g.every(x=>x>=1&&x<=4)&&new Set(g).size===4));
 GAMES.sudo=spdBase({name:'سودوكو سريع',lbc:'#34495E',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A6582"/><rect x="14" y="14" width="72" height="72" rx="6" fill="#fff"/><path d="M50 14V86M14 50H86" stroke="#2D4763" stroke-width="3"/><path d="M32 14V86M68 14V86M14 32H86M14 68H86" stroke="#c9d6e4" stroke-width="1.5"/><text x="23" y="29" font-size="13" font-weight="800" fill="#2D4763" text-anchor="middle">1</text><text x="59" y="47" font-size="13" font-weight="800" fill="#EC6158" text-anchor="middle">4</text><text x="41" y="83" font-size="13" font-weight="800" fill="#2D4763" text-anchor="middle">3</text></svg>`,title:'كمّل لوحة 4×4: كل صف وعمود ومربع فيه 1 إلى 4 بدون تكرار',
   start(d,st){st.phase='go';st.t0=performance.now();st.v={};st.cur=null;},
   view(d,ctx,st){const P=sudo4(d);return `<div class="sudo">${P.sol.map((x,i)=>P.holes.includes(i)?`<button class="su ${st.cur===i?'cur':''}" data-ga="c" data-i="${i}">${st.v[i]||''}</button>`:`<div class="su fixed">${x}</div>`).join('')}</div>
     <div class="acts">${[1,2,3,4].map(n=>`<button class="btn navy" data-ga="n" data-i="${n}">${n}</button>`).join('')}</div><button class="btn red wide" data-ga="go" ${P.holes.every(i=>st.v[i])?'':'disabled'}>خلصت</button>`;},
   click(a,i,d,ctx,st){if(st.phase!=='go')return;const P=sudo4(d);
     if(a==='c'){st.cur=i;render();return;}if(a==='n'&&st.cur!=null){st.v[st.cur]=i;const nx=P.holes.find(h=>!st.v[h]);st.cur=nx??st.cur;render();return;}
-    if(a==='go'&&P.holes.every(h=>st.v[h]))spdSubmit(d,ctx,P.holes.every(h=>st.v[h]===P.sol[h]));}});
+    if(a==='go'&&P.holes.every(h=>st.v[h]))spdSubmit(d,ctx,sudoOk(P.sol.map((x,k)=>P.holes.includes(k)?+st.v[k]:x)));}});
 
 /* ---------- typing race ---------- */
 const SENT=['الصبر مفتاح الفرج','من جد وجد ومن زرع حصد','العلم نور','خير الكلام ما قل ودل','الوقت من ذهب','القناعة كنز لا يفنى','الجار قبل الدار','الصديق وقت الضيق','في التأني السلامة','اطلبوا العلم من المهد إلى اللحد'];
@@ -116,13 +118,15 @@ function fkScore(a){if(!a.length)return 0;const c=[0,0,0,0,0,0,0];a.forEach(x=>c
   let s=0;for(let f=1;f<=6;f++){const n=c[f];if(!n)continue;if(n>=3){s+=(f===1?1000:f*100)*Math.pow(2,n-3);}else if(f===1)s+=100*n;else if(f===5)s+=50*n;else return 0;}return s;}
 const fkAny=a=>{const c=[0,0,0,0,0,0,0];a.forEach(x=>c[x]++);return c[1]>0||c[5]>0||c.some(x=>x>=3)||(a.length===6&&(c.slice(1).every(x=>x===1)||c.filter(x=>x===2).length===3));};
 // after someone reaches the goal, everyone else gets one last turn, then the highest wins
-function fkPass(d,x,t){const nx=nextSeat(d,t);let endAt=d.endAt;if(endAt==null&&x.sc&&x.sc[t]>=d.goal)endAt=t;
-  if(endAt!=null&&nx===endAt){const sc=x.sc||d.sc;return {...x,endAt,turn:nx,win:mostPts(sc.map((v,s)=>d.out[s]==='1'?-1:v)),last:(x.last||'')+' • انتهت الجولة الأخيرة'};}
+function fkPass(d,x,t){const n=d.pl.length,nx=nextSeat(x,t);let endAt=d.endAt;if(endAt==null&&x.sc&&x.sc[t]>=d.goal)endAt=t;
+  let hit=false;if(endAt!=null)for(let s=(t+1)%n;;s=(s+1)%n){if(s===endAt){hit=true;break;}if(s===nx)break;}
+  if(hit){const sc=x.sc||d.sc;return {...x,endAt,turn:nx,win:mostPts(sc.map((v,s)=>x.out[s]==='1'?-1:v)),last:(x.last||'')+' • انتهت الجولة الأخيرة'};}
   return {...x,endAt,turn:nx,last:(x.last||'')+(endAt!=null&&d.endAt==null?` • وصل الهدف! كل واحد باقي له دور أخير`:'')};}
 GAMES.farkle={name:'عشرة آلاف',cat:'cards',lbc:'#7B241C',icon:iconE('#A93226','🎲'),
   init:n=>({dice:'',used:'000000',tot:0,sc:Array(n).fill(0),goal:10000,endAt:null,rolled:false,last:''}),
   points:d=>d.sc,
   onTimeout:d=>fkPass(d,{...d,dice:'',used:'000000',tot:0,rolled:false},d.turn),
+  onSkip(nd,d){if(nd.out[d.turn]!=='1')return nd;const x={...nd,dice:'',used:'000000',tot:0,rolled:false,last:nm(d,d.turn)+' طلع'+(d.tot>0?' وراح جمع دوره':'')};return x.win!=null?x:fkPass(x,x,d.turn);},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>جمع الدور: <b>${d.tot}</b>، الهدف ${d.goal}</small>`,
   render(d,ctx){const my=ctx.my;S.sel=S.sel||[];const anim=S.rolled;S.rolled=false;const sel=S.sel.map(i=>+d.dice[i]);const sv=fkScore(sel);
     let s=`<div class="row ${anim?'':''}" style="gap:8px">${d.dice?[...d.dice].map((x,i)=>d.used[i]==='1'?`<div class="dice" style="width:50px;height:50px;opacity:.25">${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</div>`:`<button class="dice" style="width:50px;height:50px;${S.sel.includes(i)?'box-shadow:0 0 0 4px #ffd84d':''}" data-ga="sel" data-i="${i}" ${my&&d.rolled?'':'disabled'}>${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</button>`).join(''):''}</div>`;

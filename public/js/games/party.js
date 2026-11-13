@@ -7,13 +7,15 @@ const normAr=t=>String(t||'').trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي
 const CATF=['إنسان','حيوان','نبات','جماد','بلاد'];
 const CATL='ابتجحخدرزسشصطعفقكلمنهوي';
 const catOk=(w,L)=>{w=normAr(w);if(!w)return false;if(w.startsWith('ال')&&w.length>2&&w[2]===L)return true;return w[0]===L;};
+// letter ا: «الفيل» starts with ا only through the article, so it goes to the vote instead of the dictionary
+const catAl=(w,L)=>{w=normAr(w);return L==='ا'&&w.startsWith('ال')&&w.length>2&&w[2]!=='ا';};
 const inDict=(k,w)=>typeof DICT!=='undefined'&&DICT[CATF[k]]&&DICT[CATF[k]].has(normW(w));
 function catScore(d,picks,acc){const pts=[...d.pts];const got=picks.map(()=>Array(5).fill(0));
   for(let k=0;k<5;k++){const cnt={};picks.forEach((a,s)=>{if(a&&acc[s][k]){const w=normW(a[k]);cnt[w]=(cnt[w]||0)+1;}});
     picks.forEach((a,s)=>{if(a&&acc[s][k]){got[s][k]=cnt[normW(a[k])]>1?5:10;}});}
   got.forEach((g,s)=>pts[s]+=g.reduce((x,y)=>x+y,0));
-  const round=d.round+1;const nL=CATL.replace(d.L,'');
-  return {...d,pts,rd:d.rd+1,round,phase:'write',pend:null,ans:null,prev:{L:d.L,a:picks,p:got,how:acc},res:`انتهت جولة حرف «${d.L}»`,L:nL[rnd(nL.length)],win:round>=d.rounds?mostPts(pts):null};}
+  const round=d.round+1;const used=(d.used||'')+d.L;const nL=[...CATL].filter(c=>!used.includes(c)).join('')||CATL.replace(d.L,'');
+  return {...d,pts,rd:d.rd+1,round,phase:'write',pend:null,ans:null,prev:{L:d.L,a:picks,p:got,how:acc},res:`انتهت جولة حرف «${d.L}»`,L:nL[rnd(nL.length)],used,win:round>=d.rounds?mostPts(pts):null};}
 GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B7834F"/><rect x="16" y="14" width="68" height="72" rx="8" fill="#FFF7E8"/>${[0,1,2,3,4].map(k=>`<path d="M26 ${28+k*12}H74" stroke="#C9B08A" stroke-width="2"/>`).join('')}<circle cx="74" cy="22" r="13" fill="#EC6158"/><text x="74" y="28" font-size="16" font-weight="800" fill="#fff" text-anchor="middle">م</text></svg>`,
   init:n=>({rd:0,round:0,phase:'write',pts:Array(n).fill(0),res:'',prev:null,rounds:5,L:CATL[rnd(CATL.length)]}),
@@ -37,7 +39,7 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',
     if(a==='vote'){const v=d.pend.map((x,k)=>(S.draft.votes||{})[k]??1);S.draft.votes={};simulPick(d,ctx.v,v);return;}
     const ans=CATF.map((c,k)=>String((S.draft||{})['c'+k]||'').trim().slice(0,30));for(let k=0;k<5;k++)delete S.draft['c'+k];simulPick(d,ctx.v,ans);},
   resolve(d,picks){
-    if(d.phase==='write'){const acc=picks.map(a=>a?a.map((w,k)=>catOk(w,d.L)?(inDict(k,w)?1:0):-1):[-1,-1,-1,-1,-1]);
+    if(d.phase==='write'){const acc=picks.map(a=>a?a.map((w,k)=>catOk(w,d.L)?(inDict(k,w)&&!catAl(w,d.L)?1:0):-1):[-1,-1,-1,-1,-1]);
       const pend=[];picks.forEach((a,s)=>{if(a)a.forEach((w,k)=>{if(acc[s][k]===0)pend.push({s,k,w});});});
       if(!pend.length)return catScore(d,picks,acc.map(r=>r.map(x=>x===1?1:0)));
       return {...d,phase:'vote',ans:picks,pend,acc,rd:d.rd+1,res:''};}
@@ -75,7 +77,7 @@ GAMES.close={name:'أقرب تخمين',cat:'quiz',lbc:'#6A4C93',
   q(d,rd){const R=srng(d,'cl');const ord=[...CLOSE.keys()];for(let i=ord.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}return CLOSE[ord[rd%ord.length]];},
   render(d,ctx){if(d.win!=null)return '';const Q=this.q(d,d.rd);
     return pickedChips(d)+`<div class="qbox">${Q[0]}</div>`+(ctx.my?`<input class="code" inputmode="numeric" style="max-width:260px;letter-spacing:2px" data-draft="n" value="${esc((S.draft||{}).n||'')}" placeholder="رقمك" autocomplete="off"><button class="btn red wide" data-ga="go">أرسل</button>`:'');},
-  click(a,i,d,ctx){if(!ctx.my)return;const v=parseFloat(String((S.draft||{}).n||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)));if(!isFinite(v)){toast('اكتب رقم');return;}S.draft={};simulPick(d,ctx.v,v);},
+  click(a,i,d,ctx){if(!ctx.my)return;const t=String((S.draft||{}).n||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/٫/g,'.').replace(/[,٬\s]/g,'');const v=/^-?\d+(\.\d+)?$/.test(t)?parseFloat(t):NaN;if(!isFinite(v)){toast('اكتب رقم');return;}S.draft={};simulPick(d,ctx.v,v);},
   resolve(d,picks){const Q=this.q(d,d.rd);const diff=picks.map(p=>p==null?Infinity:Math.abs(p-Q[1]));const mn=Math.min(...diff);const pts=[...d.pts];const w=[];
     diff.forEach((x,s)=>{if(x===mn&&isFinite(x)){pts[s]++;w.push(nm(d,s));}});
     const rd=d.rd+1;return {...d,pts,rd,res:`${Q[0]} الجواب ${Q[1]}. `+d.pl.map((r,s)=>picks[s]==null?'':`${nm(d,s)} ${picks[s]}`).filter(Boolean).join('، ')+`. الأقرب: ${w.join('، ')}`,win:rd>=d.rounds?mostPts(pts):null};}
@@ -90,12 +92,12 @@ GAMES.tf=makeQuiz({name:'صح أو خطأ',lbc:'#2E8B57',icon:`<svg viewBox="0 0
 const ALLW=Object.values(WORDS).flat().filter(w=>w.length>=3);
 GAMES.scr=makeQuiz({name:'رتّب الحروف',lbc:'#B5651D',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D98236"/>${['ق','ل','م'].map((c,k)=>`<rect x="${14+k*26}" y="${30+(k%2)*14}" width="22" height="26" rx="5" fill="#fff" transform="rotate(${(k-1)*12} ${25+k*26} ${43+(k%2)*14})"/><text x="${25+k*26}" y="${50+(k%2)*14}" font-size="18" font-weight="800" fill="#2D4763" text-anchor="middle">${c}</text>`).join('')}</svg>`,
   gen(d,rd){const R=srng(d,'sc'+rd);const w=ALLW[Math.floor(R()*ALLW.length)];let a=[...w];for(let t=0;t<10;t++){for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}if(a.join('')!==w)break;}
-    const wr=new Set();let g=0;while(wr.size<3&&g++<500){const x=ALLW[Math.floor(R()*ALLW.length)];if(x!==w&&Math.abs(x.length-w.length)<=1)wr.add(x);}
-    while(wr.size<3){const x=ALLW[Math.floor(R()*ALLW.length)];if(x!==w)wr.add(x);}
+    const key=s=>[...s].sort().join(''),kw=key(w);const wr=new Set();let g=0;while(wr.size<3&&g++<500){const x=ALLW[Math.floor(R()*ALLW.length)];if(key(x)!==kw&&Math.abs(x.length-w.length)<=1)wr.add(x);}
+    while(wr.size<3){const x=ALLW[Math.floor(R()*ALLW.length)];if(key(x)!==kw)wr.add(x);}
     return {rq:'رتّب الحروف:',q:`<div class="wordbox">${a.map(c=>`<div class="wl">${c}</div>`).join('')}</div>وش الكلمة؟`,...withOptions(R,w,[...wr])};}});
 
 /* ---------- odd one out ---------- */
-const ODD=[['🍎','🍌','🍇','🍉','🍓','🍍','🍒','🍑'],['🐶','🐱','🐭','🐰','🦊','🐻','🐼','🦁'],['🚗','🚕','🚌','🚑','🚒','🚓','🚜','🚲'],['⚽','🏀','🏈','⚾','🎾','🏐','🏓'],['☀️','🌧️','⛈️','❄️','🌈','☁️'],['🐟','🐠','🐡','🦈','🐙','🦀','🐬','🐳'],['🎸','🎹','🥁','🎺','🎻','🎷'],['🥕','🌽','🍆','🥦','🥔','🥒','🍅','🌶️'],['👕','👖','👗','👔','🧥','👟','👒','🧢'],['🏠','🏢','🏫','🏥','🏦','🏨','🏪','🕌'],['🎸','🎹','🥁','🎺','🎻','🎷'],['✏️','📏','📌','📎','✂️','📐','📒','🖍️'],['📱','💻','🖥️','⌨️','🖨️','📷','📺','⌚'],['🍩','🍪','🎂','🍰','🍫','🍬','🍭','🧁'],['☕','🍵','🥛','🧃','🥤','🍹'],['🦅','🦉','🦆','🐧','🦜','🕊️','🐓','🦚'],['🐝','🐞','🦋','🐜','🐛','🦗','🕷️'],['🌙','⭐','🌍','🪐','☄️','🚀','🛸']];
+const ODD=[['🍎','🍌','🍇','🍉','🍓','🍍','🍒','🍑'],['🐶','🐱','🐭','🐰','🦊','🐻','🐼','🦁'],['🚗','🚕','🚌','🚑','🚒','🚓','🚜','🚲'],['⚽','🏀','🏈','⚾','🎾','🏐','🏓'],['☀️','🌧️','⛈️','❄️','🌈','☁️'],['🐟','🐠','🐡','🦈','🐙','🦀','🐬','🐳'],['🎸','🎹','🥁','🎺','🎻','🎷'],['🥕','🌽','🍆','🥦','🥔','🥒','🍅','🌶️'],['👕','👖','👗','👔','🧥','👟','👒','🧢'],['🏠','🏢','🏫','🏥','🏦','🏨','🏪','🕌'],['🔨','🔧','🔩','⛏️','🧰','🪓'],['✏️','📏','📌','📎','✂️','📐','📒','🖍️'],['📱','💻','🖥️','⌨️','🖨️','📷','📺','⌚'],['🍩','🍪','🎂','🍰','🍫','🍬','🍭','🧁'],['☕','🍵','🥛','🧃','🥤','🍹'],['🦅','🦉','🦆','🐧','🦜','🕊️','🐓','🦚'],['🐝','🐞','🦋','🐜','🐛','🦗','🕷️'],['🌙','⭐','🌍','🪐','☄️','🚀','🛸']];
 GAMES.odd=makeQuiz({name:'مين المختلف',lbc:'#C0507A',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#DD6E98"/><text x="30" y="44" font-size="26" text-anchor="middle">🍎</text><text x="70" y="44" font-size="26" text-anchor="middle">🍌</text><text x="30" y="80" font-size="26" text-anchor="middle">🍇</text><text x="70" y="80" font-size="26" text-anchor="middle">🚗</text></svg>`,
   gen(d,rd){const R=srng(d,'od'+rd);const a=Math.floor(R()*ODD.length);let b=Math.floor(R()*(ODD.length-1));if(b>=a)b++;
     const g=[...ODD[a]];for(let i=g.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[g[i],g[j]]=[g[j],g[i]];}const x=ODD[b][Math.floor(R()*ODD[b].length)];

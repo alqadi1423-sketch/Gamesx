@@ -17,18 +17,26 @@ const BARA=[
 ['أغراض المدرسة','سبورة قلم دفتر كتاب مسطرة ممحاة شنطة طاولة كرسي طباشير فرجار آلة_حاسبة مقلمة ألوان صمغ مقص خريطة مجسم جرس مقصف ساحة فصل معمل مكتبة شهادة اختبار واجب طابور فسحة زي_مدرسي'],
 ].map(([t,w])=>[t,w.split(' ').map(x=>x.replace(/_/g,' '))]);
 const baraWord=d=>BARA[d.cat][1][d.w];
-function baraPairs(n){const p=shuffle([...Array(n).keys()]);return p.map((a,i)=>[a,p[(i+1)%n]]);}
+function baraPairs(d){const p=shuffle(aliveSeats(d));return p.map((a,i)=>[a,p[(i+1)%p.length]]);}
+// drop seats that left from the question chain: whoever had to ask them asks the next one still playing
+function baraFix(d){const o=s=>d.out[s]==='1',nx={};d.pr.forEach(([a,b])=>nx[a]=b);let qi=0;const pr=[];
+  d.pr.forEach(([a,b],i)=>{if(o(a))return;for(let k=0;o(b)&&k<d.pl.length;k++)b=nx[b];if(b==null||b===a||o(b))return;if(i<d.qi)qi++;pr.push([a,b]);});return {...d,pr,qi};}
 GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D9573A"/><circle cx="30" cy="40" r="11" fill="#fff"/><circle cx="50" cy="40" r="11" fill="#fff"/><circle cx="70" cy="40" r="11" fill="#2D4763"/><path d="M14 80c0-12 7-18 16-18s16 6 16 18zM34 80c0-12 7-18 16-18s16 6 16 18z" fill="#fff"/><path d="M54 80c0-12 7-18 16-18s16 6 16 18z" fill="#2D4763"/><text x="70" y="45" font-size="13" font-weight="800" text-anchor="middle" fill="#fff">؟</text></svg>`,
   init:n=>({ph:'cat',cat:-1,w:-1,bo:-1,pr:[],qi:0,q2:false,rd:0,votes:null,opts:null,res:'',last:''}),
   simulNow:d=>d.ph==='see'||d.ph==='vote',
   viewer:d=>d.win!=null?null:(d.ph==='see'||d.ph==='vote')?simulViewer(d):d.ph==='guess'?d.bo:null,
   coverMsg:d=>d.res||'',
-  winText(d){return d.win===d.bo?`${nm(d,d.bo)} كان برة السالفة وفاز!`:`كشفتوا ${nm(d,d.bo)}، كان برة السالفة!`;},
-  winExtra:d=>`السالفة: ${baraWord(d)} (${BARA[d.cat][0]})${d.guess!=null?` • خمّن: ${BARA[d.cat][1][d.guess]}`:''}`,
+  winText(d){if(d.bo<0)return null;return d.win===d.bo?`${nm(d,d.bo)} كان برة السالفة وفاز!`:d.out[d.bo]==='1'&&d.guess==null?`${nm(d,d.bo)} طلع وهو برة السالفة`:`كشفتوا ${nm(d,d.bo)}، كان برة السالفة!`;},
+  winExtra:d=>d.cat<0?'':`السالفة: ${baraWord(d)} (${BARA[d.cat][0]})${d.guess!=null&&d.guess>=0?` • خمّن: ${BARA[d.cat][1][d.guess]}`:''}`,
   points:d=>d.pl.map((_,s)=>d.votes&&d.votes[s]!=null&&d.ph!=='vote'?(d.votes[s]>=0?'صوّت لـ '+nm(d,d.votes[s]):'ما صوّت'):''),
   onTimeout(d){if(d.ph==='cat')return baraStart(d,rnd(BARA.length));if(d.ph==='ask')return baraAsked(d);if(d.ph==='more')return {...d,ph:'vote',rd:d.rd+1,last:'بدأ التصويت'};
     if(d.ph==='guess')return baraGuess(d,d.opts[rnd(d.opts.length)]);return d;},
+  // a player left: if it was the one out of the loop the round ends, otherwise the questions go on without them
+  onSkip(nd){const bo=nd.bo;if(bo>=0&&nd.out[bo]==='1'){if(nd.ph==='guess')return {...baraGuess(nd,-1),last:`${nm(nd,bo)} طلع وما خمّن`};
+      const al=aliveSeats(nd);return {...nd,ph:'end',win:al.length?al[0]:'d',wins:al,last:`${nm(nd,bo)} طلع وهو برة السالفة`};}
+    if(nd.win!=null||!nd.pr.length)return nd;const x=baraFix(nd);if(x.ph!=='ask'||!x.pr.length)return x;
+    return x.qi<x.pr.length?{...x,turn:x.pr[x.qi][0]}:{...x,ph:'more',turn:x.pr[0][0],last:'خلصت الأسئلة'};},
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;const who=me?'<b class="yt">دورك</b>':`${nameTag(d,d.turn)}`;let s=d.last?`<small>${d.last}</small><br>`:'';
     if(d.ph==='cat')return s+`${who}: اختر نوع السالفة`;
     if(d.ph==='see')return s+'كل واحد يشوف بطاقته بدون ما يوريها أحد';
@@ -45,16 +53,16 @@ GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer
       if(local||a===v)h+='<button class="big green" data-ga="asked">سأل وجاوب، التالي</button>';return h+mine;}
     if(d.ph==='more'){if(myT)h+=`<div class="row bopts">${d.q2?'':'<button class="btn" data-ga="again">جولة ثانية</button>'}<button class="btn red" data-ga="vote">نصوّت</button></div>`;return h+mine;}
     if(d.ph==='vote'){if(v==null||v<0||!ctx.my)return '<p class="note">ننتظر تصويت الباقين…</p>'+mine;
-      return `<p class="lbl" style="text-align:center">مين تتوقع برة السالفة؟</p><div class="tabs">${d.pl.map((_,s)=>s===v?'':`<button class="tab" style="background:${col(d,s)}" data-ga="v" data-i="${s}">${nm(d,s)}</button>`).join('')}</div>`+mine;}
+      return `<p class="lbl" style="text-align:center">مين تتوقع برة السالفة؟</p><div class="tabs">${d.pl.map((_,s)=>s===v||d.out[s]==='1'?'':`<button class="tab" style="background:${col(d,s)}" data-ga="v" data-i="${s}">${nm(d,s)}</button>`).join('')}</div>`+mine;}
     if(d.ph==='guess'){if(!(local||v===d.bo))return `<p class="note">${nm(d,d.bo)} يخمّن السالفة الحين…</p>`;
       return `<p class="lbl" style="text-align:center">وش السالفة؟ (${BARA[d.cat][0]})</p><div class="opts g2">${d.opts.map(i=>`<button class="opt" data-ga="g" data-i="${i}">${BARA[d.cat][1][i]}</button>`).join('')}</div>`;}
     return h;},
   click(a,i,d,ctx){const v=ctx.v,local=ctx.local,myT=local||d.turn===v;
     if(a==='ok'&&d.ph==='see'&&ctx.my){simulPick(d,v,1);return;}
-    if(a==='v'&&d.ph==='vote'&&ctx.my&&i!==v){simulPick(d,v,i);return;}
+    if(a==='v'&&d.ph==='vote'&&ctx.my&&i!==v&&d.out[i]!=='1'){simulPick(d,v,i);return;}
     if(a==='cat'&&d.ph==='cat'&&myT){act(baraStart(d,i<0?rnd(BARA.length):i));return;}
     if(a==='asked'&&d.ph==='ask'&&(local||d.pr[d.qi][0]===v)){act(baraAsked(d));return;}
-    if(a==='again'&&d.ph==='more'&&myT&&!d.q2){{const pr=baraPairs(d.pl.length);act({...d,ph:'ask',pr,qi:0,q2:true,turn:pr[0][0],last:'جولة أسئلة ثانية'});}return;}
+    if(a==='again'&&d.ph==='more'&&myT&&!d.q2){{const pr=baraPairs(d);act({...d,ph:'ask',pr,qi:0,q2:true,turn:pr[0][0],last:'جولة أسئلة ثانية'});}return;}
     if(a==='vote'&&d.ph==='more'&&myT){act({...d,ph:'vote',rd:d.rd+1,last:'بدأ التصويت'});return;}
     if(a==='g'&&d.ph==='guess'&&(local||v===d.bo)){act(baraGuess(d,i));return;}},
   resolve(d,picks){if(d.ph==='see')return {...d,ph:'ask',rd:d.rd+1,turn:d.pr[0][0],res:'',last:'كل واحد شاف بطاقته، بدأت الأسئلة'};
@@ -65,10 +73,10 @@ GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer
       return {...d,votes,ph:'guess',turn:d.bo,opts:shuffle([d.w,...others]),res:`الأصوات: ${tally}`,last:`انكشف ${nm(d,d.bo)}!`};}
     const wins=[d.bo];return {...d,votes,ph:'end',win:d.bo,wins,res:'',last:acc<0?'تعادل في الأصوات، وطلع اللي برة السالفة سالم':`طلّعتوا ${nm(d,acc)} وهو داخل السالفة`};}
 };
-function baraStart(d,cat){const n=d.pl.length;const pr=baraPairs(n);return {...d,ph:'see',cat,w:rnd(BARA[cat][1].length),bo:rnd(n),pr,qi:0,rd:d.rd+1,last:`نوع السالفة: ${BARA[cat][0]}`};}
+function baraStart(d,cat){const al=aliveSeats(d);const pr=baraPairs(d);return {...d,ph:'see',cat,w:rnd(BARA[cat][1].length),bo:al[rnd(al.length)],pr,qi:0,rd:d.rd+1,last:`نوع السالفة: ${BARA[cat][0]}`};}
 function baraAsked(d){const qi=d.qi+1;if(qi<d.pr.length)return {...d,qi,turn:d.pr[qi][0],last:''};return {...d,ph:'more',turn:d.pr[0][0],last:'خلصت الأسئلة'};}
 function baraGuess(d,i){const ok=i===d.w;if(ok)return {...d,guess:i,ph:'end',win:d.bo,wins:[d.bo],last:`${nm(d,d.bo)} عرف السالفة!`};
-  const right=d.votes.map((x,s)=>x===d.bo?s:-1).filter(s=>s>=0);return {...d,guess:i,ph:'end',win:right[0],wins:right,last:`${nm(d,d.bo)} ما عرف السالفة`};}
+  const right=d.votes.map((x,s)=>x===d.bo&&d.out[s]!=='1'?s:-1).filter(s=>s>=0);return {...d,guess:i,ph:'end',win:right.length?right[0]:'d',wins:right,last:`${nm(d,d.bo)} ما عرف السالفة`};}
 
 /* ---------- المافيا ---------- */
 const MFR={m:'مافيا',d:'طبيب',t:'محقق',c:'مواطن'},MFE={m:'🕵️',d:'🩺',t:'🔎',c:'🙂'};
@@ -127,13 +135,15 @@ const mfLog=d=>d.log.length?`<details class="smine"><summary>اللي صار</su
 const WNORM=w=>String(w).replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه');
 const WASLA='مدرسة سيارة طائرة مكتبة حديقة ملعقة مروحة نافذة وسادة سفينة مدينة قبيلة جزيرة بحيرة صحراء خريطة رسالة قصيدة عائلة جامعة طاولة خزانة ثلاجة غسالة مكنسة فراشة زرافة غزالة دجاجة بطاطس فاكهة كنافة بسكوت عصفور حمامة تمساح دلفين ثعبان بطريق نعامة سنجاب تفاحة رمانة ليمون جوافة مانجو زيتون طماطم ملفوف بيتزا فطيرة مرقوق قرصان عصيدة زبادي شوربة مزرعة حظيرة بقالة منتزه ميناء عاصمة اليمن لبنان سوريا ليبيا الهند الصين تركيا ايران فرنسا روسيا جازان نجران الخبر بريدة عنيزة سكاكا الجوف بيروت بغداد باريس مدريد طوكيو مهندس محامي ممرضة مزارع سجادة ستارة مصباح ابريق فنجان مقلاة مكواة مفتاح حقيبة محفظة نظارة قلادة مسطرة ممحاة حاسوب تلفاز راديو سماعة بنطال فستان عباءة جاكيت جوارب طاقية سروال سحابة بركان زلزال عاصفة امطار اسنان جمجمة اظافر سباحة رماية شطرنج سعادة صداقة شجاعة كرامة امانة نظافة رمادي بنفسج سماوي كتابة قراءة رياضة سياحة تجارة زراعة صناعة هندسة ادارة سياسة ثقافة ترجمة حكاية رواية سينما اغنية مشكلة اجابة شهادة وظيفة اجازة تذكرة ضيافة ظهيرة اسبوع سنوات دقيقة ثانية الفجر العصر رمضان السبت الصيف دراجة حافلة شاحنة غواصة صاروخ مركبة اسعاف تاكسي ميزان مسمار مطرقة منشار فرشاة صابون معجون منشفة نعناع ريحان خزامى الماس ياقوت تطبيق رسائل جيران اخوان اطفال والدة اعمام اخوال معلمة طالبة تلميذ سبورة قاموس جريدة صحيفة اخبار اعلان البحر الشمس القمر النجم الورد'.split(' ');
 const WKEYS=['ضصثقفغعهخحج','شسيبلاتنمكط','ءئؤرذدزظوة'];
-let WDICT=null,WDLOAD=null;
-function wLoad(){if(WDICT||WDLOAD)return;WDLOAD=fetch('data/ar5.txt?v=1').then(r=>r.text()).then(t=>{const L='ءؤئابتثجحخدذرزسشصضطظعغفقكلمنهوي',A='abcdefghijklmnopqrstuvwxyzABCDE';const m={};[...A].forEach((c,i)=>m[c]=L[i]);
+let WDICT=null,WDLOAD=null,WDFAIL=0;
+// a failed or odd answer (404, captive portal page) leaves no dictionary and is tried again a bit later
+function wLoad(){if(WDICT||WDLOAD||Date.now()-WDFAIL<15000)return;WDLOAD=fetch('data/ar5.txt?v=1').then(r=>{if(!r.ok)throw 0;return r.text();}).then(t=>{if(!/^0[a-zA-E]{5}/.test(t))throw 0;const L='ءؤئابتثجحخدذرزسشصضطظعغفقكلمنهوي',A='abcdefghijklmnopqrstuvwxyzABCDE';const m={};[...A].forEach((c,i)=>m[c]=L[i]);
   const out=[];let prev='',i=0;while(i<t.length){const k=+t[i];i++;const w=prev.slice(0,k)+t.slice(i,i+5-k);i+=5-k;out.push(w);prev=w;}
-  WDICT={s:out.join(''),n:out.length,m};}).catch(()=>{WDLOAD=null;});}
+  if(out.length<100000)throw 0;WDICT={s:out.join(''),n:out.length,m};}).catch(()=>{WDLOAD=null;WDFAIL=Date.now();});}
 function wKnown(w){w=WNORM(w);if(WASLA.some(x=>WNORM(x)===w))return true;if(!WDICT)return true;
   const r={};const L='ءؤئابتثجحخدذرزسشصضطظعغفقكلمنهوي',A='abcdefghijklmnopqrstuvwxyzABCDE';const enc=[...w].map(c=>A[L.indexOf(c)]||'?').join('');
   let lo=0,hi=WDICT.n-1;while(lo<=hi){const mid=(lo+hi)>>1;const x=WDICT.s.substr(mid*5,5);if(x===enc)return true;if(x<enc)lo=mid+1;else hi=mid-1;}return false;}
+function wEnd(nd){if(nd.out.includes('0'))return nd;const sv=nd.pl.map((_,s)=>(nd.solved||[])[s]||99);const mn=Math.min(...sv);if(mn===99)return {...nd,win:'d'};const w=sv.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);return {...nd,win:w[0],wins:w};}
 function wScore(g,a){const res=Array(5).fill(0);const left={};for(let i=0;i<5;i++){if(g[i]===a[i])res[i]=2;else left[a[i]]=(left[a[i]]||0)+1;}
   for(let i=0;i<5;i++)if(res[i]!==2&&left[g[i]]){res[i]=1;left[g[i]]--;}return res;}
 GAMES.wasla={name:'وصلة',cat:'mind',lbc:'#2E7D5B',noTimer:false,
@@ -164,7 +174,7 @@ GAMES.wasla={name:'وصلة',cat:'mind',lbc:'#2E7D5B',noTimer:false,
     if(a==='ent'){if(w.length<5){toast('الكلمة لازم 5 حروف');return;}if(!wKnown(w)){toast('هذي الكلمة مو بالقاموس');return;}S.draft.wl='';simulPick(d,ctx.v,w);}},
   resolve(d,picks){const ans=WNORM(WASLA[d.ans]);const gs=(d.gs||d.pl.map(()=>[])).map(x=>[...x]);const solved=[...(d.solved||d.pl.map(()=>0))];let out=d.out;
     picks.forEach((p,s)=>{if(p===null&&d.out[s]==='1')return;gs[s].push(p?WNORM(p):'؟؟؟؟؟');if(p&&WNORM(p)===ans){solved[s]=gs[s].length;out=setAt(out,s,'1');}else if(gs[s].length>=6)out=setAt(out,s,'1');});
-    const nd={...d,gs,solved,out,rd:d.rd+1};
-    if(!out.includes('0')){const sv=solved.map((x,s)=>x?x:99);const mn=Math.min(...sv);if(mn===99)return {...nd,win:'d'};const w=sv.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);return {...nd,win:w[0],wins:w};}
-    return nd;}
+    return wEnd({...d,gs,solved,out,rd:d.rd+1});},
+  // d.out also marks the ones who finished, so the engine's "last one left wins" does not apply here
+  onSkip:nd=>wEnd({...nd,win:null,wins:undefined})
 };
