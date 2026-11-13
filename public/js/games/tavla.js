@@ -48,12 +48,14 @@ function tvPlay(d,m){const s=d.sd;const t=tvMove(d,s,m.from,m.to);const mv=[...d
   if(!left.length)nd={...nd,ph:'roll',mv:[],sd:1-s,...tmPass(d,s)};
   nd.last=`${tmName(d,s)} لعب ${d.dice[0]} و${d.dice[1]}${t.hit?' وضرب حجر':''}`;
   return nd;}
-function tvAuto(d){// used by the turn timer: plays legal moves until the turn ends
-  let x=d,guard=0;while(guard++<8&&x.win==null){
-    if(x.ph==='open'){const r=1+rnd(6);x=tvOpen(x,r);continue;}
+function tvAuto(d){// used by the turn timer: acts only for the side that ran out of time, until its turn ends
+  const me=d.ph==='dbl'?1-d.sd:d.sd;let x=d,guard=0;while(guard++<8&&x.win==null){
+    if(x.ph==='open'){x=tvOpen(x,1+rnd(6));if(x.ph!=='move'||x.sd!==me)break;continue;}
     if(x.ph==='dbl'){x=tvAnswer(x,true);break;}
+    if(x.sd!==me)break;
     if(x.ph==='roll'){x=tvRolled(x,[1+rnd(6),1+rnd(6)]);if(x.ph!=='move')break;continue;}
-    if(x.ph==='move'){const s=x.sd;const a=tvAllowed(x,s,x.mv);if(!a.length)break;x=tvPlay(x,a[rnd(a.length)]);if(x.sd!==s)break;}}
+    if(x.ph==='move'){const a=tvAllowed(x,me,x.mv);if(!a.length)break;x=tvPlay(x,a[rnd(a.length)]);if(x.sd!==me)break;continue;}
+    break;}
   return x;}
 function tvOpen(d,r){const o=[...d.op];o[d.sd]=r;
   if(d.sd===0)return {...d,op:o,sd:1,turn:tmNow(d,1),last:`${tmName(d,0)} رمى ${r}`};
@@ -67,10 +69,12 @@ function tvAnswer(d,take){const s=d.sd,o=1-s;// side o was asked
 GAMES.tavla={name:'طاولة الزهر',cat:'board',lbc:'#6B3D1F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7A4A26"/><rect x="6" y="8" width="88" height="84" rx="4" fill="#E9CF9E"/><rect x="47" y="8" width="6" height="84" fill="#7A4A26"/>${[0,1,2].map(k=>`<path d="M${9+k*13} 10l6 34 6-34z" fill="${k%2?'#2D4763':'#C9473E'}"/><path d="M${56+k*13} 90l6-34 6 34z" fill="${k%2?'#C9473E':'#2D4763'}"/>`).join('')}<circle cx="70" cy="30" r="8" fill="#fff" stroke="#2D4763" stroke-width="2"/><circle cx="30" cy="70" r="8" fill="#2D4763"/></svg>`,
   init:()=>({pts:[...TV0],bar:[0,0],off:[0,0],sd:0,tr:[0,0],ph:'open',op:[0,0],dice:[0,0],mv:[],cube:1,own:-1,lm:null,last:''}),
+  start:d=>({...d,turn:0}),// white (seat 0) always rolls the first opening die
+  onSkip(nd,d){const x=tmSkip(nd,d);return x.win!=null?{...x,ph:'end',wpts:x.cube}:x;},
   onTimeout:d=>tvAuto(d),
   points:d=>d.pl.map((_,s)=>`${s%2?'⚫':'⚪'} برّا ${d.off[s%2]}`),
   winText(d){const side=d.win%2;const nm2=side?'الأسود':'الأبيض';const x=d.wpts||1;
-    return d.end==='drop'?`فاز ${nm2}، الخصم رفض المضاعفة`:`فاز ${nm2}${d.end?' '+d.end:''}${x>1?` (${x} نقاط)`:''}`;},
+    return d.end==='drop'?`فاز ${nm2}، الخصم رفض المضاعفة`:d.end==='left'?`فاز ${nm2}، الخصم طلع`:`فاز ${nm2}${d.end?' '+d.end:''}${x>1?` (${x} نقاط)`:''}`;},
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;
     const who=me?'<b class="yt">دورك</b>':`دور ${tmName(d,d.sd)}`;const side=`<span class="chside ${d.sd?'bk':''}">${d.sd?'الأسود':'الأبيض'}</span>`;
     if(d.ph==='open')s+=`${who} ${side}: ارمِ زهرة وحدة، الأعلى يبدأ`;

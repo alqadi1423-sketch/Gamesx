@@ -9,6 +9,8 @@ function revFlips(b,z,i,p){if(b[i]!=='.')return [];const r=Math.floor(i/z),c=i%z
   return out;}
 const revAny=(b,z,p)=>{for(let i=0;i<z*z;i++)if(b[i]==='.'&&revFlips(b,z,i,p).length)return true;return false;};
 GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',onTimeout:d=>{const n=d.pl.length;for(let k=1;k<=n;k++){const s=(d.turn+k)%n;if(d.out[s]!=='1'&&revAny(d.b,d.z,s))return {...d,turn:s};}return {...d,win:mostPts(cntSeat(d.b,n).map((x,s)=>d.out[s]==='1'?-1:x))};},
+  // a player left: the turn goes to the first seat from here that can place a disc, or the game ends
+  onSkip:d=>d.win!=null?d:GAMES.rev.onTimeout({...d,turn:(d.turn+d.pl.length-1)%d.pl.length}),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E8B5E"/>${[1,2,3].map(k=>`<path d="M${k*25} 0V100M0 ${k*25}H100" stroke="#1F6B4A" stroke-width="2"/>`).join('')}<circle cx="37.5" cy="37.5" r="10" fill="#fff"/><circle cx="62.5" cy="62.5" r="10" fill="#fff"/><circle cx="62.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="37.5" cy="62.5" r="10" fill="#2D4763"/><circle cx="62.5" cy="12.5" r="10" fill="#EC6158"/></svg>`,
   init:n=>{const z=RVS[n]||12;const b=Array(z*z).fill('.');const m=(z-1)/2;
     if(n===2){const a=Math.floor(m),c=Math.ceil(m);b[a*z+a]='0';b[c*z+c]='0';b[a*z+c]='1';b[c*z+a]='1';}
@@ -35,8 +37,12 @@ GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',onTimeout:d=>{const n=d.pl.
 function omPairs(cards){const by={};cards.forEach(c=>{(by[c[0]]=by[c[0]]||[]).push(c);});const keep=[];for(const r in by){const a=by[r];if(a.length%2)keep.push(a[a.length-1]);}return keep;}
 GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,points:d=>d.hands.map((h,s)=>d.out[s]==='1'?'خلّص ✓':h.length/2+' ورق'),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9C527C"/><rect x="18" y="22" width="34" height="50" rx="6" fill="#4AB1E8" stroke="#fff" stroke-width="3" transform="rotate(-12 35 47)"/><rect x="46" y="22" width="36" height="54" rx="6" fill="#fff" transform="rotate(8 64 49)"/><text x="64" y="60" font-size="26" font-weight="800" fill="#2D4763" text-anchor="middle" transform="rotate(8 64 49)">K♠</text></svg>`,
-  init:n=>{const dk=shuffle(deck52().filter(c=>!['Kh','Kd','Kc'].includes(c)));const hands=Array(n).fill(0).map(()=>[]);dk.forEach((c,k)=>hands[k%n].push(c));
-    return {hands:hands.map(h=>shuffle(omPairs(h)).join('')),fin:[],last:''};},
+  init:n=>{let hands;do{const dk=shuffle(deck52().filter(c=>!['Kh','Kd','Kc'].includes(c)));const hs=Array(n).fill(0).map(()=>[]);dk.forEach((c,k)=>hs[k%n].push(c));
+      hands=hs.map(h=>shuffle(omPairs(h)).join(''));}while(hands.filter(h=>h).length<2);
+    return {hands,fin:[],last:''};},
+  // whoever is dealt only pairs has finished before the first draw
+  start:d=>{let out=d.out;const fin=[];d.hands.forEach((h,s)=>{if(!h){out=setAt(out,s,'1');fin.push(s);}});if(!fin.length)return d;
+    return {...d,out,fin,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,last:`${fin.map(s=>nm(d,s)).join(' و')} طلع ورقه كله أزواج وخلّص`};},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   winText:d=>d.win!=null&&d.loser!=null?`${nm(d,d.win)} خلّص أول، و${nm(d,d.loser)} علق معه الشايب`:null,
@@ -69,15 +75,15 @@ GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',noTimer:tru
     if(my&&ss)s+='<br><b>'+(ss.phase==='show'?'ركّز…':ss.inp.length<d.seq.length?`كرر (${ss.inp.length} من ${d.seq.length})`:'زيد لون جديد')+'</b>';return s;},
   key:d=>d.gid+':'+d.seq.length+':'+d.turn+':'+d.out,
   render(d,ctx){if(ctx.my&&(!S.simon||S.simon.key!==this.key(d)))S.simon={key:this.key(d),phase:d.seq.length?'show':'input',inp:[],run:false};
-    const ok=ctx.my&&S.simon&&S.simon.phase==='input';
-    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;width:min(100%,320px)">${SIM.map((c,k)=>`<button class="simp" data-ga="p" data-i="${k}" style="aspect-ratio:1;border-radius:${['14px 160px 14px 14px','160px 14px 14px 14px','14px 14px 160px 14px','14px 14px 14px 160px'][k]};background:${c};opacity:.75;transition:opacity .15s,transform .15s" ${ok?'':'disabled'}></button>`).join('')}</div>`;},
+    const ok=ctx.my&&S.simon&&S.simon.phase==='input',lit=ctx.my&&S.simon?S.simon.lit:null;
+    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;width:min(100%,320px)">${SIM.map((c,k)=>`<button class="simp" data-ga="p" data-i="${k}" style="aspect-ratio:1;border-radius:${['14px 160px 14px 14px','160px 14px 14px 14px','14px 14px 160px 14px','14px 14px 14px 160px'][k]};background:${c};opacity:${k===lit?1:.75};${k===lit?'transform:scale(1.06);':''}transition:opacity .15s,transform .15s" ${ok?'':'disabled'}></button>`).join('')}</div>`;},
   after(d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='show'||ss.run||app.querySelector('.cover'))return;ss.run=true;const key=ss.key;const seq=[...d.seq].map(Number);let k=0;
-    const flash=()=>{if(!S.simon||S.simon.key!==key)return;if(k>=seq.length){S.simon.phase='input';render();return;}
-      const el=app.querySelectorAll('.simp')[seq[k]];if(el){el.style.opacity='1';el.style.transform='scale(1.06)';}
-      setTimeout(()=>{const e2=app.querySelectorAll('.simp')[seq[k]];if(e2){e2.style.opacity='.75';e2.style.transform='';}k++;setTimeout(flash,220);},520);};
+    const flash=()=>{if(!S.simon||S.simon.key!==key)return;if(k>=seq.length){S.simon.phase='input';S.simon.lit=null;render();return;}
+      S.simon.lit=seq[k];render();
+      setTimeout(()=>{if(!S.simon||S.simon.key!==key)return;S.simon.lit=null;render();k++;setTimeout(flash,220);},520);};
     setTimeout(flash,500);},
   click(a,k,d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='input')return;const t=d.turn;const pos=ss.inp.length;
-    const el=app.querySelectorAll('.simp')[k];if(el){el.style.opacity='1';setTimeout(()=>{el.style.opacity='.75';},180);}
+    const tap=ss.tap=(ss.tap||0)+1;ss.lit=k;setTimeout(()=>{if(S.simon===ss&&ss.tap===tap){ss.lit=null;render();}},180);
     if(pos<d.seq.length){if(+d.seq[pos]!==k){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);S.simon=null;
         act({...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),last:`${nm(d,t)} غلط عند اللون ${pos+1} وطلع`});return;}
       ss.inp.push(k);render();return;}

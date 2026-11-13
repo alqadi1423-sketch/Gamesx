@@ -3,12 +3,20 @@
    (even seats against odd seats) and the members of a team take turns moving for their side. */
 
 /* ---------- teams ---------- */
-const tmSeats=(d,side)=>d.pl.map((_,s)=>s).filter(s=>s%2===side);
-const tmNow=(d,side)=>{const m=tmSeats(d,side);return m[(d.tr[side]||0)%m.length];};
+// members still playing (seats that left or were skipped are out)
+const tmSeats=(d,side)=>d.pl.map((_,s)=>s).filter(s=>s%2===side&&(d.out||'')[s]!=='1');
+const tmNow=(d,side)=>{const m=tmSeats(d,side);return m.length?m[(d.tr[side]||0)%m.length]:d.turn;};
 // after `side` moved: its next member moves next time, and the other side's current member moves now
-function tmPass(d,side){const tr=[...d.tr];tr[side]=(tr[side]+1)%tmSeats(d,side).length;return {tr,turn:tmNow({...d,tr},1-side)};}
+function tmPass(d,side){const tr=[...d.tr];tr[side]=(tr[side]+1)%(tmSeats(d,side).length||1);return {tr,turn:tmNow({...d,tr},1-side)};}
 const tmName=(d,side)=>{const m=tmSeats(d,side);return m.length===1?nameTag(d,m[0]):m.map(s=>nameTag(d,s)).join(' و');};
-const tmWin=(d,side)=>{const m=tmSeats(d,side);return {win:m[0],wins:m};};
+const tmWin=(d,side)=>{let m=tmSeats(d,side);if(!m.length)m=d.pl.map((_,s)=>s).filter(s=>s%2===side);return {win:m[0],wins:m};};
+// a member left (skip or kick): each side keeps its rotation on the member due next (or the next one still here);
+// a side with nobody left loses. While a double is offered (tavla) the asked side acts
+function tmSkip(nd,d){d=d||nd;if(nd.win!=null)return {...nd,end:'left'};
+  for(const side of [0,1])if(!tmSeats(nd,side).length)return {...nd,...tmWin(nd,1-side),end:'left'};
+  const tr=[0,1].map(side=>{const o=tmSeats(d,side),m=tmSeats(nd,side),k=(d.tr[side]||0)%(o.length||1);
+    for(let j=0;j<o.length;j++){const x=o[(k+j)%o.length];if(m.includes(x))return m.indexOf(x);}return 0;});
+  const x={...nd,tr};return {...x,turn:tmNow(x,x.ph==='dbl'?1-x.sd:x.sd)};}
 const tmMySide=(d,ctx)=>ctx.local?d.sd:(ctx.v>=0?ctx.v%2:0);
 
 /* ---------- chess ---------- */
@@ -60,7 +68,8 @@ function chNoMate(b){const p=[...b].filter(x=>x!=='.'&&x.toLowerCase()!=='k');
 const CHN={k:'الملك',q:'الوزير',r:'القلعة',b:'الفيل',n:'الحصان',p:'الجندي'};
 function chMove(d,m){const s=d.sd,a=chApply(d,m),ns=1-s;const key=chKey(a.b,ns,a.cr,a.ep);
   const hist=a.hm===0?[key]:[...(d.hist||[]),key].slice(-110);
-  const nd={...d,b:a.b,cr:a.cr,ep:a.ep,hm:a.hm,hist,sd:ns,lm:[m.f,m.t],offer:null,...tmPass(d,s)};
+  // an own draw offer stays for the opponent's turn; moving instead of accepting declines the opponent's offer
+  const nd={...d,b:a.b,cr:a.cr,ep:a.ep,hm:a.hm,hist,sd:ns,lm:[m.f,m.t],offer:d.offer===s?s:null,...tmPass(d,s)};
   const p=d.b[m.f].toLowerCase();const sq='abcdefgh'[m.t&7]+(8-(m.t>>3));
   nd.last=m.cs?`${tmName(d,s)} بيّت ${m.cs==='k'?'قصير':'طويل'}`:`${CHN[p]} إلى ${sq}${a.cap?' وأكل '+CHN[(m.ep?'p':d.b[m.t]).toLowerCase()]:''}${m.pr?' وترقى '+CHN[m.pr]:''}`;
   const moves=chLegal(nd,ns),chk=chCheck(a.b,ns);
@@ -81,11 +90,13 @@ const CHP={
 const chPiece=p=>{const s=chSide(p),t=p.toLowerCase();return `<svg viewBox="0 0 40 40" class="chp ${s?'bk':'wh'}">${CHP[t]}</svg>`;};
 GAMES.chess={name:'شطرنج',cat:'board',lbc:'#5B4632',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9A66B"/>${[0,1,2,3].map(r=>[0,1,2,3].map(c=>(r+c)%2?`<rect x="${c*25}" y="${r*25}" width="25" height="25" fill="#8B6B43"/>`:'').join('')).join('')}<g transform="translate(18 14) scale(1.6)" fill="#fff" stroke="#2D4763" stroke-width="1.6" stroke-linejoin="round">${CHP.k}</g></svg>`,
-  init:n=>({b:CH0,sd:0,cr:'KQkq',ep:-1,hm:0,hist:[],tr:[0,0],lm:null,offer:null,last:''}),
+  init:n=>({b:CH0,sd:0,cr:'KQkq',ep:-1,hm:0,hist:[chKey(CH0,0,'KQkq',-1)],tr:[0,0],lm:null,offer:null,last:''}),
+  start:d=>({...d,turn:0}),// white (seat 0) always opens, also in later rounds
+  onSkip:tmSkip,
   onTimeout(d){const ms=chLegal(d,d.sd);return chMove(d,ms[rnd(ms.length)]);},
   points:d=>d.pl.map((_,s)=>s%2?'الأسود':'الأبيض'),
   winText(d){if(d.win==='d')return ({stale:'تعادل: ما عنده حركة وملكه مو مكشوش',mat:'تعادل: القطع ما تكفي لكش مات',50:'تعادل: 50 نقلة بدون أكل ولا حركة جندي',rep:'تعادل: نفس الوضع تكرر 3 مرات',agree:'تعادل بالاتفاق'})[d.end]||'تعادل';
-    const side=d.win%2;return `فاز ${side?'الأسود':'الأبيض'}${d.end==='mate'?' كش مات':d.end==='resign'?' بالاستسلام':''}`;},
+    const side=d.win%2;return `فاز ${side?'الأسود':'الأبيض'}${d.end==='mate'?' كش مات':d.end==='resign'?' بالاستسلام':d.end==='left'?'، الخصم طلع':''}`;},
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';
     s+=`${ctx.local||d.turn!==ctx.v?`دور ${tmName(d,d.sd)}`:'<b class="yt">دورك</b>'} <span class="chside ${d.sd?'bk':''}">${d.sd?'الأسود':'الأبيض'}</span>`;
     if(chCheck(d.b,d.sd))s+=' <b class="chk">كش!</b>';return s;},
@@ -148,9 +159,11 @@ const dmCount=(b,s)=>[...b].filter(p=>dmSide(p)===s).length;
 GAMES.dama={name:'داما',cat:'board',lbc:'#7A3B2E',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8C994"/>${[1,2,3].map(k=>`<path d="M${k*25} 0V100M0 ${k*25}H100" stroke="#A97D45" stroke-width="2"/>`).join('')}<circle cx="37.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="62.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="37.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="4" fill="#EDB02F"/></svg>`,
   init:()=>({b:DM0,sd:0,tr:[0,0],lm:null,quiet:0,last:''}),
+  start:d=>({...d,turn:0}),
+  onSkip:tmSkip,
   onTimeout(d){const ms=dmMoves(d.b,d.sd);return dmDo(d,ms[rnd(ms.length)]);},
   points:d=>d.pl.map((_,s)=>(s%2?'الأسود ':'الأبيض ')+dmCount(d.b,s%2)),
-  winText(d){if(d.win==='d')return d.end==='km'?'تعادل: شيخ ضد قطعة وحدة':d.end==='q'?'تعادل: 50 نقلة بدون أكل':'تعادل';return `فاز ${d.win%2?'الأسود':'الأبيض'}${d.end==='block'?'، الخصم ما عنده حركة':''}${d.end==='resign'?' بالاستسلام':''}`;},
+  winText(d){if(d.win==='d')return d.end==='km'?'تعادل: شيخ ضد قطعة وحدة':d.end==='q'?'تعادل: 50 نقلة بدون أكل':'تعادل';return `فاز ${d.win%2?'الأسود':'الأبيض'}${d.end==='block'?'، الخصم ما عنده حركة':''}${d.end==='resign'?' بالاستسلام':''}${d.end==='left'?'، الخصم طلع':''}`;},
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';s+=`${ctx.local||d.turn!==ctx.v?`دور ${tmName(d,d.sd)}`:'<b class="yt">دورك</b>'} <span class="chside ${d.sd?'bk':''}">${d.sd?'الأسود':'الأبيض'}</span>`;
     const ms=dmMoves(d.b,d.sd);if(ms[0]&&ms[0].caps.length)s+=`<br><small>الأكل إجباري${ms[0].caps.length>1?`، وبأكبر عدد (${ms[0].caps.length})`:''}</small>`;return s;},
   render(d,ctx){const my=ctx.my,s=d.sd,flip=!ctx.local&&tmMySide(d,ctx)===1;
