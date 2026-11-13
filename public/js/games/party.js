@@ -18,20 +18,20 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B7834F"/><rect x="16" y="14" width="68" height="72" rx="8" fill="#FFF7E8"/>${[0,1,2,3,4].map(k=>`<path d="M26 ${28+k*12}H74" stroke="#C9B08A" stroke-width="2"/>`).join('')}<circle cx="74" cy="22" r="13" fill="#EC6158"/><text x="74" y="28" font-size="16" font-weight="800" fill="#fff" text-anchor="middle">م</text></svg>`,
   init:n=>({rd:0,round:0,phase:'write',pts:Array(n).fill(0),res:'',prev:null,rounds:5,L:CATL[rnd(CATL.length)]}),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,(d.phase==='vote'?'<small>صوّتوا على الكلمات اللي مو في القاموس</small><br>':`<small>جولة ${Math.min(d.round+1,d.rounds)} من ${d.rounds}. الجواب لحاله 10، والمكرر 5</small><br>`)),
+  status:(d,ctx)=>simulStatus(d,ctx,(d.phase==='vote'?'<small>صوّتوا على الكلمات اللي مو في القاموس</small><br>':`<small>جولة ${Math.min(d.round+1,d.rounds)} من ${d.rounds}</small><br>`)),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
-  render(d,ctx){let s='';
-    if(d.prev&&d.phase==='write'){s+=`<div class="panel" style="width:100%;overflow:auto;padding:10px"><b>أجوبة حرف «${d.prev.L}»</b><table style="width:100%;font-size:14px;border-collapse:collapse;margin-top:6px"><tr><td></td>${CATF.map(c=>`<th>${c}</th>`).join('')}</tr>${d.prev.a.map((row,si)=>row?`<tr><td style="color:${col(d,si)};font-weight:800">${nm(d,si)}</td>${row.map((w,k)=>{const h=d.prev.how?d.prev.how[si][k]:1;return `<td style="text-align:center;${d.prev.p[si][k]?'':'color:#c0392b;text-decoration:line-through'}">${esc(w)||'·'}<br><small>${d.prev.p[si][k]}${h===2?' 👍':''}</small></td>`;}).join('')}</tr>`:'').join('')}</table><small class="note">👍 = قبلها اللاعبين بالتصويت</small></div>`;}
-    if(d.win!=null)return s;
+  render(d,ctx){let s='',prevT='';
+    if(d.prev&&d.phase==='write'){prevT=`<details class="panel prevr"><summary>أجوبة الجولة اللي فاتت (حرف «${d.prev.L}»)</summary><table style="width:100%;font-size:14px;border-collapse:collapse;margin-top:6px"><tr><td></td>${CATF.map(c=>`<th>${c}</th>`).join('')}</tr>${d.prev.a.map((row,si)=>row?`<tr><td style="color:${col(d,si)};font-weight:800">${nm(d,si)}</td>${row.map((w,k)=>{const h=d.prev.how?d.prev.how[si][k]:1;return `<td style="text-align:center;${d.prev.p[si][k]?'':'color:#c0392b;text-decoration:line-through'}">${esc(w)||'·'}<br><small>${d.prev.p[si][k]}${h===2?' 👍':''}</small></td>`;}).join('')}</tr>`:'').join('')}</table></details>`;}
+    if(d.win!=null)return prevT;
     if(d.phase==='vote'){
       s+=pickedChips(d)+`<div class="qbox">هل هذي الكلمات صحيحة؟</div>`;
       const mine=S.draft.votes||{};
       s+=d.pend.map((x,i)=>{const own=x.s===ctx.v;const v=mine[i];return `<div class="opt" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px"><span><small style="color:${col(d,x.s)}">${nm(d,x.s)}، ${CATF[x.k]}</small><br>${esc(x.w)}</span>${own||!ctx.my?'<small class="note">'+(own?'جوابك':'')+'</small>':`<span><button class="seg ${v===1?'on':''}" data-ga="v1" data-i="${i}">👍</button> <button class="seg ${v===0?'on':''}" data-ga="v0" data-i="${i}">👎</button></span>`}</div>`;}).join('');
       if(ctx.my)s+=`<button class="btn red wide" data-ga="vote">أرسل تصويتي</button>`;
       return s;}
-    s+=pickedChips(d)+`<div class="qbox">الحرف: <span style="font-size:40px;color:var(--red)">${d.L}</span></div>`;
-    if(ctx.my){s+=CATF.map((c,k)=>`<label style="display:block;width:100%;max-width:420px;margin:4px auto;font-weight:700">${c}<input class="field" data-draft="c${k}" value="${esc((S.draft||{})['c'+k]||'')}" autocomplete="off"></label>`).join('')+`<button class="btn red wide" data-ga="go">خلصت</button>`;}
-    return s;},
+    s+=`<div class="letter"><small>الحرف</small><b>${d.L}</b></div>`;
+    if(ctx.my){s+=`<div class="catf">${CATF.map((c,k)=>`<label><span>${c}</span><input class="field" data-draft="c${k}" value="${esc((S.draft||{})['c'+k]||'')}" autocomplete="off" placeholder="${c} بحرف ${d.L}"></label>`).join('')}</div><button class="btn red wide" data-ga="go">خلصت ✓</button>`;}
+    return s+prevT;},
   click(a,i,d,ctx){if(!ctx.my)return;
     if(a==='v1'||a==='v0'){S.draft.votes={...(S.draft.votes||{}),[i]:a==='v1'?1:0};render();return;}
     if(a==='vote'){const v=d.pend.map((x,k)=>(S.draft.votes||{})[k]??1);S.draft.votes={};simulPick(d,ctx.v,v);return;}
@@ -53,15 +53,15 @@ GAMES.major={name:'لو خيروك',cat:'quiz',lbc:'#2F7F86',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3FA2AA"/><rect x="10" y="30" width="36" height="40" rx="10" fill="#fff"/><rect x="54" y="30" width="36" height="40" rx="10" fill="#FFD84D"/><text x="50" y="58" font-size="16" font-weight="800" fill="#2D4763" text-anchor="middle">أو</text></svg>`,
   init:n=>({rd:0,pts:Array(n).fill(0),res:'',rounds:8}),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,`<small>سؤال ${Math.min(d.rd+1,d.rounds)} من ${d.rounds}. اللي مع الأغلبية ياخذون نقطة</small><br>`),
+  status:(d,ctx)=>simulStatus(d,ctx,`<small>سؤال ${Math.min(d.rd+1,d.rounds)} من ${d.rounds}</small><br>`),
   winExtra:d=>d.res,
   q(d,rd){const R=srng(d,'w');const ord=[...WYR.keys()];for(let i=ord.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}return WYR[ord[rd%ord.length]];},
   render(d,ctx){if(d.win!=null)return '';const Q=this.q(d,d.rd);
-    return pickedChips(d)+`<div class="qbox">لو خيروك؟</div><div class="row">${Q.map((t,k)=>`<button class="btn ${k?'blue':'red'}" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`;},
+    return `<p class="lbl" style="text-align:center">لو خيروك بين…</p><div class="wyr">${Q.map((t,k)=>`<button class="wyrc ${k?'b':'a'}" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${t}</button>`).join('<span class="or">أو</span>')}</div>`;},
   click(a,k,d,ctx){if(!ctx.my)return;simulPick(d,ctx.v,k);},
   resolve(d,picks){const Q=this.q(d,d.rd);const c=[0,0];picks.forEach(p=>{if(p!=null)c[p]++;});const pts=[...d.pts];
     const maj=c[0]===c[1]?-1:c[0]>c[1]?0:1;if(maj>=0)picks.forEach((p,s)=>{if(p===maj)pts[s]++;});
-    const rd=d.rd+1;return {...d,pts,rd,res:`${Q[0]} ${c[0]}، ${Q[1]} ${c[1]}. ${maj<0?'تعادل، محد أخذ نقطة':'الأغلبية اختارت '+Q[maj]}`,win:rd>=d.rounds?mostPts(pts):null};}
+    const rd=d.rd+1;return {...d,pts,rd,res:`${Q[0]} ${c[0]} • ${Q[1]} ${c[1]}${maj<0?' • تعادل':''}`,win:rd>=d.rounds?mostPts(pts):null};}
 };
 
 /* ---------- closest guess ---------- */

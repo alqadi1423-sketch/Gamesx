@@ -38,11 +38,12 @@ function makeQuiz(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
   status:(d,ctx)=>simulStatus(d,ctx,`<small>سؤال ${Math.min(d.rd+1,ROUNDS)} من ${ROUNDS}</small><br>`),
   winExtra:d=>d.res+'<br>النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
   render(d,ctx){if(d.win!=null)return '';const Q=o.gen(d,d.rd);
-    return pickedChips(d)+`<div class="qbox">${Q.q}</div>${Q.o.map((t,k)=>`<button class="opt" style="${Q.big?'font-size:34px':''}" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}`;},
+    const g2=Q.big||Q.o.every(t=>String(t).replace(/<[^>]+>/g,'').length<=7);
+    return `<div class="qbox">${Q.q}</div><div class="opts ${g2?'g2':''} ${Q.big?'emo':''}">${Q.o.map((t,k)=>`<button class="opt" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`;},
   click(a,k,d,ctx){if(!ctx.my)return;simulPick(d,ctx.v,k);},
   resolve(d,picks){const Q=o.gen(d,d.rd);const pts=[...d.pts];const ok=[];
     picks.forEach((p,s)=>{if(p===Q.a){pts[s]++;ok.push(nm(d,s));}});
-    const res=`${Q.rq||Q.q} الجواب: ${Q.o[Q.a]}. ${ok.length?'جاوب صح: '+ok.join('، '):'محد جاوب صح'}`;
+    const res=`الجواب: ${String(Q.o[Q.a]).replace(/<[^>]+>/g,'')} • ${ok.length?'✓ '+ok.join('، '):'محد جابها'}`;
     const rd=d.rd+1;return {...d,pts,rd,res,win:rd>=ROUNDS?mostPts(pts):null};}
 };}
 function withOptions(R,right,wrongs){const opts=[right,...wrongs];for(let i=opts.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[opts[i],opts[j]]=[opts[j],opts[i]];}return {o:opts,a:opts.indexOf(right)};}

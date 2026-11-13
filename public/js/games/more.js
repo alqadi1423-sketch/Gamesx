@@ -57,7 +57,7 @@ const line3=s=>{for(const L of L3)if(s[L[0]]!=='.'&&s[L[0]]!=='d'&&s[L[0]]===s[L
 GAMES.uxo={name:'إكس أو المضاعفة',cat:'board',lbc:'#8E3B46',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B4505C"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${8+c*29}" y="${8+r*29}" width="26" height="26" rx="4" fill="${(r+c)%2?'#fff':'#FBE3E6'}"/>`).join('')).join('')}<path d="M14 14l14 14M28 14L14 28" stroke="#EC6158" stroke-width="4"/><circle cx="50" cy="50" r="7" stroke="#4AB1E8" stroke-width="4" fill="none"/></svg>`,
   init:()=>({b:'.'.repeat(81),w:'.'.repeat(9),nb:-1}),
-  status:(d,ctx)=>turnTxt(d,ctx)+`<br><small>${d.nb<0?'العب في أي مربع كبير':'لازم تلعب في المربع الكبير المضيء'}. خانتك تحدد وين يلعب اللي بعدك</small>`,
+  status:(d,ctx)=>turnTxt(d,ctx),
   winExtra:d=>'المربعات الكبيرة: '+cntSeat(d.w.replace(/d/g,'.'),d.pl.length).map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
   render(d,ctx){let s='<div class="uxo">';
     for(let k=0;k<9;k++){const w=d.w[k],act=d.win==null&&w==='.'&&(d.nb<0||d.nb===k);
@@ -120,10 +120,10 @@ GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),points:d=>d.books.map(b=>b.length),
   winExtra:d=>'المجموعات: '+d.books.map((b,s)=>`${nm(d,s)} ${b.length}`).join('، '),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
-    let s=`<div class="score" style="gap:4px">${d.pl.map((r,i)=>`<span class="chip" style="background:${col(d,i)}">${!ctx.local&&i===ctx.v?'أنت':nm(d,i)} 🂠${d.hands[i].length/2}</span>`).join('')}<span class="chip" style="background:#2D4763">المخزن ${d.dk.length/2}</span></div>`;
+    let s=`<p class="lbl" style="text-align:center">باقي في المخزن ${d.dk.length/2}</p>`;
     if(v<0||d.win!=null)return s;const hand=cardsOf(d.hands[v]).sort((a,b)=>rv(a)-rv(b));const my=ctx.my&&d.turn===v;
     if(my){const ts=d.pl.map((_,i)=>i).filter(i=>i!==v&&d.hands[i].length);if(S.tgt==null||!ts.includes(S.tgt))S.tgt=ts[0]??null;
-      if(ts.length)s+=`<p class="lbl" style="text-align:center">من تسأل؟</p><div class="tabs">${ts.map(i=>`<button class="tab ${i===S.tgt?'sel':''}" style="background:${col(d,i)}" data-ga="tgt" data-i="${i}">${nm(d,i)}</button>`).join('')}</div><p class="lbl" style="text-align:center">اضغط على ورقة تطلب رقمها</p>`;}
+      if(ts.length)s+=`<p class="lbl" style="text-align:center">من تسأل؟</p><div class="tabs">${ts.map(i=>`<button class="tab ${i===S.tgt?'sel':''}" style="background:${col(d,i)}" data-ga="tgt" data-i="${i}">${nm(d,i)}</button>`).join('')}</div>`;}
     s+=`<div class="hand">${hand.map(c=>my&&S.tgt!=null?cardHTML(c,false,'pick" data-ga="ask" data-i="'+RANKS.indexOf(rk(c))):cardHTML(c)).join('')||'<span class="note">ما عندك أوراق</span>'}</div>`;
     if(my&&(!hand.length||S.tgt==null))s+=`<div class="acts"><button class="btn blue" data-ga="draw">${d.dk.length?'اسحب ورقة':'مرّر الدور'}</button></div>`;
     return s;},
@@ -145,8 +145,8 @@ GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',
 };
 
 /* ---------- 99 ---------- */
-const v99=(c,tot)=>{const r=c[0];if(r==='K')return 99;if(r==='T')return tot-10;if(r==='4'||r==='9')return tot;if(r==='J'||r==='Q')return tot+10;if(r==='A')return tot+1;return tot+(+r);};
-const lab99={K:'= 99',T:'−10','4':'عكس',9:'+0',J:'+10',Q:'+10'};
+const v99=(c,tot)=>{const r=c[0];if(r==='K')return 99;if(r==='T')return tot>=10?tot-10:tot+10;if(r==='4'||r==='9')return tot;if(r==='J'||r==='Q')return tot+10;if(r==='A')return tot+1;return tot+(+r);};
+const lab99={K:'= 99',T:'±10','4':'عكس',9:'+0',J:'+10',Q:'+10'};
 GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7D3C98"/><text x="50" y="64" font-size="40" font-weight="800" fill="#fff" text-anchor="middle">99</text></svg>`,
   init:n=>{let dk=shuffle(deck52(n>5?2:1));const hands=[];for(let s=0;s<n;s++){hands.push(dk.slice(0,3).join(''));dk=dk.slice(3);}return {hands,dk:dk.join(''),tot:0,dir:1,last:''};},
@@ -154,9 +154,10 @@ GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',
   onTimeout:d=>{const t=d.turn;const h=cardsOf(d.hands[t]);const ok=h.map((c,i)=>v99(c,d.tot)<=99?i:-1).filter(i=>i>=0);return GAMES.n99.play(d,ok.length?ok[0]:-1);},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
-    let s=`<div class="qbox"><span class="big-num" style="color:${d.tot>89?'#D43C33':'var(--ink)'}">${d.tot}</span><br><small style="font-size:14px">من 99 ${d.dir>0?'⟲':'⟳'}</small></div>`;
+    let s=`<div class="qbox"><span class="big-num ltr" style="color:${d.tot>89?'#D43C33':'var(--ink)'}">${d.tot}</span><br><small style="font-size:14px">لا تتعدى 99 • الدور ${d.dir>0?'↻':'↺'}</small></div>`;
     if(v<0||d.win!=null)return s;const my=ctx.my&&d.turn===v;const h=cardsOf(d.hands[v]);
     s+=`<p class="lbl" style="text-align:center">أوراقك</p><div class="hand">${h.map((c,i)=>{const ok=v99(c,d.tot)<=99;const b=lab99[c[0]]?`<small style="position:absolute;bottom:-18px;font-size:11px;color:var(--mut);white-space:nowrap">${lab99[c[0]]}</small>`:'';return (my&&ok?cardHTML(c,true,'pick" data-ga="m" data-i="'+i):cardHTML(c,true,my?'dim':'')).replace('</div>',b+'</div>');}).join('')}</div>`;
+    s+=`<p class="lbl" style="text-align:center;font-size:13px">K = 99 • 10 = ±10 • 4 يعكس • 9 = 0 • J Q = +10</p>`;
     if(my&&!h.some(c=>v99(c,d.tot)<=99))s+=`<div class="acts"><button class="btn red" data-ga="m" data-i="-1">ما عندي ورقة 😵</button></div>`;
     return s;},
   play(d,i){const t=d.turn;const h=cardsOf(d.hands[t]);

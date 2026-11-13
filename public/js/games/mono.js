@@ -110,11 +110,11 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     else{const fresh=d.rid&&once('md'+d.gid+'_'+d.rid);
       c=`<div class="mlogo">مونوبولي</div>`;
       if(d.card)c+=`<div class="mcard ${fresh?'in':''}">🃏 ${d.card}</div>`;
-      c+=`<div class="mdice">${d.dice[0]?d.dice.map(x=>`<div class="dice ${S.rolling?'spin':fresh?'land':''}">${diceSVG(x)}</div>`).join(''):''}</div>`;
+      const canR=d.win==null&&my&&d.ph==='roll'&&!S.rolling;
+      c+=`<${canR?'button data-ga="roll" aria-label="ارمِ"':'div'} class="mdice ${canR?'can':''}">${(d.dice[0]?d.dice:[6,6]).map(x=>`<span class="dice ${S.rolling?'spin':fresh?'land':''}">${diceSVG(x)}</span>`).join('')}</${canR?'button':'div'}>`;
       c+=`<div class="mwho" style="--c:${col(d,s)}"><i></i>${!ctx.local&&s===ctx.v?'دورك':nm(d,s)} • ${money(d.cash[s])}${d.jail[s]?' • 🚔 في السجن':''}${d.free[s]?' • 🎫':''}</div>`;
       if(d.win==null&&my){
-        if(d.ph==='roll'){if(d.jail[s])c+=`<div class="macts"><button class="btn red" data-ga="roll" ${S.rolling?'disabled':''}>🎲 ارمِ للدبل</button><button class="btn navy" data-ga="bail" ${d.cash[s]<50?'disabled':''}>ادفع 50</button>${d.free[s]?'<button class="btn blue" data-ga="free">🎫 البطاقة</button>':''}</div>`;
-          else c+=`<div class="macts"><button class="btn red" data-ga="roll" ${S.rolling?'disabled':''}>🎲 ارمِ الزهر</button></div>`;}
+        if(d.ph==='roll'){if(d.jail[s])c+=`<div class="macts"><button class="btn navy" data-ga="bail" ${d.cash[s]<50?'disabled':''}>ادفع 50 واطلع</button>${d.free[s]?'<button class="btn blue" data-ga="free">🎫 البطاقة</button>':''}</div>`;}
         else if(d.ph==='buy'){const i=d.pos[s];c+=`<div class="mbuy"><b>${MP[i][1]}</b> متاح بـ ${MP[i][2]}</div><div class="macts"><button class="btn red" data-ga="buy" ${d.cash[s]<mPrice(i)?'disabled':''}>🏷️ اشترِ</button><button class="btn navy" data-ga="skip">لا</button></div>`;}
         else c+=`<div class="macts"><button class="btn blue" data-ga="end">إنهاء الدور ⏭</button></div>`;}
       else if(d.win==null)c+=`<p class="mwait">ننتظر ${nm(d,s)}</p>`;

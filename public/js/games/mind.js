@@ -46,7 +46,7 @@ GAMES.nim={name:'أعواد الكبريت',cat:'mind',lbc:'#9C4A2F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9673F"/>${[0,1,2,3,4].map(k=>`<rect x="${20+k*13}" y="22" width="7" height="56" rx="3.5" fill="#E8C38E" transform="rotate(${(k-2)*5} 50 50)"/><rect x="${19+k*13}" y="18" width="9" height="13" rx="4.5" fill="#E8574E" transform="rotate(${(k-2)*5} 50 50)"/>`).join('')}</svg>`,
   init:n=>{const k=Math.min(3+Math.floor(n/2),7);return {p:Array(k).fill(0).map(()=>3+rnd(5)),last:''};},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){return `<div class="piles">${d.p.map((n,pi)=>`<div class="pilecard ${n?'':'empty'}"><span class="pn">${pi+1}</span><div class="sticks">${n?Array(n).fill(0).map((_,j)=>`<button class="match" data-ga="m" data-i="${pi*100+j}" ${ctx.my?'':'disabled'} aria-label="خذ ${n-j}"></button>`).join(''):'<span class="note">فاضية</span>'}</div><b class="pc2">${n}</b></div>`).join('')}</div>${ctx.my?'<p class="note">اضغط على عود: تاخذه هو وكل اللي على يساره</p>':''}`;},
+  render(d,ctx){return `<div class="piles">${d.p.map((n,pi)=>`<div class="pilecard ${n?'':'empty'}"><span class="pn">${pi+1}</span><div class="sticks">${n?Array(n).fill(0).map((_,j)=>`<button class="match" data-ga="m" data-i="${pi*100+j}" ${ctx.my?'':'disabled'} aria-label="خذ ${n-j}"></button>`).join(''):'<span class="note">فاضية</span>'}</div><b class="pc2">${n}</b></div>`).join('')}</div>${ctx.my?'':''}`;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const pi=Math.floor(i/100),j=i%100;if(j>=d.p[pi])return;const t=d.turn;const take=d.p[pi]-j;const p=[...d.p];p[pi]=j;
     const empty=p.every(x=>x===0);act({...d,p,win:empty?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} أخذ ${take} من الكومة ${pi+1}`});
@@ -60,14 +60,17 @@ const pegs=(g)=>[...g].map(c=>`<span class="peg" style="background:${MMC[+c]}"><
 GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F5D80"/>${[0,1,2].map(r=>[0,1,2,3].map(c=>`<circle cx="${20+c*17}" cy="${28+r*22}" r="7" fill="${MMC[(r*2+c*3)%6]}" stroke="#fff" stroke-width="2"/>`).join('')+`<circle cx="88" cy="${24+r*22}" r="3" fill="#fff"/><circle cx="88" cy="${33+r*22}" r="3" fill="#1d2f44"/>`).join('')}</svg>`,
   init:()=>({code:Array(4).fill(0).map(()=>rnd(6)).join(''),h:[],last:''}),
-  status:(d,ctx)=>turnTxt(d,ctx),
+  status:(d,ctx)=>{const x=d.h[d.h.length-1];if(!x)return turnTxt(d,ctx);const [b,w]=mmScore(d.code,x.g);return `<small>${nm(d,x.s)}: ${b} بمكانها و${w} بغير مكانها</small><br>`+turnTxt(d,ctx);},
   winExtra:()=>'الشفرة ظاهرة تحت',
   render(d,ctx){S.mm=S.mm||[];
-    let s=d.win!=null?`<div class="mm">${pegs(d.code)}</div>`:'';
-    s+=`<div style="max-height:300px;overflow:auto;width:100%;max-width:360px">${d.h.map(x=>{const [b,w]=mmScore(d.code,x.g);return `<div class="mm"><span class="chip" style="background:${col(d,x.s)}">${nm(d,x.s)}</span>${pegs(x.g)}<span class="fb">${Array(4).fill(0).map((_,k)=>`<i class="${k<b?'b':k<b+w?'w':''}"></i>`).join('')}</span></div>`;}).join('')}</div>`;
-    if(ctx.my){s+=`<div class="mm" style="margin-top:10px">${[0,1,2,3].map(k=>S.mm[k]!=null?`<span class="peg" style="background:${MMC[S.mm[k]]}"></span>`:'<span class="peg" style="background:#fff;border-style:dashed"></span>').join('')}</div>
-      <div class="row">${MMC.map((c,k)=>`<button class="peg" style="width:40px;height:40px;background:${c}" data-ga="add" data-i="${k}"></button>`).join('')}</div>
-      <div class="row"><button class="sm" data-ga="clr">مسح</button><button class="sm go" data-ga="go" ${S.mm.length===4?'':'disabled'}>جرّب</button></div>`;}
+    const fb=(b,w)=>`<span class="fb">${Array(4).fill(0).map((_,k)=>`<i class="${k<b?'b':k<b+w?'w':''}"></i>`).join('')}</span>`;
+    let s=`<div class="mmb">`;
+    s+=`<div class="mmr code">${d.win!=null?pegs(d.code):'<span class="peg q">؟</span>'.repeat(4)}<span class="fbl">الشفرة</span></div>`;
+    s+=`<div class="mmh">${d.h.length?d.h.map(x=>{const [b,w]=mmScore(d.code,x.g);return `<div class="mmr"><i class="who" style="background:${col(d,x.s)}"></i>${pegs(x.g)}${fb(b,w)}</div>`;}).join(''):'<p class="mme">ما فيه محاولات للحين</p>'}</div>`;
+    if(ctx.my)s+=`<div class="mmr cur"><i class="who" style="background:${col(d,d.turn)}"></i>${[0,1,2,3].map(k=>S.mm[k]!=null?`<span class="peg" style="background:${MMC[S.mm[k]]}"></span>`:'<span class="peg e"></span>').join('')}<span class="fb"></span></div>`;
+    s+='</div>';
+    if(ctx.my)s+=`<div class="mmpal">${MMC.map((c,k)=>`<button class="peg big" style="background:${c}" data-ga="add" data-i="${k}" ${S.mm.length>=4?'disabled':''} aria-label="لون"></button>`).join('')}</div>
+      <div class="acts"><button class="btn navy" data-ga="clr" ${S.mm.length?'':'disabled'}>مسح</button><button class="btn red" data-ga="go" ${S.mm.length===4?'':'disabled'}>جرّب</button></div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;S.mm=S.mm||[];
@@ -83,8 +86,8 @@ GAMES.c31={name:'لا تقول 31',cat:'mind',lbc:'#C0392B',
   icon:iconE('#E35D4F','31','rgba(255,255,255,.25)').replace('font-size="40"','font-size="34" font-weight="800" fill="#fff"'),
   init:n=>({n:0,tgt:n>4?41:31,last:''}),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){return `<div class="big-num" style="font-size:80px;color:${col(d,d.turn)}">${d.n}</div><p class="note">الهدف اللي محد يبي يقوله: ${d.tgt}</p>
-    <div class="row">${[1,2,3].map(k=>`<button class="btn" style="background:${col(d,d.turn)}" data-ga="m" data-i="${k}" ${ctx.my&&d.n+k<=d.tgt?'':'disabled'}>+${k}</button>`).join('')}</div>`;},
+  render(d,ctx){return `<div class="big-num" style="font-size:80px;color:${col(d,d.turn)}">${d.n}</div><p class="lbl" style="text-align:center">اللي يقول ${d.tgt} يخسر</p>
+    <div class="row">${[1,2,3].map(k=>`<button class="btn" style="background:${col(d,d.turn)}" data-ga="m" data-i="${k}" ${ctx.my&&d.n+k<=d.tgt?'':'disabled'}><span class="ltr">+${k}</span></button>`).join('')}</div>`;},
   click(a,k,d,ctx){
     if(!ctx.my||d.n+k>d.tgt)return;const t=d.turn,n=d.n+k;
     if(n<d.tgt){act({...d,n,turn:nextSeat(d,t),last:`${nm(d,t)} قال ${n}`});return;}

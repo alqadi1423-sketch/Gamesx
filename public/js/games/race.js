@@ -58,8 +58,8 @@ function luRoll(d,auto){const s=d.turn,r=1+rnd(6),six=r===6?d.six+1:0;const b={.
   return {...b,roll:r,six,last:`${nm(d,s)} جاب ${r}، يختار القطعة`};}
 function rollDie(after){S.rolling=true;render();S.holdRender=true;const iv=setInterval(()=>{const el=document.querySelector('.ldie');if(el)el.innerHTML=diceSVG(1+rnd(6));},70);
   setTimeout(()=>{clearInterval(iv);S.holdRender=false;S.rolling=false;after();},620);}
-function dieBox(d,my,label){const fresh=d.dsid&&once('die'+d.gid+'_'+d.dsid);
-  return `<div class="lupanel"><div class="ldie ${S.rolling?'spin':fresh?'land':''}" style="--c:${col(d,d.turn)}">${diceSVG(d.die||6)}</div>${label}</div>`;}
+function dieBox(d,my,label,can){const fresh=d.dsid&&once('die'+d.gid+'_'+d.dsid);
+  return `<div class="lupanel">${tapDie(d.die||6,can&&!S.rolling,col(d,d.turn),'ldie '+(S.rolling?'spin':fresh?'land':''))}${label}</div>`;}
 GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><rect width="40" height="40" fill="#EC6158"/><rect x="60" width="40" height="40" fill="#4CB97F"/><rect y="60" width="40" height="40" fill="#4AB1E8"/><rect x="60" y="60" width="40" height="40" fill="#F0B429"/>${[[20,20],[80,20],[20,80],[80,80]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="13" fill="#fff"/>`).join('')}<path d="M40 40L50 50L60 40Z" fill="#4CB97F"/><path d="M40 40L50 50L40 60Z" fill="#EC6158"/><path d="M60 60L50 50L40 60Z" fill="#4AB1E8"/><path d="M60 60L50 50L60 40Z" fill="#F0B429"/><rect x="40" y="0" width="20" height="40" fill="none" stroke="#c9d6e4" stroke-width="1.5"/><rect x="47" y="6" width="6" height="34" fill="#4CB97F" opacity=".5"/><circle cx="20" cy="20" r="7" fill="#EC6158"/><circle cx="80" cy="80" r="7" fill="#F0B429"/></svg>`,
   init:n=>({T:LT(n),tk:Array(n*LT(n)).fill(-1),roll:null,six:0,die:6,dsid:0,mv:null,last:''}),
@@ -88,10 +88,10 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
         <ellipse cy=".3" rx=".36" ry=".13" fill="rgba(0,0,0,.22)"/><path d="M-.3 .25C-.3 -.05-.16-.12-.13-.22A.24 .24 0 1 1 .13 -.22C.16-.12 .3-.05 .3 .25Z" fill="${c}" stroke="#fff" stroke-width=".07"/><circle cy="-.38" r=".09" fill="rgba(255,255,255,.55)"/></g>`;}
     v+='</svg>';
     let lab='';
-    if(d.win==null){if(my&&d.roll==null)lab=`<button class="btn red" data-ga="roll" ${S.rolling?'disabled':''}>🎲 ارمِ الزهر</button>`;
-      else if(my)lab='<b class="hint">اضغط على القطعة اللي تبيها</b>';
+    if(d.win==null){if(my&&d.roll==null)lab='';
+      else if(my)lab='<b class="hint">اختار القطعة</b>';
       else lab=`<span class="note">ينتظر ${nm(d,s0)}</span>`;}
-    return v+dieBox(d,my,lab);},
+    return v+dieBox(d,my,lab,my&&d.roll==null&&d.win==null);},
   click(a,i,d,ctx){if(!ctx.my)return;
     if(a==='roll'&&d.roll==null&&!S.rolling){const g=d.gid,t=d.turn;rollDie(()=>{const nd=S.st.d;if(!nd||nd.gid!==g||nd.turn!==t||nd.roll!=null)return;act(luRoll(nd));});return;}
     if(a==='tok'&&d.roll!=null&&luMovable(d,d.turn,d.roll).includes(i))act(luApply(d,d.turn,i,d.roll));},
@@ -158,10 +158,9 @@ GAMES.jakaro={name:'جكارو',cat:'board',lbc:'#7B4A2A',
     return {mb:Array(n*4).fill(-1),hd,deck,top:null,np:0,team:n>=4&&n%2===0,last:'',mv:null};},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
-  points:d=>d.pl.map((r,s)=>{const L=jkL(d);let f=0;for(let k=0;k<4;k++)if(d.mb[s*4+k]>=L)f++;return f+'/4';}),
+  points:d=>d.pl.map((r,s)=>{const L=jkL(d);let f=0;for(let k=0;k<4;k++)if(d.mb[s*4+k]>=L)f++;return (d.team?'فريق '+(s%(d.pl.length/2)+1)+' • ':'')+f+'/4';}),
   status(d,ctx){const s=d.turn;let t=(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);
-    if(d.team){const v=ctx.local?s:ctx.v;if(v>=0){const p=jkTeamOf(d,v).find(x=>x!==v);t+=`<br><small>شريكك: ${nameTag(d,p)}</small>`;}}
-    if(ctx.my&&jkCtl(d,s)!==s)t+=`<br><small>حبّاتك وصلت، الحين تلعب بحبّات شريكك</small>`;return t;},
+    return t;},
   onTimeout:d=>jkAuto(d),
   render(d,ctx){const n=d.pl.length,A=starArms(n),G=starGeo(A),L=13*A,s0=d.turn,my=ctx.my,cs=jkCtl(d,s0);
     const v0=ctx.local?s0:ctx.v;const sel=jkSel(d);const cards=v0>=0?cardsOf(d.hd[v0]||''):[];
@@ -199,6 +198,7 @@ GAMES.jakaro={name:'جكارو',cat:'board',lbc:'#7B4A2A',
         cards[sel.ci][0]==='J'&&sel.k==null?'<p class="hint" style="text-align:center">اختر حبتك، وبعدها الحبة اللي تبدّل معها</p>':cards[sel.ci][0]==='J'?'<p class="hint" style="text-align:center">اختر الحبة اللي تبدّل معها</p>':
         cards[sel.ci][0]==='7'&&sel.a!=null?'<p class="hint" style="text-align:center">اختر الحبة الثانية للباقي</p>':cards[sel.ci][0]==='7'&&sel.k==null?'<p class="hint" style="text-align:center">اختر الحبة (تقدر تقسم السبعة على حبتين)</p>':
         (cards[sel.ci][0]==='A'||cards[sel.ci][0]==='K')&&opts.some(o=>o.t==='o')&&sel.k==null?'<p class="hint" style="text-align:center">اضغط حبة في بيتك تطلّعها، أو حبة في الطريق تمشيها</p>':sel.k==null?'<p class="hint" style="text-align:center">اختر الحبة</p>':'';
+      if(my&&cs!==s0)h+=`<p class="hint" style="text-align:center">حبّاتك وصلت، تلعب الحين بحبّات ${nameTag(d,cs)}</p>`;
       h+=hint+choice+`<div class="jhand ${my?'':'wait'}">${cards.map((c,i)=>{const ok=my&&(burn||optsAll[i].length);return `<button class="jc ${sel.ci===i&&my?'up':''} ${my&&!ok?'no':''}" data-ga="card" data-i="${i}" ${my?'':'disabled'}>${cardHTML(c,true)}</button>`;}).join('')}</div>`;
       if(my&&burn&&sel.ci!=null)h+=`<button class="btn red wide" data-ga="burn">🔥 احرق الورقة</button>`;}
     return v+h;},

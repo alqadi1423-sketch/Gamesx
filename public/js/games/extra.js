@@ -33,7 +33,7 @@ GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',onTimeout:d=>{const n=d.pl.
 
 /* ---------- old maid ---------- */
 function omPairs(cards){const by={};cards.forEach(c=>{(by[c[0]]=by[c[0]]||[]).push(c);});const keep=[];for(const r in by){const a=by[r];if(a.length%2)keep.push(a[a.length-1]);}return keep;}
-GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,
+GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,points:d=>d.hands.map((h,s)=>d.out[s]==='1'?'خلّص ✓':h.length/2+' ورق'),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9C527C"/><rect x="18" y="22" width="34" height="50" rx="6" fill="#4AB1E8" stroke="#fff" stroke-width="3" transform="rotate(-12 35 47)"/><rect x="46" y="22" width="36" height="54" rx="6" fill="#fff" transform="rotate(8 64 49)"/><text x="64" y="60" font-size="26" font-weight="800" fill="#2D4763" text-anchor="middle" transform="rotate(8 64 49)">K♠</text></svg>`,
   init:n=>{const dk=shuffle(deck52().filter(c=>!['Kh','Kd','Kc'].includes(c)));const hands=Array(n).fill(0).map(()=>[]);dk.forEach((c,k)=>hands[k%n].push(c));
     return {hands:hands.map(h=>shuffle(omPairs(h)).join('')),fin:[],last:''};},
@@ -42,7 +42,7 @@ GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,
   winText:d=>d.win!=null&&d.loser!=null?`${nm(d,d.win)} خلّص أول، و${nm(d,d.loser)} علق معه الشايب`:null,
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
-    let s=`<div class="score" style="gap:4px">${d.pl.map((r,i)=>`<span class="chip" style="background:${col(d,i)};opacity:${d.out[i]==='1'?.4:1}">${!ctx.local&&i===ctx.v?'أنت':nm(d,i)} ${d.hands[i].length/2}${d.out[i]==='1'?' ✓':''}</span>`).join('')}</div>`;
+    let s='';
     if(d.win!=null||v<0)return s;
     const tg=nextSeat(d,d.turn);const my=ctx.my&&d.turn===v;
     if(my&&tg!==d.turn)s+=`<p class="lbl" style="text-align:center">اسحب ورقة من ${nameTag(d,tg)}</p><div class="hand">${cardsOf(d.hands[tg]).map((c,i)=>`<button class="card back pick" data-ga="take" data-i="${i}"></button>`).join('')}</div>`;

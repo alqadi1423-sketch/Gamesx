@@ -34,7 +34,7 @@ GAMES.dots={name:'نقاط ومربعات',cat:'board',lbc:'#8F86C9',
     for(let r=0;r<=B;r++)for(let c=0;c<B;c++){const k=r*B+c;add(seg(P(c),P(r),P(c+1),P(r),d.h[k],'h',k));}
     for(let r=0;r<B;r++)for(let c=0;c<=B;c++){const k=r*(B+1)+c;add(seg(P(c),P(r),P(c),P(r+1),d.v[k],'v',k));}
     for(let r=0;r<=B;r++)for(let c=0;c<=B;c++)dots+=`<circle cx="${P(c)}" cy="${P(r)}" r="${B>4?1.9:2.3}" fill="#2D4763" pointer-events="none"/>`;
-    return `<svg class="dots" viewBox="0 0 100 100">${bx}${hits}${lines}${dots}</svg><p class="note">اضغط بين نقطتين ترسم خط. تقفل مربع؟ تلعب مرة ثانية</p>`;
+    return `<svg class="dots" viewBox="0 0 100 100">${bx}${hits}${lines}${dots}</svg>`;
   },
   click(a,i,d,ctx){
     if(!ctx.my)return;let {h,v,bx}=d;const B=d.B,t=String(d.turn);
@@ -62,6 +62,7 @@ function snakeSVG(a,b,k){const [x1,y1]=cellXY(a),[x2,y2]=cellXY(b);const dx=x2-x
 GAMES.snakes={name:'السلم والثعبان',cat:'board',lbc:'#A8743F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#FBEFD9"/><path d="M0 0H33V33H0ZM66 0H100V33H66ZM33 33H66V66H33ZM0 66H33V100H0ZM66 66H100V100H66Z" fill="#F3D9AE"/><path d="M60 8L80 70M70 6L90 68" stroke="#8a5a2b" stroke-width="4"/><path d="M63 20L74 17M66 32L78 29M70 44L82 41M74 56L86 53" stroke="#8a5a2b" stroke-width="3"/><path d="M22 22C40 35 6 50 26 70" stroke="#2D4763" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M22 22C40 35 6 50 26 70" stroke="#5CC08C" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="22" cy="22" r="8" fill="#5CC08C" stroke="#2D4763" stroke-width="2.5"/><circle cx="19" cy="20" r="2" fill="#fff"/><circle cx="25" cy="20" r="2" fill="#fff"/><circle cx="40" cy="84" r="7" fill="#EC6158" stroke="#2D4763" stroke-width="2.5"/><circle cx="58" cy="84" r="7" fill="#4AB1E8" stroke="#2D4763" stroke-width="2.5"/></svg>`,
   init:n=>({pos:Array(n).fill(0),dice:0,msg:''}),
+  status:(d,ctx)=>(d.msg?`<small>${d.msg}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){
     let cells='';for(let row=9;row>=0;row--)for(let c=0;c<10;c++){const n=row%2===0?row*10+c+1:row*10+(9-c)+1;cells+=`<div class="cl ${(row+c)%2?'b':'a'}">${n}</div>`;}
     let ov=Object.entries(LAD).map(([a,b])=>ladderSVG(+a,b)).join('')+Object.entries(SNK).map(([a,b],k)=>snakeSVG(+a,b,k)).join('');
@@ -73,8 +74,7 @@ GAMES.snakes={name:'السلم والثعبان',cat:'board',lbc:'#A8743F',
     const anim=S.rolled;S.rolled=false;
     return `<div class="sl"><div class="cells">${cells}</div><svg viewBox="0 0 100 100">${ov}</svg></div>
       ${off.length?`<div class="start">قبل البداية: ${off.map(s=>`<span class="mini" style="background:${col(d,s)}">${nm(d,s)}</span>`).join('')}</div>`:''}
-      <div class="row" style="align-items:center;gap:14px"><div class="dice ${anim?'roll':''}">${d.dice?diceSVG(d.dice):''}</div><button class="btn" style="background:${col(d,d.turn)}" data-ga="roll" ${ctx.my?'':'disabled'}>ارمِ النرد</button></div>
-      <div class="slmsg">${d.msg||''}</div>`;
+      <div class="row">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}</div>`;
   },
   click(a,i,d,ctx){
     if(!ctx.my)return;const r=1+rnd(6),t=d.turn;let p=d.pos[t]+r,msg;
@@ -98,7 +98,7 @@ function cwCell(c,n){const pts=CP[n]||[];
 GAMES.cw={name:'حرب الألوان',cat:'board',lbc:'#4B3A62',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4B3A62"/>${[0,1,2].map(r=>[0,1,2].map(c=>{const x=6+c*31,y=6+r*31;const k=(r*3+c)%4;const bg=k===0?'#FAD2CE':k===1?'#CDEAFA':'#EFE8DD';const dot=k===0?'#EC6158':k===1?'#4AB1E8':'';return `<rect x="${x}" y="${y}" width="27" height="27" rx="7" fill="${bg}"/>`+(dot?`<circle cx="${x+13.5}" cy="${y+13.5}" r="10" fill="${dot}"/><circle cx="${x+10}" cy="${y+10}" r="2.6" fill="#fff"/><circle cx="${x+17}" cy="${y+17}" r="2.6" fill="#fff"/>`:'');}).join('')).join('')}</svg>`,
   init:n=>{const Z=CWS[n]||8;return {Z,o:'.'.repeat(Z*Z),n:'0'.repeat(Z*Z),mv:Array(n).fill(0)};},
-  status(d,ctx){return turnTxt(d,ctx)+(d.mv[d.turn]===0?'<br><small>أول حركة: اختر أي خانة فاضية</small>':'<br><small>اضغط على خانة من لونك، توصل 4 تنفجر</small>');},
+  status(d,ctx){return turnTxt(d,ctx);},
   render(d,ctx){
     const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z;
     return `<div class="cw" style="grid-template-columns:repeat(${Z},minmax(0,1fr));gap:${Z>6?4:6}px">${[...d.o].map((o,i)=>{const can=ctx.my&&(first?o==='.':o===t);
@@ -165,10 +165,10 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
     const mine=pr[d.pl[v]];if(!mine)return '<p class="note">جاري التجهيز…</p>';
     if(!allReady(d,pr)){
       return `<p class="lbl">بحرك (${SHIPS.length} سفن)</p>${seaGrid(mine.f,d.sh[v],true,false)}`+
-        (seaReady(mine,d)?'<p class="hint">جاهز ✓</p>':`<div class="row"><button class="sm" data-ga="shuffle">وزّعها من جديد</button><button class="sm go" data-ga="ready">جاهز</button></div>`);}
+        (seaReady(mine,d)?'<p class="hint">جاهز ✓</p>':`<div class="acts"><button class="btn navy" data-ga="shuffle">🔀 وزّعها من جديد</button><button class="btn red" data-ga="ready">جاهز ✓</button></div>`);}
     const myTurn=ctx.my&&d.turn===v;const o=curTarget(d,v);if(o==null)return '';
     const of=pr[d.pl[o]]?pr[d.pl[o]].f:null;
-    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}${myTurn?'، اضغط مربع تضربه':''}</p>${seaGrid(of,d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1')}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true)}`;
+    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(of,d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1')}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true)}`;
   },
   click(a,i,d,ctx){
     if(a==='tgt'){S.tgt=i;render();return;}
@@ -250,7 +250,7 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
     const spect=v<0;if(spect)v=d.turn;
     const mine=ctx.priv[d.pl[v]];const myTurn=ctx.my&&d.turn===v;const gm=myTurn&&S.gw;
     const o=curTarget(d,v);if(o==null)return '';
-    let s=!spect&&mine&&mine.gid===d.gid?`<div class="secret">${pc(mine.sec,'')}<div><b>شخصيتك السرية: ${PEOPLE[mine.sec].name}</b><br><small class="note">الباقين يحاولون يعرفونها، جاوب بصدق 😉</small></div></div>`:'';
+    let s=!spect&&mine&&mine.gid===d.gid?`<div class="secret">${pc(mine.sec,'')}<div><b>شخصيتك السرية: ${PEOPLE[mine.sec].name}</b><br><small class="note">الباقين يحاولون يعرفونها</small></div></div>`:'';
     s+=tabsHTML(d,v,myTurn?'اختر مين تسأل عنه':'لوحتك عن كل لاعب');
     const el=elSeg(d,v,o);const left=[...el].filter(c=>c==='0').length;
     const key=d.gid+'_'+v+'_'+o;S.gPrev=S.gPrev||{};const prev=S.gPrev[key]||el;S.gPrev[key]=el;

@@ -13,7 +13,7 @@ function spdResolve(d,picks){
   const rd=d.rd+1;return {...d,pts,rd,res,win:rd>=SPD_ROUNDS?mostPts(pts):null};
 }
 const spdSubmit=(d,ctx,ok)=>{const st=spdState(d,ctx.v);const ms=Math.round(performance.now()-st.t0);S.sp={...st,phase:'sent'};simulPick(d,ctx.v,{ok:!!ok,ms});};
-const readyCard=(title,art)=>`<div class="spd">${art||''}<div class="spdt">${title}</div><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>`;
+const readyCard=(title,art)=>`<div class="spd">${art||`<div class="rdyi">${(GAMES[S.st.g]||{}).icon||''}</div>`}<div class="spdt">${title}</div><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>`;
 const waitCard=()=>'<div class="spd"><div class="spdt">✓ أرسلت</div><p class="note">ننتظر الباقين</p></div>';
 function spdBase(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
   init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
@@ -118,9 +118,9 @@ GAMES.farkle={name:'عشرة آلاف',cat:'cards',lbc:'#7B241C',icon:iconE('#A9
   onTimeout:d=>({...d,dice:'',used:'000000',tot:0,rolled:false,turn:nextSeat(d,d.turn)}),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>جمع الدور: <b>${d.tot}</b>، الهدف ${d.goal}</small>`,
   render(d,ctx){const my=ctx.my;S.sel=S.sel||[];const anim=S.rolled;S.rolled=false;const sel=S.sel.map(i=>+d.dice[i]);const sv=fkScore(sel);
-    let s=`<div class="row ${anim?'':''}" style="gap:8px">${d.dice?[...d.dice].map((x,i)=>d.used[i]==='1'?`<div class="dice" style="width:50px;height:50px;opacity:.25">${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</div>`:`<button class="dice" style="width:50px;height:50px;${S.sel.includes(i)?'box-shadow:0 0 0 4px #ffd84d':''}" data-ga="sel" data-i="${i}" ${my&&d.rolled?'':'disabled'}>${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</button>`).join(''):'<p class="note">ارمِ الزهر الستة</p>'}</div>`;
+    let s=`<div class="row ${anim?'':''}" style="gap:8px">${d.dice?[...d.dice].map((x,i)=>d.used[i]==='1'?`<div class="dice" style="width:50px;height:50px;opacity:.25">${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</div>`:`<button class="dice" style="width:50px;height:50px;${S.sel.includes(i)?'box-shadow:0 0 0 4px #ffd84d':''}" data-ga="sel" data-i="${i}" ${my&&d.rolled?'':'disabled'}>${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</button>`).join(''):''}</div>`;
     if(my){if(!d.rolled)s+=`<div class="acts"><button class="btn red" data-ga="roll">ارمِ ${6-[...d.used].filter(x=>x==='1').length||6} زهرات</button>${d.tot>0?`<button class="btn navy" data-ga="bank">احفظ ${d.tot}</button>`:''}</div>`;
-      else s+=`<p class="note">اختار الزهر اللي يسجل (1 = 100، 5 = 50، ثلاثة متشابهة وأكثر)</p><div class="acts"><button class="btn red" data-ga="keep" ${sv?'':'disabled'}>خذ ${sv||''} وارمِ الباقي</button><button class="btn navy" data-ga="keepbank" ${sv?'':'disabled'}>خذ واحفظ ${sv?d.tot+sv:''}</button></div>`;}
+      else s+=`<div class="acts"><button class="btn red" data-ga="keep" ${sv?'':'disabled'}>خذ ${sv||''} وارمِ الباقي</button><button class="btn navy" data-ga="keepbank" ${sv?'':'disabled'}>خذ واحفظ ${sv?d.tot+sv:''}</button></div>`;}
     return s;},
   click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn;S.sel=S.sel||[];
     if(a==='sel'){S.sel=S.sel.includes(i)?S.sel.filter(x=>x!==i):[...S.sel,i];render();return;}

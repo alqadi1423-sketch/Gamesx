@@ -24,7 +24,7 @@ function fighterSVG(c,pose){
 }
 
 /* ---------- arena brawl (everyone picks an action at once) ---------- */
-const ARA={atk:['⚔️','هجوم'],def:['🛡️','دفاع'],heal:['💚','علاج'],spc:['💥','ضربة خاصة']};
+const ARA={atk:['⚔️','هجوم'],def:['🛡️','دفاع'],heal:['💚','علاج'],spc:['💥','خاصة ⚡3']};
 GAMES.arena={name:'حلبة القتال',cat:'fight',lbc:'#922B21',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B03A2E"/><circle cx="50" cy="50" r="38" fill="#E6B0AA"/><circle cx="50" cy="50" r="30" fill="#F5B7B1"/><path d="M28 72L62 30M38 72L72 30" stroke="#2D4763" stroke-width="6" stroke-linecap="round"/><path d="M26 68l10 6M60 26l10 6" stroke="#F0B429" stroke-width="6" stroke-linecap="round"/></svg>`,
   init:n=>({rd:0,hp:Array(n).fill(100),en:Array(n).fill(1),anim:null,res:'',maxRd:20}),
@@ -41,7 +41,7 @@ GAMES.arena={name:'حلبة القتال',cat:'fight',lbc:'#922B21',
         <div class="enp">${[0,1,2].map(k=>`<i class="${k<d.en[i]?'on':''}"></i>`).join('')}</div></${tg?'button':'div'}>`;}).join('')}</div>`;
     if(d.win!=null)return s;
     if(ctx.my){if(choosing)s+=`<p class="hint" style="text-align:center">اختار مين تهاجم</p><div class="acts"><button class="btn navy" data-ga="cancel">رجوع</button></div>`;
-      else s+=`<div class="acts">${Object.entries(ARA).map(([k,[e,t]])=>`<button class="btn ${k==='atk'?'red':k==='def'?'navy':k==='heal'?'':'blue'}" style="${k==='heal'?'background:#3FAE5C':''}" data-ga="act" data-i="${['atk','def','heal','spc'].indexOf(k)}" ${k==='spc'&&d.en[v]<3?'disabled':''}>${e} ${t}</button>`).join('')}</div><p class="note">الضربة الخاصة تحتاج 3 طاقة وتخترق الدفاع</p>`;}
+      else s+=`<div class="acts">${Object.entries(ARA).map(([k,[e,t]])=>`<button class="btn ${k==='atk'?'red':k==='def'?'navy':k==='heal'?'':'blue'}" style="${k==='heal'?'background:#3FAE5C':''}" data-ga="act" data-i="${['atk','def','heal','spc'].indexOf(k)}" ${k==='spc'&&d.en[v]<3?'disabled':''}>${e} ${t}</button>`).join('')}</div>`;}
     else if(v>=0&&hasPicked(d,v))s+='<p class="note" style="text-align:center">✓ اخترت حركتك، ننتظر الباقين</p>';
     return s;},
   click(a,i,d,ctx){if(!ctx.my)return;
@@ -95,7 +95,7 @@ GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
   init:n=>{const ph=[Math.random()*6,Math.random()*6,Math.random()*6];const h=[];for(let x=0;x<=100;x++)h.push(+Math.max(6,Math.min(36,20+7*Math.sin(x/9+ph[0])+5*Math.sin(x/4.3+ph[1])+3*Math.sin(x/2.1+ph[2]))).toFixed(1));
     const slots=shuffle(Array(n).fill(0).map((_,i)=>n===1?50:8+i*(84/(n-1))));return {h,tx:slots,hp:Array(n).fill(100),ang:slots.map(x=>x<50?50:130),wind:rnd(9)-4,shot:null,sid:0,turns:0};},
   points:d=>d.hp.map(h=>h+'❤'),
-  status:(d,ctx)=>(d.shot&&d.shot.msg?`<small>${d.shot.msg}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>الرياح: ${d.wind===0?'ما فيه':(d.wind>0?'→ ':'← ')+Math.abs(d.wind)}</small>`,
+  status:(d,ctx)=>(d.shot&&d.shot.msg?`<small>${d.shot.msg}</small><br>`:'')+turnTxt(d,ctx),
   onTimeout:d=>({...d,turn:nextSeat(d,d.turn),wind:rnd(9)-4}),
   render(d,ctx){const my=ctx.my;const t=d.turn;const ang=tkAng(d,t),pow=tkPow();
     const Y=y=>60-y;const terr='M0 60 '+d.h.map((y,x)=>`L${x} ${Y(y).toFixed(1)}`).join(' ')+' L100 60Z';const w=d.wind;
@@ -116,10 +116,10 @@ GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
     S.draft.angs=undefined;
     act({...d,h:r.h,hp:r.hp,out,ang:angs,shot:{path:r.path,hit:r.hit,hits:r.hits,msg},sid:d.sid+1,turns,wind:rnd(9)-4,turn:win==null?nextSeat(d,t,out):t,win});},
   after(d,ctx){const f=document.getElementById('tkf');if(!f)return;
-    const upd=()=>{const t=d.turn,ang=tkAng(d,t),pow=tkPow();const av=document.getElementById('angv'),pv=document.getElementById('powv');if(av)av.textContent=tkAngTxt(ang);if(pv)pv.textContent=pow;
+    const upd=()=>{const d=S.st.d,ctx=mkCtx();if(!d||!d.tx)return;const t=d.turn,ang=tkAng(d,t),pow=tkPow();const av=document.getElementById('angv'),pv=document.getElementById('powv');if(av)av.textContent=tkAngTxt(ang);if(pv)pv.textContent=pow;
       const el=document.getElementById('aim');if(el){const tp=tkTip(d,t,ang),a=ang*Math.PI/180,L=3+pow/9;el.setAttribute('x1',tp.x.toFixed(2));el.setAttribute('y1',(60-tp.y).toFixed(2));el.setAttribute('x2',(tp.x+Math.cos(a)*L).toFixed(2));el.setAttribute('y2',(60-tp.y-Math.sin(a)*L).toFixed(2));}
       const tk=f.querySelector('.tank.on line');if(tk&&ctx.my){tk.setAttribute('x2',(Math.cos(ang*Math.PI/180)*3.4).toFixed(2));tk.setAttribute('y2',(-3.1-Math.sin(ang*Math.PI/180)*3.4).toFixed(2));}};
-    app.querySelectorAll('.aimc input').forEach(inp=>inp.addEventListener('input',upd));
+    app.querySelectorAll('.aimc input').forEach(inp=>{if(inp._b)return;inp._b=1;inp.addEventListener('input',()=>upd());});
     if(d.shot&&once('tk'+d.gid+d.sid)){const fx=document.getElementById('fx');if(!fx)return;S.holdRender=true;const P=d.shot.path;const ns='http://www.w3.org/2000/svg';
       const mk=(tag,at)=>{const e=document.createElementNS(ns,tag);for(const k in at)e.setAttribute(k,at[k]);fx.appendChild(e);return e;};
       const trail=mk('polyline',{fill:'none',stroke:'rgba(255,255,255,.75)','stroke-width':'.45','stroke-dasharray':'1 .8'});
@@ -151,7 +151,7 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
     return {own:own.join(''),dice:dice.join(''),last:null,sid:0};},
   points:d=>d.pl.map((r,s)=>[...d.own].filter(o=>o===String(s)).length+'⬢'),
   onTimeout:d=>dwEnd(d),
-  status:(d,ctx)=>(d.last&&d.last.msg?`<small>${d.last.msg}</small><br>`:'')+turnTxt(d,ctx)+(ctx.my?'<br><small>اختار أرضك (فيها زهرتين أو أكثر) وبعدها أرض جارة للخصم</small>':''),
+  status:(d,ctx)=>(d.last&&d.last.msg?`<small>${d.last.msg}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const my=ctx.my,t=d.turn,ts=String(t);let sel=my?S.dwSel:null;if(sel!=null&&(d.own[sel]!==ts||+d.dice[sel]<2))sel=null;const targets=sel!=null?new Set(dwNb(sel).filter(b=>d.own[b]!=='.'&&d.own[b]!==ts)):new Set();
     const w=100/(DW_W+0.5),r=w/Math.sqrt(3),vh=(DW_H-1)*1.5*r+2*r;
     const hex=(cx,cy)=>[0,1,2,3,4,5].map(k=>{const a=Math.PI/180*(60*k-90);return (cx+r*0.97*Math.cos(a)).toFixed(2)+','+(cy+r*0.97*Math.sin(a)).toFixed(2);}).join(' ');

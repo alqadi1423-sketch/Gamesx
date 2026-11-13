@@ -51,7 +51,7 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     const r=d.pl[v];const p=S.priv[r]||{};setPriv(r,{...p,gid:d.gid,rd:d.rd,pick:1,hist:{...(p.gid===d.gid&&p.hist||{}),[d.rd]:content}});
   },
   resolve(d,picks){const rd=d.rd+1;return {...d,rd,win:rd>=d.R?'d':null};},
-  after(d,ctx){const pad=document.getElementById('pad');if(!pad||!ctx.my||pad.dataset.on)return;pad.dataset.on='1';const st=teleDraw(d,ctx.v);
+  after(d,ctx){const pad=document.getElementById('pad');if(!pad||!ctx.my||pad._on)return;pad._on=1;const st=teleDraw(d,ctx.v);
     const total=()=>st.strokes.reduce((a,s)=>a+s.p.length,0);
     const pt=e=>{const b=pad.getBoundingClientRect();return [Math.max(0,Math.min(63,Math.round((e.clientX-b.left)/b.width*63))),Math.max(0,Math.min(63,Math.round((e.clientY-b.top)/b.height*63)))];};
     let cur=null,el=null;

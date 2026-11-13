@@ -22,8 +22,9 @@ GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{co
   render(d,ctx){const t=d.turn;const card=d.cards[t];const anim=S.rolled;S.rolled=false;
     let s=`<div class="row ${anim?'':''}">${[...d.dice].map((x,i)=>dieBtn(+x,d.held[i]==='1',ctx.my&&d.rolls>0&&d.rolls<3?`data-ga="hold" data-i="${i}"`:'')).join('')}</div>`;
     s+=`<div class="acts"><button class="btn" style="background:${col(d,t)}" data-ga="roll" ${ctx.my&&d.rolls<3?'':'disabled'}>ارمِ (${3-d.rolls} باقي)</button></div>`;
-    s+=`<p class="lbl" style="text-align:center">بطاقة ${nameTag(d,t)}</p><div style="width:100%;max-width:420px">${YC.map((n,k)=>{const v=card[k];const pv=d.rolls?yScore(k,d.dice):0;
-      return v>=0?`<div class="opt" style="display:flex;justify-content:space-between;opacity:.6;padding:8px 12px"><span>${n}</span><b>${v}</b></div>`:`<button class="opt" style="display:flex;justify-content:space-between;padding:8px 12px" data-ga="score" data-i="${k}" ${ctx.my&&d.rolls?'':'disabled'}><span>${n}</span><b style="color:var(--blue)">${d.rolls?pv:''}</b></button>`;}).join('')}</div>`;
+    const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);
+    s+=`<div class="ysheet">${YC.map((n,k)=>{const v=card[k];const pv=d.rolls?yScore(k,d.dice):0;
+      return v>=0?`<div class="yc done"><span>${n}</span><b>${v}</b></div>`:`<button class="yc" data-ga="score" data-i="${k}" ${ctx.my&&d.rolls?'':'disabled'}><span>${n}</span><b class="${d.rolls&&pv?'pv':''}">${d.rolls?pv:'·'}</b></button>`;}).join('')}<div class="yc tot"><span>المكافأة ${up}/63</span><b>${up>=63?'+35':''}</b></div><div class="yc tot"><span>المجموع</span><b>${yTotal(card)}</b></div></div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn;
@@ -36,7 +37,7 @@ GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{co
 };
 
 /* ---------- liar's dice ---------- */
-GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',onTimeout:d=>{const b=d.bid?{q:d.bid.q+1,f:d.bid.f,s:d.turn}:{q:1,f:1,s:d.turn};return {...d,bid:b,turn:nextSeat(d,d.turn)};},
+GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map(x=>x+' 🎲'),onTimeout:d=>{const b=d.bid?{q:d.bid.q+1,f:d.bid.f,s:d.turn}:{q:1,f:1,s:d.turn};return {...d,bid:b,turn:nextSeat(d,d.turn)};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#5E4A8A"/><path d="M20 70Q50 20 80 70Z" fill="#3B2D59"/><rect x="30" y="56" width="18" height="18" rx="4" fill="#fff"/><rect x="52" y="56" width="18" height="18" rx="4" fill="#fff"/><circle cx="39" cy="65" r="3" fill="#2D4763"/><circle cx="57" cy="61" r="2.5" fill="#2D4763"/><circle cx="65" cy="69" r="2.5" fill="#2D4763"/><text x="50" y="40" font-size="22" font-weight="800" fill="#FFD84D" text-anchor="middle">؟</text></svg>`,
   init:n=>({r:0,n:Array(n).fill(n>4?4:5),bid:null,last:''}),
   privInit:(d,r)=>{const s=d.pl.indexOf(r);const k=s>=0?d.n[s]:0;return {r:d.r,dice:Array(k).fill(0).map(()=>1+rnd(6)).join('')};},
@@ -45,7 +46,7 @@ GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',onTimeout:d=>{con
   coverMsg:d=>d.last||'',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
-    let s=`<div class="score" style="gap:4px">${d.pl.map((r,i)=>d.out[i]==='1'?'':`<span class="chip" style="background:${col(d,i)}">${!ctx.local&&i===ctx.v?'أنت':nm(d,i)} 🎲${d.n[i]}</span>`).join('')}</div>`;
+    let s='';
     s+=d.bid?`<div class="qbox">المزايدة: ${d.bid.q} × ${diceSVG(d.bid.f).replace('<svg ','<svg style="width:34px;height:34px;vertical-align:middle;background:#fff;border-radius:6px" ')}<br><small style="font-size:14px">من ${nm(d,d.bid.s)}</small></div>`:'<div class="qbox">ما فيه مزايدة للحين</div>';
     if(v<0)return s;const p=ctx.priv[d.pl[v]];
     if(p&&p.r===d.r)s+=`<p class="lbl">زهراتك</p><div class="row">${[...p.dice].map(x=>dieBtn(+x)).join('')}</div>`;
@@ -77,8 +78,9 @@ GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',onTimeout:d
   winExtra:d=>d.boxes.map((b,s)=>`${nm(d,s)} ${boxScore(b)}`).join('، '),
   render(d,ctx){const t=d.turn,b=d.boxes[t];S.sel=S.sel||[];const sel=S.sel.reduce((a,x)=>a+x,0);const small=b.slice(6)==='000';const anim=S.rolled;S.rolled=false;
     let s=`<p class="lbl" style="text-align:center">صندوق ${nameTag(d,t)}</p><div class="sbox">${[...b].map((c,k)=>c==='1'?`<button class="stile ${S.sel.includes(k+1)?'sel':''}" data-ga="tile" data-i="${k+1}" ${ctx.my&&d.roll?'':'disabled'}>${k+1}</button>`:`<div class="stile shut"></div>`).join('')}</div>`;
-    s+=`<div class="row" style="align-items:center;gap:10px">${d.dice?[...d.dice].map(x=>dieBtn(+x)).join(''):''}${d.roll?`<b class="rollsum">= ${d.roll}</b>`:''}</div>`;
-    if(ctx.my){if(!d.roll)s+=`<div class="acts"><button class="btn" style="background:${col(d,t)}" data-ga="roll">ارمِ زهرتين</button>${small?'<button class="btn navy" data-ga="roll1">زهرة وحدة</button>':''}</div>`;
+    const dv=d.dice?[...d.dice].map(Number):[5,2];const canR=ctx.my&&!d.roll&&d.win==null;
+    s+=`<div class="row" style="align-items:center;gap:12px">${dv.map(x=>tapDie(x,canR,col(d,t),anim?'roll':'')).join('')}${d.roll?`<b class="rollsum">= ${d.roll}</b>`:''}</div>`;
+    if(ctx.my){if(!d.roll){if(small)s+=`<div class="acts"><button class="btn navy" data-ga="roll1">ارمِ زهرة وحدة بس</button></div>`;}
       else s+=`<div class="acts"><button class="btn blue" data-ga="ok" ${sel===d.roll?'':'disabled'}>اقفلها (${sel} من ${d.roll})</button></div>`;}
     return s;},
   click(a,i,d,ctx){
@@ -104,9 +106,9 @@ GAMES.camel={name:'سباق الهجن',cat:'cards',lbc:'#B8860B',
   render(d,ctx){const anim=S.rolled;S.rolled=false;
     const mk=k=>BOOST[k]?'⚡':TRAP[k]?'🌵':'';
     let s=`<div class="race">${d.pl.map((r,i)=>{const p=Math.min(d.pos[i],TRACK);const pct=p/TRACK*100;
-      return `<div class="lane ${d.turn===i&&d.win==null?'on':''}" style="--c:${col(d,i)};--l:${lit(d,i)}"><div class="lname"><i>${nm(d,i).replace(/&[^;]+;/g,'').charAt(0)}</i><span>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}</span><b>${p}/${TRACK}</b></div>
+      return `<div class="lane ${d.turn===i&&d.win==null?'on':''}" style="--c:${col(d,i)};--l:${lit(d,i)}"><div class="lname"><i>${shapeW(d.pl[i])}</i><span>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}</span><b>${p}/${TRACK}</b></div>
       <div class="track"><div class="fill" style="width:${pct}%"></div>${Array(TRACK).fill(0).map((_,k)=>mk(k+1)?`<span class="mk" style="inset-inline-start:${(k+1)/TRACK*100}%">${mk(k+1)}</span>`:'').join('')}<span class="camelp" style="inset-inline-start:${pct}%">🐪</span><span class="flag">🏁</span></div></div>`;}).join('')}</div>`;
-    s+=`<div class="row" style="align-items:center;gap:14px"><div class="dice ${anim?'roll':''}">${d.dice?diceSVG(d.dice):''}</div><button class="btn" style="background:${col(d,d.turn)}" data-ga="roll" ${ctx.my?'':'disabled'}>ارمِ</button></div>`;
+    s+=`<div class="row">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}</div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn,r=1+rnd(6);S.rolled=true;let p=d.pos[t]+r,msg=`طلع ${r}`;
     if(BOOST[p]){const b=BOOST[p];p+=b;msg+=`، ⚡ تقدّم ${b}`;}else if(TRAP[p]){p=Math.max(0,p+TRAP[p]);msg+='، 🌵 رجع';}
@@ -122,7 +124,7 @@ GAMES.luck={name:'صناديق الحظ',cat:'cards',lbc:'#A5373F',
   render(d,ctx){const k=d.box.length,c=k<=16?4:k<=20?5:6;
     return `<div class="cellgrid" style="grid-template-columns:repeat(${c},minmax(0,1fr));background:#7A2B31">${[...d.box].map((v,i)=>{const o=d.op[i];
       if(o==='.')return `<button class="cg" style="background:#F2C14E;font-size:24px" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>${d.win!=null&&v==='b'?'💣':'🎁'}</button>`;
-      return `<div class="cg" style="background:${lit(d,+o)};font-size:${v==='b'?24:22}px;box-shadow:inset 0 0 0 3px ${col(d,+o)}">${v==='b'?'💥':'+'+v}</div>`;}).join('')}</div>`;},
+      return `<div class="cg" style="background:${lit(d,+o)};font-size:${v==='b'?24:22}px;box-shadow:inset 0 0 0 3px ${col(d,+o)}">${v==='b'?'💥':'<span class="ltr">+'+v+'</span>'}</div>`;}).join('')}</div>`;},
   click(a,i,d,ctx){if(!ctx.my||d.op[i]!=='.')return;const t=d.turn,v=d.box[i];const op=setAt(d.op,i,String(t));let out=d.out,pts=[...d.pts],last;
     if(v==='b'){out=setAt(out,t,'1');last=`${nm(d,t)} فتح صندوق 💣 وطلع`;}else{pts[t]+=+v;last=`${nm(d,t)} أخذ ${v} نقاط`;}
     const al=aliveSeats(d,out);const left=[...d.box].some((x,k)=>op[k]==='.'&&x!=='b');let win=null;
