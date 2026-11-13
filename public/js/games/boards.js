@@ -48,7 +48,8 @@ const TRS={2:6,3:7,4:7,5:8,6:8,7:8,8:8};
 const heat=k=>['#E8473E','#F07A3C','#F2A93B','#E9CD52','#B7D36A','#7FC8A9','#6BB2DA','#5A8FD0','#5872B8','#555A99'][Math.min(k,9)];
 GAMES.treasure={name:'الكنز المدفون',cat:'mind',lbc:'#B07B2A',
   icon:iconE('#E6B65C','💰','rgba(255,255,255,.35)'),
-  init:n=>{const z=TRS[n]||8;return {z,t:rnd(z*z),o:'.'.repeat(z*z),by:'.'.repeat(z*z),last:''};},
+  // the treasure is not placed in advance: each dig draws its spot from the cells that still fit every clue, so it is never in the shared state
+  init:n=>{const z=TRS[n]||8;return {z,o:'.'.repeat(z*z),by:'.'.repeat(z*z),last:''};},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const z=d.z;
     return `<div class="cellgrid" style="grid-template-columns:repeat(${z},minmax(0,1fr));background:#C9A15B">${[...d.o].map((v,i)=>{
@@ -56,9 +57,10 @@ GAMES.treasure={name:'الكنز المدفون',cat:'mind',lbc:'#B07B2A',
       if(v==='*')return `<div class="cg" style="background:#ffd84d;font-size:22px">💰</div>`;
       const k=v.charCodeAt(0)-97;return `<div class="cg" style="background:${heat(k)};color:#fff;box-shadow:inset 0 0 0 3px ${col(d,+d.by[i])}">${k}</div>`;}).join('')}</div>`;},
   click(a,i,d,ctx){
-    if(!ctx.my||d.o[i]!=='.')return;const z=d.z,t=d.turn;
-    if(i===d.t){act({...d,o:setAt(d.o,i,'*'),by:setAt(d.by,i,String(t)),win:t,last:`${nm(d,t)} لقى الكنز!`});return;}
-    const k=Math.abs(Math.floor(i/z)-Math.floor(d.t/z))+Math.abs(i%z-d.t%z);
+    if(!ctx.my||d.o[i]!=='.')return;const z=d.z,t=d.turn,far=(a,b)=>Math.abs(Math.floor(a/z)-Math.floor(b/z))+Math.abs(a%z-b%z);
+    let tc=d.t;if(tc==null){const ok=[];for(let j=0;j<z*z;j++)if(d.o[j]==='.'&&[...d.o].every((v,c)=>v<'a'||far(j,c)===v.charCodeAt(0)-97))ok.push(j);tc=ok.length?ok[rnd(ok.length)]:i;}
+    if(i===tc){act({...d,o:setAt(d.o,i,'*'),by:setAt(d.by,i,String(t)),win:t,last:`${nm(d,t)} لقى الكنز!`});return;}
+    const k=far(i,tc);
     act({...d,o:setAt(d.o,i,String.fromCharCode(97+k)),by:setAt(d.by,i,String(t)),turn:nextSeat(d,t),last:`${nm(d,t)} حفر وطلع الكنز يبعد ${k} خطوات`});
   }
 };

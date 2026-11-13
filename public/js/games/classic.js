@@ -42,7 +42,7 @@ GAMES.dots={name:'نقاط ومربعات',cat:'board',lbc:'#8F86C9',
     let got=false;
     for(let r=0;r<B;r++)for(let c=0;c<B;c++){const k=r*B+c;if(bx[k]!=='.')continue;
       if(h[r*B+c]!=='.'&&h[(r+1)*B+c]!=='.'&&v[r*(B+1)+c]!=='.'&&v[r*(B+1)+c+1]!=='.'){bx=setAt(bx,k,t);got=true;}}
-    let win=null;if(!bx.includes('.')){const n=cntSeat(bx,d.pl.length);const mx=Math.max(...n);const top=n.map((x,s)=>x===mx?s:-1).filter(s=>s>=0);win=top.length===1?top[0]:'d';}
+    let win=null;if(!bx.includes('.')){const n=cntSeat(bx,d.pl.length).map((x,s)=>d.out[s]==='1'?-1:x);const mx=Math.max(...n);const top=n.map((x,s)=>x===mx?s:-1).filter(s=>s>=0);win=top.length===1?top[0]:'d';}
     act({...d,h,v,bx,turn:got?d.turn:nextSeat(d,d.turn),win});
   }
 };
@@ -134,8 +134,11 @@ function randFleet(){
     if(ok)return f.join('');}
   return '.'.repeat(64);
 }
-const seaReady=(p,d)=>!!(p&&p.gid===d.gid&&p.ready&&p.f);
+// d.auto: the turn timer ran out while ships were being placed, so every fleet laid out so far counts as ready
+const seaReady=(p,d)=>!!(p&&p.gid===d.gid&&(p.ready||d.auto)&&p.f);
 const allReady=(d,pr)=>d.pl.every((r,s)=>d.out[s]==='1'||seaReady(pr[r],d));
+// online, seats still placing ships whose player has left; the turn seat is left to the room's own skip button
+const seaGone=(d,pr)=>S.mode!=='online'||d.win!=null?[]:aliveSeats(d).filter(s=>s!==d.turn&&!S.roles.has(d.pl[s])&&!seaReady(pr[d.pl[s]],d));
 function seaGrid(f,sh,show,click,small){
   const sunk=new Set();
   if(f)for(const L of SL){const cs=[];for(let i=0;i<64;i++)if(f[i]===L)cs.push(i);if(cs.length&&cs.every(i=>sh[i]==='o'))sunk.add(L);}
@@ -148,15 +151,22 @@ function seaGrid(f,sh,show,click,small){
 GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3E8FC4"/><path d="M25 0V100M50 0V100M75 0V100M0 25H100M0 50H100M0 75H100" stroke="#5FAEDF" stroke-width="2"/><path d="M8 46H74L84 52L74 60H14Z" fill="#E8746B" stroke="#2D4763" stroke-width="3"/><path d="M22 48l6 5M32 48l6 5M42 48l6 5" stroke="#2D4763" stroke-width="3"/><path d="M72 52l-9-9 4-2-5-7 9 4 1-6 4 8 6-2-3 7 7 3-7 3" fill="#fff"/><circle cx="72" cy="52" r="7" fill="#2D4763"/><circle cx="70" cy="50" r="2" fill="#fff"/><path d="M14 82l8-8M22 82l-8-8" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
   init:n=>({sh:Array(n).fill('.'.repeat(64)),last:''}),
-  privInit:()=>({f:randFleet(),ready:false}),
+  // bots keep the random fleet they are dealt, so a game against bots only waits for the people
+  privInit:(d,r)=>{const s=d.pl.indexOf(r);return {f:randFleet(),ready:s>=0&&isBot(d,s)};},
   canAct:(d,pr)=>allReady(d,pr),
+  // online, time ran out while placing ships: fleets laid out so far are locked in, and a seat with no fleet at all (its player never came) is out.
+  // On one phone everybody is here, so nobody is pushed: the turn just moves on (a bot's turn passes to the people, see 'ready')
+  onTimeout(d){const pr=S.priv;if(S.mode!=='online'||allReady(d,pr))return {...d,turn:nextSeat(d,d.turn)};let out=d.out;
+    d.pl.forEach((r,s)=>{const p=pr[r];if(!(p&&p.gid===d.gid&&p.f))out=setAt(out,s,'1');});const al=aliveSeats(d,out);
+    return {...d,auto:1,out,win:al.length===1?al[0]:al.length?null:'d',turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn};},
   viewer(d,pr){if(d.win!=null)return null;for(let s=0;s<d.pl.length;s++)if(d.out[s]!=='1'&&!seaReady(pr[d.pl[s]],d))return s;return d.turn;},
   coverMsg:d=>d.last||'',
   status(d,ctx){const pr=ctx.priv;
     if(!allReady(d,pr)){
       if(ctx.local)return `${nameTag(d,ctx.v)}: رتّب سفنك واضغط جاهز`;
-      const rd=d.pl.filter((r,s)=>seaReady(pr[r],d)).length;
-      return (ctx.v>=0&&seaReady(pr[S.me],d)?'بانتظار الباقين يجهّزون سفنهم':'رتّب سفنك واضغط جاهز')+`<br><small>جاهز ${rd} من ${d.pl.length}</small>`;}
+      const al=aliveSeats(d),rd=al.filter(s=>seaReady(pr[d.pl[s]],d)).length,gone=seaGone(d,pr);
+      return (ctx.v>=0&&seaReady(pr[S.me],d)?'بانتظار الباقين يجهّزون سفنهم':'رتّب سفنك واضغط جاهز')+`<br><small>جاهز ${rd} من ${al.length}</small>`+
+        (gone.length?`<br><span class="gone">${gone.map(x=>nm(d,x)).join('، ')} طلع <button class="sm" data-ga="gone">تخطّاه</button></span>`:'');}
     return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);},
   winExtra:d=>d.last||'',
   render(d,ctx){
@@ -172,8 +182,11 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   },
   click(a,i,d,ctx){
     if(a==='tgt'){S.tgt=i;render();return;}
+    if(a==='gone'){const g=seaGone(d,S.priv);if(!g.length)return;let out=d.out;for(const s of g)out=setAt(out,s,'1');const al=aliveSeats(d,out);act({...d,out,win:al.length===1?al[0]:null});return;}
     if(a==='shuffle'||a==='ready'){const v=ctx.v;if(v==null||v<0)return;const r=d.pl[v];const p=S.priv[r];if(!p||seaReady(p,d))return;
-      setPriv(r,a==='shuffle'?{...p,f:randFleet()}:{...p,ready:true});return;}
+      setPriv(r,a==='shuffle'?{...p,f:randFleet()}:{...p,ready:true});
+      // with bots on one phone the screen follows the turn: pass it to the next person still placing ships, then back to the starter
+      if(a==='ready'&&ctx.bots){const nx=humanSeats(d).find(s=>!seaReady(S.priv[d.pl[s]],d));const tu=nx!=null?nx:d.st;if(tu!==d.turn)act({...d,turn:tu});}return;}
     if(!ctx.my)return;const t=d.turn,o=curTarget(d,t);if(o==null)return;const f=S.priv[d.pl[o]]&&S.priv[d.pl[o]].f;
     if(!f){toast('انتظر اللاعب');return;}if(d.sh[o][i]!=='.')return;
     const hit=f[i]!=='.';const sh=[...d.sh];sh[o]=setAt(sh[o],i,hit?'o':'x');let last,win=null,out=d.out;
