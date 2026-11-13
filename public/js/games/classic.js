@@ -165,7 +165,7 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
     const mine=pr[d.pl[v]];if(!mine)return '<p class="note">جاري التجهيز…</p>';
     if(!allReady(d,pr)){
       return `<p class="lbl">بحرك (${SHIPS.length} سفن)</p>${seaGrid(mine.f,d.sh[v],true,false)}`+
-        (seaReady(mine,d)?'<p class="hint">جاهز ✓</p>':`<div class="acts"><button class="btn navy" data-ga="shuffle">🔀 وزّعها من جديد</button><button class="btn red" data-ga="ready">جاهز ✓</button></div>`);}
+        (seaReady(mine,d)?'<p class="hint">جاهز ✓</p>':`<div class="acts"><button class="btn navy" data-ga="shuffle">🔀 غيّر</button><button class="btn red" data-ga="ready">جاهز ✓</button></div>`);}
     const myTurn=ctx.my&&d.turn===v;const o=curTarget(d,v);if(o==null)return '';
     const of=pr[d.pl[o]]?pr[d.pl[o]].f:null;
     return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(of,d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1')}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true)}`;

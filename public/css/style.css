@@ -687,3 +687,4 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .mc.msl .ic,.mc.msr .ic{display:none}
 .mc .nm{font-size:7.5px;max-height:1.2em}
 .mc .pr{font-size:7px;max-height:1.2em;overflow:hidden}
+.mem b{background:var(--c);color:#fff;border-radius:99px;padding:0 8px;font-size:13px;margin-inline-start:2px}

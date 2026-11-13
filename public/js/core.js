@@ -225,7 +225,7 @@ function sameKind(a,b){if(a.nodeType!==b.nodeType||a.nodeName!==b.nodeName)retur
   return (a.id||'')===(b.id||'')&&(a.getAttribute('data-k')||'')===(b.getAttribute('data-k')||'');}
 function patchNode(a,b){
   if(a.nodeType!==1){if(a.nodeValue!==b.nodeValue)a.nodeValue=b.nodeValue;return;}
-  const aa=a.attributes;for(let i=aa.length-1;i>=0;i--){const n=aa[i].name;if(!b.hasAttribute(n))a.removeAttribute(n);}
+  const aa=a.attributes;for(let i=aa.length-1;i>=0;i--){const n=aa[i].name;if(!b.hasAttribute(n)&&!(n==='open'&&a.nodeName==='DETAILS'))a.removeAttribute(n);}
   for(const at of b.attributes){if(a.getAttribute(at.name)!==at.value)a.setAttribute(at.name,at.value);}
   const tag=a.nodeName;
   if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'){if(document.activeElement!==a&&(tag==='TEXTAREA'||b.hasAttribute('value'))){const v=tag==='TEXTAREA'?b.value:b.getAttribute('value');if(a.value!==v)a.value=v;}if(tag!=='TEXTAREA')return;return;}
@@ -311,7 +311,7 @@ const iconE=(bg,e)=>{const id='ie'+bg.replace(/[^0-9a-f]/gi,'')+[...e].length;co
 function standings(){
   const rs=S.mode==='local'?players():[...new Set([...players(),...S.st.sc.map((x,r)=>x>0?r:-1).filter(r=>r>=0)])];
   if(!rs.some(r=>S.st.sc[r]>0))return '';const t=cfg().target;
-  return `<div class="panel standings"><b>نقاط الجلسة${t?` (الفوز بالمباراة عند ${t})`:''}</b><div class="score" style="margin:6px 0 0">${rs.sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<div class="pl" style="background:${COLS[r]}">${PERSON}<b>${S.st.sc[r]}</b><span>${r===S.me?'أنت':pname(r)}</span></div>`).join('')}</div></div>`;
+  return `<div class="panel standings"><b>نقاط الجلسة${t?` (الفوز بالمباراة عند ${t})`:''}</b><div class="mlist" style="margin-top:8px">${rs.sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} <b>${S.st.sc[r]}</b></span>`).join('')}</div></div>`;
 }
 function renderGrid(){
   let mid='';
@@ -365,7 +365,7 @@ function resultHTML(d,G,ctx){
     <div class="trophy">${d.win==='d'?'🤝':typeof d.win==='number'&&(S.mode==='local'||d.win===ctx.v||(Array.isArray(d.wins)&&d.wins.includes(ctx.v)))?'🏆':'🎖️'}</div>
     <h2 style="color:${c}">${winTitle(d,G,ctx)}</h2>${G.winExtra?`<p class="note">${G.winExtra(d,ctx)}</p>`:''}
     ${ml!=null?`<p class="hint">🏅 ${ml===S.me?'أنت فزت':pname(ml)+' فاز'} بالمباراة! (${S.st.sc[ml]} نقاط)</p>`:''}
-    <div class="score">${d.pl.map(r=>`<div class="pl" style="background:${COLS[r]}">${PERSON}<b>${S.st.sc[r]}</b><span>${r===S.me?'أنت':pname(r)}</span></div>`).join('')}</div>
+    <p class="lbl" style="margin:10px 0 6px">نقاط الجلسة</p><div class="mlist" style="justify-content:center">${[...d.pl].sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} <b>${S.st.sc[r]}</b></span>`).join('')}</div>
     <div class="acts"><button class="btn red" data-a="again">جولة جديدة</button><button class="btn navy" data-a="${S.mode==='online'?'browse':'grid'}">قائمة الألعاب</button></div>
     <button class="link" data-a="closeres">شوف اللوحة</button></div></div>`;
 }
