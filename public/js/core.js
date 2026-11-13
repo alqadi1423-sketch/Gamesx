@@ -20,7 +20,9 @@ const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
 
 /* ================= players and names ================= */
 /* a game has d.pl = list of roles (colours) taking part; seat i plays role d.pl[i] */
-function pname(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return escH(String(n).trim().slice(0,14))||(S.mode==='local'&&S.bots[r]?'🤖 '+BOTL[S.bots[r]]:NAMES[r]);}
+function pnameText(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return String(n).trim().slice(0,14)||(S.mode==='local'&&S.bots[r]?'🤖 '+BOTL[S.bots[r]]:NAMES[r]);}
+// the same name, escaped for HTML (pnameText is for textContent, such as toasts)
+function pname(r){return escH(pnameText(r));}
 /* ================= bots: only on one phone (local mode) ================= */
 const BOTL=['','سهل','متوسط','صعب'];
 const hasBots=()=>S.mode==='local'&&Object.keys(S.bots||{}).some(r=>S.bots[r]&&+r<S.localN);
@@ -45,30 +47,30 @@ const cfg=()=>S.st.cfg||CFG0;
 function players(){
   if(S.mode==='local')return [...Array(S.localN).keys()];
   const k=cfg().kick||[];
-  return [...S.roles].filter(r=>typeof r==='number'&&r>=0&&r<MAXP&&!k.includes(r)).sort((a,b)=>a-b);
+  return [...S.roles].filter(r=>isRole(r)&&!k.includes(r)).sort((a,b)=>a-b);
 }
-function actingHost(){if(S.mode!=='online')return null;const r=[...S.roles].filter(x=>typeof x==='number').sort((a,b)=>a-b);return r.length?r[0]:null;}
+function actingHost(){if(S.mode!=='online')return null;const r=[...S.roles].filter(isRole).sort((a,b)=>a-b);return r.length?r[0]:null;}
 const isHost=()=>S.mode==='local'||(S.me!=null&&S.me===actingHost());
 const canPick=()=>S.mode==='local'||isHost()||(cfg().pick==='all'&&S.me!=null);
 
 /* a game may set its own first mover with start(d,base): e.g. chess always opens with seat 0 (white) */
 function newD(g,starter,pl){const n=pl.length;starter=starter%n;const G=GAMES[g],base=G.init(n);const d={...base,gid:rid(),st:starter,turn:starter,pl,out:'0'.repeat(n),win:null};return G.start?G.start(d,base):d;}
-function setGame(g){
+function setGame(g){if(netDown())return;
   if(g){const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
     if(GAMES[g].minP&&pl.length<GAMES[g].minP){toast(`${GAMES[g].name} تحتاج ${GAMES[g].minP} لاعبين أو أكثر`);return;}
     S.st={...S.st,g,s:S.st.s+1,d:newD(g,0,pl),sc:matchSc()};}
   else S.st={...S.st,g:null,s:S.st.s+1,d:null,sc:matchSc()};
   S.seen=null;S.browse=false;S.showResult=false;resetUI();afterChange();
 }
-function newRound(){const d=S.st.d;const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
+function newRound(){if(netDown())return;const d=S.st.d;const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
   const G0=GAMES[S.st.g];if(G0&&G0.minP&&pl.length<G0.minP){toast(`${G0.name} تحتاج ${G0.minP} لاعبين أو أكثر`);return;}
   if(d&&d.mw!=null)toast('مباراة جديدة! النقاط رجعت صفر');
   const st=d?(d.st||0)+1:0;S.st={...S.st,s:S.st.s+1,d:newD(S.st.g,st,pl),sc:matchSc()};S.seen=null;S.showResult=false;resetUI();afterChange();}
 function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];S.draft={...(S.draft.q!=null?{q:S.draft.q}:{})};S.sel=[];S.simon=null;S.lq=null;S.lf=null;S.sp=null;S.mcell=null;S.mprops=false;S.jk=null;S.arA=null;S.dwSel=null;S.rolling=false;}
 let ACT_CAP=null;
-function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number'){(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));nd=matchEnd(nd,sc);}S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
-function setCfg(patch){S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
-function setPriv(role,p){S.priv[role]=p;afterChange();}
+function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}if(netDown())return;if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number'){(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));nd=matchEnd(nd,sc);}S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
+function setCfg(patch){if(netDown())return;S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
+function setPriv(role,p){if(netDown())return;S.priv[role]=p;afterChange();}
 function afterChange(){ensurePriv();publish();render();queueSimul();}
 
 /* simultaneous rounds: every alive seat stores {rd,pick} in its private part; one resolver applies G.resolve.
@@ -79,11 +81,11 @@ function queueSimul(){if(simulT)return;simulT=setTimeout(()=>{simulT=null;trySim
 // NOPICK marks a seat that chose to give no answer, so the round does not wait for it
 const NOPICK='~';
 function simulPicks(d){return d.pl.map((r,s)=>{if(d.out[s]==='1')return null;const p=S.priv[r];return p&&p.gid===d.gid&&p.rd===d.rd&&p.pick!=null?(p.pick===NOPICK?null:p.pick):undefined;});}
-const isEnforcer=()=>S.mode==='local'||(S.me!=null&&S.me===actingHost());
+const isEnforcer=()=>S.mode==='local'||(S.me!=null&&S.me===actingHost()&&!S.offline);
 function trySimul(){
   const {g,d}=S.st;if(!g||!d||d.win!=null)return;const G=GAMES[g];if(!G||!isSimul(G,d))return;
   const picks=simulPicks(d);if(picks.some(x=>x===undefined))return;
-  if(S.mode==='online'){const present=d.pl.filter((r,s)=>d.out[s]!=='1'&&S.roles.has(r));if(!present.length||Math.min(...present)!==S.me)return;}
+  if(S.mode==='online'){if(S.offline)return;const present=d.pl.filter((r,s)=>d.out[s]!=='1'&&S.roles.has(r));if(!present.length||Math.min(...present)!==S.me)return;}
   act(G.resolve(d,picks));
 }
 function simulPick(d,seat,pick){const r=d.pl[seat];const p=S.priv[r]||{gid:d.gid};setPriv(r,{...p,gid:d.gid,rd:d.rd,pick});}
@@ -97,8 +99,9 @@ function publish(rx){
   save();if(S.mode!=='online'||!S.nr)return;
   const o={g:S.st.g,s:S.st.s,d:S.st.d,sc:S.st.sc,cfg:S.st.cfg,r:S.me,p:S.me==null?null:S.priv[S.me],n:S.myName.slice(0,14),ch:S.myChat.slice(-10)};
   if(rx)o.rx=rx;
-  // Claude rooms take 4 KB per player: drop the oldest chat lines first if the game state is large
-  while(o.ch.length&&new Blob([JSON.stringify(o)]).size>3800)o.ch=o.ch.slice(1);
+  // Claude rooms take 4 KB per player: drop the oldest chat lines first if the game state is large (our own rooms say how much they take: nr.max)
+  const max=S.nr.max||3800;let size;while((size=new Blob([JSON.stringify(o)]).size)>max&&o.ch.length)o.ch=o.ch.slice(1);
+  if(size>max&&!S.bigWarn){S.bigWarn=true;console.warn('presence over the room limit',size,max);toast('اللعبة صارت أكبر من حد الغرفة، يمكن ما توصل للباقين');}
   S.nr.presence(o).catch(e=>console.warn('presence',e));
 }
 function save(){
@@ -187,7 +190,7 @@ function getRoom(){
 }
 function genCode(){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<6;i++)c+=A[rnd(A.length)];return c;}
 let lastPeers=[];
-function takenRoles(){const t=new Set();for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(typeof r==='number')t.add(r);}return t;}
+function takenRoles(){const t=new Set();for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(isRole(r))t.add(r);}return t;}
 function pickRole(pref){const t=takenRoles(),c=cfg(),k=c.kick||[];
   const okRole=r=>r>=0&&r<MAXP&&!t.has(r)&&!k.includes(r);
   if(c.lock)return typeof pref==='number'&&(c.members||[]).includes(pref)&&okRole(pref)?pref:null;
@@ -198,40 +201,106 @@ async function enterRoom(code,host,restore,given){
   if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
   try{nr=await room.join('g-'+code.toLowerCase());}
-  catch(e){S.joining=false;S.roomErr=given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
+  catch(e){S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
   S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
+  S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();S.fresh=!host||!!restore;
   if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st};if(!Array.isArray(S.st.sc)||S.st.sc.length<MAXP)S.st.sc=Array(MAXP).fill(0);}
   else S.st={g:null,s:host?1:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};
   if(host){S.me=0;S.pending=false;if(!restore)S.modal='settings';}
   else{S.me=null;S.pending=true;
-    setTimeout(()=>{if(S.nr!==nr)return;S.me=pickRole(restore?restore.me:null);if(S.me!=null&&restore&&restore.me===S.me)S.priv[S.me]=restore.priv||null;S.pending=false;recomputeRoles();afterChange();},1500);}
-  nr.onPeers(onPeers,()=>{toast('انقطع الاتصال، نحاول نرجع…');});
+    setTimeout(()=>{if(S.nr!==nr)return;S.me=pickRole(restore?restore.me:null);if(S.me!=null&&restore&&restore.me===S.me)S.priv[S.me]=restore.priv||null;S.pending=false;recomputeRoles();afterChange();},1500);
+    // a mistyped code opens a new empty room: say so instead of waiting there for nobody
+    setTimeout(()=>{if(S.nr===nr&&!lastPeers.some(p=>!p.sameTab)){S.roomEmpty=true;render();}},3500);}
+  S.unsub=nr.onPeers(onPeers,st=>{if(S.nr===nr)netState(st);});
+  setTimeout(()=>{if(S.nr===nr)render();},GRACE+200);
   afterChange();
 }
-function leaveRoom(msg){if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;if(msg)toast(msg);render();}
-function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(typeof r==='number')s.add(r);}S.roles=s;}
+function leaveRoom(msg){if(S.unsub)try{S.unsub();}catch(e){}S.unsub=null;if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;S.offline=false;S.roomEmpty=false;lastPeers=[];S.roles=new Set();if(msg)toast(msg);render();}
+/* what the room transport says about the connection: 'lost' / 'back', 'full' while it tries to get back in,
+   and for a nearby room 'gone' (the room's phone is no longer around) or 'bye' (its owner closed it) */
+function netState(st){
+  if(st==='back'){if(S.offline){S.offline=false;toast('رجع الاتصال 👍');}publish();render();return;}
+  if(st==='gone'||st==='bye'){leaveRoom(st==='bye'?'صاحب الغرفة قفلها':'ما عاد نلقى جوال صاحب الغرفة');return;}
+  // Claude rooms only report trouble, never that it is over: there it stays a toast
+  if(st!=='lost'&&st!=='full'){toast('انقطع الاتصال، نحاول نرجع…');return;}
+  const was=S.offline;S.offline=st;if(!was)toast(st==='full'?'الغرفة مليانة، نحاول ندخل…':'انقطع الاتصال، نحاول نرجع…');render();}
+// nothing is played while the connection is down: the move would stay on this phone only
+function netDown(){if(S.mode!=='online'||!S.offline)return false;if(Date.now()-(S.offT||0)>1500){S.offT=Date.now();toast('انقطع الاتصال، استنى لين يرجع');}return true;}
+// a player who dropped out gets GRACE ms before the others can skip them, so a short network cut does not cost the game
+const GRACE=15000;
+function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(const p of lastPeers){if(p.sameTab||p.kind!=='viewer')continue;const r=(p.presence||{}).r;if(isRole(r))s.add(r);}
+  const now=Date.now();S.goneAt=S.goneAt||{};for(const r of S.roles)if(!s.has(r)&&S.goneAt[r]==null){S.goneAt[r]=now;setTimeout(()=>{if(S.mode==='online')render();},GRACE+200);}for(const r of s)delete S.goneAt[r];
+  S.roles=s;}
+
+/* ================= what a peer may send =================
+   Every device takes the newest state from any peer, so nothing a peer sends is used as it is: roles are whole numbers 0..7,
+   the room settings and the session scores follow the acting host only, and every string in the game state keeps only the
+   few tags the games write themselves (a name in its colour, small notes, line breaks); anything else shows as plain text. */
+function isRole(r){return Number.isInteger(r)&&r>=0&&r<MAXP;}
+const roleList=a=>Array.isArray(a)&&a.length<=16&&a.every(isRole);
+// only the values the settings sheet offers
+const CFGOK={pick:v=>v==='host'||v==='all',timer:v=>[0,15,30,60].includes(v),target:v=>[0,3,5,10].includes(v),lock:v=>typeof v==='boolean',kick:roleList,members:roleList};
+function cleanCfg(c,base){const o={...CFG0,...base};if(c&&typeof c==='object')for(const k in CFGOK)if(CFGOK[k](c[k]))o[k]=Array.isArray(c[k])?[...new Set(c[k])]:c[k];return o;}
+const cleanSc=sc=>Array.isArray(sc)&&sc.length===MAXP&&sc.every(x=>typeof x==='number'&&isFinite(x))?sc.slice():null;
+const TAGOK=/^<(?:\/(?:b|small|span|em|i|u|strong|bdi)|br\s*\/?|(?:b|small|span|em|i|u|strong|bdi)(?:\s+(?:class="[\w -]{0,40}"|dir="(?:ltr|rtl|auto)"|style="(?:(?:color|background|font-size|font-weight|--c):(?:#[0-9A-Fa-f]{3,8}|var\(--[\w-]+\)|\d{1,3}(?:px|%)?|bold);?)+"))*)\s*>$/;
+function cleanStr(t){return t.split(/(<[^<>]*>)/).map((x,i)=>i%2&&TAGOK.test(x)?x:x.replace(/<(?=[A-Za-z\/!?])/g,'&lt;').replace(/"/g,'&quot;')).join('');}
+function cleanVal(v,k){if(typeof v==='string')return cleanStr(v);if(v==null||typeof v==='number'||typeof v==='boolean')return v;if(k>12||typeof v!=='object')throw 0;
+  if(Array.isArray(v))return v.map(x=>cleanVal(x,k+1));const o={};for(const n of Object.keys(v))if(n!=='__proto__')o[cleanStr(n)]=cleanVal(v[n],k+1);return o;}
+function cleanD(d){
+  if(d==null)return null;if(typeof d!=='object'||Array.isArray(d))throw 0;
+  const pl=d.pl,n=Array.isArray(pl)?pl.length:0,seat=x=>Number.isInteger(x)&&x>=0&&x<n;
+  if(n<1||n>MAXP||!pl.every(isRole)||new Set(pl).size!==n||typeof d.out!=='string'||!/^[01]*$/.test(d.out)||d.out.length!==n)throw 0;
+  if(!(d.turn==null||seat(d.turn))||!(d.win==null||d.win==='d'||seat(d.win))||!(d.mw==null||isRole(d.mw))||!(d.wins==null||Array.isArray(d.wins)&&d.wins.every(seat)))throw 0;
+  if(!(d.wpts==null||typeof d.wpts==='number'&&d.wpts>=0&&d.wpts<=1000)||!(d.st==null||Number.isInteger(d.st)&&d.st>=0)||typeof d.gid!=='string'||!/^\w{0,16}$/.test(d.gid))throw 0;
+  return cleanVal(d,0);}
+// a peer's {g,d} made safe, or null when it is not a state this app could have made
+function cleanSt(pr){try{const g=pr.g==null?null:pr.g;if(g!==null&&!(typeof g==='string'&&Object.prototype.hasOwnProperty.call(GAMES,g)))return null;return {g,d:g==null?null:cleanD(pr.d)};}catch(e){return null;}}
+const stKey=st=>JSON.stringify([st.g??null,st.d??null]);
+// session points for a win this device sees in an adopted state (the same rule as act())
+function winCredit(sc,od,nd){if(!nd||typeof nd.win!=='number'||od&&od.gid===nd.gid&&od.win!=null)return sc;sc=[...sc];(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));return sc;}
 function onPeers(ch){
   if(S.mode!=='online')return;
-  lastPeers=ch.peers;let adopt=null;
-  for(const p of ch.peers){
-    if(p.sameTab){S.myPeer=p.peer;continue;}
-    if(p.kind!=='viewer')continue;const pr=p.presence||{};
-    if(typeof pr.r==='number'){S.priv[pr.r]=pr.p??S.priv[pr.r];if(typeof pr.n==='string')S.names[pr.r]=pr.n;
-      if(Array.isArray(pr.ch))for(const m of pr.ch){if(m&&m.i&&!S.chat[m.i]&&typeof m.x==='string'){S.chat[m.i]={i:m.i,r:pr.r,n:pr.n||'',t:+m.t||Date.now(),x:m.x.slice(0,200)};if(S.chatReady&&S.modal!=='chat'&&!(S.browse||!S.st.g)){chatPop(S.chat[m.i]);}}}
-      if(pr.rx&&pr.rx.t>(S.rxSeen[pr.r]||0)){S.rxSeen[pr.r]=pr.rx.t;if(Date.now()-pr.rx.t<8000)setTimeout(()=>floatRx(pr.r,pr.rx.e),0);}}
-    if(S.me!=null&&pr.r===S.me&&String(p.peer)<String(S.myPeer)){S.me=pickRole(null);}
-    if(typeof pr.s!=='number')continue;
-    const better=pr.s>S.st.s||(pr.s===S.st.s&&pr.r===0&&S.me!==0&&JSON.stringify(pr.d??null)!==JSON.stringify(S.st.d));
-    if(better&&(!adopt||pr.s>adopt.s))adopt=pr;
+  const peers=ch&&Array.isArray(ch.peers)?ch.peers:[];lastPeers=peers;
+  // who holds each role: when two peers claim one, the lower peer id keeps it and the other picks again
+  const hold={};
+  for(const p of peers){if(p.sameTab){S.myPeer=p.peer;continue;}const r=p.kind==='viewer'&&p.presence?p.presence.r:null;if(isRole(r)&&(!hold[r]||String(p.peer)<String(hold[r].peer)))hold[r]=p;}
+  if(S.me!=null&&hold[S.me]&&String(hold[S.me].peer)<String(S.myPeer))S.me=pickRole(null);
+  let adopt=null,myKey=null;
+  for(const p of peers){
+    if(p.sameTab||p.kind!=='viewer')continue;const pr=p.presence;
+    if(!pr||typeof pr!=='object'||pr.r!=null&&!isRole(pr.r))continue;
+    // a peer speaks only for the role it really holds, and never for this device's own role
+    const r=isRole(pr.r)&&hold[pr.r]===p&&pr.r!==S.me?pr.r:null,n=typeof pr.n==='string'?pr.n.slice(0,14):'';
+    if(r!=null){
+      if(pr.p!=null&&typeof pr.p==='object')try{S.priv[r]=cleanVal(pr.p,0);}catch(e){}
+      if(typeof pr.n==='string')S.names[r]=n;
+      const rx=pr.rx;if(rx&&Number.isInteger(rx.e)&&typeof rx.t==='number'&&rx.t>(S.rxSeen[r]||0)){S.rxSeen[r]=rx.t;if(Date.now()-rx.t<8000)setTimeout(()=>floatRx(r,rx.e),0);}}
+    // chat from everybody in the room, spectators too (kept with role -1)
+    if(Array.isArray(pr.ch))for(const m of pr.ch.slice(-10)){if(!m||typeof m.i!=='string'||m.i.length>40||typeof m.x!=='string')continue;const o=S.chat[m.i];
+      if(o){if(o.r===-1&&r!=null)o.r=r;continue;}
+      S.chat[m.i]={i:m.i,r:r??-1,n,t:typeof m.t==='number'&&isFinite(m.t)?m.t:Date.now(),x:m.x.slice(0,200)};if(S.chatReady&&S.modal!=='chat'&&!(S.browse||!S.st.g))chatPop(S.chat[m.i]);}
+    // the newest state wins; at the same number every device picks the same copy, whoever is in the room
+    // (a jump far beyond the room's number would leave no room to count past it)
+    if(!Number.isInteger(pr.s)||pr.s<(adopt?adopt.s:S.st.s)||pr.s>S.st.s+1e5&&!S.fresh)continue;
+    if(myKey==null)myKey=stKey(S.st);
+    if(!adopt&&pr.s===S.st.s&&JSON.stringify([pr.g??null,pr.d??null])===myKey)continue;
+    const c=cleanSt(pr);if(!c)continue;const k=stKey(c);
+    if(pr.s>(adopt?adopt.s:S.st.s)||k>(adopt?adopt.k:myKey))adopt={...c,s:pr.s,k,pr};
   }
-  recomputeRoles();S.chatReady=true;
+  recomputeRoles();S.chatReady=true;if(peers.some(p=>!p.sameTab))S.roomEmpty=false;
+  // the room settings and the session scores belong to the acting host: other peers' copies are not taken
+  const h=actingHost(),hp=h!=null&&h!==S.me&&hold[h]?hold[h].presence:null;let synced=false;
   if(adopt){
-    const oldGid=S.st.d&&S.st.d.gid,oldG=S.st.g;
-    S.st={g:adopt.g??null,s:adopt.s,d:adopt.d??null,sc:Array.isArray(adopt.sc)?adopt.sc:Array(MAXP).fill(0),cfg:{...CFG0,...(adopt.cfg||{})}};
+    const oldGid=S.st.d&&S.st.d.gid,oldG=S.st.g,hsc=adopt.pr===hp||S.fresh?cleanSc(adopt.pr.sc):null;
+    S.st={g:adopt.g,s:adopt.s,d:adopt.d,sc:hsc||winCredit(S.st.sc,S.st.d,adopt.d),cfg:S.st.cfg};S.fresh=false;
     if(S.st.g!==oldG){resetUI();S.browse=false;S.showResult=false;}else if((S.st.d&&S.st.d.gid)!==oldGid){resetUI();S.showResult=false;}
-    if(S.me!=null&&(cfg().kick||[]).includes(S.me)){try{localStorage.removeItem(LSK.room);}catch(e){}leaveRoom('صاحب الغرفة طلّعك منها');return;}
-    ensurePriv();publish();
   }
+  if(hp){const c=cleanCfg(hp.cfg,S.st.cfg),sc=Number.isInteger(hp.s)&&hp.s>=S.st.s&&cleanSc(hp.sc);
+    if(JSON.stringify(c)!==JSON.stringify(S.st.cfg)){S.st={...S.st,cfg:c};synced=true;}
+    if(sc&&JSON.stringify(sc)!==JSON.stringify(S.st.sc)){S.st={...S.st,sc};synced=true;}}
+  // a kick counts only from the acting host's settings, and never against the acting host itself
+  if(S.me!=null&&S.me!==h&&(cfg().kick||[]).includes(S.me)){try{localStorage.removeItem(LSK.room);}catch(e){}leaveRoom('صاحب الغرفة طلّعك منها');return;}
+  if(adopt){ensurePriv();publish();}else if(synced)save();
   render();queueSimul();
 }
 
@@ -255,18 +324,21 @@ function turnTxt(d,ctx){
   if(!ctx.local&&d.turn===ctx.v)return '<b class="yt">دورك</b>';
   return `دور ${nameTag(d,d.turn)}`;
 }
-function absentSeats(d,G){if(S.mode!=='online'||d.win!=null)return [];if(isSimul(G,d))return aliveSeats(d).filter(s=>!S.roles.has(d.pl[s])&&!hasPicked(d,s));return S.roles.has(d.pl[d.turn])?[]:[d.turn];}
+// seats whose player is not in the room; with all=false only those gone for longer than GRACE (they can be skipped)
+function absentSeats(d,G,all){if(S.mode!=='online'||d.win!=null)return [];const off=s=>{const r=d.pl[s];return !S.roles.has(r)&&(all||Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE);};
+  if(isSimul(G,d))return aliveSeats(d).filter(s=>off(s)&&!hasPicked(d,s));return off(d.turn)?[d.turn]:[];}
 function winTitle(d,G,ctx){if(Array.isArray(d.wins)&&d.wins.length>1&&!(G.winText&&G.winText(d)))return !ctx.local&&d.wins.includes(ctx.v)?'فزتوا! 🎉':`فاز ${d.wins.map(w=>nm(d,w)).join(' و')}!`;return G.winText&&G.winText(d)||(d.win==='d'?'تعادل!':(!ctx.local&&d.win===ctx.v?'فزت! 🎉':`فاز ${nm(d,d.win)}!`));}
-function statusHTML(d,G,ctx){
+function statusHTML(d,G,ctx){try{
   if(d.win!=null){
     const c=typeof d.win==='number'?col(d,d.win):'var(--ink)';
     return `<span class="w" style="color:${c}">${winTitle(d,G,ctx)}</span> ${againBtn('sm go')}`+(G.winExtra?`<br><small>${String(G.winExtra(d,ctx)).replace(/<br\s*\/?>/g,' • ')}</small>`:'');
   }
   let s=G.status?G.status(d,ctx):turnTxt(d,ctx);
   if(!ctx.local&&ctx.v<0)s+='<br><small>تتفرج الحين، وتدخل معهم في الجولة الجاية</small>';
-  const gone=absentSeats(d,G);
+  const gone=absentSeats(d,G),wait=gone.length?[]:absentSeats(d,G,true);
   if(!ctx.local&&gone.length)s+=`<br><span class="gone">${gone.map(x=>nm(d,x)).join('، ')} طلع <button class="sm" data-a="skip">تخطّاه</button></span>`;
-  return s;
+  else if(!ctx.local&&wait.length)s+=`<br><span class="gone">${wait.map(x=>nm(d,x)).join('، ')} انقطع، ننتظره شوي…</span>`;
+  return s;}catch(e){console.error(e);return '';}
 }
 /* the status card always has the same height: one quiet line for what just happened, one line for what to do now */
 function statusBox(html){
@@ -314,12 +386,13 @@ function render(){
   if(S.holdRender){if(S.holdVK==null)S.holdVK=S.lastVK;if(vk===S.holdVK){S.renderPending=true;return;}S.holdRender=false;}
   S.holdVK=null;S.renderPending=false;S.lastVK=vk;
   const ae=document.activeElement,fid=ae&&ae.dataset&&ae.dataset.draft,cs=fid&&ae.selectionStart;
-  OUT='';
+  OUT='';try{
   if(S.mode===null)renderHome();
   else if(S.mode==='lobby')renderLobby();
   else if(S.mode==='near')renderNear();
   else if(!S.st.g||!GAMES[S.st.g]||!S.st.d||S.browse)renderGrid();
-  else renderGame();
+  else renderGame();}
+  catch(e){console.error(e);const inGame=S.st.g&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local');OUT=`${topBar('ألعابنا',inGame?'browse':S.mode==='online'?'leave':'home')}${roomBar()}<p class="err">صار خطأ في عرض الشاشة.</p>`;}
   // the screen is patched in place: only what changed is touched, so the page does not jump and typing is not lost
   const screen=S.mode+'|'+(S.mode==='online'||S.mode==='local'?(S.st.g&&!S.browse&&S.st.d?'g:'+S.st.g:'grid'):'');
   if(screen!==S.lastScreen){S.lastScreen=screen;app.innerHTML='';window.scrollTo(0,0);}
@@ -327,7 +400,7 @@ function render(){
   const nm_=chatList().length;app.querySelectorAll('.msgs').forEach(b=>{if(b._n!==nm_||!b._s){b.scrollTop=b.scrollHeight;b._n=nm_;b._s=1;}});
   if(fid&&document.activeElement!==app.querySelector(`[data-draft="${fid}"]`)){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(cs,cs);}catch(e){}}}
   const strip=app.querySelector('.players');if(strip&&strip.scrollWidth>strip.clientWidth+2){const on=strip.querySelector('.pt.on');const k=S.st.g+':'+(S.st.d&&S.st.d.turn);if(on&&S.stripKey!==k){S.stripKey=k;const c=strip.getBoundingClientRect(),e=on.getBoundingClientRect();strip.scrollBy({left:(e.left+e.width/2)-(c.left+c.width/2),behavior:'smooth'});}}
-  const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))G.after(S.st.d,mkCtx());
+  const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(S.st.d,mkCtx());}catch(e){console.error(e);}
 }
 function topBar(title,back,extra){
   return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="الصوت">${S.mute?'🔇':'🔊'}</button></div>`;
@@ -390,14 +463,17 @@ function renderLobby(){
   ${sv&&sv.code&&sv.via!=='near'?`<button class="link" data-a="resume">ارجع لغرفتك ${sv.code}</button>`:''}
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
 }
-function roomBar(full){
+function roomBar(full){try{
   if(S.mode!=='online')return '';
   const pl=players(),h=actingHost(),near=S.via==='near';
   const av=pl.map(r=>`<span class="av ${r===S.me?'me':''}" data-r="${r}" style="--c:${COLS[r]}">${shapeW(r)}${r===h?'<em>👑</em>':''}</span>`).join('');
   let s=`<div class="roombar"><div class="rb-code"><small>${near?'📶 غرفة قريبة':'رمز الغرفة'}${cfg().lock?' 🔒':''}</small><b class="code">${S.code}</b></div>${near?'':'<button class="rbb" data-a="copy" aria-label="نسخ الرمز">نسخ</button>'}<div class="rb-av">${av}</div><button class="rbb" data-a="m-settings" aria-label="الإعدادات">⚙️</button></div>`;
+  // the connection is down, or nobody else is in this room (most likely a mistyped code): say it where everyone looks
+  if(S.offline)s+=`<p class="err" role="status">${S.offline==='full'?'الغرفة مليانة، نحاول ندخل مرة ثانية…':'انقطع الاتصال، نحاول نرجع…'}</p>`;
+  else if(S.roomEmpty&&pl.length<2)s+=`<div class="panel"><p class="err">ما لقينا أحد في هذي الغرفة، تأكد من الرمز</p><div class="acts"><button class="btn" data-a="recode">عدّل الرمز</button><button class="btn navy" data-a="leave">اطلع</button></div></div>`;
   if(full){const me=S.pending?'<p class="note">جاري اختيار لونك…</p>':S.me==null?'<p class="note">تتفرج الحين</p>':'';
     s+=`<div class="panel members"><div class="mh"><b>اللاعبين</b><small>${pl.length} من ${MAXP}</small></div>${me}<div class="mlist">${pl.map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)}${r===h?' 👑':''}</span>`).join('')}</div></div>`;}
-  return s;
+  return s;}catch(e){console.error(e);return '';}
 }
 const NEWG=['baloot','hand','chess','tavla','dama','bara','mafia','wasla'];
 const CATS=[['board','ألعاب لوحة'],['fight','ألعاب قتالية'],['cards','ورق وزهر'],['mind','ذكاء وتخمين'],['quiz','مسابقات وتحدي']];
@@ -406,7 +482,7 @@ const iconE=(bg,e)=>{const id='ie'+bg.replace(/[^0-9a-f]/gi,'')+[...e].length;co
 function standings(){
   const rs=S.mode==='local'?players():[...new Set([...players(),...S.st.sc.map((x,r)=>x>0?r:-1).filter(r=>r>=0)])];
   if(!rs.some(r=>S.st.sc[r]>0))return '';const t=cfg().target;
-  return `<div class="panel standings"><b>نقاط الجلسة${t?` (الفوز بالمباراة عند ${t})`:''}</b><div class="mlist" style="margin-top:8px">${rs.sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} <b>${S.st.sc[r]}</b></span>`).join('')}</div></div>`;
+  return `<div class="panel standings"><b>نقاط الجلسة${t?` (الفوز بالمباراة عند ${escH(t)})`:''}</b><div class="mlist" style="margin-top:8px">${rs.sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} <b>${escH(S.st.sc[r])}</b></span>`).join('')}</div></div>`;
 }
 // local: the game left with back stays open here, and a game the app closed on can go on
 function localLive(){const d=S.st.d;if(S.st.g&&d&&GAMES[S.st.g]&&d.win==null)return `<div class="panel live"><b>اللعبة الحالية: ${GAMES[S.st.g].name}</b><button class="sm go" data-a="resumegame">ارجع لها</button></div>`;
@@ -420,7 +496,7 @@ function renderGrid(){
   else{
     const live=S.st.g&&S.st.d&&GAMES[S.st.g];
     if(live)mid+=`<div class="panel live"><b>اللعبة الحالية: ${GAMES[S.st.g].name}</b><button class="sm go" data-a="resumegame">ارجع لها</button></div>`;
-    mid+=players().length<2?'<p class="note">أرسل رمز الغرفة لأصحابك عشان يدخلون</p>':canPick()?'':'<p class="note">صاحب الغرفة 👑 يختار اللعبة</p>';
+    mid+=players().length<2?(S.roomEmpty?'':'<p class="note">أرسل رمز الغرفة لأصحابك عشان يدخلون</p>'):canPick()?'':'<p class="note">صاحب الغرفة 👑 يختار اللعبة</p>';
   }
   const q=normQ(S.draft.q||'');
   const list=k=>!q||normQ(GAMES[k].name).includes(q);
@@ -430,13 +506,13 @@ function renderGrid(){
   ${CATS.map(([c,t])=>{const ks=Object.keys(GAMES).filter(k=>(GAMES[k].cat||'board')===c&&list(k)).sort((a,b)=>NEWG.includes(b)-NEWG.includes(a));return ks.length?`<h2 class="cat">${t} <small>${ks.length}</small></h2><div class="grid">${ks.map(k=>`<button class="gcard" data-a="pick" data-g="${k}">${GAMES[k].icon}${NEWG.includes(k)?'<i class="newb">جديد</i>':''}${GAMES[k].minP?`<i class="minb">${GAMES[k].minP}+</i>`:''}<div class="lb" style="background:${GAMES[k].lbc}">${GAMES[k].name}</div></button>`).join('')}</div>`:'';}).join('')}`;
 }
 const normQ=t=>String(t).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ً-ْ]/g,'').trim();
-function scoreBar(sc,d){
+function scoreBar(sc,d){try{
   const G=GAMES[S.st.g];let pts=null;try{pts=G.points?G.points(d):(Array.isArray(d.pts)?d.pts:null);}catch(e){}
   const simul=isSimul(G,d);
   return `<div class="players ${d.pl.length>4?'two':''}" style="--n:${Math.min(d.pl.length,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&d.turn===s;
     const pk=simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u class="pk ok">✓</u>':'<u class="pk">…</u>'):'';
     const won=typeof d.win==='number'&&(d.win===s||(Array.isArray(d.wins)&&d.wins.includes(s)));
-    return `<div class="pt ${on?'on':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}"><i>${shapeW(r)}${sc[r]?`<b>${sc[r]}</b>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${pts[s]}</em>`:''}</div>${pk}</div>`;}).join('')}</div>`;
+    return `<div class="pt ${on?'on':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}"><i>${shapeW(r)}${sc[r]?`<b>${escH(sc[r])}</b>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${escH(pts[s])}</em>`:''}</div>${pk}</div>`;}).join('')}</div>`;}catch(e){console.error(e);return '';}
 }
 function renderGame(){
   const {g,d,sc}=S.st,G=GAMES[g];const ctx=mkCtx();let body=null,cover=false;
@@ -495,7 +571,7 @@ function modalHTML(){
 }
 function chatList(){return Object.values(S.chat).sort((a,b)=>a.t-b.t).slice(-60);}
 function unread(){return Object.values(S.chat).filter(m=>m.t>S.chatSeen&&m.r!==S.me).length;}
-function chatName(m){return m.r===S.me?'أنت':(escH((S.names[m.r]||m.n||'').slice(0,14))||NAMES[m.r]||'لاعب');}
+function chatName(m){if(m.r===S.me)return 'أنت';const n=escH(((isRole(m.r)&&S.names[m.r])||m.n||'').slice(0,14));return m.r===-1?(n?n+' (متفرج)':'متفرج'):n||NAMES[m.r]||'لاعب';}
 const hhmm=t=>{const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');};
 function fabs(){const u=unread();return `<div class="rx">${S.me!=null?'<button class="rxb" data-a="m-react" aria-label="رد سريع">😊</button>':''}<button class="rxb" data-a="m-chat" aria-label="المحادثة">💬${u?`<i class="badge">${u}</i>`:''}</button></div>`;}
 function chatHTML(){const L=chatList();let prev=null;
@@ -534,6 +610,7 @@ app.addEventListener('click',e=>{
     case 'join':{
       const c=(document.getElementById('code').value||'').trim().toUpperCase();
       if(!/^[A-Z0-9]{4,6}$/.test(c)){S.roomErr='اكتب رمز الغرفة كامل';render();return;}
+      if(/[^A-HJKMNP-Z2-9]/.test(c)){S.roomErr='الرموز ما فيها O ولا 0 ولا I ولا 1 ولا L، تأكد من الرمز';render();return;}
       const sv=loadSaved();const same=sv&&sv.code===c;
       if(same&&sv.me===0)enterRoom(c,true,sv);else enterRoom(c,false,same?sv:null);break;}
     case 'resume':{const sv=loadSaved();if(sv)enterRoom(sv.code,sv.me===0,sv);break;}
@@ -563,8 +640,9 @@ app.addEventListener('click',e=>{
     case 'rx':{S.modal=null;const rx={e:i,t:Date.now()};S.rxSeen[S.me]=rx.t;render();floatRx(S.me,i);publish(rx);break;}
     case 'cfg':{if(!isHost())return;let v=t.dataset.v;v=v==='true'?true:v==='false'?false:/^\d+$/.test(v)?+v:v;const p={[t.dataset.k]:v};if(t.dataset.k==='lock'&&v)p.members=players();setCfg(p);break;}
     case 'kick':{if(!isHost())return;const r=i;setCfg({kick:[...new Set([...(cfg().kick||[]),r])]});const d=S.st.d;if(d&&d.win==null&&d.pl.includes(r)){const s=d.pl.indexOf(r);const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);const G=GAMES[S.st.g];
-      const nd={...d,out,turn:d.turn===s?nextSeat(d,s,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}toast(pname(r)+' طلع من الغرفة');break;}
-    case 'unkick':setCfg({kick:[]});break;
+      const nd={...d,out,turn:d.turn===s?nextSeat(d,s,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}toast(pnameText(r)+' طلع من الغرفة');break;}
+    case 'unkick':if(!isHost())return;setCfg({kick:[]});break;
+    case 'recode':{const c=S.code;leaveRoom();S.mode='lobby';render();const el=document.getElementById('code');if(el){el.value=c;el.focus();}break;}
     case 'resetsc':if(!isHost())return;S.st={...S.st,sc:Array(MAXP).fill(0),s:S.st.s+1};afterChange();toast('تصفّرت النقاط');break;
   }
 });

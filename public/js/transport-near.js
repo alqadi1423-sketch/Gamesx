@@ -36,9 +36,9 @@ window.NEARROOM={
   // the engine asks for a room object; mode 'host' advertises a new room, mode 'join' connects to a found one
   room(mode,arg){const self=this;return {join:()=>mode==='host'?self.host(arg.code,arg.name):self.client(arg.id,arg.code,arg.name)};},
   base(){let mine={},peers={},hs=[],err=null;const me={id:null};
-    const emit=()=>{const arr=[{peer:me.id||'me',sameTab:true,isMe:true,kind:'viewer',presence:mine}];for(const k in peers)arr.push({peer:k,sameTab:false,isMe:false,kind:'viewer',presence:peers[k]});hs.forEach(h=>h({peers:arr}));};
+    const emit=()=>{const arr=[{peer:me.id||'me',sameTab:true,isMe:true,kind:'viewer',presence:mine}];for(const k in peers)arr.push({peer:k,sameTab:false,isMe:false,kind:'viewer',presence:peers[k]});hs.forEach(h=>{try{h({peers:arr});}catch(e){console.error(e);}});};
     const setMine=patch=>{mine={...mine};for(const k in patch){if(patch[k]===null)delete mine[k];else mine[k]=patch[k];}mine=JSON.parse(JSON.stringify(mine));};
-    return {me,peers:()=>peers,setPeers:p=>{peers=p;},mine:()=>mine,setMine,emit,onPeers:(h,e)=>{hs.push(h);if(e)err=e;setTimeout(emit,0);return()=>{hs=hs.filter(x=>x!==h);};},fail:()=>{err&&err();}};},
+    return {me,peers:()=>peers,setPeers:p=>{peers=p;},mine:()=>mine,setMine,emit,onPeers:(h,e)=>{hs.push(h);if(e)err=e;setTimeout(emit,0);return()=>{hs=hs.filter(x=>x!==h);if(err===e)err=null;};},fail:st=>{try{err&&err(st||'lost');}catch(x){}}};},
   async host(code,name){this.lastErr='';
     if(!await this.perms())throw new Error(this.lastErr||'perm');
     await this.stopAll();
@@ -55,27 +55,35 @@ window.NEARROOM={
     try{await N.advertise({name:'A1|'+code+'|'+(name||'').slice(0,14)});}catch(e){this.note('advertise error '+this.errText(e));await this.stopAll();throw new Error(this.errText(e));}
     this.note('advertising '+code);
     return {name:code,near:true,
-      presence:async patch=>{b.setMine(patch);b.emit();send([...conns],{t:'p',peer:'H',p:b.mine()});},
-      onPeers:b.onPeers,
-      leave:async()=>{await NEARROOM.stopAll();}};
+      presence:async patch=>{b.setMine(patch);send([...conns],{t:'p',peer:'H',p:b.mine()});b.emit();},
+      onPeers:b.onPeers,max:30000,   // Nearby carries up to 32 KB in one message
+      // tell the other phones the room is closed before the radio goes off
+      leave:async()=>{if(conns.size)await Promise.race([N.send({ids:[...conns],data:JSON.stringify({t:'bye'})}).catch(()=>{}),new Promise(r=>setTimeout(r,500))]);await NEARROOM.stopAll();}};
   },
   async client(id,code,name){this.lastErr='';
     if(!await this.perms())throw new Error(this.lastErr||'perm');
-    const b=this.base();const N=this.P();let host=id,opened=false,closed=false,retry=null;
+    const b=this.base();const N=this.P();let host=id,opened=false,closed=false,retry=null,lostAt=0,tryAt=0,live=false;
     const send=o=>{if(host)N.send({ids:[host],data:JSON.stringify(o)}).catch(()=>{});};
-    const api={name:code,near:true,
-      presence:async patch=>{b.setMine(patch);b.emit();send({t:'p',p:b.mine()});},
+    const api={name:code,near:true,max:30000,
+      presence:async patch=>{b.setMine(patch);send({t:'p',p:b.mine()});b.emit();},
       onPeers:b.onPeers,
       leave:async()=>{closed=true;clearInterval(retry);await NEARROOM.stopAll();}};
     // keep looking for the same room, so the phone can come back after a short cut
-    this.onList=list=>{if(closed||host)return;const f=list.find(x=>x.code===code);if(f){host=f.id;this.note('connect again '+f.id);N.connect({id:f.id,name:(name||'').slice(0,14)}).catch(e=>{host=null;this.note('connect error '+this.errText(e));});}};
+    const join=f=>{host=f.id;tryAt=Date.now();this.note('connect again '+f.id);N.connect({id:f.id,name:(name||'').slice(0,14)}).catch(e=>{host=null;this.note('connect error '+this.errText(e));});};
+    this.onList=list=>{if(closed||host)return;const f=list.find(x=>x.code===code);if(f)join(f);};
+    // after a cut, try again every 4 s (a failed try does not bring a new 'found'), and give up after a minute
+    const lookAgain=()=>{if(retry||closed)return;lostAt=Date.now();retry=setInterval(()=>{if(closed||live){clearInterval(retry);retry=null;return;}
+      if(Date.now()-lostAt>60000){clearInterval(retry);retry=null;this.note('room gone');b.fail('gone');return;}
+      if(host&&Date.now()-tryAt>15000)host=null;if(host)return;
+      const f=NEARROOM.list().find(x=>x.code===code);if(f)join(f);else NEARROOM.P().discover().catch(()=>{});},4000);};
     return await new Promise(async(ok,no)=>{
       await this.on('message',e=>{if(e.id!==host)return;let m;try{m=JSON.parse(e.data);}catch(x){return;}
-        if(m.t==='hello'){this.note('hello, in the room');b.me.id=m.peer;const p={};(m.peers||[]).forEach(k=>{p[k]={};});b.setPeers(p);send({t:'p',p:b.mine()});if(!opened){opened=true;ok(api);}b.emit();}
+        if(m.t==='hello'){this.note('hello, in the room');live=true;clearInterval(retry);retry=null;b.me.id=m.peer;const p={};(m.peers||[]).forEach(k=>{p[k]={};});b.setPeers(p);send({t:'p',p:b.mine()});if(!opened){opened=true;ok(api);}else b.fail('back');b.emit();}
+        else if(m.t==='bye'){closed=true;clearInterval(retry);b.fail('bye');}
         else if(m.t==='join'){b.peers()[m.peer]=b.peers()[m.peer]||{};send({t:'p',p:b.mine()});b.emit();}
         else if(m.t==='p'){b.peers()[m.peer]=m.p||{};b.emit();}
         else if(m.t==='leave'){delete b.peers()[m.peer];b.emit();}});
-      await this.on('disconnected',e=>{if(e.id!==host)return;host=null;b.setPeers({});b.emit();if(!closed){b.fail();this.P().discover().catch(()=>{});}});
+      await this.on('disconnected',e=>{if(e.id!==host)return;host=null;live=false;b.setPeers({});b.emit();if(!closed){b.fail('lost');this.P().discover().catch(()=>{});if(opened)lookAgain();}});
       await this.on('failed',e=>{if(e.id===host)host=null;});
       await this.on('connected',e=>{if(e.id===host)N.stopDiscovery().catch(()=>{});});
       this.note('connect '+id);

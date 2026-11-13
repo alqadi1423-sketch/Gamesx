@@ -1,0 +1,7 @@
+# Cloudflare static assets: security headers for every page of the site.
+# Scripts only from our own files (no inline script, no eval), so HTML that slips into the page cannot run code.
+# The Android app and claude.ai do not read this file; they add their own inline scripts, so there is no CSP meta tag in index.html.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' wss: https:; media-src 'self' data: blob:
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
