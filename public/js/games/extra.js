@@ -8,7 +8,7 @@ function revFlips(b,z,i,p){if(b[i]!=='.')return [];const r=Math.floor(i/z),c=i%z
   for(const [dr,dc] of DIR8){const line=[];let rr=r+dr,cc=c+dc;while(rr>=0&&rr<z&&cc>=0&&cc<z){const v=b[rr*z+cc];if(v==='.')break;if(v===ps){if(line.length)out.push(...line);break;}line.push(rr*z+cc);rr+=dr;cc+=dc;}}
   return out;}
 const revAny=(b,z,p)=>{for(let i=0;i<z*z;i++)if(b[i]==='.'&&revFlips(b,z,i,p).length)return true;return false;};
-GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',
+GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',onTimeout:d=>{const n=d.pl.length;for(let k=1;k<=n;k++){const s=(d.turn+k)%n;if(d.out[s]!=='1'&&revAny(d.b,d.z,s))return {...d,turn:s};}return {...d,win:mostPts(cntSeat(d.b,n).map((x,s)=>d.out[s]==='1'?-1:x))};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E8B5E"/>${[1,2,3].map(k=>`<path d="M${k*25} 0V100M0 ${k*25}H100" stroke="#1F6B4A" stroke-width="2"/>`).join('')}<circle cx="37.5" cy="37.5" r="10" fill="#fff"/><circle cx="62.5" cy="62.5" r="10" fill="#fff"/><circle cx="62.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="37.5" cy="62.5" r="10" fill="#2D4763"/><circle cx="62.5" cy="12.5" r="10" fill="#EC6158"/></svg>`,
   init:n=>{const z=RVS[n]||12;const b=Array(z*z).fill('.');const m=(z-1)/2;
     if(n===2){const a=Math.floor(m),c=Math.ceil(m);b[a*z+a]='0';b[c*z+c]='0';b[a*z+c]='1';b[c*z+a]='1';}
@@ -33,7 +33,7 @@ GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',
 
 /* ---------- old maid ---------- */
 function omPairs(cards){const by={};cards.forEach(c=>{(by[c[0]]=by[c[0]]||[]).push(c);});const keep=[];for(const r in by){const a=by[r];if(a.length%2)keep.push(a[a.length-1]);}return keep;}
-GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',
+GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9C527C"/><rect x="18" y="22" width="34" height="50" rx="6" fill="#4AB1E8" stroke="#fff" stroke-width="3" transform="rotate(-12 35 47)"/><rect x="46" y="22" width="36" height="54" rx="6" fill="#fff" transform="rotate(8 64 49)"/><text x="64" y="60" font-size="26" font-weight="800" fill="#2D4763" text-anchor="middle" transform="rotate(8 64 49)">K♠</text></svg>`,
   init:n=>{const dk=shuffle(deck52().filter(c=>!['Kh','Kd','Kc'].includes(c)));const hands=Array(n).fill(0).map(()=>[]);dk.forEach((c,k)=>hands[k%n].push(c));
     return {hands:hands.map(h=>shuffle(omPairs(h)).join('')),fin:[],last:''};},
@@ -62,7 +62,7 @@ GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',
 
 /* ---------- colour memory ---------- */
 const SIM=['#E5483F','#3D8FD8','#3FAE5C','#F0B429'];
-GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',
+GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4B50A8"/><path d="M50 50L50 12A38 38 0 0 1 88 50Z" fill="#E5483F"/><path d="M50 50L88 50A38 38 0 0 1 50 88Z" fill="#3D8FD8"/><path d="M50 50L50 88A38 38 0 0 1 12 50Z" fill="#3FAE5C"/><path d="M50 50L12 50A38 38 0 0 1 50 12Z" fill="#F0B429"/><circle cx="50" cy="50" r="13" fill="#2D4763"/></svg>`,
   init:()=>({seq:'',last:''}),
   status(d,ctx){const ss=S.simon,my=ctx.my;let s=(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>طول السلسلة: ${d.seq.length}. كرر السلسلة كاملة وبعدها زيد لون جديد، واللي يغلط يطلع</small>`;

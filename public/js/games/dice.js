@@ -14,7 +14,7 @@ function yScore(k,dice){const d=[...dice].map(Number);const c=[0,0,0,0,0,0,0];d.
   if(k===10)return has([1,2,3,4,5])||has([2,3,4,5,6])?40:0;
   if(k===11)return mx===5?50:0;return sum;}
 const yTotal=card=>{const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);return card.reduce((a,b)=>a+Math.max(b,0),0)+(up>=63?35:0);};
-GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',
+GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{const t=d.turn;const cards=d.cards.map(c=>[...c]);const empty=cards[t].map((v,k)=>v<0?k:-1).filter(k=>k>=0);let best=empty[0];if(d.rolls){let bv=-1;for(const k of empty){const v=yScore(k,d.dice);if(v>bv){bv=v;best=k;}}cards[t][best]=bv;}else cards[t][best]=0;const done=cards.every((c,s)=>d.out[s]==='1'||c.every(x=>x>=0));return {...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:done?mostPts(cards.map((c,s)=>d.out[s]==='1'?-1:yTotal(c))):null};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D5505F"/>${[[14,16],[52,12],[30,50],[64,48],[22,78]].map(([x,y],k)=>`<rect x="${x}" y="${y}" width="26" height="26" rx="6" fill="#fff" transform="rotate(${k*9-18} ${x+13} ${y+13})"/><circle cx="${x+13}" cy="${y+13}" r="4" fill="#2D4763"/>`).join('')}</svg>`,
   init:n=>({dice:'00000',held:'00000',rolls:0,cards:Array(n).fill(0).map(()=>Array(13).fill(-1))}),
   status:(d,ctx)=>turnTxt(d,ctx)+'<br>'+d.cards.map((c,s)=>`<span class="mini" style="background:${col(d,s)}">${yTotal(c)}</span>`).join('')+`<br><small>3 رميات بالدور، ثبّت الزهر اللي تبيه واختر خانة تسجل فيها</small>`,
@@ -36,7 +36,7 @@ GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',
 };
 
 /* ---------- liar's dice ---------- */
-GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',
+GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',onTimeout:d=>{const b=d.bid?{q:d.bid.q+1,f:d.bid.f,s:d.turn}:{q:1,f:1,s:d.turn};return {...d,bid:b,turn:nextSeat(d,d.turn)};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#5E4A8A"/><path d="M20 70Q50 20 80 70Z" fill="#3B2D59"/><rect x="30" y="56" width="18" height="18" rx="4" fill="#fff"/><rect x="52" y="56" width="18" height="18" rx="4" fill="#fff"/><circle cx="39" cy="65" r="3" fill="#2D4763"/><circle cx="57" cy="61" r="2.5" fill="#2D4763"/><circle cx="65" cy="69" r="2.5" fill="#2D4763"/><text x="50" y="40" font-size="22" font-weight="800" fill="#FFD84D" text-anchor="middle">؟</text></svg>`,
   init:n=>({r:0,n:Array(n).fill(n>4?4:5),bid:null,last:''}),
   privInit:(d,r)=>{const s=d.pl.indexOf(r);const k=s>=0?d.n[s]:0;return {r:d.r,dice:Array(k).fill(0).map(()=>1+rnd(6)).join('')};},
@@ -70,7 +70,7 @@ GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',
 /* ---------- shut the box ---------- */
 function canMake(open,sum){const a=[];for(let k=1;k<=9;k++)if(open[k-1]==='1')a.push(k);const f=(i,s)=>s===0||(i<a.length&&s>0&&(f(i+1,s-a[i])||f(i+1,s)));return f(0,sum);}
 const boxScore=b=>[...b].reduce((x,c,k)=>x+(c==='1'?k+1:0),0);
-GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',
+GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',onTimeout:d=>{const t=d.turn;const done=setAt(d.done,t,'1');const fin=d.pl.every((r,s)=>d.out[s]==='1'||done[s]==='1');const o2=d.out.split('').map((c,s)=>c==='1'||done[s]==='1'?'1':'0').join('');let win=null;if(fin){const sc=d.boxes.map((bb,s)=>d.out[s]==='1'?99:boxScore(bb));const mn=Math.min(...sc);const top=sc.map((x,s)=>x===mn?s:-1).filter(s=>s>=0);win=top.length===1?top[0]:'d';}return {...d,done,roll:0,dice:'',turn:nextSeat(d,t,o2),win};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8C5A34"/><rect x="8" y="30" width="84" height="40" rx="6" fill="#5B3A20"/>${[1,2,3,4,5,6,7,8,9].map(k=>`<rect x="${10+(k-1)*9}" y="${k%3?34:44}" width="7.5" height="${k%3?30:20}" rx="2" fill="${k%3?'#F3D9AE':'#C9A15B'}"/>`).join('')}</svg>`,
   init:n=>({boxes:Array(n).fill('111111111'),done:'0'.repeat(n),roll:0,dice:'',last:''}),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br>'+d.boxes.map((b,s)=>`<span class="mini" style="background:${col(d,s)}">${d.done[s]==='1'?boxScore(b):'…'}</span>`).join('')+'<br><small>ارمِ واقفل أرقام مجموعها نفس الرمية. الأقل مجموع في الآخر يفوز</small>',

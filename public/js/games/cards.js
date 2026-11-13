@@ -12,7 +12,7 @@ const cardsOf=s=>s.match(/.{2}/g)||[];
 /* ---------- memory ---------- */
 const MEMP={2:8,3:10,4:10,5:12,6:12,7:15,8:15},MEMC={8:4,10:5,12:6,15:6};
 const EMO=['🍎','🐪','⚽','🌙','🚗','🎈','🐟','🌴','⭐','☕','🎁','🦅','🍉','🏠','🔑'];
-GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',
+GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout:d=>({...d,open:[],turn:nextSeat(d,d.turn)}),
   icon:iconE('#4FB09B','🃏'),
   init:n=>{const p=MEMP[n]||15;const a=[];for(let k=0;k<p;k++)a.push(String.fromCharCode(97+k),String.fromCharCode(97+k));return {p,dk:shuffle(a).join(''),own:'.'.repeat(p*2),open:[]};},
   status(d,ctx){const c=cntSeat(d.own,d.pl.length);return turnTxt(d,ctx)+'<br>'+c.map((x,s)=>`<span class="mini" style="background:${col(d,s)}">${x/2}</span>`).join('')+'<br><small>اقلب كرتين، لو تطابقوا تاخذهم وتلعب مرة ثانية</small>';},
@@ -54,7 +54,7 @@ function bjFinish(d){let dk=d.dk,dl=d.dl;while(bjVal(dl)<17){dl+=dk.slice(0,2);d
   const dv=bjVal(dl),res=d.hands.map((h,s)=>{if(d.out[s]==='1')return 'x';const v=bjVal(h);return v>21?'b':dv>21||v>dv?'w':v===dv?'p':'l';});
   const best=Math.max(...d.hands.map((h,s)=>res[s]==='w'?bjVal(h):-1));const top=res.map((r,s)=>r==='w'&&bjVal(d.hands[s])===best?s:-1).filter(s=>s>=0);
   return {...d,dk,dl,res:res.join(''),phase:'done',win:top.length===1?top[0]:top.length?'d':'h'};}
-GAMES.bj={name:'بلاك جاك 21',cat:'cards',lbc:'#1E6B45',
+GAMES.bj={name:'بلاك جاك 21',cat:'cards',lbc:'#1E6B45',onTimeout:d=>{const sd=setAt(d.sd,d.turn,'1');const nd={...d,sd};const nx=bjNext(nd,d.turn,sd);return nx<0?bjFinish(nd):{...nd,turn:nx};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E8B57"/><rect x="20" y="22" width="34" height="50" rx="6" fill="#fff" transform="rotate(-10 37 47)"/><rect x="46" y="26" width="34" height="50" rx="6" fill="#fff" transform="rotate(8 63 51)"/><text x="34" y="54" font-size="20" font-weight="800" fill="#2D4763" text-anchor="middle" transform="rotate(-10 37 47)">A</text><text x="63" y="58" font-size="20" font-weight="800" fill="#D43C33" text-anchor="middle" transform="rotate(8 63 51)">K</text><text x="50" y="92" font-size="16" font-weight="800" fill="#fff" text-anchor="middle">21</text></svg>`,
   init:n=>{let dk=shuffle(deck52(n>4?2:1)).join('');const hands=[];for(let s=0;s<n;s++){hands.push(dk.slice(0,4));dk=dk.slice(4);}const dl=dk.slice(0,4);dk=dk.slice(4);
     return {dk,hands,dl,sd:'0'.repeat(n),phase:'play',res:''};},
@@ -84,7 +84,7 @@ const uCard=(c,cls,attrs)=>`<${attrs?'button':'div'} class="card ${cls||''}" sty
 const uPlayable=(c,d)=>{const top=d.disc.slice(-2);return c[0]==='k'||c[0]===d.color||c[1]===top[1];};
 function uStep(d,from,k,dir,out){out=out||d.out;const n=d.pl.length;let s=from;for(let m=0;m<k;m++){for(let q=0;q<n;q++){s=((s+dir)%n+n)%n;if(out[s]!=='1')break;}}return s;}
 function uDraw(d,k){let dr=d.draw,disc=d.disc,got='';for(let m=0;m<k;m++){if(!dr.length){const top=disc.slice(-2);dr=shuffle(cardsOf(disc.slice(0,-2))).join('');disc=top;}if(!dr.length)break;got+=dr.slice(0,2);dr=dr.slice(2);}return [got,{...d,draw:dr,disc}];}
-GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',
+GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',onTimeout:d=>({...d,drew:false,turn:uStep(d,d.turn,1,d.dir)}),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2D4763"/>${[['#E5483F',-16,22],['#F0B429',-5,34],['#3FAE5C',6,46],['#3D8FD8',17,58]].map(([c,r,x])=>`<rect x="${x-14}" y="26" width="30" height="46" rx="6" fill="${c}" stroke="#fff" stroke-width="3" transform="rotate(${r} ${x} 50)"/>`).join('')}<text x="62" y="58" font-size="18" font-weight="800" fill="#fff" text-anchor="middle" transform="rotate(17 58 50)">+2</text></svg>`,
   init:n=>{let a=unoDeck();const hands=[];for(let s=0;s<n;s++){hands.push(a.slice(0,7).join(''));a=a.slice(7);}
     let i=a.findIndex(c=>/[0-9]/.test(c[1]));const top=a.splice(i,1)[0];return {hands,draw:a.join(''),disc:top,color:top[0],dir:1,drew:false,last:''};},
@@ -168,7 +168,7 @@ function seedOf(str){let h=2166136261;for(const ch of String(str)){h^=ch.charCod
 function bingoCard(d,s){const R=mulberry(seedOf(d.gid+':'+d.pl[s]));const a=[...Array(25).keys()].map(x=>x+1);for(let i=24;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 const BLINES=(()=>{const L=[];for(let k=0;k<5;k++){L.push([0,1,2,3,4].map(c=>k*5+c));L.push([0,1,2,3,4].map(r=>r*5+k));}L.push([0,6,12,18,24]);L.push([4,8,12,16,20]);return L;})();
 const bingoLines=(card,called)=>BLINES.filter(L=>L.every(i=>called[card[i]-1]==='1')).length;
-GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',
+GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:nextSeat(d,d.turn)}),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D45D87"/>${[0,1,2,3,4].map(r=>[0,1,2,3,4].map(c=>`<rect x="${12+c*16}" y="${12+r*16}" width="14" height="14" rx="3" fill="${(r===c)?'#ffd84d':'#fff'}"/>`).join('')).join('')}<path d="M14 14L86 86" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
   init:()=>({called:'0'.repeat(25),last:''}),
   viewer:d=>d.win!=null?null:d.turn,
@@ -188,7 +188,7 @@ GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',
 };
 
 /* ---------- risky dice ---------- */
-GAMES.pig={name:'زهر المخاطرة',cat:'cards',lbc:'#A0522D',
+GAMES.pig={name:'زهر المخاطرة',cat:'cards',lbc:'#A0522D',onTimeout:d=>({...d,tot:0,dice:0,turn:nextSeat(d,d.turn)}),
   icon:iconE('#D7774A','🎲'),
   init:n=>({sc:Array(n).fill(0),tot:0,dice:0,goal:50,last:''}),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br>'+ptsBadges(d,d.sc)+`<br><small>ارمِ وجمّع، لو طلع 1 يروح جمع الدور. أول واحد يوصل ${d.goal} يفوز</small>`,

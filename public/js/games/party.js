@@ -3,29 +3,47 @@
 
 const normAr=t=>String(t||'').trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ');
 
-/* ---------- categories ---------- */
+/* ---------- categories: dictionary first, then the other players vote on unknown words ---------- */
 const CATF=['إنسان','حيوان','نبات','جماد','بلاد'];
 const CATL='ابتجحخدرزسشصطعفقكلمنهوي';
 const catOk=(w,L)=>{w=normAr(w);if(!w)return false;if(w.startsWith('ال')&&w.length>2&&w[2]===L)return true;return w[0]===L;};
+const inDict=(k,w)=>typeof DICT!=='undefined'&&DICT[CATF[k]]&&DICT[CATF[k]].has(normW(w));
+function catScore(d,picks,acc){const pts=[...d.pts];const got=picks.map(()=>Array(5).fill(0));
+  for(let k=0;k<5;k++){const cnt={};picks.forEach((a,s)=>{if(a&&acc[s][k]){const w=normW(a[k]);cnt[w]=(cnt[w]||0)+1;}});
+    picks.forEach((a,s)=>{if(a&&acc[s][k]){got[s][k]=cnt[normW(a[k])]>1?5:10;}});}
+  got.forEach((g,s)=>pts[s]+=g.reduce((x,y)=>x+y,0));
+  const round=d.round+1;const nL=CATL.replace(d.L,'');
+  return {...d,pts,rd:d.rd+1,round,phase:'write',pend:null,ans:null,prev:{L:d.L,a:picks,p:got,how:acc},res:`انتهت جولة حرف «${d.L}»`,L:nL[rnd(nL.length)],win:round>=d.rounds?mostPts(pts):null};}
 GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B7834F"/><rect x="16" y="14" width="68" height="72" rx="8" fill="#FFF7E8"/>${[0,1,2,3,4].map(k=>`<path d="M26 ${28+k*12}H74" stroke="#C9B08A" stroke-width="2"/>`).join('')}<circle cx="74" cy="22" r="13" fill="#EC6158"/><text x="74" y="28" font-size="16" font-weight="800" fill="#fff" text-anchor="middle">م</text></svg>`,
-  init:n=>({rd:0,pts:Array(n).fill(0),res:'',prev:null,rounds:5,L:CATL[rnd(CATL.length)]}),
+  init:n=>({rd:0,round:0,phase:'write',pts:Array(n).fill(0),res:'',prev:null,rounds:5,L:CATL[rnd(CATL.length)]}),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)+`<br><small>جولة ${Math.min(d.rd+1,d.rounds)} من ${d.rounds}. الجواب لحاله 10، والمكرر 5</small><br>`),
+  status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)+(d.phase==='vote'?'<br><small>صوّتوا على الكلمات اللي مو في القاموس</small><br>':`<br><small>جولة ${Math.min(d.round+1,d.rounds)} من ${d.rounds}. الجواب لحاله 10، والمكرر 5</small><br>`)),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
   render(d,ctx){let s='';
-    if(d.prev){s+=`<div class="panel" style="width:100%;overflow:auto;padding:10px"><b>أجوبة حرف «${d.prev.L}»</b><table style="width:100%;font-size:14px;border-collapse:collapse;margin-top:6px"><tr><td></td>${CATF.map(c=>`<th>${c}</th>`).join('')}</tr>${d.prev.a.map((row,si)=>row?`<tr><td style="color:${col(d,si)};font-weight:800">${nm(d,si)}</td>${row.map((w,k)=>`<td style="text-align:center;${d.prev.p[si][k]?'':'color:#c0392b;text-decoration:line-through'}">${esc(w)||'·'}<br><small>${d.prev.p[si][k]}</small></td>`).join('')}</tr>`:'').join('')}</table></div>`;}
+    if(d.prev&&d.phase==='write'){s+=`<div class="panel" style="width:100%;overflow:auto;padding:10px"><b>أجوبة حرف «${d.prev.L}»</b><table style="width:100%;font-size:14px;border-collapse:collapse;margin-top:6px"><tr><td></td>${CATF.map(c=>`<th>${c}</th>`).join('')}</tr>${d.prev.a.map((row,si)=>row?`<tr><td style="color:${col(d,si)};font-weight:800">${nm(d,si)}</td>${row.map((w,k)=>{const h=d.prev.how?d.prev.how[si][k]:1;return `<td style="text-align:center;${d.prev.p[si][k]?'':'color:#c0392b;text-decoration:line-through'}">${esc(w)||'·'}<br><small>${d.prev.p[si][k]}${h===2?' 👍':''}</small></td>`;}).join('')}</tr>`:'').join('')}</table><small class="note">👍 = قبلها اللاعبين بالتصويت</small></div>`;}
     if(d.win!=null)return s;
+    if(d.phase==='vote'){
+      s+=pickedChips(d)+`<div class="qbox">هل هذي الكلمات صحيحة؟</div>`;
+      const mine=S.draft.votes||{};
+      s+=d.pend.map((x,i)=>{const own=x.s===ctx.v;const v=mine[i];return `<div class="opt" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px"><span><small style="color:${col(d,x.s)}">${nm(d,x.s)}، ${CATF[x.k]}</small><br>${esc(x.w)}</span>${own||!ctx.my?'<small class="note">'+(own?'جوابك':'')+'</small>':`<span><button class="seg ${v===1?'on':''}" data-ga="v1" data-i="${i}">👍</button> <button class="seg ${v===0?'on':''}" data-ga="v0" data-i="${i}">👎</button></span>`}</div>`;}).join('');
+      if(ctx.my)s+=`<button class="big red" style="max-width:420px;margin:12px auto" data-ga="vote">أرسل تصويتي</button>`;
+      return s;}
     s+=pickedChips(d)+`<div class="qbox">الحرف: <span style="font-size:40px;color:var(--red)">${d.L}</span></div>`;
-    if(ctx.my){s+=CATF.map((c,k)=>`<label style="display:block;width:100%;max-width:420px;margin:4px auto;font-weight:700">${c}<input class="code" style="font-size:20px;letter-spacing:0;text-align:right;direction:rtl;margin-top:2px" data-draft="c${k}" value="${esc((S.draft||{})['c'+k]||'')}" autocomplete="off"></label>`).join('')+`<button class="big red" style="max-width:420px;margin:12px auto" data-ga="go">خلصت</button>`;}
+    if(ctx.my){s+=CATF.map((c,k)=>`<label style="display:block;width:100%;max-width:420px;margin:4px auto;font-weight:700">${c}<input class="field" data-draft="c${k}" value="${esc((S.draft||{})['c'+k]||'')}" autocomplete="off"></label>`).join('')+`<button class="big red" style="max-width:420px;margin:12px auto" data-ga="go">خلصت</button>`;}
     return s;},
-  click(a,i,d,ctx){if(!ctx.my)return;const ans=CATF.map((c,k)=>String((S.draft||{})['c'+k]||'').trim().slice(0,30));S.draft={};simulPick(d,ctx.v,ans);},
-  resolve(d,picks){const L=d.L;const pts=[...d.pts];const n=d.pl.length;const got=picks.map(()=>Array(5).fill(0));
-    for(let k=0;k<5;k++){const cnt={};picks.forEach(a=>{if(a&&catOk(a[k],L)){const w=normAr(a[k]).replace(/^ال/,'');cnt[w]=(cnt[w]||0)+1;}});
-      picks.forEach((a,s)=>{if(a&&catOk(a[k],L)){const w=normAr(a[k]).replace(/^ال/,'');got[s][k]=cnt[w]>1?5:10;}});}
-    got.forEach((g,s)=>pts[s]+=g.reduce((x,y)=>x+y,0));
-    const rd=d.rd+1;const nL=CATL.replace(L,'');
-    return {...d,pts,rd,prev:{L,a:picks,p:got},res:`انتهت جولة حرف «${L}»`,L:nL[rnd(nL.length)],win:rd>=d.rounds?mostPts(pts):null};}
+  click(a,i,d,ctx){if(!ctx.my)return;
+    if(a==='v1'||a==='v0'){S.draft.votes={...(S.draft.votes||{}),[i]:a==='v1'?1:0};render();return;}
+    if(a==='vote'){const v=d.pend.map((x,k)=>(S.draft.votes||{})[k]??1);S.draft.votes={};simulPick(d,ctx.v,v);return;}
+    const ans=CATF.map((c,k)=>String((S.draft||{})['c'+k]||'').trim().slice(0,30));for(let k=0;k<5;k++)delete S.draft['c'+k];simulPick(d,ctx.v,ans);},
+  resolve(d,picks){
+    if(d.phase==='write'){const acc=picks.map(a=>a?a.map((w,k)=>catOk(w,d.L)?(inDict(k,w)?1:0):-1):[-1,-1,-1,-1,-1]);
+      const pend=[];picks.forEach((a,s)=>{if(a)a.forEach((w,k)=>{if(acc[s][k]===0)pend.push({s,k,w});});});
+      if(!pend.length)return catScore(d,picks,acc.map(r=>r.map(x=>x===1?1:0)));
+      return {...d,phase:'vote',ans:picks,pend,acc,rd:d.rd+1,res:''};}
+    const acc=d.acc.map(r=>r.map(x=>x===1?1:0));
+    d.pend.forEach((x,i)=>{let yes=0,no=0;picks.forEach((v,s)=>{if(s===x.s||!v)return;if(v[i])yes++;else no++;});if(yes>=no&&yes+no>0)acc[x.s][x.k]=2;});
+    return catScore({...d,rd:d.rd},d.ans,acc);}
 };
 function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
