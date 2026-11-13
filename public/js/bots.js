@@ -233,7 +233,16 @@ GAMES.c31.bot=(d,s,lv)=>{// say tgt-1 to make the next player reach the target
 GAMES.num.bot=(d,s,lv)=>{const n=lvRand(lv)?d.lo+rnd(d.hi-d.lo+1):lv===3?Math.floor((d.lo+d.hi)/2):d.lo+Math.floor((d.hi-d.lo)*(0.3+Math.random()*.4));return botDo(d,s,'n',n);};
 GAMES.mm.bot=(d,s,lv)=>{let cands=[];for(let i=0;i<1296;i++){const g=[i%6,Math.floor(i/6)%6,Math.floor(i/36)%6,Math.floor(i/216)%6].join('');if(d.h.every(x=>mmScore(g,x.g).join()===mmScore(d.code,x.g).join()))cands.push(g);}
   const g=lvRand(lv)||!cands.length?[0,0,0,0].map(()=>rnd(6)).join(''):(lv===2&&Math.random()<.4?[0,0,0,0].map(()=>rnd(6)).join(''):pickR(cands));S.mm=[...g].map(Number);return botDo(d,s,'go',0);};
-GAMES.hilo.bot=(d,s,lv)=>{const cur=d.dk.slice(d.p*2,d.p*2+2);const r=rv(cur);const hi=lvRand(lv)?Math.random()<.5:r<7||(r===7&&Math.random()<.5);return botDo(d,s,hi?'hi':'lo',0);};
+GAMES.hilo.bot=(d,s,lv)=>{const cur=d.dk.slice(d.p*2,d.p*2+2);const r=rv(cur);
+  // hard bots count the cards already shown, the others assume a fresh deck
+  const seen={};if(lv===3)for(let k=0;k<=d.p;k++){const x=rv(d.dk.slice(k*2,k*2+2));seen[x]=(seen[x]||0)+1;}
+  const per=(d.pl.length>4?8:4);let hi=0,lo=0,tot=0;for(let x=1;x<=13;x++){const n=Math.max(0,per-(seen[x]||0));tot+=n;if(x>r)hi+=n;else if(x<r)lo+=n;}
+  const ph=hi/tot,pl=lo/tot,best=Math.max(ph,pl);
+  if(d.stk>0){const need=d.goal-d.pts[s];const risk=1-best;const stop=lv===1?d.stk>=1+rnd(4):lv===2?(d.stk>=3||risk>.42):(d.stk>=need||risk*(d.stk+1)>best*1.1||(d.stk>=4&&risk>.3));if(stop)return botDo(d,s,'bank',0);}
+  return botDo(d,s,lvRand(lv)?(Math.random()<.5?'hi':'lo'):ph>=pl?'hi':'lo',0);};
+GAMES.war.botPick=(d,s,lv)=>{const used=(S.priv[d.pl[s]]||{}).used||[];const free=[1,2,3,4,5,6,7].filter(c=>!used.includes(c));if(!free.length)return null;
+  const pr=d.prizes[d.rd];const pick=lv===1?pickR(free):free.sort((a,b)=>Math.abs(a-pr-(lv===3?rnd(2):0))-Math.abs(b-pr-(lv===3?rnd(2):0)))[0];
+  const p=S.priv[d.pl[s]]||{};S.priv[d.pl[s]]={...p,gid:d.gid,used:[...used,pick]};return pick;};
 GAMES.word.bot=(d,s,lv)=>{const F='اليمنوتبرعهدسقكحفجشصطخثزغضذظ';const left=[...F].filter(c=>!d.g.includes(c)&&ALPHA.includes(c));const c=lvRand(lv)?pickR(left):left[0];return botDo(d,s,'k',ALPHA.indexOf(c));};
 GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);
   const clues=[...d.o].map((c,i)=>c>='a'&&c<='z'?[i,c.charCodeAt(0)-97]:null).filter(Boolean);

@@ -71,7 +71,7 @@ function newD(g,starter,pl){const n=pl.length;starter=starter%n;const tp=teamPla
 function setGame(g){
   if(g){const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
     if(GAMES[g].minP&&pl.length<GAMES[g].minP){toast(`${GAMES[g].name} تحتاج ${GAMES[g].minP} لاعبين أو أكثر`);return;}
-    S.st={...S.st,g,s:S.st.s+1,d:newD(g,0,pl)};}
+    S.st={...S.st,g,s:S.st.s+1,d:newD(g,0,pl)};noteRecent(g);}
   else S.st={...S.st,g:null,s:S.st.s+1,d:null};
   S.seen=null;S.browse=false;S.showResult=false;resetUI();afterChange();
 }
@@ -408,6 +408,11 @@ function roomBar(full){
   return s;
 }
 const NEWG=['baloot','hand','chess','tavla','dama','bara','mafia','wasla'];
+// games rebuilt with new rules or a new look
+const UPG=['tele','cats','sea','camel','luck','wires','hilo'];
+// the last games played on this phone, shown first on the games page
+function recentGames(){try{return JSON.parse(lsGet('alaabna_recent')||'[]').filter(k=>GAMES[k]);}catch(e){return [];}}
+function noteRecent(g){try{lsSet('alaabna_recent',JSON.stringify([g,...recentGames().filter(k=>k!==g)].slice(0,8)));}catch(e){}}
 const CATS=[['board','ألعاب لوحة'],['fight','ألعاب قتالية'],['cards','ورق وزهر'],['mind','ذكاء وتخمين'],['quiz','مسابقات وتحدي']];
 const iconE=(bg,e)=>{const id='ie'+bg.replace(/[^0-9a-f]/gi,'')+[...e].length;const num=/^[0-9]+$/.test(e);
   return `<svg viewBox="0 0 100 100"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${shade(bg,.22)}"/><stop offset="1" stop-color="${shade(bg,-.12)}"/></linearGradient></defs><rect width="100" height="100" fill="url(#${id})"/><circle cx="84" cy="14" r="30" fill="#fff" opacity=".1"/><circle cx="8" cy="92" r="34" fill="#000" opacity=".06"/><circle cx="50" cy="44" r="27" fill="#fff" opacity=".16"/>${num?`<text x="50" y="57" text-anchor="middle" font-size="36" font-weight="900" fill="#fff">${e}</text>`:`<text x="50" y="61" text-anchor="middle" font-size="46">${e}</text>`}</svg>`;};
@@ -434,7 +439,8 @@ function renderGrid(){
   OUT=`${topBar('اختر لعبة',S.mode==='online'?'leave':'home',S.mode==='local'?'<button class="ib" data-a="m-settings">⚙️</button>':'')}${roomBar(true)}${mid}${standings()}
   <input class="field search" data-draft="q" value="${escH(S.draft.q||'')}" placeholder="🔍 دوّر على لعبة" autocomplete="off">
   ${S.mode==='online'?fabs():''}
-  ${CATS.map(([c,t])=>{const ks=Object.keys(GAMES).filter(k=>(GAMES[k].cat||'board')===c&&list(k)).sort((a,b)=>NEWG.includes(b)-NEWG.includes(a));return ks.length?`<h2 class="cat">${t} <small>${ks.length}</small></h2><div class="grid">${ks.map(k=>`<button class="gcard" data-a="pick" data-g="${k}">${GAMES[k].icon}${NEWG.includes(k)?'<i class="newb">جديد</i>':''}${GAMES[k].minP?`<i class="minb">${GAMES[k].minP}+</i>`:''}<div class="lb" style="background:${GAMES[k].lbc}">${GAMES[k].name}</div></button>`).join('')}</div>`:'';}).join('')}`;
+  ${!q&&recentGames().length?`<h2 class="cat">لعبتوها مؤخرًا</h2><div class="recent">${recentGames().map(k=>`<button class="rcard" data-a="pick" data-g="${k}">${GAMES[k].icon}<span>${GAMES[k].name}</span></button>`).join('')}</div>`:''}
+  ${CATS.map(([c,t])=>{const ks=Object.keys(GAMES).filter(k=>(GAMES[k].cat||'board')===c&&list(k)).sort((a,b)=>(NEWG.includes(b)||UPG.includes(b))-(NEWG.includes(a)||UPG.includes(a)));return ks.length?`<h2 class="cat">${t} <small>${ks.length}</small></h2><div class="grid">${ks.map(k=>`<button class="gcard" data-a="pick" data-g="${k}">${GAMES[k].icon}${NEWG.includes(k)?'<i class="newb">جديد</i>':UPG.includes(k)?'<i class="newb upg">مطوّرة</i>':''}${GAMES[k].minP?`<i class="minb">${GAMES[k].minP}+</i>`:''}<div class="lb" style="background:${GAMES[k].lbc}">${GAMES[k].name}</div></button>`).join('')}</div>`:'';}).join('')}`;
 }
 const normQ=t=>String(t).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ً-ْ]/g,'').trim();
 function scoreBar(sc,d){
