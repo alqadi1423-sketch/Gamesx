@@ -51,7 +51,8 @@ function actingHost(){if(S.mode!=='online')return null;const r=[...S.roles].filt
 const isHost=()=>S.mode==='local'||(S.me!=null&&S.me===actingHost());
 const canPick=()=>S.mode==='local'||isHost()||(cfg().pick==='all'&&S.me!=null);
 
-function newD(g,starter,pl){const n=pl.length;starter=starter%n;return {...GAMES[g].init(n),gid:rid(),st:starter,turn:starter,pl,out:'0'.repeat(n),win:null};}
+/* a game may set its own first mover with start(d,base): e.g. chess always opens with seat 0 (white) */
+function newD(g,starter,pl){const n=pl.length;starter=starter%n;const G=GAMES[g],base=G.init(n);const d={...base,gid:rid(),st:starter,turn:starter,pl,out:'0'.repeat(n),win:null};return G.start?G.start(d,base):d;}
 function setGame(g){
   if(g){const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
     if(GAMES[g].minP&&pl.length<GAMES[g].minP){toast(`${GAMES[g].name} تحتاج ${GAMES[g].minP} لاعبين أو أكثر`);return;}
@@ -524,7 +525,7 @@ app.addEventListener('click',e=>{
     case 'reveal':S.seen=i;S.tgt=null;render();break;
     case 'closeres':S.showResult=false;render();break;
     case 'skip':{const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];let out=d.out;for(const x of absentSeats(d,G))out=setAt(out,x,'1');const al=aliveSeats(d,out);
-      const nd={...d,out,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd):nd);break;}
+      const nd={...d,out,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);break;}
     case 'copy':try{navigator.clipboard.writeText(S.code).then(()=>toast('انسخ الرمز: '+S.code)).catch(()=>toast('الرمز: '+S.code));}catch(err){toast('الرمز: '+S.code);}break;
     case 'mute':S.mute=!S.mute;lsSet(LSK.mute,S.mute?'1':'0');if(!S.mute)sfx('pop');render();break;
     case 'm-settings':S.modal='settings';render();break;
@@ -536,7 +537,7 @@ app.addEventListener('click',e=>{
     case 'rx':{S.modal=null;const rx={e:i,t:Date.now()};S.rxSeen[S.me]=rx.t;render();floatRx(S.me,i);publish(rx);break;}
     case 'cfg':{if(!isHost())return;let v=t.dataset.v;v=v==='true'?true:v==='false'?false:/^\d+$/.test(v)?+v:v;const p={[t.dataset.k]:v};if(t.dataset.k==='lock'&&v)p.members=players();setCfg(p);break;}
     case 'kick':{if(!isHost())return;const r=i;setCfg({kick:[...new Set([...(cfg().kick||[]),r])]});const d=S.st.d;if(d&&d.win==null&&d.pl.includes(r)){const s=d.pl.indexOf(r);const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);const G=GAMES[S.st.g];
-      const nd={...d,out,turn:d.turn===s?nextSeat(d,s,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd):nd);}toast(pname(r)+' طلع من الغرفة');break;}
+      const nd={...d,out,turn:d.turn===s?nextSeat(d,s,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}toast(pname(r)+' طلع من الغرفة');break;}
     case 'unkick':setCfg({kick:[]});break;
     case 'resetsc':if(!isHost())return;S.st={...S.st,sc:Array(MAXP).fill(0),s:S.st.s+1};afterChange();toast('تصفّرت النقاط');break;
   }
