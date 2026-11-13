@@ -20,7 +20,13 @@ const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
 
 /* ================= players and names ================= */
 /* a game has d.pl = list of roles (colours) taking part; seat i plays role d.pl[i] */
-function pname(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return escH(String(n).trim().slice(0,14))||NAMES[r];}
+function pname(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return escH(String(n).trim().slice(0,14))||(S.mode==='local'&&S.bots[r]?'🤖 '+BOTL[S.bots[r]]:NAMES[r]);}
+/* ================= bots: only on one phone (local mode) ================= */
+const BOTL=['','سهل','متوسط','صعب'];
+const hasBots=()=>S.mode==='local'&&Object.keys(S.bots||{}).some(r=>S.bots[r]&&+r<S.localN);
+const isBot=(d,s)=>S.mode==='local'&&!!(S.bots||{})[d.pl[s]];
+const botLv=(d,s)=>(S.bots||{})[d.pl[s]]||1;
+const humanSeats=d=>d.pl.map((_,s)=>s).filter(s=>!isBot(d,s));
 const col=(d,s)=>COLS[d.pl[s]],lit=(d,s)=>LIGHT[d.pl[s]],nm=(d,s)=>pname(d.pl[s]);
 const nameTag=(d,s)=>`<b style="color:${col(d,s)}">${nm(d,s)}</b>`;
 function nextSeat(d,from,out){out=out||d.out;const n=d.pl.length;for(let k=1;k<=n;k++){const s=(from+k)%n;if(out[s]!=='1')return s;}return from;}
@@ -31,7 +37,8 @@ const CFG0={pick:'host',timer:0,target:0,lock:false,kick:[],members:[]};
 const S={draft:{},sel:[],mode:null,localN:2,localNames:[],myName:lsGet(LSK.name)||'',names:{},mute:lsGet(LSK.mute)==='1',
   st:{g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}},me:null,myPeer:null,code:null,nr:null,roles:new Set(),priv:Array(MAXP).fill(null),
   chat:{},myChat:[],chatSeen:Date.now(),seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false,browse:false,modal:null,showResult:false,winKey:null,wasMy:false,rxSeen:{}};
-try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){S.localN=l.n||2;S.localNames=l.names||[];}}catch(e){}
+try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){S.localN=l.n||2;S.localNames=l.names||[];S.bots=l.bots||{};}}catch(e){}
+S.bots=S.bots||{};
 const GAMES={};
 const cfg=()=>S.st.cfg||CFG0;
 
@@ -56,7 +63,8 @@ function newRound(){const d=S.st.d;const pl=players();if(pl.length<2){toast('ت�
   const G0=GAMES[S.st.g];if(G0&&G0.minP&&pl.length<G0.minP){toast(`${G0.name} تحتاج ${G0.minP} لاعبين أو أكثر`);return;}
   const st=d?(d.st||0)+1:0;S.st={...S.st,s:S.st.s+1,d:newD(S.st.g,st,pl)};S.seen=null;S.showResult=false;resetUI();afterChange();}
 function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];S.draft={...(S.draft.q!=null?{q:S.draft.q}:{})};S.sel=[];S.simon=null;S.lq=null;S.lf=null;S.sp=null;S.mcell=null;S.mprops=false;S.jk=null;S.arA=null;S.dwSel=null;S.rolling=false;}
-function act(nd){S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number')(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
+let ACT_CAP=null;
+function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number')(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
 function setCfg(patch){S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
 function setPriv(role,p){S.priv[role]=p;afterChange();}
 function afterChange(){ensurePriv();publish();render();queueSimul();}
@@ -66,7 +74,9 @@ function afterChange(){ensurePriv();publish();render();queueSimul();}
 const isSimul=(G,d)=>!!G.resolve&&(!G.simulNow||!!G.simulNow(d));
 let simulT=null;
 function queueSimul(){if(simulT)return;simulT=setTimeout(()=>{simulT=null;trySimul();},60);}
-function simulPicks(d){return d.pl.map((r,s)=>{if(d.out[s]==='1')return null;const p=S.priv[r];return p&&p.gid===d.gid&&p.rd===d.rd&&p.pick!=null?p.pick:undefined;});}
+// NOPICK marks a seat that chose to give no answer, so the round does not wait for it
+const NOPICK='~';
+function simulPicks(d){return d.pl.map((r,s)=>{if(d.out[s]==='1')return null;const p=S.priv[r];return p&&p.gid===d.gid&&p.rd===d.rd&&p.pick!=null?(p.pick===NOPICK?null:p.pick):undefined;});}
 const isEnforcer=()=>S.mode==='local'||(S.me!=null&&S.me===actingHost());
 function trySimul(){
   const {g,d}=S.st;if(!g||!d||d.win!=null)return;const G=GAMES[g];if(!G||!isSimul(G,d))return;
@@ -90,7 +100,7 @@ function publish(rx){
   S.nr.presence(o).catch(e=>console.warn('presence',e));
 }
 function save(){
-  if(S.mode==='local')lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames}));
+  if(S.mode==='local')lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames,bots:S.bots}));
   if(S.mode!=='online'||!S.code)return;lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',me:S.me,st:S.st,priv:S.me==null?null:S.priv[S.me]}));}
 function loadSaved(){try{return JSON.parse(lsGet(LSK.room)||'null');}catch(e){return null;}}
 
@@ -110,6 +120,31 @@ function doTimeout(){
   const who=nm(d,d.turn);let nd=G.onTimeout?G.onTimeout(d):{...d,turn:nextSeat(d,d.turn)};
   if('last' in d)nd={...nd,last:`انتهى وقت ${who}`};S.seen=null;act(nd);
 }
+
+/* bots think for a moment, then play through the game's own rules */
+const BOTMS=[0,1300,1000,800];const BOTQ={},BOTFB={};
+setInterval(()=>{if(!hasBots()||!S.st.g||!S.st.d||S.browse||S.holdRender||S.mode!=='local')return;const d=S.st.d,G=GAMES[S.st.g];if(!G||d.win!=null)return;
+  if(app.querySelector('.cover'))return;const now=Date.now(),sim=isSimul(G,d);
+  // in a simultaneous round every bot thinks at the same time; in a turn only the bot whose turn it is
+  const who=sim?aliveSeats(d).filter(s=>isBot(d,s)&&!hasPicked(d,s)):isBot(d,d.turn)?[d.turn]:[];
+  const live=new Set();
+  for(const s of who){const k=S.st.g+d.gid+':'+S.st.s+':'+s;live.add(k);
+    if(!(k in BOTQ)){BOTQ[k]=now+(G.botDelay?G.botDelay(d,s,botLv(d,s)):BOTMS[botLv(d,s)]+rnd(sim?2500:600));continue;}
+    if(now>=BOTQ[k]){delete BOTQ[k];runBot(G,d,s);return;}}
+  for(const k in BOTQ)if(!live.has(k))delete BOTQ[k];},200);
+const botCtx=(d,s)=>({local:false,v:s,priv:S.priv,my:true,bot:true});
+function runBot(G,d,s){const lv=botLv(d,s);
+  try{if(isSimul(G,d)){if(G.botPick){const p=G.botPick(d,s,lv);simulPick(d,s,p==null?NOPICK:p);}else botClick(G,d,s,lv,true);return;}
+    let nd=G.bot?G.bot(d,s,lv):undefined;if(nd===undefined){if(G.bot)BOTFB[S.st.g]=(BOTFB[S.st.g]||0)+1;nd=botClick(G,d,s,lv,false);}if(nd&&nd!==d)act(nd);}
+  catch(e){console.error('bot',e);if(!isSimul(G,d))act(G.onTimeout?G.onTimeout(d):{...d,turn:nextSeat(d,d.turn)});else simulPick(d,s,NOPICK);}
+  finally{S.sel=[];S.tgt=null;S.wild=null;S.dside=null;}}
+// a bot that taps the game's own buttons: used where a game has no smarter player
+function botClick(G,d,s,lv,sim){const ctx=botCtx(d,s);
+  for(let k=0;k<8;k++){TPL.innerHTML=G.render(d,ctx);const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disabled'));if(!els.length)break;
+    const e=els[rnd(els.length)];ACT_CAP={v:null};const hold=S.holdRender;S.holdRender=true;
+    try{G.click(e.dataset.ga,e.dataset.i!=null?+e.dataset.i:null,d,ctx);}finally{S.holdRender=hold;}const nd=ACT_CAP.v;ACT_CAP=null;
+    if(sim){if(hasPicked(S.st.d,s))return;}else if(nd)return nd;}
+  if(sim){simulPick(d,s,NOPICK);return;}return G.onTimeout?G.onTimeout(d):{...d,turn:nextSeat(d,d.turn)};}
 
 /* ================= sound and alerts ================= */
 let actx=null;
@@ -191,6 +226,12 @@ function toast(t){const el=document.createElement('div');el.className='toast';el
 function mySeat(d){return S.mode==='local'?null:d.pl.indexOf(S.me);}
 function mkCtx(){
   const d=S.st.d,G=GAMES[S.st.g],local=S.mode==='local';
+  if(local&&hasBots()){const hs=humanSeats(d),sim=isSimul(G,d);let v;
+    if(sim)v=hs.find(s=>d.out[s]!=='1'&&!hasPicked(d,s));else if(!isBot(d,d.turn))v=d.turn;
+    if(v==null)v=hs.includes(S.lastHuman)?S.lastHuman:hs[0];if(v==null)v=-1;S.lastHuman=v;
+    const extra=G.canAct?G.canAct(d,S.priv):true;
+    if(sim)return {local:false,v,priv:S.priv,my:v>=0&&d.out[v]!=='1'&&d.win==null&&!hasPicked(d,v)&&extra,simul:true,bots:true};
+    return {local:false,v,priv:S.priv,my:d.win==null&&extra&&d.turn===v,bots:true};}
   const v=local?(G.viewer?G.viewer(d,S.priv):d.turn):d.pl.indexOf(S.me);
   const extra=G.canAct?G.canAct(d,S.priv):true;
   if(isSimul(G,d)){const ok=v!=null&&v>=0&&d.out[v]!=='1'&&d.win==null&&!hasPicked(d,v);return {local,v,priv:S.priv,my:ok&&extra,simul:true};}
@@ -275,6 +316,7 @@ function renderHome(){
   OUT=`<div class="hero">${LOGO}<h1>ألعابنا</h1><p>${Object.keys(GAMES).length} لعبة، من لاعبين اثنين إلى ${MAXP}</p></div>
   <button class="big red" data-a="local">على نفس الجهاز<small>كلكم على جوال واحد</small></button>
   <button class="big blue" data-a="lobby">أونلاين<small>كل واحد من جهازه بغرفة خاصة</small></button>
+  <button class="big navy" data-a="vsbot">ضد البوت 🤖<small>العب لحالك، وتختار صعوبة البوت</small></button>
   ${window.NEARROOM&&NEARROOM.available()?'<button class="big green" data-a="near">قريب بدون إنترنت<small>بلوتوث، وكلكم في نفس المكان</small></button>':''}
   ${S.update?`<a class="upd" href="${S.update.apk}" target="_blank" rel="noopener">⬇️ فيه نسخة أحدث من التطبيق، اضغط وحمّلها</a>`:''}`;
 }
@@ -349,7 +391,7 @@ function standings(){
 function renderGrid(){
   let mid='';
   if(S.mode==='local')mid=`<div class="panel"><div class="stepper" style="box-shadow:none;margin:0"><span>عدد اللاعبين</span><button data-a="dec">−</button><b>${S.localN}</b><button data-a="inc">+</button></div>
-    <div class="names">${[...Array(S.localN).keys()].map(r=>`<input class="field nm" style="border-color:${COLS[r]}" data-draft="ln${r}" value="${escH(S.localNames[r]||'')}" placeholder="${NAMES[r]}" maxlength="14">`).join('')}</div></div>`;
+    <div class="names">${[...Array(S.localN).keys()].map(r=>{const b=S.bots[r];return `<div class="lrow" style="--c:${COLS[r]}"><button class="lbt ${b?'on':''}" data-a="botT" data-i="${r}" aria-label="لاعب أو بوت">${b?'🤖':'👤'}</button>${b?`<div class="lvl">${[1,2,3].map(l=>`<button class="${b===l?'on':''}" data-a="botL" data-i="${r}" data-v="${l}">${BOTL[l]}</button>`).join('')}</div>`:`<input class="field nm" data-draft="ln${r}" value="${escH(S.localNames[r]||'')}" placeholder="${NAMES[r]}" maxlength="14">`}</div>`;}).join('')}</div></div>`;
   else{
     const live=S.st.g&&S.st.d&&GAMES[S.st.g];
     if(live)mid+=`<div class="panel live"><b>اللعبة الحالية: ${GAMES[S.st.g].name}</b><button class="sm go" data-a="resumegame">ارجع لها</button></div>`;
@@ -373,7 +415,9 @@ function scoreBar(sc,d){
 }
 function renderGame(){
   const {g,d,sc}=S.st,G=GAMES[g];const ctx=mkCtx();let body=null,cover=false;
-  if(S.mode==='local'&&G.viewer){
+  if(S.mode==='local'&&G.viewer&&hasBots()){const hs=humanSeats(d);const v=d.win==null&&hs.length>1&&ctx.v>=0?ctx.v:null;
+    if(v!=null&&S.seen!==v){cover=true;body=`<div class="cover" style="background:${col(d,v)}"><p>الجهاز الحين لـ</p><h2>${nm(d,v)}</h2><p>خل الباقين ما يشوفون الشاشة</p><button class="big" data-a="reveal" data-i="${v}">أنا ${nm(d,v)}، ورّني</button></div>`;}}
+  else if(S.mode==='local'&&G.viewer){
     const v=d.win==null?G.viewer(d,S.priv):null;
     if(v!=null&&S.seen!==v){cover=true;
       const m=G.coverMsg?G.coverMsg(d):'';
@@ -456,6 +500,9 @@ app.addEventListener('click',e=>{
     case 'njoin':{const f=(S.nearList||[])[i];if(f)enterRoom(f.code,false,null,NEARROOM.room('join',{id:f.id,code:f.code,name:S.myName}));break;}
     case 'local':S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();break;
     case 'inc':S.localN=Math.min(MAXP,S.localN+1);save();render();break;
+    case 'botT':{const r=i;if(S.bots[r])delete S.bots[r];else{S.bots[r]=2;S.localNames[r]='';}if(!humanSeats({pl:[...Array(S.localN).keys()]}).length){delete S.bots[r];toast('لازم لاعب واحد على الأقل يكون إنسان');}save();render();break;}
+    case 'botL':S.bots[i]=+t.dataset.v;save();render();break;
+    case 'vsbot':S.mode='local';S.me=null;S.localN=2;S.bots={1:S.bots[1]||2};S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;save();render();break;
     case 'dec':S.localN=Math.max(2,S.localN-1);save();render();break;
     case 'lobby':S.mode='lobby';S.roomErr=null;render();getRoom();break;
     case 'create':enterRoom(genCode(),true,null);break;

@@ -16,6 +16,9 @@ const spdSubmit=(d,ctx,ok)=>{const st=spdState(d,ctx.v);const ms=Math.round(perf
 const readyCard=(title,art)=>`<div class="spd">${art||`<div class="rdyi">${(GAMES[S.st.g]||{}).icon||''}</div>`}<div class="spdt">${title}</div><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>`;
 const waitCard=()=>'<div class="spd"><div class="spdt">✓ أرسلت</div><p class="note">ننتظر الباقين</p></div>';
 function spdBase(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
+  // a bot answers right more often and faster on harder levels
+  botPick(d,s,lv){const fast=o.name==='أسرع ضغطة'||o.name==='مبارزة السيوف';const R=fast?[0,[520,880],[360,560],[250,380]][lv]:[0,[5200,9000],[3200,5600],[2000,3600]][lv];
+    return {ok:Math.random()<[0,.6,.8,.95][lv],ms:R[0]+rnd(R[1]-R[0])};},
   init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
   status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,SPD_ROUNDS)} من ${SPD_ROUNDS}</small><br>`),

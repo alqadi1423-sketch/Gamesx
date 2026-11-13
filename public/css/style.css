@@ -848,3 +848,12 @@ svg.tvb{width:min(100%,460px);display:block;border-radius:12px;box-shadow:0 6px 
 .moffer{display:flex;flex-direction:column;gap:2px;background:#fff;border-radius:12px;padding:6px 10px;margin:4px 0;color:#2D4763;font-size:13px;text-align:center}
 .mtl{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:6px}
 .mcenter .mbid{gap:4px;flex-wrap:wrap}.mcenter .mbid .sm{padding:4px 8px;font-size:13px}.mcenter .mbid b{min-width:40px;font-size:18px}
+/* local players and bots */
+.names:has(.lrow){grid-template-columns:minmax(0,1fr)}
+.lrow{display:flex;align-items:center;gap:8px;margin:0;min-width:0}
+.lrow .field.nm{flex:1;min-width:0;border-color:var(--c)}
+.lbt{width:44px;height:44px;flex:none;border-radius:14px;background:var(--bg);font-size:21px;box-shadow:inset 0 0 0 2px var(--c)}
+.lbt.on{background:var(--c)}
+.lvl{flex:1;min-width:0;display:flex;gap:4px;background:var(--bg);border-radius:14px;padding:4px;box-shadow:inset 0 0 0 2px var(--c)}
+.lvl button{flex:1;min-width:0;padding:7px 0;border-radius:10px;font-weight:800;font-size:15px;color:var(--mut);background:none;white-space:nowrap}
+.lvl button.on{background:var(--c);color:#fff}

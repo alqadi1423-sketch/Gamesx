@@ -33,6 +33,7 @@ GAMES.rps={name:'حجرة ورقة مقص',cat:'quiz',lbc:'#C76A2A',
 /* ---------- quiz factory ---------- */
 const ROUNDS=10;
 function makeQuiz(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
+  gen:o.gen,botPick(d,s,lv){const Q=o.gen(d,d.rd);return Math.random()<[0,.45,.72,.93][lv]?Q.a:rnd(Q.o.length);},
   init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
   viewer:simulViewer,coverMsg:d=>d.res||'',
   status:(d,ctx)=>simulStatus(d,ctx,`<small>سؤال ${Math.min(d.rd+1,ROUNDS)} من ${ROUNDS}</small><br>`),
