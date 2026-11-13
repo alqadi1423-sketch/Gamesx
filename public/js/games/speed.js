@@ -112,10 +112,14 @@ function fkScore(a){if(!a.length)return 0;const c=[0,0,0,0,0,0,0];a.forEach(x=>c
   if(a.length===6&&c.slice(1).every(x=>x===1))return 1500;if(a.length===6&&c.filter(x=>x===2).length===3)return 750;
   let s=0;for(let f=1;f<=6;f++){const n=c[f];if(!n)continue;if(n>=3){s+=(f===1?1000:f*100)*Math.pow(2,n-3);}else if(f===1)s+=100*n;else if(f===5)s+=50*n;else return 0;}return s;}
 const fkAny=a=>{const c=[0,0,0,0,0,0,0];a.forEach(x=>c[x]++);return c[1]>0||c[5]>0||c.some(x=>x>=3)||(a.length===6&&(c.slice(1).every(x=>x===1)||c.filter(x=>x===2).length===3));};
+// after someone reaches the goal, everyone else gets one last turn, then the highest wins
+function fkPass(d,x,t){const nx=nextSeat(d,t);let endAt=d.endAt;if(endAt==null&&x.sc&&x.sc[t]>=d.goal)endAt=t;
+  if(endAt!=null&&nx===endAt){const sc=x.sc||d.sc;return {...x,endAt,turn:nx,win:mostPts(sc.map((v,s)=>d.out[s]==='1'?-1:v)),last:(x.last||'')+' • انتهت الجولة الأخيرة'};}
+  return {...x,endAt,turn:nx,last:(x.last||'')+(endAt!=null&&d.endAt==null?` • وصل الهدف! كل واحد باقي له دور أخير`:'')};}
 GAMES.farkle={name:'عشرة آلاف',cat:'cards',lbc:'#7B241C',icon:iconE('#A93226','🎲'),
-  init:n=>({dice:'',used:'000000',tot:0,sc:Array(n).fill(0),goal:n>4?3000:5000,rolled:false,last:''}),
+  init:n=>({dice:'',used:'000000',tot:0,sc:Array(n).fill(0),goal:10000,endAt:null,rolled:false,last:''}),
   points:d=>d.sc,
-  onTimeout:d=>({...d,dice:'',used:'000000',tot:0,rolled:false,turn:nextSeat(d,d.turn)}),
+  onTimeout:d=>fkPass(d,{...d,dice:'',used:'000000',tot:0,rolled:false},d.turn),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>جمع الدور: <b>${d.tot}</b>، الهدف ${d.goal}</small>`,
   render(d,ctx){const my=ctx.my;S.sel=S.sel||[];const anim=S.rolled;S.rolled=false;const sel=S.sel.map(i=>+d.dice[i]);const sv=fkScore(sel);
     let s=`<div class="row ${anim?'':''}" style="gap:8px">${d.dice?[...d.dice].map((x,i)=>d.used[i]==='1'?`<div class="dice" style="width:50px;height:50px;opacity:.25">${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</div>`:`<button class="dice" style="width:50px;height:50px;${S.sel.includes(i)?'box-shadow:0 0 0 4px #ffd84d':''}" data-ga="sel" data-i="${i}" ${my&&d.rolled?'':'disabled'}>${diceSVG(+x).replace('<svg ','<svg style="width:40px;height:40px" ')}</button>`).join(''):''}</div>`;
@@ -125,11 +129,11 @@ GAMES.farkle={name:'عشرة آلاف',cat:'cards',lbc:'#7B241C',icon:iconE('#A9
   click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn;S.sel=S.sel||[];
     if(a==='sel'){S.sel=S.sel.includes(i)?S.sel.filter(x=>x!==i):[...S.sel,i];render();return;}
     if(a==='roll'){let used=d.used;if(!used.includes('0'))used='000000';const dice=[...used].map((u,k)=>u==='1'?d.dice[k]:String(1+rnd(6))).join('');const free=[...dice].filter((x,k)=>used[k]==='0').map(Number);S.rolled=true;S.sel=[];
-      if(!fkAny(free)){act({...d,dice,used:'000000',tot:0,rolled:false,turn:nextSeat(d,t),last:`${nm(d,t)} طلع له زهر ما يسجل وراح جمع الدور 💥`});return;}
+      if(!fkAny(free)){act(fkPass(d,{...d,dice,used:'000000',tot:0,rolled:false,last:`${nm(d,t)} طلع له زهر ما يسجل وراح جمع الدور 💥`},t));return;}
       act({...d,dice,used,rolled:true,last:''});return;}
-    if(a==='bank'){if(d.tot<=0)return;const sc=[...d.sc];sc[t]+=d.tot;act({...d,sc,tot:0,dice:'',used:'000000',rolled:false,turn:nextSeat(d,t),win:sc[t]>=d.goal?t:null,last:`${nm(d,t)} حفظ ${d.tot}`});return;}
+    if(a==='bank'){if(d.tot<=0)return;const sc=[...d.sc];sc[t]+=d.tot;act(fkPass(d,{...d,sc,tot:0,dice:'',used:'000000',rolled:false,last:`${nm(d,t)} حفظ ${d.tot}`},t));return;}
     if(a==='keep'||a==='keepbank'){const sv=fkScore(S.sel.map(k=>+d.dice[k]));if(!sv)return;let used=d.used;S.sel.forEach(k=>used=setAt(used,k,'1'));S.sel=[];const tot=d.tot+sv;
-      if(a==='keepbank'){const sc=[...d.sc];sc[t]+=tot;act({...d,sc,tot:0,dice:'',used:'000000',rolled:false,turn:nextSeat(d,t),win:sc[t]>=d.goal?t:null,last:`${nm(d,t)} حفظ ${tot}`});return;}
+      if(a==='keepbank'){const sc=[...d.sc];sc[t]+=tot;act(fkPass(d,{...d,sc,tot:0,dice:'',used:'000000',rolled:false,last:`${nm(d,t)} حفظ ${tot}`},t));return;}
       act({...d,used:used.includes('0')?used:'000000',tot,rolled:false,last:used.includes('0')?'':`${nm(d,t)} سجّل الستة كلها 🔥 يرمي الستة من جديد`});}
   }
 };

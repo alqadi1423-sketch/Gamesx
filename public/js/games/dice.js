@@ -13,8 +13,15 @@ function yScore(k,dice){const d=[...dice].map(Number);const c=[0,0,0,0,0,0,0];d.
   if(k===9)return has([1,2,3,4])||has([2,3,4,5])||has([3,4,5,6])?30:0;
   if(k===10)return has([1,2,3,4,5])||has([2,3,4,5,6])?40:0;
   if(k===11)return mx===5?50:0;return sum;}
-const yTotal=card=>{const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);return card.reduce((a,b)=>a+Math.max(b,0),0)+(up>=63?35:0);};
-GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{const t=d.turn;const cards=d.cards.map(c=>[...c]);const empty=cards[t].map((v,k)=>v<0?k:-1).filter(k=>k>=0);let best=empty[0];if(d.rolls){let bv=-1;for(const k of empty){const v=yScore(k,d.dice);if(v>bv){bv=v;best=k;}}cards[t][best]=bv;}else cards[t][best]=0;const done=cards.every((c,s)=>d.out[s]==='1'||c.every(x=>x>=0));return {...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:done?mostPts(cards.map((c,s)=>d.out[s]==='1'?-1:yTotal(c))):null};},
+const yTotal=card=>{const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);return card.slice(0,13).reduce((a,b)=>a+Math.max(b,0),0)+(up>=63?35:0)+100*(card[13]||0);};
+// official Yahtzee extras: a further Yahtzee earns 100 when the Yahtzee box holds 50, and it plays as a joker
+const yIsY=dice=>dice!=='00000'&&[...dice].every(x=>x===dice[0]);
+function yOpts(card,dice){const free=[...Array(13).keys()].filter(k=>card[k]<0);if(!yIsY(dice)||card[11]<0)return free.map(k=>[k,yScore(k,dice)]);
+  const f=+dice[0]-1;if(card[f]<0)return [[f,yScore(f,dice)]];
+  const low=free.filter(k=>k>=6);if(low.length)return low.map(k=>[k,k===8?25:k===9?30:k===10?40:yScore(k,dice)]);
+  return free.map(k=>[k,0]);}
+function yPut(card,k,dice){const c=[...card];const o=yOpts(card,dice).find(x=>x[0]===k);if(!o)return null;if(yIsY(dice)&&card[11]===50)c[13]=(c[13]||0)+1;c[k]=o[1];return c;}
+GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{const t=d.turn;const cards=d.cards.map(c=>[...c]);const empty=cards[t].map((v,k)=>k<13&&v<0?k:-1).filter(k=>k>=0);let best=empty[0];if(d.rolls){const o=yOpts(cards[t],d.dice);const b=o.reduce((x,y)=>y[1]>x[1]?y:x);cards[t]=yPut(cards[t],b[0],d.dice);}else cards[t][best]=0;const done=cards.every((c,s)=>d.out[s]==='1'||c.slice(0,13).every(x=>x>=0));return {...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:done?mostPts(cards.map((c,s)=>d.out[s]==='1'?-1:yTotal(c))):null};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D5505F"/>${[[14,16],[52,12],[30,50],[64,48],[22,78]].map(([x,y],k)=>`<rect x="${x}" y="${y}" width="26" height="26" rx="6" fill="#fff" transform="rotate(${k*9-18} ${x+13} ${y+13})"/><circle cx="${x+13}" cy="${y+13}" r="4" fill="#2D4763"/>`).join('')}</svg>`,
   init:n=>({dice:'00000',held:'00000',rolls:0,cards:Array(n).fill(0).map(()=>Array(13).fill(-1))}),
   points:d=>d.cards.map(yTotal),status:(d,ctx)=>turnTxt(d,ctx),
@@ -22,22 +29,26 @@ GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{co
   render(d,ctx){const t=d.turn;const card=d.cards[t];const anim=S.rolled;S.rolled=false;
     let s=`<div class="row ${anim?'':''}">${[...d.dice].map((x,i)=>dieBtn(+x,d.held[i]==='1',ctx.my&&d.rolls>0&&d.rolls<3?`data-ga="hold" data-i="${i}"`:'')).join('')}</div>`;
     s+=`<div class="acts"><button class="btn" style="background:${col(d,t)}" data-ga="roll" ${ctx.my&&d.rolls<3?'':'disabled'}>ارمِ (${3-d.rolls} باقي)</button></div>`;
-    const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);
-    s+=`<div class="ysheet">${YC.map((n,k)=>{const v=card[k];const pv=d.rolls?yScore(k,d.dice):0;
-      return v>=0?`<div class="yc done"><span>${n}</span><b>${v}</b></div>`:`<button class="yc" data-ga="score" data-i="${k}" ${ctx.my&&d.rolls?'':'disabled'}><span>${n}</span><b class="${d.rolls&&pv?'pv':''}">${d.rolls?pv:'·'}</b></button>`;}).join('')}<div class="yc tot"><span>المكافأة ${up}/63</span><b>${up>=63?'+35':''}</b></div><div class="yc tot"><span>المجموع</span><b>${yTotal(card)}</b></div></div>`;
+    const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);const opts=d.rolls?yOpts(card,d.dice):[];
+    if(d.rolls&&yIsY(d.dice)&&card[11]>=0)s+=`<p class="hint" style="text-align:center">خمسة متشابهة مرة ثانية!${card[11]===50?' +100 مكافأة،':''} وتنحسب جوكر</p>`;
+    s+=`<div class="ysheet">${YC.map((n,k)=>{const v=card[k];const op=opts.find(x=>x[0]===k);const pv=op?op[1]:0;
+      return v>=0?`<div class="yc done"><span>${n}</span><b>${v}</b></div>`:`<button class="yc" data-ga="score" data-i="${k}" ${ctx.my&&d.rolls&&op?'':'disabled'}><span>${n}</span><b class="${d.rolls&&pv?'pv':''}">${d.rolls?pv:'·'}</b></button>`;}).join('')}<div class="yc tot"><span>المكافأة ${up}/63</span><b>${up>=63?'+35':''}</b></div>${card[13]?`<div class="yc tot"><span>مكافأة الخمسة</span><b>+${card[13]*100}</b></div>`:''}<div class="yc tot"><span>المجموع</span><b>${yTotal(card)}</b></div></div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn;
     if(a==='hold'){if(!d.rolls||d.rolls>=3)return;act({...d,held:setAt(d.held,i,d.held[i]==='1'?'0':'1')});return;}
     if(a==='roll'){if(d.rolls>=3)return;S.rolled=true;const dice=[...d.dice].map((x,k)=>d.held[k]==='1'&&d.rolls?x:String(1+rnd(6))).join('');act({...d,dice,rolls:d.rolls+1});return;}
-    if(a==='score'){if(!d.rolls||d.cards[t][i]>=0)return;const cards=d.cards.map(c=>[...c]);cards[t][i]=yScore(i,d.dice);
-      const done=cards.every((c,s)=>d.out[s]==='1'||c.every(x=>x>=0));
+    if(a==='score'){if(!d.rolls||d.cards[t][i]>=0)return;const cards=d.cards.map(c=>[...c]);const nc=yPut(cards[t],i,d.dice);if(!nc)return;cards[t]=nc;
+      const done=cards.every((c,s)=>d.out[s]==='1'||c.slice(0,13).every(x=>x>=0));
       act({...d,cards,dice:'00000',held:'00000',rolls:0,turn:nextSeat(d,t),win:done?mostPts(cards.map((c,s)=>d.out[s]==='1'?-1:yTotal(c))):null});}
   }
 };
 
 /* ---------- liar's dice ---------- */
-GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map(x=>x+' 🎲'),onTimeout:d=>{const b=d.bid?{q:d.bid.q+1,f:d.bid.f,s:d.turn}:{q:1,f:1,s:d.turn};return {...d,bid:b,turn:nextSeat(d,d.turn)};},
+// Perudo rules: ones are wild; to switch to ones you may halve the count (rounded up), to leave ones you need double plus one
+function liarOk(prev,q,f){if(!prev)return f!==1&&q>=1;if(prev.f!==1){if(f===1)return q>=Math.ceil(prev.q/2);return q>prev.q||(q===prev.q&&f>prev.f);}
+  if(f===1)return q>prev.q;return q>=prev.q*2+1;}
+GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map(x=>x+' 🎲'),onTimeout:d=>{const b=d.bid?(d.bid.f===1?{q:d.bid.q+1,f:1,s:d.turn}:{q:d.bid.q+1,f:d.bid.f,s:d.turn}):{q:1,f:2,s:d.turn};return {...d,bid:b,turn:nextSeat(d,d.turn)};},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#5E4A8A"/><path d="M20 70Q50 20 80 70Z" fill="#3B2D59"/><rect x="30" y="56" width="18" height="18" rx="4" fill="#fff"/><rect x="52" y="56" width="18" height="18" rx="4" fill="#fff"/><circle cx="39" cy="65" r="3" fill="#2D4763"/><circle cx="57" cy="61" r="2.5" fill="#2D4763"/><circle cx="65" cy="69" r="2.5" fill="#2D4763"/><text x="50" y="40" font-size="22" font-weight="800" fill="#FFD84D" text-anchor="middle">؟</text></svg>`,
   init:n=>({r:0,n:Array(n).fill(n>4?4:5),bid:null,last:''}),
   privInit:(d,r)=>{const s=d.pl.indexOf(r);const k=s>=0?d.n[s]:0;return {r:d.r,dice:Array(k).fill(0).map(()=>1+rnd(6)).join('')};},
@@ -50,17 +61,19 @@ GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map
     s+=d.bid?`<div class="qbox">المزايدة: ${d.bid.q} × ${diceSVG(d.bid.f).replace('<svg ','<svg style="width:34px;height:34px;vertical-align:middle;background:#fff;border-radius:6px" ')}<br><small style="font-size:14px">من ${nm(d,d.bid.s)}</small></div>`:'<div class="qbox">ما فيه مزايدة للحين</div>';
     if(v<0)return s;const p=ctx.priv[d.pl[v]];
     if(p&&p.r===d.r)s+=`<p class="lbl">زهراتك</p><div class="row">${[...p.dice].map(x=>dieBtn(+x)).join('')}</div>`;
-    if(ctx.my){const total=d.n.reduce((a,b,i)=>a+(d.out[i]==='1'?0:b),0);const minQ=d.bid?d.bid.q:1;S.lq=Math.max(S.lq||minQ,minQ);S.lq=Math.min(S.lq,total);S.lf=S.lf||(d.bid?d.bid.f:1);
+    if(ctx.my){const total=d.n.reduce((a,b,i)=>a+(d.out[i]==='1'?0:b),0);const minQ=d.bid?(d.bid.f===1?d.bid.q:Math.ceil(d.bid.q/2)):1;S.lq=Math.max(S.lq||minQ,minQ);S.lq=Math.min(S.lq,total);S.lf=S.lf||(d.bid?d.bid.f:1);
       s+=`<div class="stepper"><span>العدد</span><button data-ga="qd">−</button><b>${S.lq}</b><button data-ga="qu">+</button></div><div class="row">${[1,2,3,4,5,6].map(f=>`<button class="dice" style="width:46px;height:46px;${S.lf===f?'box-shadow:0 0 0 4px #ffd84d':''}" data-ga="f" data-i="${f}">${diceSVG(f).replace('<svg ','<svg style="width:36px;height:36px" ')}</button>`).join('')}</div>
-      <div class="acts"><button class="btn blue" data-ga="bid">زايد</button>${d.bid?'<button class="btn red" data-ga="call">كذاب!</button>':''}</div>`;}
+      <div class="acts"><button class="btn blue" data-ga="bid">زايد</button>${d.bid?'<button class="btn red" data-ga="call">كذاب!</button><button class="btn navy" data-ga="calza">بالضبط!</button>':''}</div><p class="note">الواحد جوكر يحسب مع أي وجه</p>`;}
     return s;},
   click(a,i,d,ctx){
     if(a==='qu'){S.lq=(S.lq||1)+1;render();return;}if(a==='qd'){S.lq=Math.max(1,(S.lq||1)-1);render();return;}if(a==='f'){S.lf=i;render();return;}
     if(!ctx.my)return;const t=d.turn;
-    if(a==='bid'){const q=S.lq,f=S.lf;if(d.bid&&!(q>d.bid.q||(q===d.bid.q&&f>d.bid.f))){toast('لازم تزايد أعلى من اللي قبلك');return;}
+    if(a==='bid'){const q=S.lq,f=S.lf;if(!liarOk(d.bid,q,f)){toast(!d.bid&&f===1?'ما تبدأ المزايدة على الواحد':d.bid&&d.bid.f===1&&f!==1?`من الواحد لازم ${d.bid.q*2+1} أو أكثر`:'لازم تزايد أعلى من اللي قبلك');return;}
       S.lq=null;S.lf=null;act({...d,bid:{q,f,s:t},turn:nextSeat(d,t),last:`${nm(d,t)} زايد: ${q} زهرات وجهها ${f}`});return;}
-    if(a==='call'&&d.bid){let cnt=0,missing=false;const all=[];d.pl.forEach((r,s)=>{if(d.out[s]==='1')return;const p=S.priv[r];if(!p||p.r!==d.r){missing=true;return;}cnt+=[...p.dice].filter(x=>+x===d.bid.f).length;all.push(`${nm(d,s)} ${p.dice}`);});
+    if((a==='call'||a==='calza')&&d.bid){let cnt=0,missing=false;const all=[];d.pl.forEach((r,s)=>{if(d.out[s]==='1')return;const p=S.priv[r];if(!p||p.r!==d.r){missing=true;return;}cnt+=[...p.dice].filter(x=>+x===d.bid.f||(d.bid.f!==1&&+x===1)).length;all.push(`${nm(d,s)} ${p.dice}`);});
       if(missing){toast('انتظر الباقين');return;}
+      if(a==='calza'){const n=[...d.n],start=d.pl.length>4?4:5,hit=cnt===d.bid.q;let out=d.out;if(hit)n[t]=Math.min(start,n[t]+1);else{n[t]--;if(n[t]<=0)out=setAt(out,t,'1');}const al=aliveSeats(d,out);S.lq=null;S.lf=null;
+        act({...d,n,out,r:d.r+1,bid:null,turn:out[t]==='1'?nextSeat(d,t,out):t,win:al.length===1?al[0]:null,last:`${nm(d,t)} قال بالضبط! كان فيه ${cnt}، ${hit?'وصدق ورجعت له زهرة 🎯':'وغلط وخسر زهرة'}. (${all.join('، ')})`});return;}
       const loser=cnt>=d.bid.q?t:d.bid.s;const n=[...d.n];n[loser]--;let out=d.out;if(n[loser]<=0)out=setAt(out,loser,'1');const al=aliveSeats(d,out);
       S.lq=null;S.lf=null;
       act({...d,n,out,r:d.r+1,bid:null,turn:out[loser]==='1'?nextSeat(d,loser,out):loser,win:al.length===1?al[0]:null,
