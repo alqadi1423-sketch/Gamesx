@@ -158,7 +158,7 @@ GAMES.jakaro={name:'جكارو',cat:'board',lbc:'#7B4A2A',
     return {mb:Array(n*4).fill(-1),hd,deck,top:null,np:0,team:n>=4&&n%2===0,last:'',mv:null};},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
-  points:d=>d.pl.map((r,s)=>{const L=jkL(d);let f=0;for(let k=0;k<4;k++)if(d.mb[s*4+k]>=L)f++;return (d.team?'فريق '+(s%(d.pl.length/2)+1)+' • ':'')+f+'/4';}),
+  points:d=>d.pl.map((r,s)=>{const L=jkL(d);let f=0;for(let k=0;k<4;k++)if(d.mb[s*4+k]>=L)f++;return f+'/4'+(d.team?' 🤝'+(s%(d.pl.length/2)+1):'');}),
   status(d,ctx){const s=d.turn;let t=(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);
     return t;},
   onTimeout:d=>jkAuto(d),

@@ -62,8 +62,9 @@ GAMES.bj={name:'بلاك جاك 21',cat:'cards',lbc:'#1E6B45',onTimeout:d=>{cons
   status(d,ctx){return d.phase==='play'?turnTxt(d,ctx):'';},
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${bjVal(d.hands[s])} ${({w:'فاز',l:'خسر',p:'تعادل',b:'تعدّى 21',x:'طلع'})[d.res[s]]}`).join('، ')+`، والديلر ${bjVal(d.dl)}`,
   render(d,ctx){const done=d.phase==='done';
-    let s=`<p class="lbl">الديلر ${done?bjVal(d.dl):''}</p><div class="hand">${cardsOf(d.dl).map((c,i)=>cardHTML(!done&&i===1?'??':c)).join('')}</div>`;
-    s+=d.pl.map((r,i)=>{if(d.out[i]==='1')return '';const v=bjVal(d.hands[i]);return `<p class="lbl" style="color:${col(d,i)}">${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}: ${v}${v>21?' تعدّى':d.sd[i]==='1'&&!done?' وقف':''}</p><div class="hand">${cardsOf(d.hands[i]).map(c=>cardHTML(c)).join('')}</div>`;}).join('');
+    let s=`<div class="bjd"><b>الديلر ${done?`<em>${bjVal(d.dl)}</em>`:''}</b><div class="hand">${cardsOf(d.dl).map((c,i)=>cardHTML(!done&&i===1?'??':c)).join('')}</div></div>`;
+    s+=`<div class="bjp">${d.pl.map((r,i)=>{if(d.out[i]==='1')return '';const v=bjVal(d.hands[i]);const st=v>21?'تعدّى':d.sd[i]==='1'&&!done?'وقف':'';
+      return `<div class="bjh ${d.turn===i&&!done?'on':''} ${v>21?'bust':''}" style="--c:${col(d,i)}"><b>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}<em>${v}</em></b><div class="hand">${cardsOf(d.hands[i]).map(c=>cardHTML(c)).join('')}</div>${st?`<small>${st}</small>`:''}</div>`;}).join('')}</div>`;
     if(ctx.my)s+=`<div class="acts"><button class="btn blue" data-ga="hit">اسحب ورقة</button><button class="btn navy" data-ga="stand">اكتفيت</button></div>`;
     return s;},
   click(a,i,d,ctx){

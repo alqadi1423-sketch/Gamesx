@@ -333,10 +333,10 @@ const normQ=t=>String(t).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/
 function scoreBar(sc,d){
   const G=GAMES[S.st.g];let pts=null;try{pts=G.points?G.points(d):(Array.isArray(d.pts)?d.pts:null);}catch(e){}
   const simul=!!G.resolve;
-  return `<div class="players" style="--n:${Math.min(d.pl.length,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&d.turn===s;
+  return `<div class="players ${d.pl.length>4?'two':''}" style="--n:${Math.min(d.pl.length,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&d.turn===s;
     const pk=simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u class="pk ok">✓</u>':'<u class="pk">…</u>'):'';
     const won=typeof d.win==='number'&&(d.win===s||(Array.isArray(d.wins)&&d.wins.includes(s)));
-    return `<div class="pt ${on?'on':''} ${won?'won':''} ${d.out[s]==='1'?'out':''}" data-r="${r}" style="--c:${COLS[r]}"><i>${shapeW(r)}${sc[r]?`<b>${sc[r]}</b>`:''}</i><span>${label}</span>${pts?`<em>${pts[s]}</em>`:''}${pk}</div>`;}).join('')}</div>`;
+    return `<div class="pt ${on?'on':''} ${won?'won':''} ${d.out[s]==='1'?'out':''}" data-r="${r}" style="--c:${COLS[r]}"><i>${shapeW(r)}${sc[r]?`<b>${sc[r]}</b>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${pts[s]}</em>`:''}</div>${pk}</div>`;}).join('')}</div>`;
 }
 function renderGame(){
   const {g,d,sc}=S.st,G=GAMES[g];const ctx=mkCtx();let body=null,cover=false;
@@ -501,4 +501,12 @@ function appSetup(){
   const el=document.querySelector('script[src*="core.js"]');const mine=+((el&&/v=(\d+)/.exec(el.src)||[])[1]||0);
   fetch(SERVER+'/version.json',{cache:'no-store'}).then(r=>r.json()).then(j=>{if(j&&+j.v>mine&&j.apk){S.update=j;if(S.mode===null)render();}}).catch(()=>{});
 }
-function boot(){render();if(isApp())appSetup();}
+function infoScreen(){
+  const mq=q=>{try{return matchMedia(q).matches?'نعم':'لا';}catch(e){return '?';}};
+  const sup=p=>{try{return CSS.supports(p)?'نعم':'لا';}catch(e){return '?';}};
+  app.innerHTML=`<div class="panel" style="direction:ltr;text-align:left;font-size:14px;line-height:1.7;word-break:break-all"><b>${escH(navigator.userAgent)}</b><br>
+  dark: ${mq('(prefers-color-scheme: dark)')} • light: ${mq('(prefers-color-scheme: light)')}<br>
+  aspect-ratio: ${sup('aspect-ratio:1')} • color-mix: ${sup('color:color-mix(in srgb,red,blue)')}<br>
+  screen: ${screen.width}x${screen.height} • dpr: ${devicePixelRatio} • font: ${getComputedStyle(document.documentElement).fontSize}<br>
+  v: ${(document.querySelector('script[src*="core.js"]')||{}).src||''}</div>`;}
+function boot(){if(/[?&]info\b/.test(location.search)){infoScreen();return;}render();if(isApp())appSetup();}

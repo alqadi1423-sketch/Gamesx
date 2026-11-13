@@ -157,7 +157,7 @@ GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',
     let s=`<div class="qbox"><span class="big-num ltr" style="color:${d.tot>89?'#D43C33':'var(--ink)'}">${d.tot}</span><br><small style="font-size:14px">لا تتعدى 99 • الدور ${d.dir>0?'↻':'↺'}</small></div>`;
     if(v<0||d.win!=null)return s;const my=ctx.my&&d.turn===v;const h=cardsOf(d.hands[v]);
     s+=`<p class="lbl" style="text-align:center">أوراقك</p><div class="hand">${h.map((c,i)=>{const ok=v99(c,d.tot)<=99;const b=lab99[c[0]]?`<small style="position:absolute;bottom:-18px;font-size:11px;color:var(--mut);white-space:nowrap">${lab99[c[0]]}</small>`:'';return (my&&ok?cardHTML(c,true,'pick" data-ga="m" data-i="'+i):cardHTML(c,true,my?'dim':'')).replace('</div>',b+'</div>');}).join('')}</div>`;
-    s+=`<p class="lbl" style="text-align:center;font-size:13px">K = 99 • 10 = ±10 • 4 يعكس • 9 = 0 • J Q = +10</p>`;
+    s+=`<div class="legend"><span dir="ltr">K = 99</span><span dir="ltr">10 = ±10</span><span dir="ltr">J Q = +10</span><span dir="ltr">9 = +0</span><span>4 يعكس الدور</span></div>`;
     if(my&&!h.some(c=>v99(c,d.tot)<=99))s+=`<div class="acts"><button class="btn red" data-ga="m" data-i="-1">ما عندي ورقة 😵</button></div>`;
     return s;},
   play(d,i){const t=d.turn;const h=cardsOf(d.hands[t]);

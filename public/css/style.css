@@ -688,3 +688,35 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .mc .nm{font-size:7.5px;max-height:1.2em}
 .mc .pr{font-size:7px;max-height:1.2em;overflow:hidden}
 .mem b{background:var(--c);color:#fff;border-radius:99px;padding:0 8px;font-size:13px;margin-inline-start:2px}
+/* five to eight players: two rows of compact tiles, still a fixed height */
+.pt .tx{display:flex;flex-direction:column;align-items:center;min-width:0;max-width:100%}
+.players.two{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:48px;height:auto;overflow:visible;gap:6px;padding:4px 0 8px;margin:0 0 4px}
+.players.two .pt{flex:none;min-width:0;flex-direction:row;justify-content:flex-start;gap:5px;padding:4px 5px;border-radius:14px;height:48px}
+.players.two .pt i{width:26px;height:26px}.players.two .pt i svg{width:14px;height:14px}
+.players.two .pt .tx{align-items:flex-start;flex:1}
+.players.two .pt span{font-size:12px;padding:0;max-width:100%}
+.players.two .pt em{font-size:11px}
+.players.two .pt .pk{top:2px;right:auto;left:4px;font-size:11px}
+.players.two .pt i b{top:-7px;left:-8px;font-size:9px;min-width:15px;height:15px;line-height:15px}
+.players.two .pt.on{transform:none}
+/* blackjack table */
+.bjd{width:100%;background:linear-gradient(#2E8B57,#246E45);border-radius:20px;padding:10px;text-align:center;color:#fff;box-shadow:var(--sh);margin-bottom:10px}
+.bjd b{display:block;margin-bottom:6px}.bjd em,.bjh em{font-style:normal;background:rgba(0,0,0,.25);border-radius:99px;padding:0 9px;margin-inline-start:6px}
+.bjd .hand,.bjh .hand{justify-content:center;flex-wrap:wrap;gap:4px;display:flex}
+.bjp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;width:100%}
+.bjh{background:var(--card);border-radius:16px;padding:8px;box-shadow:var(--sh);text-align:center;position:relative}
+.bjh>b{display:block;color:var(--c);font-size:15px;margin-bottom:6px}.bjh em{background:var(--c);color:#fff}
+.bjh.on{box-shadow:0 0 0 2.5px var(--c),var(--sh)}
+.bjh.bust{opacity:.6}
+.bjh small{display:block;color:var(--mut);font-weight:700;margin-top:4px}
+.bjh .card{width:40px;height:58px;font-size:18px}
+/* camel race: one compact line per player so the die stays on screen */
+.race{gap:6px}
+.lane{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:14px}
+.lane .lname{margin:0;flex:none;gap:4px;flex-direction:column;align-items:center;width:34px}
+.lane .lname span{display:none}
+.lane .lname b{margin:0;font-size:11px;color:var(--mut)}
+.lane .track{flex:1;height:30px}
+.legend{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:10px 0 0}.legend span{background:var(--card);border-radius:99px;padding:1px 9px;font-size:12px;font-weight:700;color:var(--mut);box-shadow:var(--sh)}
+.players.two .pt i b{display:none}
+.players.two .pt .pk{top:auto;bottom:3px;left:6px}
