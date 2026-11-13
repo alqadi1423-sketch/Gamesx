@@ -94,7 +94,7 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
   onTimeout(d){
     if(d.ph==='sum')return {...hNewRound({...d,r:d.r+1})};
     let x=d;if(x.ph==='draw')x=hDraw(x,false);
-    if(x.took){const back=[...x.hands];const hc=cardsOf(back[x.turn]);const i=hc.indexOf(x.took);if(i>=0){hc.splice(i,1);back[x.turn]=hc.join('');x={...x,hands:back,disc:x.disc+x.took};}x={...x,took:null};}
+    if(x.took){const back=[...x.hands];const hc=cardsOf(back[x.turn]);const i=hc.indexOf(x.took);if(i>=0){hc.splice(i,1);back[x.turn]=hc.join('');x=hDraw({...x,hands:back,disc:x.disc+x.took,took:null},false);}x={...x,took:null};}
     const hc=cardsOf(x.hands[x.turn]);const c=hc.find(c=>!hJ(c))||hc[0];return hDiscard(x,c);},
   // the absent player's half-done turn: the discard he took goes back to the pile and the next player starts by drawing
   onSkip(nd,d){if(nd.win!=null||nd.turn===d.turn||d.ph==='sum')return nd;const t=d.turn,hands=[...nd.hands];let disc=nd.disc;
