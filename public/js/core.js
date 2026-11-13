@@ -94,7 +94,12 @@ function afterChange(){ensurePriv();publish();render();queueSimul();}
    A game can mix both kinds: simulNow(d) says whether the current phase is a simultaneous one */
 const isSimul=(G,d)=>!!G.resolve&&(!G.simulNow||!!G.simulNow(d));
 let simulT=null;
-function queueSimul(){if(simulT)return;simulT=setTimeout(()=>{simulT=null;trySimul();},60);}
+function queueSimul(){if(simulT)return;simulT=setTimeout(()=>{simulT=null;trySimul();tryHost();},60);}
+// G.host(d) lets one device (the phone, or the room host online) move a game on: clocks, typed guesses, bots
+function tryHost(){const {g,d}=S.st;if(!g||!d||d.win!=null)return;const G=GAMES[g];if(!G||!G.host)return;
+  if(S.mode==='online'&&(S.me==null||S.me!==actingHost()))return;if(S.mode!=='online'&&S.mode!=='local')return;
+  let nd=null;try{nd=G.host(d);}catch(e){console.error('host',e);return;}if(nd&&nd!==d)act(nd);}
+setInterval(tryHost,400);
 // NOPICK marks a seat that chose to give no answer, so the round does not wait for it
 const NOPICK='~';
 function simulPicks(d){return d.pl.map((r,s)=>{if(d.out[s]==='1')return null;const p=S.priv[r];return p&&p.gid===d.gid&&p.rd===d.rd&&p.pick!=null?(p.pick===NOPICK?null:p.pick):undefined;});}
@@ -578,7 +583,8 @@ app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.draf
   else if(/^ln\d$/.test(k)){S.localNames[+k[2]]=e.target.value;save();}
   else if(k==='q')render();});
 app.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.send'))e.preventDefault();});
-app.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}else if(e.target.dataset&&e.target.dataset.draft==='chat'){e.preventDefault();sendChat();}});
+app.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}else if(e.target.dataset&&e.target.dataset.draft==='chat'){e.preventDefault();sendChat();}
+  else if(e.target.dataset&&e.target.dataset.enter){e.preventDefault();const b=app.querySelector(`[data-ga="${e.target.dataset.enter}"]`);if(b&&!b.disabled)b.click();}});
 
 /* target picker used by sea battle and guess the person */
 function targets(d,me){return aliveSeats(d).filter(s=>s!==me&&!sameTeam(d,s,me));}
