@@ -47,6 +47,9 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',
     d.pend.forEach((x,i)=>{let yes=0,no=0;picks.forEach((v,s)=>{if(s===x.s||!v)return;if(v[i])yes++;else no++;});if(yes>=no&&yes+no>0)acc[x.s][x.k]=2;});
     return catScore({...d,rd:d.rd},d.ans,acc);}
 };
+// a bot writes real words for the letter from the dictionary (more of them at higher levels) and votes yes on the others' words
+GAMES.cats.botPick=(d,s,lv)=>{if(d.phase==='vote')return d.pend.map(()=>lv===1?rnd(2):1);const p=[0,.45,.7,.9][lv]||.7;
+  return CATF.map(c=>{if(Math.random()>p||typeof DICT==='undefined'||!DICT[c])return '';const ws=[...DICT[c]].filter(w=>catOk(w,d.L)&&!catAl(w,d.L));return ws.length?ws[rnd(ws.length)]:'';});};
 function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ---------- majority ---------- */
