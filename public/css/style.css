@@ -726,3 +726,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .ndiag .nd p{margin:0;font-weight:700;color:var(--ink)}
 .ndiag .nd .btn{align-self:flex-start}
 .nraw{display:block;margin-top:6px;font-size:12px;color:var(--mut);font-weight:400;direction:ltr;text-align:left;word-break:break-all}
+.nlog{margin:4px 2px 18px;color:var(--mut)}
+.nlog summary{font-weight:700;cursor:pointer;padding:6px 0}
+.nlog pre{direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.5;background:var(--card);border-radius:12px;padding:10px;margin:6px 0 0;max-height:320px;overflow:auto}

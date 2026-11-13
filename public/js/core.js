@@ -281,7 +281,8 @@ function renderNear(){
   <div class="panel"><h3>اسمك</h3><input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off"></div>
   <div class="panel"><h3>أنشئ غرفة قريبة</h3><p>أصحابك اللي جنبك يشوفون غرفتك عندهم ويدخلون بضغطة، بدون إنترنت</p><button class="big red" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
   <div class="panel"><h3>الغرف القريبة</h3>${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><span>${f.code}</span><i>ادخل</i></button>`).join('')}</div>`:S.nearScan?`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`:'<p class="note">البحث متوقف</p>'}</div>
-  ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
+  ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}
+  ${NEARROOM.log.length?`<details class="nlog"><summary>تفاصيل الاتصال</summary><pre>${escH(NEARROOM.log.join('\n'))}</pre></details>`:''}`;
 }
 // turns a native error into a short Arabic hint, with the raw code kept for us
 function nearErr(m){m=String(m||'');const raw=m&&m!=='perm'&&m!=='timeout'?`<small class="ltr nraw">${escH(m.slice(0,90))}</small>`:'';
@@ -304,7 +305,8 @@ async function nearCheck(){
   return D;}
 async function startNear(){
   if(S.mode==='near'&&NEARROOM.scanning)await NEARROOM.stopAll();
-  S.mode='near';S.roomErr=null;S.nearList=[];S.nearScan=false;S.nearDiag=[];render();
+  S.mode='near';S.roomErr=null;S.nearList=[];S.nearScan=false;S.nearDiag=[];
+  NEARROOM.onLog=()=>{if(S.mode==='near')render();};render();
   const D=await nearCheck();if(S.mode!=='near')return;
   const r=await NEARROOM.scan(list=>{S.nearList=list;if(S.mode==='near')render();});
   if(S.mode!=='near')return;

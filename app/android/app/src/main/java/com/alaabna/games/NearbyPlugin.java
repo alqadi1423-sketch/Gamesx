@@ -26,6 +26,8 @@ import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback;
+import com.google.android.gms.nearby.connection.ConnectionOptions;
+import com.google.android.gms.nearby.connection.ConnectionType;
 import com.google.android.gms.nearby.connection.ConnectionResolution;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
 import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo;
@@ -225,7 +227,11 @@ public class NearbyPlugin extends Plugin {
     @PluginMethod
     public void advertise(PluginCall call) {
         String name = call.getString("name", "room");
-        AdvertisingOptions opt = new AdvertisingOptions.Builder().setStrategy(Strategy.P2P_STAR).build();
+        // small game messages only: stay on Bluetooth and never switch the phone's Wi-Fi on or off
+        AdvertisingOptions opt = new AdvertisingOptions.Builder()
+            .setStrategy(Strategy.P2P_STAR)
+            .setConnectionType(ConnectionType.NON_DISRUPTIVE)
+            .build();
         client.stopAdvertising();
         client.startAdvertising(name, SERVICE_ID, lifeCb, opt)
             .addOnSuccessListener(v -> call.resolve())
@@ -261,7 +267,8 @@ public class NearbyPlugin extends Plugin {
             call.reject("no id");
             return;
         }
-        client.requestConnection(name, id, lifeCb)
+        ConnectionOptions opt = new ConnectionOptions.Builder().setConnectionType(ConnectionType.NON_DISRUPTIVE).build();
+        client.requestConnection(name, id, lifeCb, opt)
             .addOnSuccessListener(v -> call.resolve())
             .addOnFailureListener(e -> call.reject(msg(e)));
     }
