@@ -399,7 +399,7 @@ function fabs(){const u=unread();return `<div class="rx">${S.me!=null?'<button c
 function chatHTML(){const L=chatList();let prev=null;
   const items=L.map(m=>{const mine=m.r===S.me,first=prev!==m.r;prev=m.r;
     return `<div class="msg ${mine?'me':''} ${first?'first':''}" style="--c:${COLS[m.r]||'#888'}">${first&&!mine?`<b>${chatName(m)}</b>`:''}<span>${escH(m.x)}</span><time>${hhmm(m.t)}</time></div>`;}).join('');
-  return `<div class="msgs">${items||'<div class="empty">👋<br>ما فيه رسائل للحين</div>'}</div>
+  return `<div class="msgs">${items||'<div class="chat-empty">👋<br>ما فيه رسائل للحين</div>'}</div>
   <div class="chatin"><input class="field" data-draft="chat" value="${escH(S.draft.chat||'')}" maxlength="200" placeholder="اكتب رسالة…" autocomplete="off" enterkeyhint="send"><button class="send" data-a="send" aria-label="إرسال"><svg viewBox="0 0 24 24"><path d="M20 12L4 4l3 8-3 8z" fill="currentColor"/></svg></button></div>`;}
 function sendChat(){const x=String(S.draft.chat||'').trim().slice(0,200);if(!x||S.mode!=='online')return;const m={i:rid()+rid(),t:Date.now(),x};S.myChat=[...S.myChat,m].slice(-10);S.chat[m.i]={...m,r:S.me,n:S.myName};S.draft.chat='';S.chatSeen=Date.now();publish();const el=app.querySelector('[data-draft="chat"]');if(el)el.value='';render();if(el)el.focus({preventScroll:true});}
 function chatPop(m){sfx('pop');const el=document.createElement('div');el.className='chatpop';el.innerHTML=`<b style="color:${COLS[m.r]||'#888'}">${chatName(m)}</b> ${escH(m.x)}`;el.addEventListener('click',()=>{S.modal='chat';S.chatSeen=Date.now();render();el.remove();});document.body.appendChild(el);setTimeout(()=>el.remove(),3500);}

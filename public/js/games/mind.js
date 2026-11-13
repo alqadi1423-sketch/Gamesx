@@ -65,11 +65,11 @@ GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
   render(d,ctx){S.mm=S.mm||[];
     const fb=(b,w)=>`<span class="fb">${Array(4).fill(0).map((_,k)=>`<i class="${k<b?'b':k<b+w?'w':''}"></i>`).join('')}</span>`;
     let s=`<div class="mmb">`;
-    s+=`<div class="mmr code">${d.win!=null?pegs(d.code):'<span class="peg q">؟</span>'.repeat(4)}<span class="fbl">الشفرة</span></div>`;
+    s+=`<div class="mmr code">${d.win!=null?pegs(d.code):'<span class="peg pq">؟</span>'.repeat(4)}<span class="fbl">الشفرة</span></div>`;
     s+=`<div class="mmh">${d.h.length?d.h.map(x=>{const [b,w]=mmScore(d.code,x.g);return `<div class="mmr"><i class="who" style="background:${col(d,x.s)}"></i>${pegs(x.g)}${fb(b,w)}</div>`;}).join(''):'<p class="mme">ما فيه محاولات للحين</p>'}</div>`;
     if(ctx.my)s+=`<div class="mmr cur"><i class="who" style="background:${col(d,d.turn)}"></i>${[0,1,2,3].map(k=>S.mm[k]!=null?`<span class="peg" style="background:${MMC[S.mm[k]]}"></span>`:'<span class="peg e"></span>').join('')}<span class="fb"></span></div>`;
     s+='</div>';
-    if(ctx.my)s+=`<div class="mmpal">${MMC.map((c,k)=>`<button class="peg big" style="background:${c}" data-ga="add" data-i="${k}" ${S.mm.length>=4?'disabled':''} aria-label="لون"></button>`).join('')}</div>
+    if(ctx.my)s+=`<div class="mmpal">${MMC.map((c,k)=>`<button class="peg pbig" style="background:${c}" data-ga="add" data-i="${k}" ${S.mm.length>=4?'disabled':''} aria-label="لون"></button>`).join('')}</div>
       <div class="acts"><button class="btn navy" data-ga="clr" ${S.mm.length?'':'disabled'}>مسح</button><button class="btn red" data-ga="go" ${S.mm.length===4?'':'disabled'}>جرّب</button></div>`;
     return s;},
   click(a,i,d,ctx){

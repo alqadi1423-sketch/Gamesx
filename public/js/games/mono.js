@@ -83,7 +83,7 @@ function mCellHTML(d,i){const q=MP[i],t=q[0],side=MSIDE(i),[r,c]=MPOS(i),o=d.own
   else if(t==='rr'||t==='ut')inner=`<span class="ic">${t==='rr'?'🚆':i===12?'⚡':'💧'}</span><span class="nm">${t==='rr'?q[1].replace('محطة ',''):q[1]}</span><span class="pr">${q[2]}</span>`;
   else if(t==='tax')inner=`<span class="ic">💸</span><span class="nm">ضريبة</span><span class="pr">${q[2]}</span>`;
   else inner=`<span class="ic">${MICO[t]}</span><span class="nm">${q[1]}</span>`;
-  return `<button class="mc s${side} ${t} ${o!=='.'?'own':''} ${d.mg[i]==='1'?'mort':''} ${S.mcell===i?'pick':''}" data-ga="cell" data-i="${i}" data-c="${i}" style="grid-row:${r};grid-column:${c};${oc?`--o:${oc}`:''}">${inner}<span class="tks">${toks}</span></button>`;}
+  return `<button class="mc ms${side} mt-${t} ${o!=='.'?'own':''} ${d.mg[i]==='1'?'mort':''} ${S.mcell===i?'pick':''}" data-ga="cell" data-i="${i}" data-c="${i}" style="grid-row:${r};grid-column:${c};${oc?`--o:${oc}`:''}">${inner}<span class="tks">${toks}</span></button>`;}
 function mDetail(d,i){const q=MP[i],t=q[0],o=d.own[i];let s=`<div class="mdet"><button class="x" data-ga="cell" data-i="${i}">✕</button>`;
   if(t==='p'){s+=`<div class="dh" style="background:${MGC[q[3]]}">${q[1]}</div><table>${['الإيجار','مع بيت','بيتين','3 بيوت','4 بيوت','فندق'].map((l,k)=>`<tr ${+d.hs[i]===k&&o!=='.'?'class="on"':''}><td>${l}</td><td>${q[4][k]}</td></tr>`).join('')}</table><small>سعر البيت ${q[5]} • السعر ${q[2]}<br>لو ملكت كل اللون يتضاعف الإيجار</small>`;}
   else if(t==='rr')s+=`<div class="dh" style="background:#2D4763">🚆 ${q[1]}</div><table>${[1,2,3,4].map(k=>`<tr><td>${k} محطة</td><td>${25*2**(k-1)}</td></tr>`).join('')}</table><small>السعر ${q[2]}</small>`;
