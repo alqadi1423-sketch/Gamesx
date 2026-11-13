@@ -71,6 +71,10 @@ jobs:
   publish:
     needs: apk
     runs-on: ubuntu-latest
+    # never cut short halfway through swapping the APK
+    concurrency:
+      group: android-publish
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
@@ -101,3 +105,5 @@ jobs:
           if [ -n "$old" ]; then gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"; fi
           gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name=alaabna.apk --silent
           gh release edit app-latest --notes "$NOTES"
+          # point the release tag at this build so the page and its source match the APK
+          gh api -X PATCH "repos/$GH_REPO/git/refs/tags/app-latest" -f sha="$GITHUB_SHA" -F force=true --silent

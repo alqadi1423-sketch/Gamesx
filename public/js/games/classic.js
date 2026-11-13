@@ -138,7 +138,7 @@ function randFleet(){
 const seaReady=(p,d)=>!!(p&&p.gid===d.gid&&(p.ready||d.auto)&&p.f);
 const allReady=(d,pr)=>d.pl.every((r,s)=>d.out[s]==='1'||seaReady(pr[r],d));
 // online, seats still placing ships whose player has left; the turn seat is left to the room's own skip button
-const seaGone=(d,pr)=>S.mode!=='online'||d.win!=null?[]:aliveSeats(d).filter(s=>s!==d.turn&&!S.roles.has(d.pl[s])&&!seaReady(pr[d.pl[s]],d));
+const seaGone=(d,pr)=>S.mode!=='online'||d.win!=null?[]:aliveSeats(d).filter(s=>s!==d.turn&&!S.roles.has(d.pl[s])&&Date.now()-((S.goneAt||{})[d.pl[s]]??S.joinT??0)>=GRACE&&!seaReady(pr[d.pl[s]],d));
 function seaGrid(f,sh,show,click,small){
   const sunk=new Set();
   if(f)for(const L of SL){const cs=[];for(let i=0;i<64;i++)if(f[i]===L)cs.push(i);if(cs.length&&cs.every(i=>sh[i]==='o'))sunk.add(L);}

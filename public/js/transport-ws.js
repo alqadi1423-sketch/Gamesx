@@ -24,7 +24,7 @@ window.WSROOM={
       if(!opened){stop();no(new Error(full?'full':'ws'));return;}
       if(up||full){up=false;tell(full?'full':'lost');}
       clearTimeout(again);const t=Math.min(30000,1500*2**Math.min(tries++,5));again=setTimeout(connect,t*(.8+Math.random()*.4));};
-    const api={name,max:60000,   // the room passes on messages of up to 64 000 characters
+    const api={name,max:32000,   // the room server drops messages over 32 768 characters (worker/index.js MAX_MSG)
       presence:async patch=>{mine={...mine};for(const k in patch){if(patch[k]===null)delete mine[k];else mine[k]=patch[k];}mine=JSON.parse(JSON.stringify(mine));send({t:'p',p:mine});emit();},
       onPeers:(h,st)=>{hs.push(h);if(st)sts.push(st);setTimeout(emit,0);return()=>{hs=hs.filter(x=>x!==h);sts=sts.filter(x=>x!==st);};},
       leave:async()=>{hs=[];sts=[];stop();}};

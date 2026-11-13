@@ -25,7 +25,8 @@ function pnameText(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myNa
 function pname(r){return escH(pnameText(r));}
 /* ================= bots: only on one phone (local mode) ================= */
 const BOTL=['','سهل','متوسط','صعب'];
-const hasBots=()=>S.mode==='local'&&Object.keys(S.bots||{}).some(r=>S.bots[r]&&+r<S.localN);
+// a running game keeps its bots even if the player count was lowered under it afterwards
+const hasBots=()=>S.mode==='local'&&(Object.keys(S.bots||{}).some(r=>S.bots[r]&&+r<S.localN)||!!(S.st.d&&S.st.d.win==null&&S.st.d.pl.some(r=>(S.bots||{})[r])));
 const isBot=(d,s)=>S.mode==='local'&&!!(S.bots||{})[d.pl[s]];
 const botLv=(d,s)=>(S.bots||{})[d.pl[s]]||1;
 const humanSeats=d=>d.pl.map((_,s)=>s).filter(s=>!isBot(d,s));
@@ -243,7 +244,7 @@ const CFGOK={pick:v=>v==='host'||v==='all',timer:v=>[0,15,30,60].includes(v),tar
 function cleanCfg(c,base){const o={...CFG0,...base};if(c&&typeof c==='object')for(const k in CFGOK)if(CFGOK[k](c[k]))o[k]=Array.isArray(c[k])?[...new Set(c[k])]:c[k];return o;}
 const cleanSc=sc=>Array.isArray(sc)&&sc.length===MAXP&&sc.every(x=>typeof x==='number'&&isFinite(x))?sc.slice():null;
 const TAGOK=/^<(?:\/(?:b|small|span|em|i|u|strong|bdi)|br\s*\/?|(?:b|small|span|em|i|u|strong|bdi)(?:\s+(?:class="[\w -]{0,40}"|dir="(?:ltr|rtl|auto)"|style="(?:(?:color|background|font-size|font-weight|--c):(?:#[0-9A-Fa-f]{3,8}|var\(--[\w-]+\)|\d{1,3}(?:px|%)?|bold);?)+"))*)\s*>$/;
-function cleanStr(t){return t.split(/(<[^<>]*>)/).map((x,i)=>i%2&&TAGOK.test(x)?x:x.replace(/<(?=[A-Za-z\/!?])/g,'&lt;').replace(/"/g,'&quot;')).join('');}
+function cleanStr(t){return t.split(/(<[^<>]*>)/).map((x,i)=>i%2&&TAGOK.test(x)?x:x.replace(/<(?=[A-Za-z\/!?])/g,'&lt;').replace(/"/g,'”')).join('');}
 function cleanVal(v,k){if(typeof v==='string')return cleanStr(v);if(v==null||typeof v==='number'||typeof v==='boolean')return v;if(k>12||typeof v!=='object')throw 0;
   if(Array.isArray(v))return v.map(x=>cleanVal(x,k+1));const o={};for(const n of Object.keys(v))if(n!=='__proto__')o[cleanStr(n)]=cleanVal(v[n],k+1);return o;}
 function cleanD(d){
@@ -292,7 +293,7 @@ function onPeers(ch){
   const h=actingHost(),hp=h!=null&&h!==S.me&&hold[h]?hold[h].presence:null;let synced=false;
   if(adopt){
     const oldGid=S.st.d&&S.st.d.gid,oldG=S.st.g,hsc=adopt.pr===hp||S.fresh?cleanSc(adopt.pr.sc):null;
-    S.st={g:adopt.g,s:adopt.s,d:adopt.d,sc:hsc||winCredit(S.st.sc,S.st.d,adopt.d),cfg:S.st.cfg};S.fresh=false;
+    S.st={g:adopt.g,s:adopt.s,d:adopt.d,sc:hsc||winCredit(S.st.d&&S.st.d.mw!=null&&(adopt.d&&adopt.d.gid)!==oldGid?Array(MAXP).fill(0):S.st.sc,S.st.d,adopt.d),cfg:S.st.cfg};S.fresh=false;
     if(S.st.g!==oldG){resetUI();S.browse=false;S.showResult=false;}else if((S.st.d&&S.st.d.gid)!==oldGid){resetUI();S.showResult=false;}
   }
   if(hp){const c=cleanCfg(hp.cfg,S.st.cfg),sc=Number.isInteger(hp.s)&&hp.s>=S.st.s&&cleanSc(hp.sc);
@@ -592,7 +593,7 @@ app.addEventListener('click',e=>{
   const t=e.target.closest('[data-a],[data-ga]');if(!t||t.disabled)return;
   if(t.classList.contains('sheet-bg')&&e.target!==t)return;
   const i=t.dataset.i!=null?+t.dataset.i:null;
-  if(t.dataset.ga){const G=GAMES[S.st.g];if(G&&S.st.d)G.click(t.dataset.ga,i,S.st.d,mkCtx());return;}
+  if(t.dataset.ga){if(netDown())return;const G=GAMES[S.st.g];if(G&&S.st.d)G.click(t.dataset.ga,i,S.st.d,mkCtx());return;}
   switch(t.dataset.a){
     case 'home':if(S.mode==='near'&&window.NEARROOM)NEARROOM.stopAll();S.mode=null;render();break;
     case 'near':startNear();break;
