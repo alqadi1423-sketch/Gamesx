@@ -7,8 +7,8 @@ function lineWin(b,sz,k){for(let r=0;r<sz;r++)for(let c=0;c<sz;c++){const v=b[r*
 GAMES.ttt={name:'إكس أو',cat:'board',lbc:'#B9483F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E36A5E"/><path d="M38 12V72M62 12V72M14 30H86M14 54H86" stroke="#2D4763" stroke-width="5" stroke-linecap="round"/><path d="M19 37L32 49M32 37L19 49" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="42" r="7" stroke="#4AB1E8" stroke-width="5" fill="none"/><circle cx="74" cy="19" r="6" stroke="#4AB1E8" stroke-width="5" fill="none"/></svg>`,
   init:n=>{const [sz,k]=TTS[n]||[8,4];return {sz,k,b:'.'.repeat(sz*sz),ln:null};},
-  status:(d,ctx)=>turnTxt(d,ctx)+(d.pl.length>2?`<br><small>أول واحد يصف ${d.k} ورا بعض يفوز</small>`:''),
-  render(d,ctx){const g=d.sz>5?4:d.sz>3?5:8;return `<div class="ttt" style="grid-template-columns:repeat(${d.sz},1fr);gap:${g}px">${[...d.b].map((c,i)=>`<button class="tc ${d.ln&&d.ln.includes(i)?'hl':''}" data-ga="m" data-i="${i}" ${c!=='.'||!ctx.my?'disabled':''}>${c!=='.'?shape(d.pl[+c]):''}</button>`).join('')}</div>`;},
+  status:(d,ctx)=>turnTxt(d,ctx),
+  render(d,ctx){const g=d.sz>5?4:d.sz>3?5:8;return `<div class="ttt" style="grid-template-columns:repeat(${d.sz},minmax(0,1fr));gap:${g}px">${[...d.b].map((c,i)=>`<button class="tc ${d.ln&&d.ln.includes(i)?'hl':''}" data-ga="m" data-i="${i}" ${c!=='.'||!ctx.my?'disabled':''}>${c!=='.'?shape(d.pl[+c]):''}</button>`).join('')}</div>`;},
   click(a,i,d,ctx){
     if(!ctx.my||d.b[i]!=='.')return;
     const b=setAt(d.b,i,String(d.turn));const r=lineWin(b,d.sz,d.k);let win=null,ln=null;
@@ -22,7 +22,7 @@ const cntSeat=(s,n)=>{const a=Array(n).fill(0);for(const c of s)if(c!=='.')a[+c]
 GAMES.dots={name:'نقاط ومربعات',cat:'board',lbc:'#8F86C9',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D8D2F6"/><rect x="22" y="22" width="28" height="28" fill="#F6B3AC"/><path d="M22 22H50V50H22Z" stroke="#EC6158" stroke-width="4" fill="none"/><path d="M50 50H78M78 22V50" stroke="#4AB1E8" stroke-width="4"/>${[22,50,78].map(y=>[22,50,78].map(x=>`<circle cx="${x}" cy="${y}" r="5" fill="#2D4763"/>`).join('')).join('')}</svg>`,
   init:n=>{const B=n===2?4:n<=4?5:6;return {B,h:'.'.repeat((B+1)*B),v:'.'.repeat(B*(B+1)),bx:'.'.repeat(B*B)};},
-  status(d,ctx){const c=cntSeat(d.bx,d.pl.length);return `${turnTxt(d,ctx)}<br>${c.map((x,s)=>`<span class="mini" style="background:${col(d,s)}">${x}</span>`).join('')}`;},
+  points:d=>cntSeat(d.bx,d.pl.length),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra(d){const c=cntSeat(d.bx,d.pl.length);return 'المربعات: '+c.map((x,s)=>`${nm(d,s)} ${x}`).join('، ');},
   render(d,ctx){
     const B=d.B,st=80/B,P=k=>10+k*st,sw=B>4?2.6:3.2,hw=B>4?7:9;let bx='',hits='',lines='',dots='';
@@ -73,7 +73,7 @@ GAMES.snakes={name:'السلم والثعبان',cat:'board',lbc:'#A8743F',
     const anim=S.rolled;S.rolled=false;
     return `<div class="sl"><div class="cells">${cells}</div><svg viewBox="0 0 100 100">${ov}</svg></div>
       ${off.length?`<div class="start">قبل البداية: ${off.map(s=>`<span class="mini" style="background:${col(d,s)}">${nm(d,s)}</span>`).join('')}</div>`:''}
-      <div class="row" style="align-items:center"><div class="dice ${anim?'roll':''}">${d.dice?diceSVG(d.dice):''}</div><button class="big" style="width:auto;margin:0;background:${col(d,d.turn)}" data-ga="roll" ${ctx.my?'':'disabled'}>ارمِ النرد</button></div>
+      <div class="row" style="align-items:center;gap:14px"><div class="dice ${anim?'roll':''}">${d.dice?diceSVG(d.dice):''}</div><button class="btn" style="background:${col(d,d.turn)}" data-ga="roll" ${ctx.my?'':'disabled'}>ارمِ النرد</button></div>
       <div class="slmsg">${d.msg||''}</div>`;
   },
   click(a,i,d,ctx){
@@ -101,7 +101,7 @@ GAMES.cw={name:'حرب الألوان',cat:'board',lbc:'#4B3A62',
   status(d,ctx){return turnTxt(d,ctx)+(d.mv[d.turn]===0?'<br><small>أول حركة: اختر أي خانة فاضية</small>':'<br><small>اضغط على خانة من لونك، توصل 4 تنفجر</small>');},
   render(d,ctx){
     const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z;
-    return `<div class="cw" style="grid-template-columns:repeat(${Z},1fr);gap:${Z>6?4:6}px">${[...d.o].map((o,i)=>{const can=ctx.my&&(first?o==='.':o===t);
+    return `<div class="cw" style="grid-template-columns:repeat(${Z},minmax(0,1fr));gap:${Z>6?4:6}px">${[...d.o].map((o,i)=>{const can=ctx.my&&(first?o==='.':o===t);
       return `<button class="cc ${can?'can':''}" style="${o!=='.'?`background:${lit(d,+o)}`:''}" data-ga="m" data-i="${i}" ${can?'':'disabled'}>${o!=='.'?cwCell(col(d,+o),+d.n[i]):''}</button>`;}).join('')}</div>`;
   },
   click(a,i,d,ctx){
@@ -225,7 +225,7 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
   privInit:()=>({sec:rnd(24)}),
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
-  status(d,ctx){return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.pl.length>2?'<br><small>تخمين صح يطلّع صاحب الشخصية، وتخمين غلط يطلّعك</small>':'');},
+  status(d,ctx){return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);},
   winExtra(d,ctx){const p=ctx.priv;return `${d.last}<br>`+d.pl.map((r,s)=>`${nm(d,s)}: ${p[r]&&p[r].gid===d.gid?PEOPLE[p[r].sec].name:'؟'}`).join('، ');},
   render(d,ctx){
     let v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;
@@ -240,7 +240,7 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
     s+=`<div class="gw">${PEOPLE.map((p,i)=>{const out=el[i]==='1';return gm&&!out?pc(i,'pick',`data-ga="guess" data-i="${i}"`):pc(i,out?'out':'');}).join('')}</div>`;
     if(myTurn){
       if(gm)s+=`<div class="row"><button class="sm" data-ga="gmode">رجوع للأسئلة</button></div>`;
-      else s+=`<p class="lbl" style="text-align:center">اسأل: هل شخصية ${nm(d,o)} فيها…</p><div class="qs">${QS.map((q,k)=>`<button class="q" data-ga="ask" data-i="${k}">${q[0]}؟</button>`).join('')}</div><div class="row"><button class="big navy" style="width:auto;margin:0" data-ga="gmode">أعرفه! أبي أخمّن</button></div>`;
+      else s+=`<p class="lbl" style="text-align:center">اسأل: هل شخصية ${nm(d,o)} فيها…</p><div class="qs">${QS.map((q,k)=>`<button class="q" data-ga="ask" data-i="${k}">${q[0]}؟</button>`).join('')}</div><div class="acts"><button class="btn navy" data-ga="gmode">أعرفه! أبي أخمّن</button></div>`;
     }
     return s;
   },

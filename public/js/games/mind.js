@@ -13,7 +13,7 @@ const ALPHA='ابتثجحخدذرزسشصضطظعغفقكلمنهوي';
 GAMES.word={name:'خمّن الكلمة',cat:'mind',lbc:'#3E7C59',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#58A777"/>${[0,1,2,3].map(k=>`<rect x="${10+k*21}" y="34" width="17" height="24" rx="4" fill="#fff"/><rect x="${10+k*21}" y="58" width="17" height="4" fill="#2D4763"/>`).join('')}<text x="39" y="53" font-size="17" font-weight="800" fill="#2D4763" text-anchor="middle">م</text><text x="81" y="53" font-size="17" font-weight="800" fill="#2D4763" text-anchor="middle">ج</text></svg>`,
   init:n=>{const cats=Object.keys(WORDS);const cat=cats[rnd(cats.length)];const list=WORDS[cat];return {cat,w:list[rnd(list.length)],g:'',pts:Array(n).fill(0),last:''};},
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br>'+ptsBadges(d,d.pts)+'<br><small>كل حرف صح يعطيك نقاط بعدد مرات ظهوره وتكمل، والخطأ يمرّر الدور</small>',
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>`الكلمة: ${d.w}`,
   render(d,ctx){
     return `<p class="lbl">التصنيف: ${d.cat}</p><div class="wordbox">${[...d.w].map(ch=>`<div class="wl">${d.g.includes(ch)||d.win!=null?ch:''}</div>`).join('')}</div>
@@ -31,7 +31,7 @@ GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
   init:()=>({sec:1+rnd(100),lo:1,hi:100,last:''}),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>الرقم السري بين ${d.lo} و ${d.hi}</small>`,
   winExtra:d=>`الرقم كان ${d.sec}`,
-  render(d,ctx){let s='<div class="cellgrid" style="grid-template-columns:repeat(10,1fr);background:#6B4FA0;gap:3px">';
+  render(d,ctx){let s='<div class="cellgrid" style="grid-template-columns:repeat(10,minmax(0,1fr));background:#6B4FA0;gap:3px">';
     for(let n=1;n<=100;n++){const ok=n>=d.lo&&n<=d.hi;s+=`<button class="cg" style="font-size:13px;${ok?'':'opacity:.25'};${d.win!=null&&n===d.sec?'background:#ffd84d':''}" data-ga="m" data-i="${n}" ${ctx.my&&ok?'':'disabled'}>${n}</button>`;}
     return s+'</div>';},
   click(a,n,d,ctx){
@@ -45,8 +45,8 @@ GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
 GAMES.nim={name:'أعواد الكبريت',cat:'mind',lbc:'#9C4A2F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9673F"/>${[0,1,2,3,4].map(k=>`<rect x="${20+k*13}" y="22" width="7" height="56" rx="3.5" fill="#E8C38E" transform="rotate(${(k-2)*5} 50 50)"/><rect x="${19+k*13}" y="18" width="9" height="13" rx="4.5" fill="#E8574E" transform="rotate(${(k-2)*5} 50 50)"/>`).join('')}</svg>`,
   init:n=>{const k=Math.min(3+Math.floor(n/2),7);return {p:Array(k).fill(0).map(()=>3+rnd(5)),last:''};},
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br><small>خذ عود أو أكثر من كومة وحدة، واللي ياخذ آخر عود يفوز</small>',
-  render(d,ctx){return d.p.map((n,pi)=>`<div class="pile">${n?Array(n).fill(0).map((_,j)=>`<button class="stick" data-ga="m" data-i="${pi*100+j}" ${ctx.my?'':'disabled'} title="${n-j}"></button>`).join(''):'<span class="note">فاضية</span>'}</div>`).join('')+'<p class="note">اضغط على عود، تاخذه هو وكل اللي بعده في نفس الكومة</p>';},
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
+  render(d,ctx){return `<div class="piles">${d.p.map((n,pi)=>`<div class="pilecard ${n?'':'empty'}"><span class="pn">${pi+1}</span><div class="sticks">${n?Array(n).fill(0).map((_,j)=>`<button class="match" data-ga="m" data-i="${pi*100+j}" ${ctx.my?'':'disabled'} aria-label="خذ ${n-j}"></button>`).join(''):'<span class="note">فاضية</span>'}</div><b class="pc2">${n}</b></div>`).join('')}</div>${ctx.my?'<p class="note">اضغط على عود: تاخذه هو وكل اللي على يساره</p>':''}`;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const pi=Math.floor(i/100),j=i%100;if(j>=d.p[pi])return;const t=d.turn;const take=d.p[pi]-j;const p=[...d.p];p[pi]=j;
     const empty=p.every(x=>x===0);act({...d,p,win:empty?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} أخذ ${take} من الكومة ${pi+1}`});
@@ -60,7 +60,7 @@ const pegs=(g)=>[...g].map(c=>`<span class="peg" style="background:${MMC[+c]}"><
 GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F5D80"/>${[0,1,2].map(r=>[0,1,2,3].map(c=>`<circle cx="${20+c*17}" cy="${28+r*22}" r="7" fill="${MMC[(r*2+c*3)%6]}" stroke="#fff" stroke-width="2"/>`).join('')+`<circle cx="88" cy="${24+r*22}" r="3" fill="#fff"/><circle cx="88" cy="${33+r*22}" r="3" fill="#1d2f44"/>`).join('')}</svg>`,
   init:()=>({code:Array(4).fill(0).map(()=>rnd(6)).join(''),h:[],last:''}),
-  status:(d,ctx)=>turnTxt(d,ctx)+'<br><small>ركّب 4 ألوان. الدائرة الغامقة: لون صح بمكان صح، والبيضاء: لون صح بمكان غلط. أول من يكسر الشفرة يفوز</small>',
+  status:(d,ctx)=>turnTxt(d,ctx),
   winExtra:()=>'الشفرة ظاهرة تحت',
   render(d,ctx){S.mm=S.mm||[];
     let s=d.win!=null?`<div class="mm">${pegs(d.code)}</div>`:'';
@@ -82,9 +82,9 @@ GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
 GAMES.c31={name:'لا تقول 31',cat:'mind',lbc:'#C0392B',
   icon:iconE('#E35D4F','31','rgba(255,255,255,.25)').replace('font-size="40"','font-size="34" font-weight="800" fill="#fff"'),
   init:n=>({n:0,tgt:n>4?41:31,last:''}),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>زِد 1 أو 2 أو 3، واللي يوصل ${d.tgt} يطلع. آخر واحد يبقى يفوز</small>`,
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){return `<div class="big-num" style="font-size:80px;color:${col(d,d.turn)}">${d.n}</div><p class="note">الهدف اللي محد يبي يقوله: ${d.tgt}</p>
-    <div class="row">${[1,2,3].map(k=>`<button class="big" style="width:80px;margin:0;background:${col(d,d.turn)}" data-ga="m" data-i="${k}" ${ctx.my&&d.n+k<=d.tgt?'':'disabled'}>+${k}</button>`).join('')}</div>`;},
+    <div class="row">${[1,2,3].map(k=>`<button class="btn" style="background:${col(d,d.turn)}" data-ga="m" data-i="${k}" ${ctx.my&&d.n+k<=d.tgt?'':'disabled'}>+${k}</button>`).join('')}</div>`;},
   click(a,k,d,ctx){
     if(!ctx.my||d.n+k>d.tgt)return;const t=d.turn,n=d.n+k;
     if(n<d.tgt){act({...d,n,turn:nextSeat(d,t),last:`${nm(d,t)} قال ${n}`});return;}

@@ -3,7 +3,7 @@
 
 const simulViewer=d=>{if(d.win!=null)return null;for(let s=0;s<d.pl.length;s++)if(d.out[s]!=='1'&&!hasPicked(d,s))return s;return null;};
 const srng=(d,k)=>mulberry(seedOf(d.gid+'#'+k));
-const pickedChips=d=>`<div class="picks">${d.pl.map((r,s)=>d.out[s]==='1'?'':`<span class="chip" style="background:${col(d,s)};opacity:${hasPicked(d,s)?1:.4}">${nm(d,s)} ${hasPicked(d,s)?'✓':'…'}</span>`).join('')}</div>`;
+const pickedChips=()=>'';
 function simulStatus(d,ctx,extra){
   if(d.win!=null)return '';
   const me=ctx.local?ctx.v:ctx.v;let s=(d.res?`<small>${d.res}</small><br>`:'')+(extra||'');
@@ -18,9 +18,9 @@ GAMES.rps={name:'حجرة ورقة مقص',cat:'quiz',lbc:'#C76A2A',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#EE8A3C"/><text x="28" y="48" font-size="30" text-anchor="middle">✊</text><text x="72" y="48" font-size="30" text-anchor="middle">✋</text><text x="50" y="84" font-size="30" text-anchor="middle">✌️</text></svg>`,
   init:n=>({rd:0,pts:Array(n).fill(0),res:'',goal:5}),
   viewer:simulViewer,coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)+`<br><small>كل لاعب تغلبه تاخذ عليه نقطة، أول واحد يوصل ${d.goal} يفوز</small><br>`),
+  status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)),
   winExtra:d=>d.res,
-  render(d,ctx){return pickedChips(d)+`<div class="row">${RPS.map((e,k)=>`<button class="big" style="width:96px;margin:0;background:#fff;color:var(--ink);font-size:44px" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${e}<small style="color:var(--ink)">${RPSN[k]}</small></button>`).join('')}</div>`;},
+  render(d,ctx){return pickedChips(d)+`<div class="row">${RPS.map((e,k)=>`<button class="rpsb" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${e}<small>${RPSN[k]}</small></button>`).join('')}</div>`;},
   click(a,k,d,ctx){if(!ctx.my)return;simulPick(d,ctx.v,k);},
   resolve(d,picks){const pts=[...d.pts];const got=Array(d.pl.length).fill(0);
     for(let a=0;a<picks.length;a++)for(let b=0;b<picks.length;b++){if(picks[a]==null||picks[b]==null)continue;if((picks[a]+2)%3===picks[b])got[a]++;}
@@ -35,7 +35,7 @@ const ROUNDS=10;
 function makeQuiz(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
   init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
   viewer:simulViewer,coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)+`<br><small>سؤال ${Math.min(d.rd+1,ROUNDS)} من ${ROUNDS}</small><br>`),
+  status:(d,ctx)=>simulStatus(d,ctx,`<small>سؤال ${Math.min(d.rd+1,ROUNDS)} من ${ROUNDS}</small><br>`),
   winExtra:d=>d.res+'<br>النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
   render(d,ctx){if(d.win!=null)return '';const Q=o.gen(d,d.rd);
     return pickedChips(d)+`<div class="qbox">${Q.q}</div>${Q.o.map((t,k)=>`<button class="opt" style="${Q.big?'font-size:34px':''}" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}`;},

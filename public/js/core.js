@@ -26,7 +26,7 @@ const aliveSeats=(d,out)=>{out=out||d.out;return d.pl.map((_,s)=>s).filter(s=>ou
 const CFG0={pick:'host',timer:0,target:0,lock:false,kick:[],members:[]};
 const S={draft:{},sel:[],mode:null,localN:2,localNames:[],myName:lsGet(LSK.name)||'',names:{},mute:lsGet(LSK.mute)==='1',
   st:{g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}},me:null,myPeer:null,code:null,nr:null,roles:new Set(),priv:Array(MAXP).fill(null),
-  seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false,browse:false,modal:null,showResult:false,winKey:null,wasMy:false,rxSeen:{}};
+  chat:{},myChat:[],chatSeen:Date.now(),seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false,browse:false,modal:null,showResult:false,winKey:null,wasMy:false,rxSeen:{}};
 try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){S.localN=l.n||2;S.localNames=l.names||[];}}catch(e){}
 const GAMES={};
 const cfg=()=>S.st.cfg||CFG0;
@@ -49,7 +49,7 @@ function setGame(g){
 }
 function newRound(){const d=S.st.d;const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
   const st=d?(d.st||0)+1:0;S.st={...S.st,s:S.st.s+1,d:newD(S.st.g,st,pl)};S.seen=null;S.showResult=false;resetUI();afterChange();}
-function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];S.draft={...(S.draft.q!=null?{q:S.draft.q}:{})};S.sel=[];S.simon=null;S.lq=null;S.lf=null;}
+function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];S.draft={...(S.draft.q!=null?{q:S.draft.q}:{})};S.sel=[];S.simon=null;S.lq=null;S.lf=null;S.sp=null;}
 function act(nd){S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number')sc[nd.pl[nd.win]]++;S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
 function setCfg(patch){S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
 function setPriv(role,p){S.priv[role]=p;afterChange();}
@@ -75,8 +75,10 @@ function ensurePriv(){
 }
 function publish(rx){
   save();if(S.mode!=='online'||!S.nr)return;
-  const o={g:S.st.g,s:S.st.s,d:S.st.d,sc:S.st.sc,cfg:S.st.cfg,r:S.me,p:S.me==null?null:S.priv[S.me],n:S.myName.slice(0,14)};
+  const o={g:S.st.g,s:S.st.s,d:S.st.d,sc:S.st.sc,cfg:S.st.cfg,r:S.me,p:S.me==null?null:S.priv[S.me],n:S.myName.slice(0,14),ch:S.myChat.slice(-10)};
   if(rx)o.rx=rx;
+  // Claude rooms take 4 KB per player: drop the oldest chat lines first if the game state is large
+  while(o.ch.length&&new Blob([JSON.stringify(o)]).size>3800)o.ch=o.ch.slice(1);
   S.nr.presence(o).catch(e=>console.warn('presence',e));
 }
 function save(){
@@ -140,7 +142,7 @@ async function enterRoom(code,host,restore){
   let nr;
   try{nr=await room.join('g-'+code.toLowerCase());}
   catch(e){S.joining=false;S.roomErr='ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
-  S.mode='online';S.code=code;S.nr=nr;S.joining=false;S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
+  S.mode='online';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
   if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st};if(!Array.isArray(S.st.sc)||S.st.sc.length<MAXP)S.st.sc=Array(MAXP).fill(0);}
   else S.st={g:null,s:host?1:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};
   if(host){S.me=0;S.pending=false;if(!restore)S.modal='settings';}
@@ -158,13 +160,14 @@ function onPeers(ch){
     if(p.sameTab){S.myPeer=p.peer;continue;}
     if(p.kind!=='viewer')continue;const pr=p.presence||{};
     if(typeof pr.r==='number'){S.priv[pr.r]=pr.p??S.priv[pr.r];if(typeof pr.n==='string')S.names[pr.r]=pr.n;
+      if(Array.isArray(pr.ch))for(const m of pr.ch){if(m&&m.i&&!S.chat[m.i]&&typeof m.x==='string'){S.chat[m.i]={i:m.i,r:pr.r,n:pr.n||'',t:+m.t||Date.now(),x:m.x.slice(0,200)};if(S.chatReady&&S.modal!=='chat'&&!(S.browse||!S.st.g)){chatPop(S.chat[m.i]);}}}
       if(pr.rx&&pr.rx.t>(S.rxSeen[pr.r]||0)){S.rxSeen[pr.r]=pr.rx.t;if(Date.now()-pr.rx.t<8000)setTimeout(()=>floatRx(pr.r,pr.rx.e),0);}}
     if(S.me!=null&&pr.r===S.me&&String(p.peer)<String(S.myPeer)){S.me=pickRole(null);}
     if(typeof pr.s!=='number')continue;
     const better=pr.s>S.st.s||(pr.s===S.st.s&&pr.r===0&&S.me!==0&&JSON.stringify(pr.d??null)!==JSON.stringify(S.st.d));
     if(better&&(!adopt||pr.s>adopt.s))adopt=pr;
   }
-  recomputeRoles();
+  recomputeRoles();S.chatReady=true;
   if(adopt){
     const oldGid=S.st.d&&S.st.d.gid,oldG=S.st.g;
     S.st={g:adopt.g??null,s:adopt.s,d:adopt.d??null,sc:Array.isArray(adopt.sc)?adopt.sc:Array(MAXP).fill(0),cfg:{...CFG0,...(adopt.cfg||{})}};
@@ -206,12 +209,14 @@ function matchLeader(){const t=cfg().target;if(!t)return null;const sc=S.st.sc;c
 
 /* ================= screens ================= */
 function render(){
+  if(S.holdRender){S.renderPending=true;return;}S.renderPending=false;
   const ae=document.activeElement,fid=ae&&ae.dataset&&ae.dataset.draft,cs=fid&&ae.selectionStart;
   if(S.mode===null)renderHome();
   else if(S.mode==='lobby')renderLobby();
   else if(!S.st.g||!GAMES[S.st.g]||!S.st.d||S.browse)renderGrid();
   else renderGame();
   if(S.modal)app.insertAdjacentHTML('beforeend',modalHTML());
+  app.querySelectorAll('.msgs').forEach(b=>{b.scrollTop=b.scrollHeight;});
   if(fid){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus();try{el.setSelectionRange(cs,cs);}catch(e){}}}
   const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))G.after(S.st.d,mkCtx());
 }
@@ -253,6 +258,7 @@ function renderGrid(){
   else{
     const live=S.st.g&&S.st.d&&GAMES[S.st.g];
     if(live)mid+=`<div class="panel live"><b>اللعبة الحالية: ${GAMES[S.st.g].name}</b><button class="sm go" data-a="resumegame">ارجع لها</button></div>`;
+    mid+=`<div class="panel"><h3 style="margin:0 0 6px">💬 دردشة الغرفة</h3>${chatHTML()}</div>`;S.chatSeen=Date.now();
     mid+=players().length<2?'<p class="note">بانتظار لاعب ثاني على الأقل. أرسل لهم رمز الغرفة</p>':canPick()?'<p class="note">أي لعبة تختارها تنفتح عند الكل</p>':'<p class="note">صاحب الغرفة 👑 هو اللي يختار اللعبة</p>';
   }
   const q=normQ(S.draft.q||'');
@@ -263,7 +269,11 @@ function renderGrid(){
 }
 const normQ=t=>String(t).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ً-ْ]/g,'').trim();
 function scoreBar(sc,d){
-  return `<div class="score">${d.pl.map((r,s)=>`<div class="pl ${d.win==null&&d.turn===s&&!GAMES[S.st.g].resolve?'on':''} ${d.out[s]==='1'?'out':''}" data-r="${r}" style="background:${COLS[r]}">${PERSON}<b>${sc[r]||0}</b><span>${S.mode==='online'&&r===S.me?'أنت':pname(r)}</span></div>`).join('')}</div>`;
+  const G=GAMES[S.st.g];let pts=null;try{pts=G.points?G.points(d):(Array.isArray(d.pts)?d.pts:null);}catch(e){}
+  const simul=!!G.resolve;
+  return `<div class="players">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&d.turn===s;
+    const pk=simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u>✓</u>':'<u class="w8">…</u>'):'';
+    return `<div class="pchip ${on?'on':''} ${d.out[s]==='1'?'out':''}" data-r="${r}" style="--c:${COLS[r]}"><i>${pname(r).replace(/&[^;]+;/g,'').charAt(0)||'•'}</i><span>${label}</span>${pk}${pts?`<em>${pts[s]}</em>`:''}${sc[r]?`<b>🏆${sc[r]}</b>`:''}</div>`;}).join('')}</div>`;
 }
 function renderGame(){
   const {g,d,sc}=S.st,G=GAMES[g];const ctx=mkCtx();let body=null,cover=false;
@@ -282,7 +292,7 @@ function renderGame(){
   app.innerHTML=`${topBar(G.name,S.mode==='online'?'browse':'grid','<button class="ib" data-a="m-help" aria-label="القواعد">؟</button>')}${roomBar()}${scoreBar(sc,d)}
   <div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div>
   <div class="status ${ctx.my&&!cover&&S.mode==='online'?'mine':''}">${cover?'':statusHTML(d,G,ctx)}</div><div class="board">${body}</div>
-  ${S.mode==='online'&&S.me!=null?`<div class="rx"><button class="rxb" data-a="m-react">😊</button></div>`:''}
+  ${S.mode==='online'?`<div class="rx">${S.me!=null?'<button class="rxb" data-a="m-react">😊</button>':''}<button class="rxb" data-a="m-chat">💬${unread()?`<i class="badge">${unread()}</i>`:''}</button></div>`:''}
   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
 }
 function resultHTML(d,G,ctx){
@@ -292,7 +302,7 @@ function resultHTML(d,G,ctx){
     <h2 style="color:${c}">${winTitle(d,G,ctx)}</h2>${G.winExtra?`<p class="note">${G.winExtra(d,ctx)}</p>`:''}
     ${ml!=null?`<p class="hint">🏅 ${ml===S.me?'أنت فزت':pname(ml)+' فاز'} بالمباراة! (${S.st.sc[ml]} نقاط)</p>`:''}
     <div class="score">${d.pl.map(r=>`<div class="pl" style="background:${COLS[r]}">${PERSON}<b>${S.st.sc[r]}</b><span>${r===S.me?'أنت':pname(r)}</span></div>`).join('')}</div>
-    <div class="row"><button class="big red" style="width:auto;margin:0" data-a="again">جولة جديدة</button><button class="big navy" style="width:auto;margin:0" data-a="${S.mode==='online'?'browse':'grid'}">قائمة الألعاب</button></div>
+    <div class="acts"><button class="btn red" data-a="again">جولة جديدة</button><button class="btn navy" data-a="${S.mode==='online'?'browse':'grid'}">قائمة الألعاب</button></div>
     <button class="link" data-a="closeres">شوف اللوحة</button></div></div>`;
 }
 const RX=['👏','😂','😮','🔥','👍','❤️','😢','😡','🤔','🙏'];
@@ -300,6 +310,7 @@ function modalHTML(){
   const m=S.modal,c=cfg(),h=isHost();
   let inner='';
   if(m==='help'){const G=GAMES[S.st.g];inner=`<h2>${G?G.name:''}</h2><p style="line-height:1.9">${(typeof HELP!=='undefined'&&HELP[S.st.g])||'اتبع التعليمات اللي تطلع فوق اللوحة.'}</p>`;}
+  else if(m==='chat'){S.chatSeen=Date.now();inner=`<h2>💬 دردشة الغرفة</h2>${chatHTML()}`;}
   else if(m==='react'){inner=`<h2>رد سريع</h2><div class="row">${RX.map((e,i)=>`<button class="rxe" data-a="rx" data-i="${i}">${e}</button>`).join('')}</div>`;}
   else if(m==='settings'){
     const opt=(key,val,label)=>`<button class="seg ${c[key]===val?'on':''}" data-a="cfg" data-k="${key}" data-v="${val}" ${h?'':'disabled'}>${label}</button>`;
@@ -316,6 +327,15 @@ function modalHTML(){
   }
   return `<div class="sheet-bg" data-a="closemodal"><div class="sheet">${inner}<button class="big navy" data-a="closemodal">تم</button></div></div>`;
 }
+function chatList(){return Object.values(S.chat).sort((a,b)=>a.t-b.t).slice(-60);}
+function unread(){return Object.values(S.chat).filter(m=>m.t>S.chatSeen&&m.r!==S.me).length;}
+function chatName(m){return m.r===S.me?'أنت':(escH((S.names[m.r]||m.n||'').slice(0,14))||NAMES[m.r]||'لاعب');}
+function chatHTML(){const L=chatList();
+  return `<div class="chatbox"><div class="msgs">${L.length?L.map(m=>`<div class="msg ${m.r===S.me?'me':''}"><b style="color:${COLS[m.r]||'#888'}">${chatName(m)}</b><span>${escH(m.x)}</span></div>`).join(''):'<p class="note">ما فيه رسائل للحين. قول هلا 👋</p>'}</div>
+  <div class="chatin"><input class="field" data-draft="chat" value="${escH(S.draft.chat||'')}" maxlength="200" placeholder="اكتب رسالة" autocomplete="off"><button class="sm go" data-a="send">إرسال</button></div></div>`;}
+function sendChat(){const x=String(S.draft.chat||'').trim().slice(0,200);if(!x||S.mode!=='online')return;const m={i:rid()+rid(),t:Date.now(),x};S.myChat=[...S.myChat,m].slice(-10);S.chat[m.i]={...m,r:S.me,n:S.myName};S.draft.chat='';S.chatSeen=Date.now();publish();render();
+  const el=app.querySelector('[data-draft="chat"]');if(el)el.focus();}
+function chatPop(m){sfx('pop');const el=document.createElement('div');el.className='chatpop';el.innerHTML=`<b style="color:${COLS[m.r]||'#888'}">${chatName(m)}</b> ${escH(m.x)}`;el.addEventListener('click',()=>{S.modal='chat';S.chatSeen=Date.now();render();el.remove();});document.body.appendChild(el);setTimeout(()=>el.remove(),3500);}
 function floatRx(r,i){
   const e=RX[i];if(!e)return;const ch=app.querySelector(`.pl[data-r="${r}"]`)||app.querySelector(`.chip[data-r="${r}"]`);
   const el=document.createElement('div');el.className='floatrx';el.textContent=e;
@@ -359,6 +379,8 @@ app.addEventListener('click',e=>{
     case 'm-settings':S.modal='settings';render();break;
     case 'm-help':S.modal='help';render();break;
     case 'm-react':S.modal='react';render();break;
+    case 'm-chat':S.modal='chat';S.chatSeen=Date.now();render();setTimeout(()=>{const b=document.querySelector('.msgs');if(b)b.scrollTop=b.scrollHeight;},0);break;
+    case 'send':sendChat();break;
     case 'closemodal':S.modal=null;render();break;
     case 'rx':{S.modal=null;const rx={e:i,t:Date.now()};S.rxSeen[S.me]=rx.t;render();floatRx(S.me,i);publish(rx);break;}
     case 'cfg':{if(!isHost())return;let v=t.dataset.v;v=v==='true'?true:v==='false'?false:/^\d+$/.test(v)?+v:v;const p={[t.dataset.k]:v};if(t.dataset.k==='lock'&&v)p.members=players();setCfg(p);break;}
@@ -373,7 +395,7 @@ app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.draf
   if(k==='myname'){S.myName=e.target.value.trim().slice(0,14);lsSet(LSK.name,S.myName);clearTimeout(S.nmT);S.nmT=setTimeout(()=>publish(),400);}
   else if(/^ln\d$/.test(k)){S.localNames[+k[2]]=e.target.value;save();}
   else if(k==='q')render();});
-app.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}});
+app.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}else if(e.target.dataset&&e.target.dataset.draft==='chat'){e.preventDefault();sendChat();}});
 
 /* target picker used by sea battle and guess the person */
 function targets(d,me){return aliveSeats(d).filter(s=>s!==me);}

@@ -27,7 +27,7 @@ export class Room {
   }
 
   async webSocketMessage(ws, msg) {
-    if (typeof msg !== 'string' || msg.length > 8000) return;
+    if (typeof msg !== 'string' || msg.length > 64000) return;
     let m; try { m = JSON.parse(msg); } catch { return; }
     const a = ws.deserializeAttachment() || {};
     if (m.t === 'p') this.broadcast({ t: 'p', peer: a.peer, p: m.p ?? {} }, ws);

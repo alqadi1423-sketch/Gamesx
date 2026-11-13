@@ -15,10 +15,10 @@ GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',onTimeout:d=>{const n=d.pl.
     else{const cells=[...Array(z*z).keys()].map(i=>({i,r:Math.floor(i/z)-m,c:i%z-m})).sort((x,y)=>(x.r*x.r+x.c*x.c)-(y.r*y.r+y.c*y.c)).slice(0,2*n).sort((x,y)=>Math.atan2(x.r,x.c)-Math.atan2(y.r,y.c));
       cells.forEach((o,k)=>b[o.i]=String(k%n));}
     return {z,b:b.join('')};},
-  status(d,ctx){const c=cntSeat(d.b,d.pl.length);return turnTxt(d,ctx)+'<br>'+c.map((x,s)=>`<span class="mini" style="background:${col(d,s)}">${x}</span>`).join('')+'<br><small>حط قطعة تحصر قطع غيرك بينها وبين قطعة لك، وكلها تقلب لونك</small>';},
+  points:d=>cntSeat(d.b,d.pl.length),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra(d){const c=cntSeat(d.b,d.pl.length);return 'القطع: '+c.map((x,s)=>`${nm(d,s)} ${x}`).join('، ');},
   render(d,ctx){const z=d.z,t=d.turn;
-    return `<div class="cellgrid" style="grid-template-columns:repeat(${z},1fr);background:#1F6B4A;gap:2px">${[...d.b].map((v,i)=>{
+    return `<div class="cellgrid" style="grid-template-columns:repeat(${z},minmax(0,1fr));background:#1F6B4A;gap:2px">${[...d.b].map((v,i)=>{
       if(v!=='.')return `<div class="cg" style="background:#2E8B5E;padding:8%">${disc(col(d,+v))}</div>`;
       const ok=ctx.my&&revFlips(d.b,z,i,t).length;return `<button class="cg" style="background:#2E8B5E;padding:30%" data-ga="m" data-i="${i}" ${ok?'':'disabled'}>${ok?`<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="${col(d,t)}" opacity=".45"/></svg>`:''}</button>`;}).join('')}</div>`;},
   click(a,i,d,ctx){
@@ -40,7 +40,7 @@ GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   winText:d=>d.win!=null&&d.loser!=null?`${nm(d,d.win)} خلّص أول، و${nm(d,d.loser)} علق معه الشايب`:null,
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br><small>اسحب ورقة من اللي بعدك، وأي زوج يطلع من يدك. اللي يعلق معه الشايب (K♠) يخسر</small>',
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
     let s=`<div class="score" style="gap:4px">${d.pl.map((r,i)=>`<span class="chip" style="background:${col(d,i)};opacity:${d.out[i]==='1'?.4:1}">${!ctx.local&&i===ctx.v?'أنت':nm(d,i)} ${d.hands[i].length/2}${d.out[i]==='1'?' ✓':''}</span>`).join('')}</div>`;
     if(d.win!=null||v<0)return s;
@@ -70,7 +70,7 @@ GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',noTimer:tru
   key:d=>d.gid+':'+d.seq.length+':'+d.turn+':'+d.out,
   render(d,ctx){if(ctx.my&&(!S.simon||S.simon.key!==this.key(d)))S.simon={key:this.key(d),phase:d.seq.length?'show':'input',inp:[],run:false};
     const ok=ctx.my&&S.simon&&S.simon.phase==='input';
-    return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(100%,320px)">${SIM.map((c,k)=>`<button class="simp" data-ga="p" data-i="${k}" style="aspect-ratio:1;border-radius:${['80px 14px 14px 14px','14px 80px 14px 14px','14px 14px 14px 80px','14px 14px 80px 14px'][k]};background:${c};opacity:.75;transition:opacity .15s,transform .15s" ${ok?'':'disabled'}></button>`).join('')}</div>`;},
+    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;width:min(100%,320px)">${SIM.map((c,k)=>`<button class="simp" data-ga="p" data-i="${k}" style="aspect-ratio:1;border-radius:${['14px 160px 14px 14px','160px 14px 14px 14px','14px 14px 160px 14px','14px 14px 14px 160px'][k]};background:${c};opacity:.75;transition:opacity .15s,transform .15s" ${ok?'':'disabled'}></button>`).join('')}</div>`;},
   after(d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='show'||ss.run||app.querySelector('.cover'))return;ss.run=true;const key=ss.key;const seq=[...d.seq].map(Number);let k=0;
     const flash=()=>{if(!S.simon||S.simon.key!==key)return;if(k>=seq.length){S.simon.phase='input';render();return;}
       const el=app.querySelectorAll('.simp')[seq[k]];if(el){el.style.opacity='1';el.style.transform='scale(1.06)';}

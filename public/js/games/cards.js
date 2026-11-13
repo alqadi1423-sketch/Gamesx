@@ -15,10 +15,10 @@ const EMO=['🍎','🐪','⚽','🌙','🚗','🎈','🐟','🌴','⭐','☕','�
 GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout:d=>({...d,open:[],turn:nextSeat(d,d.turn)}),
   icon:iconE('#4FB09B','🃏'),
   init:n=>{const p=MEMP[n]||15;const a=[];for(let k=0;k<p;k++)a.push(String.fromCharCode(97+k),String.fromCharCode(97+k));return {p,dk:shuffle(a).join(''),own:'.'.repeat(p*2),open:[]};},
-  status(d,ctx){const c=cntSeat(d.own,d.pl.length);return turnTxt(d,ctx)+'<br>'+c.map((x,s)=>`<span class="mini" style="background:${col(d,s)}">${x/2}</span>`).join('')+'<br><small>اقلب كرتين، لو تطابقوا تاخذهم وتلعب مرة ثانية</small>';},
+  points:d=>cntSeat(d.own,d.pl.length).map(x=>x/2),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra(d){const c=cntSeat(d.own,d.pl.length);return 'الأزواج: '+c.map((x,s)=>`${nm(d,s)} ${x/2}`).join('، ');},
   render(d,ctx){const op=d.open||[];
-    return `<div class="cellgrid" style="grid-template-columns:repeat(${MEMC[d.p]},1fr);background:#2F6E62">${[...d.dk].map((e,i)=>{
+    return `<div class="cellgrid" style="grid-template-columns:repeat(${MEMC[d.p]},minmax(0,1fr));background:#2F6E62">${[...d.dk].map((e,i)=>{
       const own=d.own[i];if(own!=='.')return `<div class="cg" style="background:${lit(d,+own)};font-size:26px;box-shadow:inset 0 0 0 3px ${col(d,+own)}">${EMO[e.charCodeAt(0)-97]}</div>`;
       if(op.includes(i))return `<div class="cg" style="background:#fff;font-size:26px">${EMO[e.charCodeAt(0)-97]}</div>`;
       return `<button class="cg" style="background:#7FCBB9" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>❔</button>`;}).join('')}</div>`;},
@@ -35,10 +35,10 @@ GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout
 GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4F78B5"/><rect x="18" y="20" width="36" height="52" rx="6" fill="#fff" transform="rotate(-8 36 46)"/><rect x="44" y="24" width="36" height="52" rx="6" fill="#fff" transform="rotate(8 62 50)"/><text x="60" y="58" font-size="22" font-weight="800" fill="#D43C33" text-anchor="middle">K</text><path d="M28 34l6-8 6 8M28 58l6 8 6-8" stroke="#2D4763" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`,
   init:n=>({dk:shuffle(deck52(n>4?2:1)).join(''),p:0,pts:Array(n).fill(0),last:'',goal:5}),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br>'+ptsBadges(d,d.pts)+`<br><small>تخمين صح = نقطة، أول واحد يوصل ${d.goal} يفوز</small>`,
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>d.last,
   render(d,ctx){const c=d.dk.slice(d.p*2,d.p*2+2);
-    return `<div class="row">${cardHTML(c,true)}</div><div class="row"><button class="big blue" style="width:auto;margin:0" data-ga="hi" ${ctx.my?'':'disabled'}>أعلى ⬆</button><button class="big red" style="width:auto;margin:0" data-ga="lo" ${ctx.my?'':'disabled'}>أقل ⬇</button></div><p class="note">الآس أصغر ورقة والشايب أكبرها، والمساوي يعتبر خطأ</p>`;},
+    return `<div class="row">${cardHTML(c,true)}</div><div class="acts"><button class="btn blue" data-ga="hi" ${ctx.my?'':'disabled'}>أعلى ⬆</button><button class="btn red" data-ga="lo" ${ctx.my?'':'disabled'}>أقل ⬇</button></div><p class="note">الآس أصغر ورقة والشايب أكبرها، والمساوي يعتبر خطأ</p>`;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn,c=d.dk.slice(d.p*2,d.p*2+2),n=d.dk.slice(d.p*2+2,d.p*2+4);if(!n)return;
     const ok=a==='hi'?rv(n)>rv(c):rv(n)<rv(c);const pts=[...d.pts];if(ok)pts[t]++;
@@ -59,12 +59,12 @@ GAMES.bj={name:'بلاك جاك 21',cat:'cards',lbc:'#1E6B45',onTimeout:d=>{cons
   init:n=>{let dk=shuffle(deck52(n>4?2:1)).join('');const hands=[];for(let s=0;s<n;s++){hands.push(dk.slice(0,4));dk=dk.slice(4);}const dl=dk.slice(0,4);dk=dk.slice(4);
     return {dk,hands,dl,sd:'0'.repeat(n),phase:'play',res:''};},
   winText:d=>d.win==='h'?'الديلر فاز على الكل':null,
-  status(d,ctx){return d.phase==='play'?turnTxt(d,ctx)+'<br><small>اقترب من 21 بدون ما تتعداها، وتغلب الديلر</small>':'';},
+  status(d,ctx){return d.phase==='play'?turnTxt(d,ctx):'';},
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${bjVal(d.hands[s])} ${({w:'فاز',l:'خسر',p:'تعادل',b:'تعدّى 21',x:'طلع'})[d.res[s]]}`).join('، ')+`، والديلر ${bjVal(d.dl)}`,
   render(d,ctx){const done=d.phase==='done';
     let s=`<p class="lbl">الديلر ${done?bjVal(d.dl):''}</p><div class="hand">${cardsOf(d.dl).map((c,i)=>cardHTML(!done&&i===1?'??':c)).join('')}</div>`;
     s+=d.pl.map((r,i)=>{if(d.out[i]==='1')return '';const v=bjVal(d.hands[i]);return `<p class="lbl" style="color:${col(d,i)}">${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}: ${v}${v>21?' تعدّى':d.sd[i]==='1'&&!done?' وقف':''}</p><div class="hand">${cardsOf(d.hands[i]).map(c=>cardHTML(c)).join('')}</div>`;}).join('');
-    if(ctx.my)s+=`<div class="row"><button class="big blue" style="width:auto;margin:0" data-ga="hit">اسحب ورقة</button><button class="big navy" style="width:auto;margin:0" data-ga="stand">اكتفيت</button></div>`;
+    if(ctx.my)s+=`<div class="acts"><button class="btn blue" data-ga="hit">اسحب ورقة</button><button class="btn navy" data-ga="stand">اكتفيت</button></div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my||d.phase!=='play')return;const t=d.turn;let {dk,hands,sd:st}=d;hands=[...hands];
@@ -97,9 +97,9 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',onTimeout:d=
     s+=`<div class="row" style="align-items:center">${uCard(top,'big')}<div class="card big back"></div></div>`;
     if(v<0)return s;
     const my=ctx.my&&d.turn===v;const hand=cardsOf(d.hands[v]);
-    if(my&&S.wild!=null)s+=`<p class="lbl" style="text-align:center">اختر اللون</p><div class="row">${'rgby'.split('').map((c,k)=>`<button class="big" style="width:64px;height:64px;margin:0;background:${UC[c]}" data-ga="wc" data-i="${k}"></button>`).join('')}</div>`;
+    if(my&&S.wild!=null)s+=`<p class="lbl" style="text-align:center">اختر اللون</p><div class="row">${'rgby'.split('').map((c,k)=>`<button class="btn swatch" style="background:${UC[c]}" data-ga="wc" data-i="${k}"></button>`).join('')}</div>`;
     s+=`<p class="lbl" style="text-align:center">أوراقك</p><div class="hand">${hand.map((c,i)=>my&&uPlayable(c,d)?uCard(c,'pick',`data-ga="play" data-i="${i}"`):uCard(c,my?'dim':'')).join('')}</div>`;
-    if(my)s+=`<div class="row">${d.drew?'<button class="big navy" style="width:auto;margin:0" data-ga="pass">مرّر الدور</button>':'<button class="big blue" style="width:auto;margin:0" data-ga="draw">اسحب ورقة</button>'}</div>`;
+    if(my)s+=`<div class="row">${d.drew?'<button class="btn navy" data-ga="pass">مرّر الدور</button>':'<button class="btn blue" data-ga="draw">اسحب ورقة</button>'}</div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn;
@@ -126,6 +126,8 @@ const DOMH={2:7,3:6,4:6,5:4,6:4,7:3,8:3};
 const PIP={0:[],1:[[10,10]],2:[[5,5],[15,15]],3:[[5,5],[10,10],[15,15]],4:[[5,5],[15,5],[5,15],[15,15]],5:[[5,5],[15,5],[10,10],[5,15],[15,15]],6:[[5,4],[15,4],[5,10],[15,10],[5,16],[15,16]]};
 const half=(n,x)=>PIP[n].map(([a,b])=>`<circle cx="${a+x}" cy="${b}" r="1.9" fill="#2D4763"/>`).join('');
 const domSVG=(t,w)=>`<svg viewBox="0 0 40 20" width="${w||52}"><line x1="20" y1="3" x2="20" y2="17" stroke="#2D4763" stroke-width="1"/>${half(+t[0],0)}${half(+t[1],20)}</svg>`;
+const halfV=(n,y)=>PIP[n].map(([a,b])=>`<circle cx="${a}" cy="${b+y}" r="1.9" fill="#2D4763"/>`).join('');
+const domV=(t,h)=>`<svg viewBox="0 0 20 40" height="${h||84}"><line x1="3" y1="20" x2="17" y2="20" stroke="#2D4763" stroke-width="1"/>${halfV(+t[0],0)}${halfV(+t[1],20)}</svg>`;
 function domEnds(d){if(!d.ch)return null;return [d.ch[0],d.ch[d.ch.length-1]];}
 const domFits=(t,d)=>{const e=domEnds(d);if(!e)return [true,true];return [t.includes(e[0]),t.includes(e[1])];};
 GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',
@@ -140,12 +142,12 @@ GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',
     const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;
     let s=`<div class="score" style="gap:4px">${d.pl.map((r,i)=>d.out[i]==='1'?'':`<span class="chip" style="background:${col(d,i)}">${!ctx.local&&i===ctx.v?'أنت':nm(d,i)} ${d.hands[i].length/2}</span>`).join('')}</div>`;
     const ch=d.ch.match(/.{2}/g)||[];
-    s+=`<div class="chain">${ch.length?ch.map(t=>`<span class="dom">${domSVG(t,40)}</span>`).join(''):'<p class="note">أول قطعة تفتح اللعب</p>'}</div>`;
+    s+=`<div class="table">${ch.length?`<div class="chain">${ch.map((t,i)=>`<span class="dom ${i===0||i===ch.length-1?'end':''}">${t[0]===t[1]?domV(t,54):domSVG(t,56)}</span>`).join('')}</div><div class="ends"><span>اليسار: <b>${d.ch[0]}</b></span><span>اليمين: <b>${d.ch[d.ch.length-1]}</b></span></div>`:'<p class="note" style="margin:24px 0">أول قطعة تفتح اللعب</p>'}<span class="bone">المخزن ${d.bone.length/2}</span></div>`;
     if(v<0)return s;const my=ctx.my&&d.turn===v;const hand=d.hands[v].match(/.{2}/g)||[];
     const any=hand.some(t=>domFits(t,d).some(x=>x));
     if(my&&S.dside!=null){const t=hand[S.dside];s+=`<div class="row"><button class="sm go" data-ga="L" data-i="${S.dside}">على اليسار (${d.ch[0]})</button><button class="sm go" data-ga="R" data-i="${S.dside}">على اليمين (${d.ch[d.ch.length-1]})</button></div>`;}
-    s+=`<p class="lbl" style="text-align:center">قطعك</p><div class="hand">${hand.map((t,i)=>{const f=domFits(t,d).some(x=>x);return my&&f?`<button class="dom pick" data-ga="play" data-i="${i}">${domSVG(t)}</button>`:`<span class="dom" style="${my?'opacity:.45':''}">${domSVG(t)}</span>`;}).join('')}</div>`;
-    if(my&&!any)s+=`<div class="row">${d.bone.length?'<button class="big blue" style="width:auto;margin:0" data-ga="draw">اسحب من المخزن</button>':'<button class="big navy" style="width:auto;margin:0" data-ga="pass">مرّر الدور</button>'}</div>`;
+    s+=`<p class="lbl" style="text-align:center">قطعك</p><div class="hand">${hand.map((t,i)=>{const f=domFits(t,d).some(x=>x);return my&&f?`<button class="dom pick" data-ga="play" data-i="${i}">${domV(t)}</button>`:`<span class="dom ${my?'dim':''}">${domV(t)}</span>`;}).join('')}</div>`;
+    if(my&&!any)s+=`<div class="row">${d.bone.length?'<button class="btn blue" data-ga="draw">اسحب من المخزن</button>':'<button class="btn navy" data-ga="pass">مرّر الدور</button>'}</div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn;const hand=d.hands[t].match(/.{2}/g)||[];
@@ -173,11 +175,11 @@ GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:
   init:()=>({called:'0'.repeat(25),last:''}),
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
-  status(d,ctx){return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br>'+d.pl.map((r,s)=>`<span class="mini" style="background:${col(d,s)}">${bingoLines(bingoCard(d,s),d.called)}/5</span>`).join('')+'<br><small>اختار رقم ينشطب عند الكل، أول واحد يكمّل 5 خطوط يفوز</small>';},
+  points:d=>d.pl.map((r,s)=>bingoLines(bingoCard(d,s),d.called)+'/5'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;if(v<0)return '';
     const card=bingoCard(d,v);const lines=BLINES.filter(L=>L.every(i=>d.called[card[i]-1]==='1')).flat();
-    return `<div style="display:flex;gap:6px;margin-bottom:6px">${'بنقو!'.split('').map((ch,k)=>`<span class="mini" style="background:${k<bingoLines(card,d.called)?col(d,v):'#c9d6e4'};font-size:22px;padding:2px 10px">${ch}</span>`).join('')}</div>
-    <div class="cellgrid" style="grid-template-columns:repeat(5,1fr);background:${col(d,v)};max-width:360px">${card.map((n,i)=>{const c=d.called[n-1]==='1';
+    const ln=bingoLines(card,d.called);return `<div class="bprog"><b>خطوطك ${ln}/5</b><div><i style="width:${ln*20}%;background:${col(d,v)}"></i></div></div>
+    <div class="cellgrid" style="grid-template-columns:repeat(5,minmax(0,1fr));background:${col(d,v)};max-width:360px">${card.map((n,i)=>{const c=d.called[n-1]==='1';
       return c?`<div class="cg" style="background:${lines.includes(i)?'#ffd84d':lit(d,v)};text-decoration:line-through;font-size:22px">${n}</div>`:`<button class="cg" style="font-size:22px" data-ga="m" data-i="${n}" ${ctx.my?'':'disabled'}>${n}</button>`;}).join('')}</div>`;},
   click(a,n,d,ctx){
     if(!ctx.my||d.called[n-1]==='1')return;const t=d.turn;const called=setAt(d.called,n-1,'1');
@@ -188,13 +190,13 @@ GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:
 };
 
 /* ---------- risky dice ---------- */
-GAMES.pig={name:'زهر المخاطرة',cat:'cards',lbc:'#A0522D',onTimeout:d=>({...d,tot:0,dice:0,turn:nextSeat(d,d.turn)}),
+GAMES.pig={points:d=>d.sc,name:'زهر المخاطرة',cat:'cards',lbc:'#A0522D',onTimeout:d=>({...d,tot:0,dice:0,turn:nextSeat(d,d.turn)}),
   icon:iconE('#D7774A','🎲'),
   init:n=>({sc:Array(n).fill(0),tot:0,dice:0,goal:50,last:''}),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+'<br>'+ptsBadges(d,d.sc)+`<br><small>ارمِ وجمّع، لو طلع 1 يروح جمع الدور. أول واحد يوصل ${d.goal} يفوز</small>`,
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const anim=S.rolled;S.rolled=false;
-    return `<div class="row" style="align-items:center"><div class="dice ${anim?'roll':''}">${d.dice?diceSVG(d.dice):''}</div><div><div class="note">جمع الدور</div><div class="big-num" style="color:${col(d,d.turn)}">${d.tot}</div></div></div>
-    <div class="row"><button class="big" style="width:auto;margin:0;background:${col(d,d.turn)}" data-ga="roll" ${ctx.my?'':'disabled'}>ارمِ</button><button class="big navy" style="width:auto;margin:0" data-ga="hold" ${ctx.my&&d.tot>0?'':'disabled'}>احفظ النقاط</button></div>`;},
+    return `<div class="row" style="align-items:center;gap:14px"><div class="dice ${anim?'roll':''}">${d.dice?diceSVG(d.dice):''}</div><div><div class="note">جمع الدور</div><div class="big-num" style="color:${col(d,d.turn)}">${d.tot}</div></div></div>
+    <div class="acts"><button class="btn" style="background:${col(d,d.turn)}" data-ga="roll" ${ctx.my?'':'disabled'}>ارمِ</button><button class="btn navy" data-ga="hold" ${ctx.my&&d.tot>0?'':'disabled'}>احفظ النقاط</button></div>`;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn;
     if(a==='roll'){const r=1+rnd(6);S.rolled=true;
