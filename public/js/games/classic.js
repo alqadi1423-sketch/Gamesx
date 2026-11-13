@@ -136,52 +136,92 @@ function randFleet(){
 }
 const seaReady=(p,d)=>!!(p&&p.gid===d.gid&&p.ready&&p.f);
 const allReady=(d,pr)=>d.pl.every((r,s)=>d.out[s]==='1'||seaReady(pr[r],d));
-function seaGrid(f,sh,show,click,small){
-  const sunk=new Set();
-  if(f)for(const L of SL){const cs=[];for(let i=0;i<64;i++)if(f[i]===L)cs.push(i);if(cs.length&&cs.every(i=>sh[i]==='o'))sunk.add(L);}
+const seaFleet=(d,s)=>{const p=S.priv[d.pl[s]];return p&&p.gid===d.gid?p.f:null;};
+const seaSunk=(f,sh)=>{const out=new Set();if(f)for(const L of SL){let any=false,all=true;for(let i=0;i<64;i++)if(f[i]===L){any=true;if(sh[i]!=='o')all=false;}if(any&&all)out.add(L);}return out;};
+const seaDead=(f,sh)=>!!f&&[...f].every((c,i)=>c==='.'||sh[i]==='o');
+const seaAfloat=(f,sh)=>f?SL.split('').filter(L=>f.includes(L)&&!seaSunk(f,sh).has(L)).length:0;
+// a ship may move or turn only onto free water that does not touch another ship
+function seaPlace(f,L,head,hz){const len=[...f].filter(c=>c===L).length;const r=Math.floor(head/8),c=head%8;if(hz?c+len>8:r+len>8)return null;
+  const g=[...f].map(x=>x===L?'.':x);const cells=[...Array(len).keys()].map(k=>hz?head+k:head+k*8);
+  if(cells.some(x=>near(g,x)))return null;cells.forEach(x=>g[x]=L);return g.join('');}
+const seaShip=(f,L)=>{const cs=[...f].map((c,i)=>c===L?i:-1).filter(i=>i>=0);return {head:cs[0],hz:cs.length>1&&cs[1]===cs[0]+1};};
+function seaGrid(f,sh,show,click,small,marks,flash){
+  const sunk=seaSunk(f,sh);
   let s=`<div class="sea ${small?'small':''}">`;
-  for(let i=0;i<64;i++){const c=f?f[i]:'.';const ship=c!=='.'&&(show||sunk.has(c));const st=sh[i];
-    const cls=`sc ${ship?'ship':''} ${sunk.has(c)?'sunk':''} ${st==='o'?'hit':st==='x'?'miss':''}`;
-    s+=click&&st==='.'?`<button class="${cls} can" data-ga="fire" data-i="${i}"></button>`:`<div class="${cls}"></div>`;}
+  for(let i=0;i<64;i++){const c=f?f[i]:'.';const ship=c!=='.'&&(show||sunk.has(c));const st=sh[i];const mk=marks&&marks.includes(i);
+    const cls=`sc ${ship?'ship':''} ${sunk.has(c)?'sunk':''} ${st==='o'?'hit':st==='x'?'miss':''} ${mk?'mark':''} ${flash&&flash.includes(i)?'fl':''} ${click==='ed'&&S.seaSel===c&&c!=='.'?'sel':''}`;
+    s+=click&&(click==='ed'||st==='.')?`<button class="${cls} can" data-ga="${click==='ed'?'ed':'fire'}" data-i="${i}"></button>`:`<div class="${cls}"></div>`;}
   return s+'</div>';
 }
+const seaSalvo=d=>d.pl.length>2;
 GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3E8FC4"/><path d="M25 0V100M50 0V100M75 0V100M0 25H100M0 50H100M0 75H100" stroke="#5FAEDF" stroke-width="2"/><path d="M8 46H74L84 52L74 60H14Z" fill="#E8746B" stroke="#2D4763" stroke-width="3"/><path d="M22 48l6 5M32 48l6 5M42 48l6 5" stroke="#2D4763" stroke-width="3"/><path d="M72 52l-9-9 4-2-5-7 9 4 1-6 4 8 6-2-3 7 7 3-7 3" fill="#fff"/><circle cx="72" cy="52" r="7" fill="#2D4763"/><circle cx="70" cy="50" r="2" fill="#fff"/><path d="M14 82l8-8M22 82l-8-8" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
-  init:n=>({sh:Array(n).fill('.'.repeat(64)),last:''}),
-  privInit:()=>({f:randFleet(),ready:false}),
+  init:n=>({sh:Array(n).fill('.'.repeat(64)),rd:0,last:'',rep:[],ls:[]}),
+  privInit:(d,r)=>({f:randFleet(),ready:S.mode==='local'&&!!(S.bots||{})[r]}),
   canAct:(d,pr)=>allReady(d,pr),
-  viewer(d,pr){if(d.win!=null)return null;for(let s=0;s<d.pl.length;s++)if(d.out[s]!=='1'&&!seaReady(pr[d.pl[s]],d))return s;return d.turn;},
+  // two players take turns and a hit shoots again; three or more fire together, one shot for every ship still afloat
+  simulNow:d=>seaSalvo(d)&&allReady(d,S.priv),
+  viewer(d,pr){if(d.win!=null)return null;for(let s=0;s<d.pl.length;s++)if(d.out[s]!=='1'&&!seaReady(pr[d.pl[s]],d))return s;return seaSalvo(d)?simulViewer(d):d.turn;},
   coverMsg:d=>d.last||'',
   status(d,ctx){const pr=ctx.priv;
-    if(!allReady(d,pr)){
+    if(!allReady(d,pr)){const rd=d.pl.filter((r,s)=>seaReady(pr[r],d)).length;
       if(ctx.local)return `${nameTag(d,ctx.v)}: رتّب سفنك واضغط جاهز`;
-      const rd=d.pl.filter((r,s)=>seaReady(pr[r],d)).length;
-      return (ctx.v>=0&&seaReady(pr[S.me],d)?'بانتظار الباقين يجهّزون سفنهم':'رتّب سفنك واضغط جاهز')+`<br><small>جاهز ${rd} من ${d.pl.length}</small>`;}
+      return (ctx.v>=0&&seaReady(pr[d.pl[ctx.v]],d)?'بانتظار الباقين يجهّزون سفنهم':'رتّب سفنك: اضغط على سفينة ثم على مكان جديد، أو دوّرها')+`<br><small>جاهز ${rd} من ${d.pl.length}</small>`;}
+    if(seaSalvo(d))return (d.last?`<small>${d.last}</small><br>`:'')+`الجولة ${d.rd+1}: الكل يطلق مع بعض`;
     return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);},
   winExtra:d=>d.last||'',
   render(d,ctx){
     const pr=ctx.priv;const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;
-    if(v<0){return `<p class="lbl">بحر ${nm(d,d.turn)}</p>${seaGrid(pr[d.pl[d.turn]]?.f,d.sh[d.turn],false,false)}`;}
-    const mine=pr[d.pl[v]];if(!mine)return '<p class="note">جاري التجهيز…</p>';
+    if(v==null||v<0){const o=d.win!=null&&typeof d.win==='number'?d.win:d.turn;return `<p class="lbl">بحر ${nm(d,o)}</p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null,false)}`;}
+    const mine=pr[d.pl[v]];if(!mine||mine.gid!==d.gid)return '<p class="note">جاري التجهيز…</p>';
     if(!allReady(d,pr)){
-      return `<p class="lbl">بحرك (${SHIPS.length} سفن)</p>${seaGrid(mine.f,d.sh[v],true,false)}`+
-        (seaReady(mine,d)?'<p class="hint">جاهز ✓</p>':`<div class="acts"><button class="btn navy" data-ga="shuffle">🔀 غيّر</button><button class="btn red" data-ga="ready">جاهز ✓</button></div>`);}
+      if(seaReady(mine,d))return `<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false)}<p class="hint">جاهز ✓ ننتظر الباقين</p>`;
+      return `<p class="lbl">رتّب سفنك (${SHIPS.length} سفن)</p>${seaGrid(mine.f,d.sh[v],true,'ed')}
+        <div class="acts"><button class="btn navy" data-ga="rot" ${S.seaSel?'':'disabled'}>🔄 تدوير</button><button class="btn navy" data-ga="shuffle">🔀 عشوائي</button><button class="btn red" data-ga="ready">جاهز ✓</button></div>`;}
+    const rep=d.rep&&d.rep.length?`<div class="srep">${d.rep.map(x=>`<p>${x}</p>`).join('')}</div>`:'';
+    if(seaSalvo(d)){const dead=d.out[v]==='1';const k=dead?0:seaAfloat(mine.f,d.sh[v]);const marks=(S.salvo&&S.salvo.k===d.gid+':'+d.rd?S.salvo.l:[]);
+      const o=curTarget(d,v);if(o==null)return rep;const picked=hasPicked(d,v);const can=ctx.my&&!picked&&!dead&&d.win==null;
+      const om=marks.filter(m=>m[0]===o).map(m=>m[1]);const flash=(d.ls||[]).filter(x=>x[0]===o).map(x=>x[1]);
+      let s=rep+tabsHTML(d,v,can?'اختار بحر وحط طلقاتك':'بحور الباقين');
+      s+=`<p class="lbl">بحر ${nameTag(d,o)} <small>(${seaAfloat(seaFleet(d,o),d.sh[o])} سفن باقية)</small></p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null||d.out[o]==='1',can?'fire':false,false,om,flash)}`;
+      if(can)s+=`<div class="sbar"><span>🎯 ${marks.length} من ${k} طلقات</span><button class="btn red" data-ga="salvo" ${marks.length?'':'disabled'}>أطلق 🚀</button></div>`;
+      else if(picked&&d.win==null)s+='<p class="hint">✓ أطلقت، ننتظر الباقين</p>';
+      else if(dead)s+='<p class="note">غرقت سفنك، تقدر تتفرج</p>';
+      return s+`<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true,null,(d.ls||[]).filter(x=>x[0]===v).map(x=>x[1]))}`;}
     const myTurn=ctx.my&&d.turn===v;const o=curTarget(d,v);if(o==null)return '';
-    const of=pr[d.pl[o]]?pr[d.pl[o]].f:null;
-    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(of,d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1')}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true)}`;
+    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1'?'fire':false)}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true)}`;
   },
   click(a,i,d,ctx){
-    if(a==='tgt'){S.tgt=i;render();return;}
-    if(a==='shuffle'||a==='ready'){const v=ctx.v;if(v==null||v<0)return;const r=d.pl[v];const p=S.priv[r];if(!p||seaReady(p,d))return;
-      setPriv(r,a==='shuffle'?{...p,f:randFleet()}:{...p,ready:true});return;}
-    if(!ctx.my)return;const t=d.turn,o=curTarget(d,t);if(o==null)return;const f=S.priv[d.pl[o]]&&S.priv[d.pl[o]].f;
+    if(a==='tgt'){S.tgt=i;S.gw=false;render();return;}
+    const v=ctx.v;if(v==null||v<0)return;const r=d.pl[v];const p=S.priv[r];
+    if(['shuffle','ready','ed','rot'].includes(a)){if(!p||seaReady(p,d))return;
+      if(a==='shuffle'){S.seaSel=null;setPriv(r,{...p,f:randFleet()});return;}
+      if(a==='ready'){S.seaSel=null;setPriv(r,{...p,ready:true});return;}
+      if(a==='ed'){const c=p.f[i];if(c!=='.'){S.seaSel=S.seaSel===c?null:c;render();return;}if(!S.seaSel)return;const {hz}=seaShip(p.f,S.seaSel);
+        const nf=seaPlace(p.f,S.seaSel,i,hz);if(!nf){toast('ما تنحط هنا، لازم تبعد عن السفن الثانية');return;}setPriv(r,{...p,f:nf});return;}
+      if(a==='rot'&&S.seaSel){const {head,hz}=seaShip(p.f,S.seaSel);const nf=seaPlace(p.f,S.seaSel,head,!hz);if(!nf){toast('ما تقدر تدورها هنا');return;}setPriv(r,{...p,f:nf});return;}
+      return;}
+    if(seaSalvo(d)){if(!ctx.my||hasPicked(d,v))return;const key=d.gid+':'+d.rd;if(!S.salvo||S.salvo.k!==key)S.salvo={k:key,l:[]};
+      if(a==='fire'){const o=curTarget(d,v);if(o==null)return;const k=seaAfloat(p.f,d.sh[v]);const at=S.salvo.l.findIndex(m=>m[0]===o&&m[1]===i);
+        if(at>=0)S.salvo.l.splice(at,1);else if(S.salvo.l.length<k)S.salvo.l.push([o,i]);else toast(`عندك ${k} طلقات بس`);render();return;}
+      if(a==='salvo'&&S.salvo.l.length){const l=S.salvo.l;S.salvo=null;simulPick(d,v,l);}return;}
+    if(!ctx.my)return;const t=d.turn,o=curTarget(d,t);if(o==null)return;const f=seaFleet(d,o);
     if(!f){toast('انتظر اللاعب');return;}if(d.sh[o][i]!=='.')return;
     const hit=f[i]!=='.';const sh=[...d.sh];sh[o]=setAt(sh[o],i,hit?'o':'x');let last,win=null,out=d.out;
     if(hit){const L=f[i];const sunk=[...f].every((c,k)=>c!==L||sh[o][k]==='o');last=`أصاب ${nm(d,o)}`+(sunk?' وأغرق سفينة! 💥':'! 🎯')+' ويضرب مرة ثانية';
-      if([...f].every((c,k)=>c==='.'||sh[o][k]==='o')){out=setAt(out,o,'1');last=`أغرق كل سفن ${nm(d,o)}!`;const al=aliveSeats(d,out);if(al.length===1)win=al[0];}}
+      if(seaDead(f,sh[o])){out=setAt(out,o,'1');last=`أغرق كل سفن ${nm(d,o)}!`;const al=aliveSeats(d,out);if(al.length===1)win=al[0];}}
     else last=`ضرب بحر ${nm(d,o)} وطاحت في الماء 💦`;
-    act({...d,sh,out,last:`${nm(d,t)}: ${last}`,turn:hit?t:nextSeat(d,t,out),win});
-  }
+    act({...d,sh,out,last:`${nm(d,t)}: ${last}`,ls:[[o,i]],turn:hit?t:nextSeat(d,t,out),win});
+  },
+  // all the shots of a round land together
+  resolve(d,picks){const sh=[...d.sh],before=[...d.sh];const ls=[],rep=[];
+    picks.forEach((l,s)=>{if(!Array.isArray(l)||d.out[s]==='1')return;const k=seaAfloat(seaFleet(d,s),before[s]);let hits=0;const sunkBy=new Set();
+      for(const [o,i] of l.slice(0,k)){if(o===s||d.out[o]==='1'||sameTeam(d,o,s)||!(i>=0&&i<64)||before[o][i]!=='.')continue;const f=seaFleet(d,o);if(!f)continue;
+        const hit=f[i]!=='.';if(sh[o][i]==='.')sh[o]=setAt(sh[o],i,hit?'o':'x');ls.push([o,i]);if(hit){hits++;if(seaSunk(f,sh[o]).has(f[i])&&!seaSunk(f,before[o]).has(f[i]))sunkBy.add(o);}}
+      rep.push(`${nameTag(d,s)}: ${hits?`${hits} إصابة 🎯`:'كلها بالماء 💦'}${sunkBy.size?` وأغرق سفينة لـ${[...sunkBy].map(o=>nm(d,o)).join(' و')} 💥`:''}`);});
+    let out=d.out;const gone=[];d.pl.forEach((_,o)=>{if(out[o]!=='1'&&seaDead(seaFleet(d,o),sh[o])){out=setAt(out,o,'1');gone.push(o);}});
+    const al=aliveSeats(d,out);const win=al.length===1?al[0]:al.length===0?'d':null;
+    return {...d,sh,out,rd:d.rd+1,ls,rep,win,last:gone.length?`غرقت كل سفن ${gone.map(o=>nm(d,o)).join(' و')} 🌊`:''};}
 };
 
 /* ================= game: guess the person ================= */

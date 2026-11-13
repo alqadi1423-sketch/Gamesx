@@ -352,3 +352,26 @@ GAMES.bingo.bot=(d,s,lv)=>{const open=[];for(let n=1;n<=25;n++)if(d.called[n-1]=
 GAMES.lowu.botPick=(d,s,lv)=>{if(lv===1)return 1+rnd(d.max);const q=lv===3?.6:.75;let r=Math.random()*(1-Math.pow(q,d.max))/(1-q),k=1;for(let w=1;k<d.max&&r>w;k++){r-=w;w*=q;}return k;};
 GAMES.two3.botPick=(d,s,lv)=>lv===1?15+rnd(60):lv===2?20+rnd(20):10+rnd(15);
 GAMES.major.botPick=()=>rnd(2);
+
+/* ---------- sea battle: hunt with a pattern, then finish the ship that was hit ---------- */
+function seaAim(d,s,o,lv,avoid){const sh=d.sh[o],f=seaFleet(d,o)||'.'.repeat(64),sunk=seaSunk(f,sh);
+  const ok=i=>i>=0&&i<64&&sh[i]==='.'&&!avoid.includes(i);
+  const nb4=i=>{const r=Math.floor(i/8),c=i%8;return [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([a,b])=>a>=0&&a<8&&b>=0&&b<8).map(([a,b])=>a*8+b);};
+  const live=[...Array(64).keys()].filter(i=>sh[i]==='o'&&!sunk.has(f[i]));
+  // ships never touch: around a sunk ship and on the corners of a hit there is only water
+  const blocked=new Set();if(lv===3)for(let i=0;i<64;i++){if(sh[i]!=='o')continue;const r=Math.floor(i/8),c=i%8,dn=sunk.has(f[i]);
+    for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){if(!dn&&(a===0||b===0))continue;const rr=r+a,cc=c+b;if(rr>=0&&rr<8&&cc>=0&&cc<8)blocked.add(rr*8+cc);}}
+  if(live.length&&Math.random()<[0,.35,.85,1][lv]){const sc={};
+    for(const h of live)for(const n of nb4(h)){if(!ok(n)||blocked.has(n))continue;sc[n]=(sc[n]||0)+1;const dl=n-h,bk=h-dl;
+      if(bk>=0&&bk<64&&live.includes(bk)&&(Math.abs(dl)!==1||Math.floor(bk/8)===Math.floor(h/8)))sc[n]+=3;}
+    const c=Object.keys(sc).map(Number);if(c.length)return c.sort((a,b)=>sc[b]-sc[a]+(Math.random()-.5)*.1)[0];}
+  let free=[...Array(64).keys()].filter(i=>ok(i)&&!blocked.has(i));
+  if(lv>=2){const par=free.filter(i=>(Math.floor(i/8)+i%8)%2===0);if(par.length)free=par;}
+  if(!free.length)free=[...Array(64).keys()].filter(ok);return free.length?pickR(free):null;}
+// the opponent worth shooting: one with a wounded ship, otherwise the one closest to sinking
+function seaFoe(d,s,lv){const ts=targets(d,s);if(lv===1||ts.length<2)return pickR(ts);
+  const w=o=>{const f=seaFleet(d,o)||'',sh=d.sh[o],sunk=seaSunk(f,sh);let live=0;for(let i=0;i<64;i++)if(sh[i]==='o'&&!sunk.has(f[i]))live++;return live*10-seaAfloat(f,sh)+Math.random();};
+  return ts.sort((a,b)=>w(b)-w(a))[0];}
+GAMES.sea.bot=(d,s,lv)=>{if(!allReady(d,S.priv)||seaSalvo(d))return d;const o=seaFoe(d,s,lv);if(o==null)return;S.tgt=o;const i=seaAim(d,s,o,lv,[]);return i==null?undefined:botDo(d,s,'fire',i);};
+GAMES.sea.botPick=(d,s,lv)=>{const k=seaAfloat(seaFleet(d,s),d.sh[s]);const out=[],av={};
+  for(let j=0;j<k;j++){const o=seaFoe(d,s,lv);if(o==null)break;const i=seaAim(d,s,o,lv,av[o]||[]);if(i==null)continue;(av[o]=av[o]||[]).push(i);out.push([o,i]);}return out;};
