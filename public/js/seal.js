@@ -22,6 +22,11 @@ window.SEAL={ok:false,fp:null,k:null,ready:null,_priv:null,_keys:new Map(),
         return C.deriveKey({name:'ECDH',public:pub},this._priv,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);})();
       this._keys.set(peerK,p);p.catch(()=>this._keys.delete(peerK));}
     return p;},
+  // is peerK a key this device can seal to (a real P-256 point)? true/false once known; null while it is checked, then cb(ok)
+  _ok:new Map(),_chk:new Set(),
+  keyOk(peerK,cb){const v=this._ok.get(peerK);if(v!==undefined)return v;
+    if(!this._chk.has(peerK)){this._chk.add(peerK);this.key(peerK).then(()=>true,()=>false).then(ok=>{this._chk.delete(peerK);if(this._ok.size>500)this._ok.delete(this._ok.keys().next().value);this._ok.set(peerK,ok);if(cb)cb(ok);});}
+    return null;},
   async seal(peerK,obj,aad){const key=await this.key(peerK);const iv=crypto.getRandomValues(new Uint8Array(12));
     const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:new TextEncoder().encode(String(aad||''))},key,new TextEncoder().encode(JSON.stringify(obj)));
     return this.b64u(iv)+'.'+this.b64u(ct);},

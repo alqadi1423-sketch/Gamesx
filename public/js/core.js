@@ -198,6 +198,8 @@ async function enterRoom(code,host,restore,given){
   S.joining=true;S.roomErr=null;render();
   await SEAL.ready;
   if(!SEAL.ok){S.joining=false;S.roomErr='هذا المتصفح ما يدعم الاتصال الآمن، حدّثه أو جرّب متصفح ثاني عشان تلعب أونلاين.';render();return;}
+  // the same browser holds one key: a room already open in another tab of it stays there
+  if(otherTab(code)){S.joining=false;S.roomErr=TAB_MSG+'، كمّل فيه أو سكّره وارجع';render();return;}
   const room=given||await getRoom();
   if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
@@ -205,7 +207,7 @@ async function enterRoom(code,host,restore,given){
   catch(e){S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
   netReset();
   S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
-  S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();
+  S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();tabEnter(code);
   // a saved room: its state, the seat table and the epoch it was at; a saved host takes the room back only if nobody else did (net.js)
   if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st,cfg:cleanCfg(restore.st.cfg)};if(!cleanSc(S.st.sc))S.st.sc=Array(MAXP).fill(0);
     S.ids=validIds(restore.ids)||S.ids;S.epoch=Number.isInteger(restore.ep)?restore.ep:0;S.sentN=+restore.n||0;
@@ -219,7 +221,7 @@ async function enterRoom(code,host,restore,given){
   setTimeout(()=>{if(S.nr===nr)render();},GRACE+200);
   afterChange();
 }
-function leaveRoom(msg){if(S.unsub)try{S.unsub();}catch(e){}S.unsub=null;if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;S.offline=false;S.roomEmpty=false;lastPeers=[];S.roles=new Set();netReset();S.me=null;if(msg)toast(msg);render();}
+function leaveRoom(msg){if(S.mode==='online')tabMark(null);if(S.unsub)try{S.unsub();}catch(e){}S.unsub=null;if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;S.offline=false;S.roomEmpty=false;lastPeers=[];S.roles=new Set();netReset();S.me=null;if(msg)toast(msg);render();}
 /* what the room transport says about the connection: 'lost' / 'back', 'full' while it tries to get back in,
    and for a nearby room 'gone' (the room's phone is no longer around) or 'bye' (its owner closed it) */
 function netState(st){
@@ -234,7 +236,8 @@ function netDown(){if(S.mode!=='online'||!S.offline)return false;if(Date.now()-(
 // a player who dropped out gets GRACE ms before the others can skip them, so a short network cut does not cost the game
 const GRACE=15000;
 // the roles in the room: seats whose device key is here
-function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(let r=0;r<MAXP;r++)if(S.ids[r]&&S.peersByFp[S.ids[r]])s.add(r);
+// (a phone whose page is frozen or asleep, net.js freshFp, counts as gone for the round; it keeps its seat for HOLD)
+function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(let r=0;r<MAXP;r++)if(S.ids[r]&&S.peersByFp[S.ids[r]]&&freshFp(S.ids[r]))s.add(r);
   const now=Date.now();S.goneAt=S.goneAt||{};for(const r of S.roles)if(!s.has(r)&&S.goneAt[r]==null){S.goneAt[r]=now;setTimeout(()=>{if(S.mode==='online')render();},GRACE+200);}for(const r of s)delete S.goneAt[r];
   S.roles=s;}
 
@@ -287,10 +290,11 @@ function turnTxt(d,ctx){
   return `دور ${nameTag(d,d.turn)}`;
 }
 // seats whose player is not in the room; with all=false only those gone for longer than GRACE (they can be skipped)
-function absentSeats(d,G,all){if(S.mode!=='online'||d.win!=null)return [];const off=s=>{const r=d.pl[s];return !S.roles.has(r)&&(all||Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE);};
+function absentSeats(d,G,all,slack){if(S.mode!=='online'||d.win!=null)return [];const off=s=>{const r=d.pl[s];return !S.roles.has(r)&&(all||Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE-(slack||0));};
   if(isSimul(G,d))return aliveSeats(d).filter(s=>off(s)&&!hasPicked(d,s));return off(d.turn)?[d.turn]:[];}
 // the host (or the one phone) takes the players who are gone out of the round
-function skipAbsent(){const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];const gone=absentSeats(d,G);if(!gone.length)return;let out=d.out;for(const x of gone)out=setAt(out,x,'1');const al=aliveSeats(d,out);
+// (slack: a player's phone asked for it after its own GRACE; this phone may have seen the seat go a few seconds later)
+function skipAbsent(slack){const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];const gone=absentSeats(d,G,false,slack);if(!gone.length)return;let out=d.out;for(const x of gone)out=setAt(out,x,'1');const al=aliveSeats(d,out);
   const nd={...d,out,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}
 function winTitle(d,G,ctx){if(Array.isArray(d.wins)&&d.wins.length>1&&!(G.winText&&G.winText(d)))return !ctx.local&&d.wins.includes(ctx.v)?'فزتوا! 🎉':`فاز ${d.wins.map(w=>nm(d,w)).join(' و')}!`;return G.winText&&G.winText(d)||(d.win==='d'?'تعادل!':(!ctx.local&&d.win===ctx.v?'فزت! 🎉':`فاز ${nm(d,d.win)}!`));}
 function statusHTML(d,G,ctx){try{
