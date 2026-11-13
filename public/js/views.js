@@ -69,9 +69,20 @@ function sandboxClick(G,d,seat,a,i,ui){
     res={v:NET_CAP.v,pv:NET_CAP.pv,toasts:list.slice(0,3),u,err};}
   finally{NET_CAP=cap;for(const k of ks){if(had[k])S[k]=sv[k];else delete S[k];}S.me=me;window.toast=tt;window.render=rr;S.holdRender=hr;S.holdVK=hv;S.renderPending=rp;}
   return res;}
-// a move a player proposes in a public game: same round, same players, nobody comes back in, and the round is still on
+/* the few public moves a game lets a player make when it is not their turn (the game's own click allows exactly these):
+   blackjack's next hand, answering a monopoly trade (or taking one's own offer back), answering a backgammon double */
+const OFFTURN={
+  bj:(d,n,s)=>d.ph==='done'&&(s===d.turn||s===aliveSeats(d)[0]),
+  mono:(d,n,s)=>!!d.offer&&(s===d.offer.to||s===d.offer.from)&&n.offer==null,
+  tavla:(d,n,s)=>d.ph==='dbl'&&s===tmNow(d,1-d.sd)};
+// may seat `seat` move now? the rule the screen uses (ctx.my: its turn, or its pick in a simultaneous round), or one of the above
+function canPropose(old,nd,seat){if(seat<0)return false;
+  try{if(ctxFor(old,seat,S.priv).my)return true;}catch(e){}
+  const f=OFFTURN[S.st.g];try{return !!(f&&f(old,nd,seat));}catch(e){return false;}}
+// a move a player proposes in a public game: same round, same players, nobody comes back in, the round is still on,
+// and the player could make a move now (a phone that is not on turn cannot hand the host a board, or a win, of its own)
 function validateProposal(old,nd,role){
   if(!old||!nd||old.win!=null||nd.gid!==old.gid||!jsEq(nd.pl,old.pl)||(nd.st??null)!==(old.st??null))return false;
   if(typeof nd.out!=='string'||nd.out.length!==old.out.length)return false;
   for(let s=0;s<old.out.length;s++)if(old.out[s]==='1'&&nd.out[s]!=='1')return false;
-  return old.pl.includes(role);}
+  return old.pl.includes(role)&&canPropose(old,nd,old.pl.indexOf(role));}

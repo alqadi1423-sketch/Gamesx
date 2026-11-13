@@ -14,7 +14,7 @@ function netReset(){clearTimeout(S.takeT);clearTimeout(S.pubT);
   Object.assign(S,{ids:Array(MAXP).fill(null),epoch:0,hostFp:null,hostK:null,hst:null,pp:{},outQ:[],pend:false,lastN:{},rejN:{},ack:{},lastAck:{},bk:null,bkC:null,
     needUpd:false,hostGoneAt:null,vgen:0,peersByFp:{},qByFp:{},lostAt:Date.now(),hostSince:0,badC:new Set(),oldSeen:false,ackN:0,sentN:0,hostKeyC:null,vwC:{},bkCache:null,seatGone:{},
     restore:null,takeT:null,pubT:null,pubBusy:false,pubAgain:false,pubRx:null,procBusy:false,procAgain:false,sendTimes:[],bigWarn:false,
-    hbSeen:{},vh:{},vtry:{},fpPeer:{},vwSig:null,lastPubAt:0,tickAt:Date.now(),rxAt:Date.now(),myPv:null,resend:null,selfPubLast:undefined});}
+    hbSeen:{},vh:{},vtry:{},fpPeer:{},vwSig:null,lastPubAt:0,tickAt:Date.now(),rxAt:Date.now(),myPv:null,resend:null,selfPubLast:undefined,dRef:null,dS:0});}
 netReset();
 const amHost=()=>S.mode==='online'&&!!S.hostFp&&S.hostFp===SEAL.fp;
 const roleOfFp=fp=>fp?S.ids.indexOf(fp):-1;
@@ -45,7 +45,7 @@ const nextN=()=>(S.sentN=Math.max(Date.now(),S.sentN+1));
 // a move in a public game: shown at once, sent to the host as the change from the state it was made on
 function propose(nd){
   const G=GAMES[S.st.g];if(isSecretG(G)){console.warn('act() in a secret game on a non-host phone');return;}
-  if(!queueIntent({t:'nd',base:S.st.s,dep:lastPendingNdN(),dp:dPatch(S.st.d,nd)}))return;
+  if(!queueIntent({t:'nd',base:S.st.s,dep:lastPendingNdN(),dp:dPatch(S.st.d,nd)}))return;S.outQ[S.outQ.length-1].bd=S.st.d;
   S.st={...S.st,s:S.st.s+1,d:nd};S.wild=null;S.dside=null;sfx('tap');render();}
 function queueIntent(m){
   if(S.mode!=='online')return false;
@@ -172,7 +172,8 @@ function applyHost(pr,cf,view,P){
     S.pend=S.outQ.some(x=>x.m.t==='ck');publish();}
   // this phone's own public move stays on screen until the host has played it (or played something else first)
   const pend=S.outQ.filter(x=>x.m.t==='nd');
-  const keep=!rej&&pend.length&&S.st.g===c.g&&S.st.d&&d&&S.st.d.gid===d.gid&&pend.some(x=>x.m.base>=s);
+  // (also while the host's board is still the one the move was made on: a settings change moves s, not the board)
+  const keep=!rej&&pend.length&&S.st.g===c.g&&S.st.d&&d&&S.st.d.gid===d.gid&&pend.some(x=>x.m.base>=s||x.bd&&jsEq(x.bd,d));
   const oldG=S.st.g,oldGid=S.st.d&&S.st.d.gid;
   S.st=keep?{...S.st,sc,cfg:cf}:{g:c.g,s,d,sc,cfg:cf};
   // private parts: the host's sealed ones for this seat, the public markers for the rest, the owner's own copy for '@'
@@ -257,7 +258,7 @@ function handleIntent(fp,r,m){
   if(!isRole(r))return {x:'seat'};
   const G=GAMES[S.st.g],d=S.st.d;
   switch(m.t){
-    case 'nd':{if(!G||!d)return rejectNd(fp,m.n,'stale');if((m.dep&&(S.rejN[fp]||[]).includes(m.dep))||m.base!==S.st.s)return rejectNd(fp,m.n,'stale');
+    case 'nd':{if(!G||!d)return rejectNd(fp,m.n,'stale');if((m.dep&&(S.rejN[fp]||[]).includes(m.dep))||!baseOk(m.base))return rejectNd(fp,m.n,'stale');
       if(isSecretG(G))return rejectNd(fp,m.n,'secret');if(!m.dp||typeof m.dp!=='object'||jsonLen(m.dp)>40000)return rejectNd(fp,m.n,'bad');
       const c=cleanSt({g:S.st.g,d:applyPatch(d,m.dp)});if(!c||!c.d||!validateProposal(d,c.d,r))return rejectNd(fp,m.n,'bad');
       act(c.d);return {};}
@@ -266,7 +267,7 @@ function handleIntent(fp,r,m){
       if(o&&o.gid===d.gid&&o.rd===d.rd&&o.pick!=null&&p.rd===d.rd&&!jsEq(o.pick,p.pick))return {x:'pick'};
       if(G&&G.privOk&&!G.privOk(d,r,o,p))return {x:'pv'};
       setPriv(r,p);return {};}
-    case 'ck':{if(!G||!isSecretG(G))return {x:'pub'};if(!d||m.base!==S.st.s||m.gid!==d.gid)return {x:'stale'};const seat=d.pl.indexOf(r);if(seat<0)return {x:'seat'};
+    case 'ck':{if(!G||!isSecretG(G))return {x:'pub'};if(!d||!baseOk(m.base)||m.gid!==d.gid)return {x:'stale'};const seat=d.pl.indexOf(r);if(seat<0)return {x:'seat'};
       let ui={};if(m.ui&&typeof m.ui==='object'&&jsonLen(m.ui)<=2048)try{ui=cleanVal(m.ui,0);}catch(e){ui={};}
       const R=sandboxClick(G,d,seat,String(m.a).slice(0,20),Number.isFinite(m.i)?m.i:null,ui);
       if(R.err)console.warn('sandbox click',R.err);
@@ -281,7 +282,11 @@ function handleIntent(fp,r,m){
   return {x:'?'};}
 
 /* ---------- publishing ---------- */
-function schedulePublish(rx){if(rx)S.pubRx=rx;if(S.pubT)return;S.pubT=setTimeout(runPublish,PUB_MS);}
+/* the s at which the board (d) last changed: a move made on that board still counts after a settings change or a score
+   reset, which move s but not the board */
+function dSeq(){if(S.st.d!==S.dRef){S.dRef=S.st.d;S.dS=S.st.s;}return S.dS;}
+const baseOk=b=>Number.isInteger(b)&&b>=dSeq()&&b<=S.st.s;
+function schedulePublish(rx){dSeq();if(rx)S.pubRx=rx;if(S.pubT)return;S.pubT=setTimeout(runPublish,PUB_MS);}
 async function runPublish(){S.pubT=null;if(S.pubBusy){S.pubAgain=true;return;}S.pubBusy=true;
   try{await doPublish();}catch(e){console.warn('publish',e);}finally{S.pubBusy=false;if(S.pubAgain){S.pubAgain=false;schedulePublish();}}}
 const RATE_N=100,RATE_W=10000;
@@ -319,10 +324,10 @@ async function doPublish(){
     Object.assign(o,{q:null,...pub,vw,bk});}
   else{for(const k of HOSTK)o[k]=null;o.q=S.outQ.filter(x=>x.c&&x.k===S.hostK).map(x=>({n:x.m.n,c:x.c}));
     const G=GAMES[S.st.g],d=S.st.d;o.pp=G&&G.selfPub&&d&&S.me!=null&&S.priv[S.me]?privFor(G,d,-1,S.me,S.priv[S.me]):null;S.selfPubLast=o.pp;}
-  // Claude rooms take about 4 KB per player: drop the oldest chat lines, then the backup copy, then the self-published part
+  // Claude rooms take about 4 KB per player: drop the backup copy, then (only while still too big) the oldest chat lines, then the self-published part
   const max=nr.max||3800;const size=()=>new Blob([JSON.stringify(o)]).size;let sz=size();
-  while(sz>max&&o.ch.length){o.ch=o.ch.slice(1);sz=size();}
   if(sz>max&&o.bk){o.bk=null;sz=size();}
+  while(sz>max&&o.ch.length){o.ch=o.ch.slice(1);sz=size();}
   if(sz>max&&o.pp&&!amHost()){o.pp=null;sz=size();}
   if(sz>max&&!S.bigWarn){S.bigWarn=true;console.warn('presence over the room limit',sz,max);toast('اللعبة صارت أكبر من حد الغرفة، يمكن ما توصل للباقين');}
   // stay under the room server's message rate (worker RATE_MAX): wait for the window instead of being cut off
