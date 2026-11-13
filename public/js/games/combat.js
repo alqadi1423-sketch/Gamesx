@@ -67,7 +67,8 @@ const TK_G=20,TKS=1.6;
 function tkHeight(h,x){x=Math.max(0,Math.min(100,x));const a=Math.floor(x),b=Math.min(100,a+1);return h[a]+(h[b]-h[a])*(x-a);}
 function tkY(d,s){return tkHeight(d.h,d.tx[s]);}
 const tkAng=(d,t)=>S.draft.angs!=null?180-(+S.draft.angs):(d.ang[t]??45);
-const tkPow=()=>+(S.draft.pow??60);
+// like the angle, each tank keeps the power it last fired with, so a bot's aim never shows up on a human's slider
+const tkPow=(d,t)=>+(S.draft.pow??(d.pw||[])[t]??60);
 const tkAngTxt=a=>a<=90?`${a}° →`:`${180-a}° ←`;
 function tkTip(d,s,ang){const r=ang*Math.PI/180,x=d.tx[s],g=tkY(d,s);return {x:x+Math.cos(r)*3.4*TKS,y:g+3.1*TKS+Math.sin(r)*3.4*TKS};}
 function tkFire(d,s,ang,pow){
@@ -97,7 +98,7 @@ GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
   points:d=>d.hp.map(h=>h+'❤'),
   status:(d,ctx)=>(d.shot&&d.shot.msg?`<small>${d.shot.msg}</small><br>`:'')+turnTxt(d,ctx),
   onTimeout:d=>({...d,turn:nextSeat(d,d.turn),wind:rnd(9)-4}),
-  render(d,ctx){const my=ctx.my;const t=d.turn;const ang=tkAng(d,t),pow=tkPow();
+  render(d,ctx){const my=ctx.my;const t=d.turn;const ang=tkAng(d,t),pow=tkPow(d,t);
     const Y=y=>60-y;const terr='M0 60 '+d.h.map((y,x)=>`L${x} ${Y(y).toFixed(1)}`).join(' ')+' L100 60Z';const w=d.wind;
     let s=`<svg viewBox="0 0 100 60" class="tanks" id="tkf"><defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E8ED0"/><stop offset=".7" stop-color="#A9D4F2"/><stop offset="1" stop-color="#E6F3FB"/></linearGradient><linearGradient id="grd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6BCF7F"/><stop offset=".12" stop-color="#3DAA5A"/><stop offset="1" stop-color="#1E6B3C"/></linearGradient></defs>
       <rect width="100" height="60" fill="url(#sky)"/><circle cx="86" cy="10" r="4.5" fill="#FDF2B3"/><circle cx="86" cy="10" r="7" fill="#FDF2B3" opacity=".25"/>
@@ -109,14 +110,14 @@ GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
     s+=`<g id="fx"></g><g transform="translate(50 5.5)"><rect x="-9" y="-3" width="18" height="5.4" rx="2.7" fill="rgba(255,255,255,.75)"/><text y="1.1" font-size="3.3" text-anchor="middle" fill="#1B4F72" font-weight="800">💨 ${w===0?'هادي':(w>0?'→ ':'← ')+Math.abs(w)}</text></g></svg>`;
     if(my)s+=`<div class="aimc"><label>الاتجاه <b id="angv">${tkAngTxt(ang)}</b><input type="range" min="0" max="180" value="${180-ang}" data-draft="angs" dir="ltr"></label><label>القوة <b id="powv">${pow}</b><input type="range" min="10" max="100" value="${pow}" data-draft="pow" dir="ltr"></label></div><button class="btn red wide" data-ga="fire">💥 أطلق</button>`;
     return s;},
-  click(a,i,d,ctx){if(!ctx.my||a!=='fire')return;const t=d.turn;const ang=tkAng(d,t),pow=tkPow();
+  click(a,i,d,ctx){if(!ctx.my||a!=='fire')return;const t=d.turn;const ang=tkAng(d,t),pow=tkPow(d,t);
     const r=tkFire(d,t,ang,pow);let out=d.out;r.hp.forEach((h,s)=>{if(h<=0&&out[s]!=='1')out=setAt(out,s,'1');});
     const al=aliveSeats(d,out);const turns=d.turns+1;let win=null;if(al.length===1)win=al[0];else if(!al.length)win='d';else if(turns>=12*d.pl.length)win=mostPts(r.hp.map((h,s)=>out[s]==='1'?-1:h));
-    const angs=[...d.ang];angs[t]=ang;const msg=`${nm(d,t)} أطلق`+(r.hits.length?`: ${r.hits.map(x=>`${nm(d,x.s)} -${x.dmg}`).join('، ')}`:' وما صاب');
-    S.draft.angs=undefined;
-    act({...d,h:r.h,hp:r.hp,out,ang:angs,shot:{path:r.path,hit:r.hit,hits:r.hits,msg},sid:d.sid+1,turns,wind:rnd(9)-4,turn:win==null?nextSeat(d,t,out):t,win});},
+    const angs=[...d.ang];angs[t]=ang;const pw=d.pl.map((_,s)=>(d.pw||[])[s]??60);pw[t]=pow;const msg=`${nm(d,t)} أطلق`+(r.hits.length?`: ${r.hits.map(x=>`${nm(d,x.s)} -${x.dmg}`).join('، ')}`:' وما صاب');
+    S.draft.angs=undefined;S.draft.pow=undefined;
+    act({...d,h:r.h,hp:r.hp,out,ang:angs,pw,shot:{path:r.path,hit:r.hit,hits:r.hits,msg},sid:d.sid+1,turns,wind:rnd(9)-4,turn:win==null?nextSeat(d,t,out):t,win});},
   after(d,ctx){const f=document.getElementById('tkf');if(!f)return;
-    const upd=()=>{const d=S.st.d,ctx=mkCtx();if(!d||!d.tx)return;const t=d.turn,ang=tkAng(d,t),pow=tkPow();const av=document.getElementById('angv'),pv=document.getElementById('powv');if(av)av.textContent=tkAngTxt(ang);if(pv)pv.textContent=pow;
+    const upd=()=>{const d=S.st.d,ctx=mkCtx();if(!d||!d.tx)return;const t=d.turn,ang=tkAng(d,t),pow=tkPow(d,t);const av=document.getElementById('angv'),pv=document.getElementById('powv');if(av)av.textContent=tkAngTxt(ang);if(pv)pv.textContent=pow;
       const el=document.getElementById('aim');if(el){const tp=tkTip(d,t,ang),a=ang*Math.PI/180,L=3+pow/9;el.setAttribute('x1',tp.x.toFixed(2));el.setAttribute('y1',(60-tp.y).toFixed(2));el.setAttribute('x2',(tp.x+Math.cos(a)*L).toFixed(2));el.setAttribute('y2',(60-tp.y-Math.sin(a)*L).toFixed(2));}
       const tk=f.querySelector('.tank.on line');if(tk&&ctx.my){tk.setAttribute('x2',(Math.cos(ang*Math.PI/180)*3.4).toFixed(2));tk.setAttribute('y2',(-3.1-Math.sin(ang*Math.PI/180)*3.4).toFixed(2));}};
     app.querySelectorAll('.aimc input').forEach(inp=>{if(inp._b)return;inp._b=1;inp.addEventListener('input',()=>upd());});
@@ -190,7 +191,8 @@ GAMES.duel.cat='fight';
 
 /* ---------- tapping battle ---------- */
 GAMES.tapwar={...spdBase({name:'معركة الضغط',lbc:'#1E8449',icon:iconE('#27AE60','👊'),art:'<div class="tapbtn prev">👊</div>',title:'عندك 5 ثواني. اضغط الزر بأسرع وأكثر ما تقدر',
-  start(d,st){st.phase='go';st.n=0;st.t0=performance.now();const v=+st.key.split(':').pop();st.timer=setTimeout(()=>{S.holdRender=false;st.phase='sent';simulPick(d,v,{ok:true,ms:st.n});},5000);},
+  start(d,st){st.phase='go';st.n=0;st.t0=performance.now();const v=+st.key.split(':').pop();st.timer=setTimeout(()=>{if(S.sp!==st)return;// left the game or round meanwhile: the hold and the pick belong to something else now
+    S.holdRender=false;st.phase='sent';const nd=S.st.d;if(nd&&nd.gid===d.gid&&nd.rd===d.rd)simulPick(d,v,{ok:true,ms:st.n});else render();},5000);},
   view(d,ctx,st){return `<div class="spd"><div class="memnum" id="tapn">${st.n||0}</div><button class="tapbtn" data-ga="tap">👊 اضغط!</button><div class="tbar" style="margin-top:12px"><i id="tapt" style="width:100%"></i></div></div>`;},
   click(a,i,d,ctx,st){if(a!=='tap'||st.phase!=='go')return;st.n++;const el=document.getElementById('tapn');if(el){el.textContent=st.n;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}}}),
   cat:'fight',

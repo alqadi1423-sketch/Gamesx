@@ -26,7 +26,11 @@ const mHousesOut=d=>[...d.hs].reduce((x,h)=>x+(h!=='5'?+h:0),0),mHotelsOut=d=>[.
 const isProp=i=>['p','rr','ut'].includes(MP[i][0]);
 const mPrice=i=>MP[i][2];
 function mDraft(d){return {...d,pos:[...d.pos],cash:[...d.cash],jail:[...d.jail],free:[...d.free],fr:{...(d.fr||{ch:-1,cc:-1})},dk:{...(d.dk||mDecks())},log:[]};}
-function mDecks(){return {ch:shuffle([...MCH.keys()]),cc:shuffle([...MCC.keys()]),ci:0,ci2:0};}
+/* only the cards already drawn from each deck are kept; the next card is picked at random when it is drawn, so the state never tells what comes next */
+function mDecks(){return {ch:[],cc:[]};}
+function mDrawCard(x,t){const D=t==='ch'?MCH:MCC,held=j=>D[j][1].free&&x.fr[t]>=0;let used=(x.dk[t]||[]).filter(j=>j<D.length);
+  let left=[...D.keys()].filter(j=>!used.includes(j)&&!held(j));if(!left.length){used=[];left=[...D.keys()].filter(j=>!held(j));}
+  const idx=left[rnd(left.length)];x.dk={...x.dk,[t]:[...used,idx]};return idx;}
 function mRent(d,i,dice,mod){const sq=MP[i],o=d.own[i];if(d.mg[i]==='1')return 0;
   if(sq[0]==='rr')return 25*2**(MRR.filter(j=>d.own[j]===o).length-1)*(mod&&mod.x2?2:1);
   if(sq[0]==='ut')return mod&&mod.u10?mod.u10*10:dice*(MUT.every(j=>d.own[j]===o)?10:4);
@@ -46,8 +50,7 @@ function mLand(x,s,dice,path,depth,mod){if(x.out[s]==='1')return;const i=x.pos[s
   if(isProp(i)){const o=x.own[i];if(o==='.'){x.ph='buy';return;}const oi=+o;if(oi!==s&&x.out[oi]!=='1'){if(mod&&mod.u10&&sq[0]==='ut'){x.log.push(`رمى للشركة ${mod.u10}`);}const r=mRent(x,i,dice,mod);if(r>0){x.log.push(`دفع إيجار ${r} لـ${nm(x,oi)}`);mPay(x,s,r,oi);}else x.log.push('العقار مرهون، ما فيه إيجار');}}
   else if(t==='tax'){x.log.push(`دفع ${sq[1]} ${sq[2]}`);mPay(x,s,sq[2],null);}
   else if(t==='gtj'){x.log.push('على السجن 🚔');mJail(x,s,path);}
-  else if(t==='cc'||t==='ch'){const D=t==='ch'?MCH:MCC,key=t==='ch'?'ci':'ci2';let k=x.dk[key],idx=x.dk[t][k%16];
-    if(D[idx][1].free&&x.fr[t]>=0){k++;idx=x.dk[t][k%16];}x.dk[key]=k+1;const c=D[idx],e=c[1];x.card=(t==='ch'?'حظ: ':'صندوق: ')+c[0];x.log.push('🃏 '+c[0]);
+  else if(t==='cc'||t==='ch'){const D=t==='ch'?MCH:MCC,idx=mDrawCard(x,t);const c=D[idx],e=c[1];x.card=(t==='ch'?'حظ: ':'صندوق: ')+c[0];x.log.push('🃏 '+c[0]);
     if(e.to!=null){mGo(x,s,(e.to-x.pos[s]+40)%40,path);if(depth<3)mLand(x,s,dice,path,depth+1);}
     else if(e.back){x.pos[s]=(x.pos[s]+37)%40;path.push(x.pos[s]);if(depth<3)mLand(x,s,dice,path,depth+1);}
     else if(e.near){let st=1;while(MP[(x.pos[s]+st)%40][0]!==e.near)st++;mGo(x,s,st,path);if(depth<3)mLand(x,s,dice,path,depth+1,e.x2?{x2:1}:e.u10?{u10:2+rnd(6)+rnd(6)}:null);}
@@ -88,8 +91,14 @@ function mTrade(d){const o=d.offer;const x={...d,cash:[...d.cash]};let own=d.own
   for(const i of o.get){if(!mTradeable(d,o.to,i))return null;own=setAt(own,i,String(o.from));if(d.mg[i]==='1')cost[0]+=Math.ceil(mPrice(i)*.1);}
   x.cash[o.from]-=o.cash+cost[0];x.cash[o.to]+=o.cash-cost[1];if(x.cash[o.from]<0||x.cash[o.to]<0)return null;
   return {...x,own,offer:null,last:`صفقة بين ${nm(d,o.from)} و${nm(d,o.to)} 🤝`};}
+// a bot only moves on its own turn, so it answers an offer at once: it takes it when what it gets is worth more than what it gives
+// (a city counts double when the trade completes its colour for whoever gets it, or breaks a colour the bot already has)
+function mBotTrade(d){const o=d.offer,b=o.to,nd=mTrade(d),no={...d,offer:null,last:`${nm(d,b)} رفض الصفقة`};if(!nd)return no;
+  const full=(own,i,s)=>MP[i][0]==='p'&&MGRP[MP[i][3]].every(j=>own[j]===String(s)),val=i=>d.mg[i]==='1'?mPrice(i)/2:mPrice(i);
+  const gain=nd.cash[b]-d.cash[b]+o.give.reduce((a,i)=>a+val(i)*(full(nd.own,i,b)?2:1),0)-o.get.reduce((a,i)=>a+val(i)*(full(nd.own,i,o.from)||full(d.own,i,b)?2:1),0);
+  return gain>=[0,-60,10,60][botLv(d,b)]?nd:no;}
 function mEnd(d){const turns=d.turns+1;let win=null;if(turns>=30*d.pl.length){const w=d.pl.map((r,s)=>d.out[s]==='1'?-1:mWorth(d,s));win=mostPts(w);}
-  return {...d,turn:nextSeat(d,d.turn),ph:'roll',dbl:0,again:false,card:null,turns,win,last:win!=null?'خلصت الجولات، الفايز الأغنى':''};}
+  return {...d,turn:nextSeat(d,d.turn),ph:'roll',dbl:0,again:false,card:null,offer:null,turns,win,last:win!=null?'خلصت الجولات، الفايز الأغنى':''};}
 function mAuto(d){if(d.ph==='buy')return mSkip(d);if(d.ph==='end')return mEnd(d);return mRoll(d);}
 const mGroupOwned=(d,s,g)=>MGRP[g].every(j=>d.own[j]===String(s));
 function mCanBuild(d,s,i){const q=MP[i];if(q[0]!=='p'||d.own[i]!==String(s))return false;const g=MGRP[q[3]];if(!g.every(j=>d.own[j]===String(s)&&d.mg[j]==='0'))return false;const h=+d.hs[i];
@@ -122,6 +131,10 @@ function mProps(d,s,my){const mine=[...Array(40).keys()].filter(i=>d.own[i]===St
     const b=[];if(my){if(mCanBuild(d,s,i))b.push(`<button class="sm" data-ga="bld" data-i="${i}">+ ${h===4?'فندق':'بيت'} ${q[5]}</button>`);if(mCanSell(d,s,i))b.push(`<button class="sm" data-ga="sel" data-i="${i}">بيع ${q[5]/2}</button>`);
       if(mCanMort(d,s,i))b.push(`<button class="sm" data-ga="mrt" data-i="${i}">رهن +${mPrice(i)/2}</button>`);if(d.mg[i]==='1')b.push(`<button class="sm" data-ga="unm" data-i="${i}" ${mCanUnm(d,s,i)?'':'disabled'}>فك الرهن ${mUnmCost(i)}</button>`);}
     return `<div class="mp ${d.mg[i]==='1'?'mort':''}" style="--g:${c}"><b>${q[0]==='rr'?'🚆 ':q[0]==='ut'?(i===12?'⚡ ':'💧 '):''}${q[1]}</b><span>${h===5?'🏨':'🏠'.repeat(h)}${q[0]==='p'&&mGroupOwned(d,s,q[3])?' <small>✓ اللون كامل</small>':''}</span><div>${b.join('')}</div></div>`;}).join('')}</div>`;}
+// the trade panel belongs to one turn of one game, so it never carries over to the next player or a new game
+const mTrKey=d=>d.gid+':'+d.turn+':'+d.turns,mTr=d=>{if(S.mtr&&S.mtr.key!==mTrKey(d))S.mtr=null;return S.mtr;};
+// on one phone with bots the other human answers on the same screen; a bot answers at once (mBotTrade)
+const mCanAns=(d,ctx)=>ctx.local||ctx.v===d.offer.to||!!ctx.bots&&!isBot(d,d.offer.to);
 function mTradePanel(d,s){const T=S.mtr;const others=aliveSeats(d).filter(x=>x!==s);if(!others.includes(T.to))T.to=others[0];
   const lst=(who,k)=>{const L=[...Array(40).keys()].filter(i=>mTradeable(d,who,i));return L.length?`<div class="mtl">${L.map(i=>`<button class="sm ${T[k].includes(i)?'go':''}" data-ga="${k==='give'?'tgive':'tget'}" data-i="${i}">${MP[i][1]}${d.mg[i]==='1'?' (مرهون)':''}</button>`).join('')}</div>`:'<p class="note">ما فيه شي يتبادل</p>';};
   return `<div class="mpanel"><div class="mph"><b>🤝 صفقة مع</b><button class="sm" data-ga="trade">إغلاق</button></div>
@@ -140,7 +153,8 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
   status(d,ctx){if(d.ph==='auc')return (d.last?`<small>${d.last}</small><br>`:'')+`مزاد على ${MP[d.auc][1]} 🔨 كل واحد يكتب مبلغه بالسر`;return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);},
   onTimeout:d=>mAuto(d),
   onSkip(nd){let own=nd.own,hs=nd.hs,mg=nd.mg;for(let i=0;i<40;i++)if(own[i]!=='.'&&nd.out[+own[i]]==='1'){own=setAt(own,i,'.');hs=setAt(hs,i,'0');mg=setAt(mg,i,'0');}
-    const moved=S.st.d&&S.st.d.turn!==nd.turn;return {...nd,own,hs,mg,...(moved?{ph:'roll',dbl:0,again:false}:{})};},
+    const o=nd.offer,offer=o&&(nd.out[o.from]==='1'||nd.out[o.to]==='1')?null:o;
+    const moved=S.st.d&&S.st.d.turn!==nd.turn;return {...nd,own,hs,mg,offer,...(moved?{ph:'roll',dbl:0,again:false}:{})};},
   render(d,ctx){const s=d.turn,my=ctx.my,v=ctx.local?s:ctx.v;
     let c='';
     if(S.mcell!=null)c=mDetail(d,S.mcell);
@@ -154,18 +168,19 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
         if(ctx.my&&ctx.v!=null&&ctx.v>=0){const b=Math.max(0,Math.min(+(S.draft.bid||0),d.cash[ctx.v]));
           c+=`<div class="mbid"><button class="sm" data-ga="bidm" data-i="50">−50</button><button class="sm" data-ga="bidm" data-i="10">−10</button><b>${b}</b><button class="sm" data-ga="bidp" data-i="10">+10</button><button class="sm" data-ga="bidp" data-i="50">+50</button></div><div class="macts"><button class="btn red" data-ga="bidgo" ${b>0?'':'disabled'}>زايد بـ ${b}</button><button class="btn navy" data-ga="bidno">ما أبي</button></div>`;}
         else c+='<p class="mwait">ننتظر مزايدات الباقين…</p>';}
-      else if(d.offer){const o=d.offer;const lst=a=>a.map(i=>MP[i][1]).join('، ')||'لا شي';
+      else{if(d.offer){const o=d.offer;const lst=a=>a.map(i=>MP[i][1]).join('، ')||'لا شي';
         c+=`<div class="moffer"><b>🤝 ${nm(d,o.from)} يعرض على ${nm(d,o.to)}</b><small>يعطيه: ${lst(o.give)}${o.cash>0?` + ${o.cash} ريال`:''}</small><small>ويأخذ: ${lst(o.get)}${o.cash<0?` + ${-o.cash} ريال`:''}</small></div>`;
-        if(ctx.local||ctx.v===o.to)c+=`<div class="macts"><button class="btn red" data-ga="tacc">أقبل</button><button class="btn navy" data-ga="trej">أرفض</button></div>`;
+        if(mCanAns(d,ctx))c+=`<div class="macts"><button class="btn red" data-ga="tacc">أقبل</button><button class="btn navy" data-ga="trej">أرفض</button></div>`;
         else if(ctx.v===o.from)c+=`<div class="macts"><button class="btn navy" data-ga="trej">إلغاء العرض</button></div>`;}
-      else if(d.win==null&&my){
+      // the player whose turn it is keeps their buttons while an offer waits for an answer
+      if(d.win==null&&my){
         if(d.ph==='roll'){if(d.jail[s])c+=`<div class="macts"><button class="btn navy" data-ga="bail" ${d.cash[s]<50?'disabled':''}>ادفع 50 واطلع</button>${d.free[s]?'<button class="btn blue" data-ga="free">🎫 البطاقة</button>':''}</div>`;}
         else if(d.ph==='buy'){const i=d.pos[s];c+=`<div class="mbuy"><b>${MP[i][1]}</b> متاح بـ ${MP[i][2]}</div><div class="macts"><button class="btn red" data-ga="buy" ${d.cash[s]<mPrice(i)?'disabled':''}>🏷️ اشترِ</button><button class="btn navy" data-ga="skip">لا</button></div>`;}
         else c+=`<div class="macts"><button class="btn blue" data-ga="end">إنهاء الدور ⏭</button></div>`;}
-      else if(d.win==null)c+=`<p class="mwait">ننتظر ${nm(d,s)}</p>`;
+      else if(d.win==null&&!d.offer)c+=`<p class="mwait">ننتظر ${nm(d,s)}</p>`;}
       c+=`<button class="mtab" data-ga="props">🏠 عقاراتي</button>${d.win==null&&my&&!d.offer&&(d.ph==='roll'||d.ph==='end')?'<button class="mtab" data-ga="trade">🤝 صفقة</button>':''}`;}
     let b=`<div class="mboard" id="mboard">${MP.map((q,i)=>mCellHTML(d,i)).join('')}<div class="mcenter">${c}</div></div>`;
-    if(S.mtr&&my&&!d.offer&&(d.ph==='roll'||d.ph==='end'))b+=mTradePanel(d,s);
+    if(mTr(d)&&my&&!d.offer&&(d.ph==='roll'||d.ph==='end'))b+=mTradePanel(d,s);
     if(S.mprops&&v>=0)b+=`<div class="mpanel"><div class="mph"><b>عقاراتك</b> ${money(d.cash[v])}<button class="sm" data-ga="props">إغلاق</button></div>${mProps(d,v,my&&d.ph!=='buy'&&v===s)}</div>`;
     return b;},
   click(a,i,d,ctx){
@@ -173,7 +188,7 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     if(a==='props'){S.mprops=!S.mprops;render();return;}
     if(a==='bidp'||a==='bidm'){S.draft.bid=String(Math.max(0,(+(S.draft.bid||0))+(a==='bidp'?i:-i)));render();return;}
     if((a==='bidgo'||a==='bidno')&&d.ph==='auc'&&ctx.my){const b=a==='bidno'?0:Math.max(0,Math.min(+(S.draft.bid||0),d.cash[ctx.v]));S.draft.bid='0';simulPick(d,ctx.v,b);return;}
-    if((a==='tacc'||a==='trej')&&d.offer&&(ctx.local||ctx.v===d.offer.to||(a==='trej'&&ctx.v===d.offer.from))){
+    if((a==='tacc'||a==='trej')&&d.offer&&(mCanAns(d,ctx)||(a==='trej'&&ctx.v===d.offer.from))){
       if(a==='trej'){act({...d,offer:null,last:ctx.v===d.offer.from?'انلغى العرض':`${nm(d,d.offer.to)} رفض الصفقة`});return;}
       const nd=mTrade(d);if(!nd){toast('الصفقة ما تنفع الحين');act({...d,offer:null});return;}act(nd);return;}
     if(!ctx.my)return;const s=d.turn;
@@ -185,11 +200,13 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     if(a==='buy'&&d.ph==='buy'){act(mBuy(d));return;}
     if(a==='skip'&&d.ph==='buy'){act(mSkip(d));return;}
     if(a==='end'&&d.ph==='end'){S.mcell=null;act(mEnd(d));return;}
-    if(a==='trade'){S.mtr=S.mtr?null:{to:aliveSeats(d).find(x=>x!==s),give:[],get:[],cash:0};render();return;}
-    if(S.mtr&&a==='tto'){S.mtr={to:i,give:[],get:[],cash:0};render();return;}
-    if(S.mtr&&(a==='tgive'||a==='tget')){const k=a==='tgive'?'give':'get';const L=S.mtr[k];const j=L.indexOf(i);if(j>=0)L.splice(j,1);else L.push(i);render();return;}
-    if(S.mtr&&a==='tcash'){S.mtr.cash+=i;render();return;}
-    if(S.mtr&&a==='tsend'){const T=S.mtr;if(!T.give.length&&!T.get.length&&!T.cash)return;S.mtr=null;act({...d,offer:{from:s,to:T.to,give:T.give,get:T.get,cash:T.cash},last:`${nm(d,s)} أرسل عرض صفقة لـ${nm(d,T.to)}`});return;}
+    const T=mTr(d);
+    if(a==='trade'){S.mtr=T?null:{key:mTrKey(d),to:aliveSeats(d).find(x=>x!==s),give:[],get:[],cash:0};render();return;}
+    if(T&&a==='tto'){S.mtr={key:mTrKey(d),to:i,give:[],get:[],cash:0};render();return;}
+    if(T&&(a==='tgive'||a==='tget')){const k=a==='tgive'?'give':'get';const L=T[k];const j=L.indexOf(i);if(j>=0)L.splice(j,1);else L.push(i);render();return;}
+    if(T&&a==='tcash'){T.cash+=i;render();return;}
+    if(T&&a==='tsend'&&!d.offer){const give=T.give.filter(j=>mTradeable(d,s,j)),get=T.get.filter(j=>mTradeable(d,T.to,j));if(T.to===s||d.out[T.to]==='1'||!give.length&&!get.length&&!T.cash)return;S.mtr=null;
+      const nd={...d,offer:{from:s,to:T.to,give,get,cash:T.cash},last:`${nm(d,s)} أرسل عرض صفقة لـ${nm(d,T.to)}`};act(isBot(d,T.to)?mBotTrade(nd):nd);return;}
     if(d.ph==='buy')return;
     if(a==='bld'&&mCanBuild(d,s,i)){const cash=[...d.cash];cash[s]-=MP[i][5];const h=+d.hs[i]+1;act({...d,cash,hs:setAt(d.hs,i,String(h)),last:`${nm(d,s)} بنى ${h===5?'فندق 🏨':'بيت 🏠'} في ${MP[i][1]}`});return;}
     if(a==='sel'&&mCanSell(d,s,i)){const cash=[...d.cash];cash[s]+=MP[i][5]/2;act({...d,cash,hs:setAt(d.hs,i,String(+d.hs[i]-1)),last:`${nm(d,s)} باع بيت في ${MP[i][1]}`});return;}

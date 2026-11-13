@@ -93,7 +93,7 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
       else lab=`<span class="note">ينتظر ${nm(d,s0)}</span>`;}
     return v+dieBox(d,my,lab,my&&d.roll==null&&d.win==null);},
   click(a,i,d,ctx){if(!ctx.my)return;
-    if(a==='roll'&&d.roll==null&&!S.rolling){const g=d.gid,t=d.turn;rollDie(()=>{const nd=S.st.d;if(!nd||nd.gid!==g||nd.turn!==t||nd.roll!=null)return;act(luRoll(nd));});return;}
+    if(a==='roll'&&d.roll==null&&!S.rolling){const g=d.gid,t=d.turn;rollDie(()=>{const nd=S.st.d;if(!nd||nd.gid!==g||nd.turn!==t||nd.roll!=null){render();return;}act(luRoll(nd));});return;}
     if(a==='tok'&&d.roll!=null&&luMovable(d,d.turn,d.roll).includes(i))act(luApply(d,d.turn,i,d.roll));},
   after(d){const m=d.mv;if(!m||!once('lu'+d.gid+'_'+m.sid))return;const el=document.getElementById(`lt${m.s}_${m.k}`);if(!el)return;
     const pts=[];if(m.from<0)pts.push(luXY(d,m.s,m.k,0));else for(let p=m.from+1;p<=m.to;p++)pts.push(luXY(d,m.s,m.k,p));
@@ -111,14 +111,16 @@ const jkHome=(d,s)=>{const L=jkL(d);for(let k=0;k<4;k++)if(d.mb[s*4+k]<L)return 
 const jkCtl=(d,s)=>d.team&&jkHome(d,s)?jkTeamOf(d,s).find(x=>x!==s):s;
 function jkXY(d,s,k,p){const n=d.pl.length,G=starGeo(starArms(n)),a=armOf(n,s),L=13*G.A;if(p<0)return G.slot(a,k);if(p<L)return G.track[(a*13+8+p)%L];return G.homes[a][p-L];}
 function jkOcc(d){const L=jkL(d),o={};for(let s=0;s<d.pl.length;s++)for(let k=0;k<4;k++){const p=d.mb[s*4+k];if(p>=0&&p<L)o[jkCell(d,s,p)]={s,k,p};}return o;}
+// a marble on its own start is safe and blocks the way, unless its player has left the game
+const jkSafe=(d,m)=>m&&m.p===0&&d.out[m.s]!=='1';
 function jkFwd(d,s,k,n,occ){const L=jkL(d),p=d.mb[s*4+k];if(p<0||p+n>L+3)return null;
-  for(let t=1;t<=n;t++){const q=p+t;if(q<L){const m=occ[jkCell(d,s,q)];if(m&&m.p===0)return null;}else{if(q-L>3)return null;for(let kk=0;kk<4;kk++)if(d.mb[s*4+kk]===q)return null;}}
+  for(let t=1;t<=n;t++){const q=p+t;if(q<L){const m=occ[jkCell(d,s,q)];if(jkSafe(d,m))return null;}else{if(q-L>3)return null;for(let kk=0;kk<4;kk++)if(d.mb[s*4+kk]===q)return null;}}
   const q=p+n;let kill=null;if(q<L){const m=occ[jkCell(d,s,q)];if(m){if(m.s===s)return null;kill=m;}}return {s,k,from:p,to:q,kill};}
 function jkBack(d,s,k,occ){const L=jkL(d),p=d.mb[s*4+k];if(p<0||p>=L)return null;let q=p;
-  for(let t=1;t<=4;t++){q=(p-t+L)%L;const m=occ[jkCell(d,s,q)];if(m&&m.p===0)return null;}
+  for(let t=1;t<=4;t++){q=(p-t+L)%L;const m=occ[jkCell(d,s,q)];if(jkSafe(d,m))return null;}
   const m=occ[jkCell(d,s,q)];if(m&&m.s===s)return null;return {s,k,from:p,to:q,kill:m||null,back:true};}
 function jkOut(d,s,occ){const k=[0,1,2,3].find(k=>d.mb[s*4+k]<0);if(k==null)return null;const m=occ[jkStart(d,s)];if(m&&m.s===s)return null;return {s,k,from:-1,to:0,kill:m||null};}
-function jkSwapOk(d,s,k,o,ok){const L=jkL(d),p=d.mb[s*4+k],q=d.mb[o*4+ok];return o!==s&&p>0&&p<L&&q>0&&q<L;}
+function jkSwapOk(d,s,k,o,ok){const L=jkL(d),p=d.mb[s*4+k],q=d.mb[o*4+ok];return o!==s&&p>0&&p<L&&(q>0||q===0&&d.out[o]==='1')&&q<L;}
 function jkDo(d,m){const mb=[...d.mb];if(m.kill)mb[m.kill.s*4+m.kill.k]=-1;mb[m.s*4+m.k]=m.to;return {...d,mb};}
 function jkOpts(d,cs,card){const r=card[0],occ=jkOcc(d),o=[];const fw=n=>{for(let k=0;k<4;k++)if(jkFwd(d,cs,k,n,occ))o.push({t:'f',k,n});};
   if((r==='A'||r==='K')&&jkOut(d,cs,occ))o.push({t:'o'});
@@ -130,7 +132,13 @@ function jkOpts(d,cs,card){const r=card[0],occ=jkOcc(d),o=[];const fw=n=>{for(le
   else fw(+r);
   return o;}
 const jkCardName=c=>(JRN[c[0]]||c[0]);
-function jkPlay(d,ci,opt){const s=d.turn,n=d.pl.length,cs=jkCtl(d,s),L=jkL(d);const hd=[...d.hd];const cards=cardsOf(hd[s]);const card=cards.splice(ci,1)[0];hd[s]=cards.join('');
+/* deals k random cards from what is left; the pile is kept in a fixed order, so the state never holds the next cards */
+function jkDraw(deck,k){const c=cardsOf(deck),h=[];for(let i=0;i<k&&c.length;i++)h.push(c.splice(rnd(c.length),1)[0]);return [h.join(''),c.join('')];}
+/* the turn from seat t on: a new deal when every player still in has no cards, else the first seat that still has cards */
+function jkNext(nd,t){const n=nd.pl.length,al=aliveSeats(nd);if(nd.out[t]==='1')t=nextSeat(nd,t);
+  if(al.every(x=>!nd.hd[x])){let deck=nd.deck;if(deck.length<8*al.length)deck=deck52().join('');const hd=[...nd.hd];for(const x of al){[hd[x],deck]=jkDraw(deck,4);}return {...nd,hd,deck,deal:(nd.deal||0)+1,turn:t};}
+  let g=0;while(!nd.hd[t]&&g++<n)t=nextSeat(nd,t);return {...nd,turn:t};}
+function jkPlay(d,ci,opt){if(!d.hd[d.turn])return jkNext(d,d.turn);const s=d.turn,n=d.pl.length,cs=jkCtl(d,s),L=jkL(d);const hd=[...d.hd];const cards=cardsOf(hd[s]);const card=cards.splice(ci,1)[0];hd[s]=cards.join('');
   let nd={...d,hd,top:card,np:d.np+1};const moves=[],kills=[];let swap=false,msg;
   const go=m=>{if(!m)return;moves.push({s:m.s,k:m.k,from:m.from,to:m.to,back:!!m.back});if(m.kill)kills.push({s:m.kill.s,k:m.kill.k,from:m.kill.p});nd=jkDo(nd,m);};
   if(!opt)msg=`${nm(d,s)} حرق ورقة ${jkCardName(card)} 🔥`;
@@ -145,17 +153,21 @@ function jkPlay(d,ci,opt){const s=d.turn,n=d.pl.length,cs=jkCtl(d,s),L=jkL(d);co
     msg=`${nm(d,s)} لعب ${jkCardName(card)}`+(opt.t==='o'?' وطلّع حبة':opt.t==='j'?` وبدّل مع ${nm(d,opt.o)}`:opt.t==='b'?' ورجع 4':opt.t==='7'&&opt.k2!=null?` وقسمها ${opt.a}+${7-opt.a}`:'')+(kills.length?`، وقتل حبة ${kills.map(x=>nm(d,x.s)).join(' و')} 💥`:'');}
   const team=jkTeamOf(nd,s);let win=null,wins=null;
   if(team.every(x=>jkHome(nd,x))){win=s;wins=team;}
-  else if(nd.np>=150*n){let best=-1,bs=[];for(let x=0;x<(d.team?n/2:n);x++){const tm=jkTeamOf(nd,x);const sc=tm.reduce((a,y)=>a+[0,1,2,3].reduce((b,k)=>b+Math.max(0,nd.mb[y*4+k]+1),0),0);if(sc>best){best=sc;bs=tm;}}win=bs[0];wins=bs;}
-  let turn=nextSeat(nd,s);const act_=aliveSeats(nd);
-  if(win==null&&act_.every(x=>!nd.hd[x])){let deck=nd.deck;if(deck.length<8*n)deck=shuffle(deck52()).join('');const h2=[...nd.hd];for(const x of act_){h2[x]=deck.slice(0,8);deck=deck.slice(8);}nd={...nd,hd:h2,deck,deal:(nd.deal||0)+1};msg+='. وزّعنا ورق جديد 🃏';}
-  else if(win==null){let g=0;while(!nd.hd[turn]&&g++<n)turn=nextSeat(nd,turn);}
+  else if(nd.np>=150*n){let best=-1,bs=[];for(let x=0;x<(d.team?n/2:n);x++){const tm=jkTeamOf(nd,x),in_=tm.filter(y=>nd.out[y]!=='1');if(!in_.length)continue;const sc=tm.reduce((a,y)=>a+[0,1,2,3].reduce((b,k)=>b+Math.max(0,nd.mb[y*4+k]+1),0),0);if(sc>best){best=sc;bs=in_;}}win=bs[0];wins=bs;}
+  let turn=nextSeat(nd,s);
+  if(win==null){const nx=jkNext(nd,turn);if(nx.deal!==nd.deal)msg+='. وزّعنا ورق جديد 🃏';nd=nx;turn=nx.turn;}
   return {...nd,turn,win,wins,last:msg,mv:{sid:(d.mv?d.mv.sid:0)+1,moves,kills,swap}};}
-function jkAuto(d){const s=d.turn,cs=jkCtl(d,s);const cards=cardsOf(d.hd[s]);for(let i=0;i<cards.length;i++){const o=jkOpts(d,cs,cards[i]);if(o.length)return jkPlay(d,i,o[0]);}return jkPlay(d,0,null);}
+function jkAuto(d){if(!d.hd[d.turn])return jkNext(d,d.turn);const s=d.turn,cs=jkCtl(d,s);const cards=cardsOf(d.hd[s]);for(let i=0;i<cards.length;i++){const o=jkOpts(d,cs,cards[i]);if(o.length)return jkPlay(d,i,o[0]);}return jkPlay(d,0,null);}
 const jkSel=d=>{const key=d.gid+':'+d.np+':'+d.turn;if(!S.jk||S.jk.key!==key)S.jk={key,ci:null,k:null,a:null};return S.jk;};
 GAMES.jakaro={name:'جكارو',cat:'board',lbc:'#7B4A2A',
   icon:`<svg viewBox="0 0 100 100"><defs><radialGradient id="jkw" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#D9A066"/><stop offset="1" stop-color="#8E5B2E"/></radialGradient></defs><rect width="100" height="100" fill="url(#jkw)"/>${[...Array(12).keys()].map(i=>{const t=i/12*Math.PI*2;return `<circle cx="${50+34*Math.cos(t)}" cy="${50+34*Math.sin(t)}" r="4" fill="#4A2C17"/>`;}).join('')}${[['#EC6158',0],['#4AB1E8',3],['#4CB97F',6],['#F0B429',9]].map(([c,i])=>{const t=i/12*Math.PI*2;return `<circle cx="${50+34*Math.cos(t)}" cy="${50+34*Math.sin(t)}" r="5.5" fill="${c}" stroke="#fff" stroke-width="1.2"/>`;}).join('')}<rect x="34" y="30" width="22" height="32" rx="3" fill="#fff" transform="rotate(-12 45 46)"/><rect x="46" y="34" width="22" height="32" rx="3" fill="#fff" transform="rotate(10 57 50)"/><text x="57" y="56" font-size="15" font-weight="800" fill="#E5483F" text-anchor="middle" transform="rotate(10 57 50)">K</text></svg>`,
-  init:n=>{let deck=shuffle(deck52()).join('');const hd=[];for(let s=0;s<n;s++){hd.push(deck.slice(0,8));deck=deck.slice(8);}
+  init:n=>{let deck=deck52().join('');const hd=[];for(let s=0;s<n;s++){let h;[h,deck]=jkDraw(deck,4);hd.push(h);}
     return {mb:Array(n*4).fill(-1),hd,deck,top:null,np:0,team:n>=4&&n%2===0,last:'',mv:null};},
+  // a player who left: in free-for-all their marbles on the track go back home (in teams the partner plays them later), the other team wins if no one of it is left,
+  // and the turn goes to someone holding cards (a new deal if nobody has any)
+  onSkip(nd){const n=nd.pl.length,L=jkL(nd);if(!nd.team)nd={...nd,mb:nd.mb.map((p,i)=>nd.out[Math.floor(i/4)]==='1'&&p>=0&&p<L?-1:p)};
+    const al=aliveSeats(nd);if(nd.team&&al.length&&al.every(x=>x%(n/2)===al[0]%(n/2)))nd={...nd,win:al[0],wins:al};
+    return nd.win!=null?nd:jkNext(nd,nd.turn);},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   points:d=>d.pl.map((r,s)=>{const L=jkL(d);let f=0;for(let k=0;k<4;k++)if(d.mb[s*4+k]>=L)f++;return f+'/4'+(d.team?' 🤝'+(s%(d.pl.length/2)+1):'');}),
