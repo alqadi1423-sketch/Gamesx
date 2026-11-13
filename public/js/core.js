@@ -100,6 +100,8 @@ function tryHost(){const {g,d}=S.st;if(!g||!d||d.win!=null)return;const G=GAMES[
   if(S.mode==='online'&&(S.me==null||S.me!==actingHost()))return;if(S.mode!=='online'&&S.mode!=='local')return;
   let nd=null;try{nd=G.host(d);}catch(e){console.error('host',e);return;}if(nd&&nd!==d)act(nd);}
 setInterval(tryHost,400);
+// any element with data-until shows the seconds left until that moment
+setInterval(()=>{for(const e of document.querySelectorAll('[data-until]')){const l=Math.max(0,Math.ceil((+e.dataset.until-Date.now())/1000));if(e.textContent!==String(l))e.textContent=l;}},500);
 // NOPICK marks a seat that chose to give no answer, so the round does not wait for it
 const NOPICK='~';
 function simulPicks(d){return d.pl.map((r,s)=>{if(d.out[s]==='1')return null;const p=S.priv[r];return p&&p.gid===d.gid&&p.rd===d.rd&&p.pick!=null?(p.pick===NOPICK?null:p.pick):undefined;});}
@@ -438,7 +440,7 @@ const normQ=t=>String(t).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/
 function scoreBar(sc,d){
   const G=GAMES[S.st.g];let pts=null;try{pts=G.points?G.points(d):(Array.isArray(d.pts)?d.pts:null);}catch(e){}
   const simul=isSimul(G,d);
-  return `<div class="players ${d.pl.length>4?'two':''}" style="--n:${Math.min(d.pl.length,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&d.turn===s;
+  return `<div class="players ${d.pl.length>4?'two':''}" style="--n:${Math.min(d.pl.length,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&!(typeof G.noTurn==='function'?G.noTurn(d):G.noTurn)&&d.turn===s;
     const pk=simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u class="pk ok">✓</u>':'<u class="pk">…</u>'):'';
     const won=typeof d.win==='number'&&(d.win===s||(Array.isArray(d.wins)&&d.wins.includes(s)));
     return `<div class="pt ${on?'on':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}"><i>${shapeW(r)}${sc[r]?`<b>${sc[r]}</b>`:''}${d.tm?`<s class="tmb">${TEAMS[d.tm[s]].e}</s>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${pts[s]}</em>`:''}</div>${pk}</div>`;}).join('')}</div>${d.tm?teamStrip(d,pts):''}`;
@@ -581,7 +583,8 @@ app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.draf
   if(e.target.type==='range'){const bn=e.target.closest('.board')&&e.target.closest('.board').querySelector('.big-num');if(bn)bn.textContent=e.target.value;}
   if(k==='myname'){S.myName=e.target.value.trim().slice(0,14);lsSet(LSK.name,S.myName);clearTimeout(S.nmT);S.nmT=setTimeout(()=>publish(),400);}
   else if(/^ln\d$/.test(k)){S.localNames[+k[2]]=e.target.value;save();}
-  else if(k==='q')render();});
+  else if(k==='q')render();
+  else{const G=S.st.g&&GAMES[S.st.g];if(G&&G.onDraft)G.onDraft(k,e.target.value);}});
 app.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.send'))e.preventDefault();});
 app.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}else if(e.target.dataset&&e.target.dataset.draft==='chat'){e.preventDefault();sendChat();}
   else if(e.target.dataset&&e.target.dataset.enter){e.preventDefault();const b=app.querySelector(`[data-ga="${e.target.dataset.enter}"]`);if(b&&!b.disabled)b.click();}});
