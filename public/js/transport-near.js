@@ -3,22 +3,28 @@
    One phone is the hub of the room and relays messages, like the Cloudflare room does online.
    It offers the same calls the engine uses: join -> presence / onPeers / leave. */
 window.NEARROOM={
-  available:()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.Nearby),
-  P:()=>Capacitor.Plugins.Nearby,
+  native:()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()),
+  // plain pages have no bundler, so the native plugin is registered here by name
+  P(){const C=window.Capacitor;if(!C)return null;if(C.Plugins&&C.Plugins.Nearby)return C.Plugins.Nearby;return C.registerPlugin?C.registerPlugin('Nearby'):null;},
+  available(){if(!this.native())return false;const C=window.Capacitor;return C.isPluginAvailable?C.isPluginAvailable('Nearby'):!!this.P();},
   found:{},          // endpoint id -> {code, host}
   scanning:false,onList:null,subs:[],
   parse(name){const m=/^A1\|([A-Z0-9]{4,6})\|(.*)$/.exec(name||'');return m?{code:m[1],host:m[2]}:null;},
-  async perms(){try{const r=await this.P().ensure();return !!(r&&r.granted);}catch(e){return false;}},
+  errText(e){return String((e&&(e.message||e.errorMessage))||e||'');},
+  async status(){try{return await this.P().status();}catch(e){return {fail:this.errText(e)};}},
+  settings(which){try{this.P().settings({which});}catch(e){}},
+  async perms(){try{const r=await this.P().ensure();return !!(r&&r.granted);}catch(e){this.lastErr=this.errText(e);return false;}},
   async on(ev,fn){const h=await this.P().addListener(ev,fn);this.subs.push(h);return h;},
   async off(){const s=this.subs;this.subs=[];for(const h of s){try{await h.remove();}catch(e){}}},
   list(){return Object.entries(this.found).map(([id,v])=>({id,...v}));},
-  async scan(onList){this.onList=onList;if(this.scanning){onList(this.list());return true;}
-    if(!await this.perms())return false;
+  // answers {ok} or {ok:false, why:'perm'|'err', msg}
+  async scan(onList){this.onList=onList;this.lastErr='';if(this.scanning){onList(this.list());return {ok:true};}
+    if(!await this.perms())return {ok:false,why:this.lastErr?'err':'perm',msg:this.lastErr};
     this.found={};this.scanning=true;
     await this.on('found',e=>{const v=this.parse(e.name);if(v){this.found[e.id]=v;this.onList&&this.onList(this.list());}});
     await this.on('lost',e=>{delete this.found[e.id];this.onList&&this.onList(this.list());});
-    try{await this.P().discover();}catch(e){this.scanning=false;return false;}
-    return true;},
+    try{await this.P().discover();}catch(e){this.scanning=false;await this.off();return {ok:false,why:'err',msg:this.errText(e)};}
+    return {ok:true};},
   async stopAll(){this.scanning=false;this.onList=null;this.found={};await this.off();try{await this.P().stop();}catch(e){}},
   // the engine asks for a room object; mode 'host' advertises a new room, mode 'join' connects to a found one
   room(mode,arg){const self=this;return {join:()=>mode==='host'?self.host(arg.code,arg.name):self.client(arg.id,arg.code,arg.name)};},
@@ -26,8 +32,8 @@ window.NEARROOM={
     const emit=()=>{const arr=[{peer:me.id||'me',sameTab:true,isMe:true,kind:'viewer',presence:mine}];for(const k in peers)arr.push({peer:k,sameTab:false,isMe:false,kind:'viewer',presence:peers[k]});hs.forEach(h=>h({peers:arr}));};
     const setMine=patch=>{mine={...mine};for(const k in patch){if(patch[k]===null)delete mine[k];else mine[k]=patch[k];}mine=JSON.parse(JSON.stringify(mine));};
     return {me,peers:()=>peers,setPeers:p=>{peers=p;},mine:()=>mine,setMine,emit,onPeers:(h,e)=>{hs.push(h);if(e)err=e;setTimeout(emit,0);return()=>{hs=hs.filter(x=>x!==h);};},fail:()=>{err&&err();}};},
-  async host(code,name){
-    if(!await this.perms())throw new Error('perm');
+  async host(code,name){this.lastErr='';
+    if(!await this.perms())throw new Error(this.lastErr||'perm');
     await this.stopAll();
     const b=this.base();b.me.id='H';const conns=new Set();const N=this.P();
     const send=(ids,o)=>{if(ids.length)N.send({ids,data:JSON.stringify(o)}).catch(()=>{});};
@@ -38,14 +44,14 @@ window.NEARROOM={
       send(others(id),{t:'join',peer:id});b.emit();});
     await this.on('message',e=>{let m;try{m=JSON.parse(e.data);}catch(x){return;}if(m.t==='p'){b.peers()[e.id]=m.p||{};send(others(e.id),{t:'p',peer:e.id,p:m.p||{}});b.emit();}});
     await this.on('disconnected',e=>{conns.delete(e.id);delete b.peers()[e.id];send([...conns],{t:'leave',peer:e.id});b.emit();});
-    await N.advertise({name:'A1|'+code+'|'+(name||'').slice(0,14)});
+    try{await N.advertise({name:'A1|'+code+'|'+(name||'').slice(0,14)});}catch(e){await this.stopAll();throw new Error(this.errText(e));}
     return {name:code,near:true,
       presence:async patch=>{b.setMine(patch);b.emit();send([...conns],{t:'p',peer:'H',p:b.mine()});},
       onPeers:b.onPeers,
       leave:async()=>{await NEARROOM.stopAll();}};
   },
-  async client(id,code,name){
-    if(!await this.perms())throw new Error('perm');
+  async client(id,code,name){this.lastErr='';
+    if(!await this.perms())throw new Error(this.lastErr||'perm');
     const b=this.base();const N=this.P();let host=id,opened=false,closed=false,retry=null;
     const send=o=>{if(host)N.send({ids:[host],data:JSON.stringify(o)}).catch(()=>{});};
     const api={name:code,near:true,

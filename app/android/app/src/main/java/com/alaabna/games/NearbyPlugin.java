@@ -1,7 +1,15 @@
 package com.alaabna.games;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.content.Context;
+import android.content.Intent;
+import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -12,6 +20,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -79,6 +89,63 @@ public class NearbyPlugin extends Plugin {
         JSObject o = new JSObject();
         o.put("id", id);
         return o;
+    }
+
+    /** What the phone has ready for nearby rooms, so the app can tell the player what to turn on. */
+    @SuppressLint("MissingPermission")
+    @PluginMethod
+    public void status(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("sdk", Build.VERSION.SDK_INT);
+        int g = -1;
+        try {
+            g = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(getContext());
+        } catch (Throwable t) {
+            g = -2;
+        }
+        r.put("gms", g);
+        r.put("gmsOk", g == ConnectionResult.SUCCESS);
+        boolean loc = true;
+        try {
+            LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+            if (lm != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) loc = lm.isLocationEnabled();
+                else loc = lm.isProviderEnabled(LocationManager.GPS_PROVIDER) || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            }
+        } catch (Throwable t) {}
+        r.put("loc", loc);
+        r.put("locNeeded", Build.VERSION.SDK_INT < 33);
+        try {
+            BluetoothManager bm = (BluetoothManager) getContext().getSystemService(Context.BLUETOOTH_SERVICE);
+            BluetoothAdapter a = bm == null ? null : bm.getAdapter();
+            r.put("hasBt", a != null);
+            r.put("bt", a != null && a.isEnabled());
+        } catch (Throwable t) {
+            r.put("hasBt", true);
+            r.put("bt", true);
+        }
+        r.put("perm", allGranted());
+        call.resolve(r);
+    }
+
+    /** Opens the phone settings page the player needs: location, bluetooth or this app's permissions. */
+    @PluginMethod
+    public void settings(PluginCall call) {
+        String which = call.getString("which", "app");
+        Intent i;
+        if ("loc".equals(which)) i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        else if ("bt".equals(which)) i = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+        else {
+            i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            i.setData(Uri.fromParts("package", getContext().getPackageName(), null));
+        }
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(msg(e));
+        }
     }
 
     @PluginMethod
@@ -159,6 +226,7 @@ public class NearbyPlugin extends Plugin {
     public void advertise(PluginCall call) {
         String name = call.getString("name", "room");
         AdvertisingOptions opt = new AdvertisingOptions.Builder().setStrategy(Strategy.P2P_STAR).build();
+        client.stopAdvertising();
         client.startAdvertising(name, SERVICE_ID, lifeCb, opt)
             .addOnSuccessListener(v -> call.resolve())
             .addOnFailureListener(e -> call.reject(msg(e)));
@@ -173,6 +241,7 @@ public class NearbyPlugin extends Plugin {
     @PluginMethod
     public void discover(PluginCall call) {
         DiscoveryOptions opt = new DiscoveryOptions.Builder().setStrategy(Strategy.P2P_STAR).build();
+        client.stopDiscovery();
         client.startDiscovery(SERVICE_ID, discoveryCb, opt)
             .addOnSuccessListener(v -> call.resolve())
             .addOnFailureListener(e -> call.reject(msg(e)));

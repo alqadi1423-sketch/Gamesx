@@ -145,7 +145,7 @@ async function enterRoom(code,host,restore,given){
   if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
   try{nr=await room.join('g-'+code.toLowerCase());}
-  catch(e){S.joining=false;S.roomErr=given?'ما قدرت أدخل الغرفة القريبة، قرّب من صاحب الغرفة وجرّب مرة ثانية.':'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
+  catch(e){S.joining=false;S.roomErr=given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
   S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
   if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st};if(!Array.isArray(S.st.sc)||S.st.sc.length<MAXP)S.st.sc=Array(MAXP).fill(0);}
   else S.st={g:null,s:host?1:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};
@@ -275,17 +275,44 @@ function renderHome(){
   ${S.update?`<a class="upd" href="${S.update.apk}" target="_blank" rel="noopener">⬇️ فيه نسخة أحدث من التطبيق، اضغط وحمّلها</a>`:''}`;
 }
 function renderNear(){
-  const L=S.nearList||[];
+  const L=S.nearList||[],D=S.nearDiag||[];
   OUT=`${topBar('قريب بدون إنترنت','home')}
+  ${D.length?`<div class="panel ndiag"><h3>قبل ما تبدأ</h3>${D.map(x=>`<div class="nd"><p>${x.t}</p>${x.a?`<button class="btn" data-a="nset" data-w="${x.a}">${x.b}</button>`:''}</div>`).join('')}<button class="big green" data-a="near">حاول مرة ثانية</button></div>`:''}
   <div class="panel"><h3>اسمك</h3><input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off"></div>
   <div class="panel"><h3>أنشئ غرفة قريبة</h3><p>أصحابك اللي جنبك يشوفون غرفتك عندهم ويدخلون بضغطة، بدون إنترنت</p><button class="big red" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
-  <div class="panel"><h3>الغرف القريبة</h3>${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><span>${f.code}</span><i>ادخل</i></button>`).join('')}</div>`:`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`}
-  <p class="note">خل البلوتوث شغّال، ووافق على صلاحية الأجهزة القريبة لو طلبها الجوال</p></div>
+  <div class="panel"><h3>الغرف القريبة</h3>${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><span>${f.code}</span><i>ادخل</i></button>`).join('')}</div>`:S.nearScan?`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`:'<p class="note">البحث متوقف</p>'}</div>
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
 }
-async function startNear(){S.mode='near';S.roomErr=null;S.nearList=[];render();
-  const ok=await NEARROOM.scan(list=>{S.nearList=list;if(S.mode==='near')render();});
-  if(!ok&&S.mode==='near'){S.roomErr='ما قدرت أدوّر على الغرف القريبة. وافق على صلاحية الأجهزة القريبة وشغّل البلوتوث، وبعدها ارجع وادخل مرة ثانية.';render();}}
+// turns a native error into a short Arabic hint, with the raw code kept for us
+function nearErr(m){m=String(m||'');const raw=m&&m!=='perm'&&m!=='timeout'?`<small class="ltr nraw">${escH(m.slice(0,90))}</small>`:'';
+  let t='ما قدرت أشغّل الغرف القريبة.';
+  if(m==='perm'||/PERMISSION/i.test(m))t='الجوال ما أعطى التطبيق صلاحية الأجهزة القريبة أو الموقع.';
+  else if(m==='timeout')t='ما رد صاحب الغرفة. قرّبوا من بعض وجرّب مرة ثانية.';
+  else if(/LOCATION/i.test(m))t='شغّل الموقع في الجوال.';
+  else if(/BLUETOOTH|RADIO/i.test(m))t='شغّل البلوتوث وجرّب مرة ثانية.';
+  else if(/API_UNAVAILABLE|SERVICE_MISSING|not implemented/i.test(m))t='هذا الجوال ما فيه خدمات Google اللي يحتاجها اللعب القريب.';
+  return t+raw;}
+async function nearCheck(){
+  const st=await NEARROOM.status(),D=[];
+  if(st.fail)D.push({t:nearErr(st.fail)});
+  else{
+    if(st.gmsOk===false)D.push({t:'هذا الجوال ما فيه خدمات Google أو تحتاج تحديث، واللعب القريب يحتاجها.'});
+    if(st.hasBt===false)D.push({t:'هذا الجوال ما فيه بلوتوث.'});
+    else if(st.bt===false)D.push({t:'البلوتوث مقفل.',a:'bt',b:'افتح البلوتوث'});
+    if(st.locNeeded&&st.loc===false)D.push({t:'الموقع مقفل، والجوال يحتاجه عشان يلقى الأجهزة القريبة.',a:'loc',b:'افتح الموقع'});
+  }
+  return D;}
+async function startNear(){
+  if(S.mode==='near'&&NEARROOM.scanning)await NEARROOM.stopAll();
+  S.mode='near';S.roomErr=null;S.nearList=[];S.nearScan=false;S.nearDiag=[];render();
+  const D=await nearCheck();if(S.mode!=='near')return;
+  const r=await NEARROOM.scan(list=>{S.nearList=list;if(S.mode==='near')render();});
+  if(S.mode!=='near')return;
+  if(!r.ok){
+    if(r.why==='perm')D.push({t:'وافق على صلاحية الأجهزة القريبة والموقع عشان تشوف الغرف.',a:'app',b:'افتح صلاحيات التطبيق'});
+    else{const m=r.msg||'';D.push({t:nearErr(m),...(/PERMISSION/i.test(m)?{a:'app',b:'افتح صلاحيات التطبيق'}:/LOCATION/i.test(m)?{a:'loc',b:'افتح الموقع'}:/BLUETOOTH/i.test(m)?{a:'bt',b:'افتح البلوتوث'}:{})});}
+  }
+  S.nearScan=r.ok;S.nearDiag=D;render();}
 function renderLobby(){
   const sv=loadSaved();
   OUT=`${topBar('أونلاين','home')}
@@ -418,6 +445,7 @@ app.addEventListener('click',e=>{
   switch(t.dataset.a){
     case 'home':if(S.mode==='near'&&window.NEARROOM)NEARROOM.stopAll();S.mode=null;render();break;
     case 'near':startNear();break;
+    case 'nset':NEARROOM.settings(t.dataset.w);break;
     case 'ncreate':{const c=genCode();enterRoom(c,true,null,NEARROOM.room('host',{code:c,name:S.myName}));break;}
     case 'njoin':{const f=(S.nearList||[])[i];if(f)enterRoom(f.code,false,null,NEARROOM.room('join',{id:f.id,code:f.code,name:S.myName}));break;}
     case 'local':S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();break;
@@ -491,7 +519,9 @@ const shapeW=r=>`<svg viewBox="0 0 40 40">${SHP[r]('#fff')}</svg>`;
 const SERVER='https://gamesx.alqadi1423.workers.dev';
 const isApp=()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
 function appSetup(){
-  const A=Capacitor.Plugins&&Capacitor.Plugins.App;let lastBack=0;
+  let A=Capacitor.Plugins&&Capacitor.Plugins.App;try{if(!A&&Capacitor.registerPlugin)A=Capacitor.registerPlugin('App');}catch(e){}let lastBack=0;
+  // back from the phone settings: look again for nearby rooms
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.mode==='near'&&(S.nearDiag||[]).length&&!S.joining)startNear();});
   if(A)A.addListener('backButton',()=>{
     if(S.modal){S.modal=null;render();return;}
     const b=app.querySelector('.top .ib');const act=b&&b.dataset.a;
