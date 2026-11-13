@@ -14,7 +14,7 @@ const onceSet=new Set();const once=k=>{if(onceSet.has(k))return false;onceSet.ad
 const escH=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BACK='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const PERSON='<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="5" fill="#fff"/><path d="M3 23c0-6 4-9 9-9s9 3 9 9z" fill="#fff"/></svg>';
-const LSK={room:'alaabna.v3',name:'alaabna.name',mute:'alaabna.mute',local:'alaabna.local'};
+const LSK={room:'alaabna.v3',name:'alaabna.name',mute:'alaabna.mute',local:'alaabna.local',lgame:'alaabna.lgame'};
 const lsGet=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
 
@@ -56,16 +56,17 @@ function newD(g,starter,pl){const n=pl.length;starter=starter%n;const G=GAMES[g]
 function setGame(g){
   if(g){const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
     if(GAMES[g].minP&&pl.length<GAMES[g].minP){toast(`${GAMES[g].name} تحتاج ${GAMES[g].minP} لاعبين أو أكثر`);return;}
-    S.st={...S.st,g,s:S.st.s+1,d:newD(g,0,pl)};}
-  else S.st={...S.st,g:null,s:S.st.s+1,d:null};
+    S.st={...S.st,g,s:S.st.s+1,d:newD(g,0,pl),sc:matchSc()};}
+  else S.st={...S.st,g:null,s:S.st.s+1,d:null,sc:matchSc()};
   S.seen=null;S.browse=false;S.showResult=false;resetUI();afterChange();
 }
 function newRound(){const d=S.st.d;const pl=players();if(pl.length<2){toast('تحتاجون لاعبين اثنين على الأقل');return;}
   const G0=GAMES[S.st.g];if(G0&&G0.minP&&pl.length<G0.minP){toast(`${G0.name} تحتاج ${G0.minP} لاعبين أو أكثر`);return;}
-  const st=d?(d.st||0)+1:0;S.st={...S.st,s:S.st.s+1,d:newD(S.st.g,st,pl)};S.seen=null;S.showResult=false;resetUI();afterChange();}
+  if(d&&d.mw!=null)toast('مباراة جديدة! النقاط رجعت صفر');
+  const st=d?(d.st||0)+1:0;S.st={...S.st,s:S.st.s+1,d:newD(S.st.g,st,pl),sc:matchSc()};S.seen=null;S.showResult=false;resetUI();afterChange();}
 function resetUI(){S.gw=false;S.tgt=null;S.wild=null;S.dside=null;S.mm=[];S.draft={...(S.draft.q!=null?{q:S.draft.q}:{})};S.sel=[];S.simon=null;S.lq=null;S.lf=null;S.sp=null;S.mcell=null;S.mprops=false;S.jk=null;S.arA=null;S.dwSel=null;S.rolling=false;}
 let ACT_CAP=null;
-function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number')(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
+function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}S.wild=null;S.dside=null;const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number'){(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));nd=matchEnd(nd,sc);}S.st={...S.st,s:S.st.s+1,d:nd,sc};sfx('tap');afterChange();}
 function setCfg(patch){S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
 function setPriv(role,p){S.priv[role]=p;afterChange();}
 function afterChange(){ensurePriv();publish();render();queueSimul();}
@@ -101,25 +102,33 @@ function publish(rx){
   S.nr.presence(o).catch(e=>console.warn('presence',e));
 }
 function save(){
-  if(S.mode==='local')lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames,bots:S.bots}));
+  if(S.mode==='local'){lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames,bots:S.bots}));if(S.st.g&&S.st.d)lsSet(LSK.lgame,JSON.stringify({st:S.st,priv:S.priv,n:S.localN,names:S.localNames,bots:S.bots}));}
   if(S.mode!=='online'||!S.code)return;lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',me:S.me,st:S.st,priv:S.me==null?null:S.priv[S.me]}));}
 function loadSaved(){try{return JSON.parse(lsGet(LSK.room)||'null');}catch(e){return null;}}
+// a local game that was not finished when the app closed or went home
+function loadLocal(){try{const l=JSON.parse(lsGet(LSK.lgame)||'null');const d=l&&l.st&&l.st.d;return d&&d.win==null&&Array.isArray(d.pl)&&GAMES[l.st.g]?l:null;}catch(e){return null;}}
+function localResume(){const l=loadLocal();if(!l)return;S.mode='local';S.me=null;S.localN=Math.max(2,Math.min(MAXP,l.n||l.st.d.pl.length));S.localNames=l.names||[];S.bots=l.bots||{};
+  S.st={...l.st,cfg:{...CFG0,...(l.st.cfg||{})},sc:Array.isArray(l.st.sc)&&l.st.sc.length>=MAXP?l.st.sc:Array(MAXP).fill(0)};S.priv=Array(MAXP).fill(null).map((x,r)=>(l.priv||[])[r]??null);
+  S.seen=null;S.browse=false;S.showResult=false;resetUI();afterChange();}
 
 /* ================= turn timer ================= */
 const TK={key:null,t0:0,fired:false};
-function timerKey(){const d=S.st.d;return S.st.g&&d?`${S.st.g}:${d.gid}:${S.st.s}:${S.mode==='local'?S.seen:''}`:null;}
+function timerKey(){const d=S.st.d;return S.st.g&&d?`${S.st.g}:${d.gid}:${S.st.s}:${S.mode==='local'?S.seen+':'+!!S.browse:''}`:null;}
 function timeLeft(){const t=cfg().timer;if(!t||!S.st.d||S.st.d.win!=null)return null;const G=GAMES[S.st.g];if(!G||G.noTimer)return null;return Math.max(0,t-(Date.now()-TK.t0)/1000);}
 setInterval(()=>{
   const k=timerKey();if(k!==TK.key){TK.key=k;TK.t0=Date.now();TK.fired=false;}
   const left=timeLeft();const bar=document.querySelector('.tbar i');
   if(bar){if(left==null)bar.parentNode.style.display='none';else{bar.parentNode.style.display='';bar.style.width=(left/cfg().timer*100)+'%';bar.style.background=left<5?'#EC6158':'#4CB97F';}}
-  if(left===0&&!TK.fired&&isEnforcer()&&!app.querySelector('.cover')){TK.fired=true;doTimeout();}
+  if(left===0&&!TK.fired&&isEnforcer()&&!app.querySelector('.cover')&&!(S.mode==='local'&&S.browse)){TK.fired=true;doTimeout();}
 },400);
 function doTimeout(){
   const {g,d}=S.st;const G=GAMES[g];if(!G||!d||d.win!=null)return;
-  if(isSimul(G,d)){act(G.resolve(d,simulPicks(d).map(x=>x===undefined?null:x)));return;}
+  if(isSimul(G,d)){
+    // one phone passed around: only the player holding it runs out of time; the players after them still get this question
+    if(S.mode==='local'&&G.viewer){const v=mkCtx().v;if(v!=null&&v>=0&&d.out[v]!=='1'&&!hasPicked(d,v)){simulPick(d,v,NOPICK);return;}}
+    act(G.resolve(d,simulPicks(d).map(x=>x===undefined?null:x)));return;}
   const who=nm(d,d.turn);let nd=G.onTimeout?G.onTimeout(d):{...d,turn:nextSeat(d,d.turn)};
-  if('last' in d)nd={...nd,last:`انتهى وقت ${who}`};S.seen=null;act(nd);
+  if('last' in d)nd={...nd,last:`انتهى وقت ${who}`+(nd.last&&nd.last!==d.last?'، '+nd.last:'')};S.seen=null;act(nd);
 }
 
 /* bots think for a moment, then play through the game's own rules */
@@ -134,17 +143,21 @@ setInterval(()=>{if(!hasBots()||!S.st.g||!S.st.d||S.browse||S.holdRender||S.mode
     if(now>=BOTQ[k]){delete BOTQ[k];runBot(G,d,s);return;}}
   for(const k in BOTQ)if(!live.has(k))delete BOTQ[k];},200);
 const botCtx=(d,s)=>({local:false,v:s,priv:S.priv,my:true,bot:true});
-function runBot(G,d,s){const lv=botLv(d,s);
-  try{if(isSimul(G,d)){if(G.botPick){const p=G.botPick(d,s,lv);simulPick(d,s,p==null?NOPICK:p);}else botClick(G,d,s,lv,true);return;}
-    let nd=G.bot?G.bot(d,s,lv):undefined;if(nd===undefined){if(G.bot)BOTFB[S.st.g]=(BOTFB[S.st.g]||0)+1;nd=botClick(G,d,s,lv,false);}if(nd&&nd!==d)act(nd);}
-  catch(e){console.error('bot',e);if(!isSimul(G,d))act(G.onTimeout?G.onTimeout(d):{...d,turn:nextSeat(d,d.turn)});else simulPick(d,s,NOPICK);}
-  finally{S.sel=[];S.tgt=null;S.wild=null;S.dside=null;}}
+// a bot thinks on a blank copy of this phone's typing, drawing, selection and opponent tab, so it never reads, sends, wipes or resets what a human has there
+function botUI(f){const sv={draft:S.draft,dr:S.dr,sel:S.sel,tgt:S.tgt,wild:S.wild,dside:S.dside},tt=window.toast;
+  S.draft={};S.dr=null;S.sel=[];S.tgt=null;S.wild=null;S.dside=null;window.toast=()=>{};
+  try{return f();}finally{Object.assign(S,sv);window.toast=tt;}}
+function runBot(G,d,s){const lv=botLv(d,s),sim=isSimul(G,d);
+  try{if(sim){if(G.botPick){const p=botUI(()=>G.botPick(d,s,lv));simulPick(d,s,p==null?NOPICK:p);}else botClick(G,d,s,lv,true);return;}
+    let nd=botUI(()=>G.bot?G.bot(d,s,lv):undefined);if(nd===undefined){if(G.bot)BOTFB[S.st.g]=(BOTFB[S.st.g]||0)+1;nd=botClick(G,d,s,lv,false);}if(nd&&nd!==d)act(nd);}
+  catch(e){console.error('bot',e);if(!sim)act(G.onTimeout?G.onTimeout(d):{...d,turn:nextSeat(d,d.turn)});else simulPick(d,s,NOPICK);}}
 // a bot that taps the game's own buttons: used where a game has no smarter player
 function botClick(G,d,s,lv,sim){const ctx=botCtx(d,s);
-  for(let k=0;k<8;k++){TPL.innerHTML=G.render(d,ctx);const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disabled'));if(!els.length)break;
-    const e=els[rnd(els.length)];ACT_CAP={v:null};const hold=S.holdRender;S.holdRender=true;
-    try{G.click(e.dataset.ga,e.dataset.i!=null?+e.dataset.i:null,d,ctx);}finally{S.holdRender=hold;}const nd=ACT_CAP.v;ACT_CAP=null;
-    if(sim){if(hasPicked(S.st.d,s))return;}else if(nd)return nd;}
+  const got=botUI(()=>{for(let k=0;k<8;k++){TPL.innerHTML=G.render(d,ctx);const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disabled'));if(!els.length)break;
+    const e=els[rnd(els.length)];ACT_CAP={v:null};const hold=S.holdRender;S.holdRender=true;let nd=null;
+    try{G.click(e.dataset.ga,e.dataset.i!=null?+e.dataset.i:null,d,ctx);}finally{S.holdRender=hold;nd=ACT_CAP.v;ACT_CAP=null;}
+    if(sim){if(hasPicked(S.st.d,s))return true;}else if(nd)return nd;}return null;});
+  if(got){if(sim){render();return;}return got;}
   if(sim){simulPick(d,s,NOPICK);return;}return G.onTimeout?G.onTimeout(d):{...d,turn:nextSeat(d,d.turn)};}
 
 /* ================= sound and alerts ================= */
@@ -247,7 +260,7 @@ function winTitle(d,G,ctx){if(Array.isArray(d.wins)&&d.wins.length>1&&!(G.winTex
 function statusHTML(d,G,ctx){
   if(d.win!=null){
     const c=typeof d.win==='number'?col(d,d.win):'var(--ink)';
-    return `<span class="w" style="color:${c}">${winTitle(d,G,ctx)}</span> <button class="sm go" data-a="again">جولة جديدة</button>`+(G.winExtra?`<br><small>${String(G.winExtra(d,ctx)).replace(/<br\s*\/?>/g,' • ')}</small>`:'');
+    return `<span class="w" style="color:${c}">${winTitle(d,G,ctx)}</span> ${againBtn('sm go')}`+(G.winExtra?`<br><small>${String(G.winExtra(d,ctx)).replace(/<br\s*\/?>/g,' • ')}</small>`:'');
   }
   let s=G.status?G.status(d,ctx):turnTxt(d,ctx);
   if(!ctx.local&&ctx.v<0)s+='<br><small>تتفرج الحين، وتدخل معهم في الجولة الجاية</small>';
@@ -261,7 +274,13 @@ function statusBox(html){
   for(const p of parts){const t=p.trim();if(!t)continue;if(/^<small>[\s\S]*<\/small>$/.test(t)&&!/<small>[\s\S]*<small>/.test(t))sub.push(t.slice(7,-8));else main.push(t);}
   return `<div class="st-sub">${sub.join(' • ')}</div><div class="st-main">${main.join(' ')}</div>`;
 }
-function matchLeader(){const t=cfg().target;if(!t)return null;const sc=S.st.sc;const mx=Math.max(...sc);return mx>=t?sc.indexOf(mx):null;}
+/* the match ends on the round that leaves one player alone at the top with the target or more (a tie at the top plays on).
+   The winner is kept in that round's state (d.mw), so every device shows it on that result only, and the next round starts a new match */
+function matchEnd(nd,sc){const t=cfg().target;if(!t)return nd;const mx=Math.max(...sc),top=sc.map((x,r)=>x===mx?r:-1).filter(r=>r>=0);return mx>=t&&top.length===1?{...nd,mw:top[0]}:nd;}
+const matchOver=()=>{const d=S.st.d;return !!(d&&d.win!=null&&d.mw!=null);};
+const matchSc=()=>S.st.d&&S.st.d.mw!=null?Array(MAXP).fill(0):S.st.sc;
+const matchTie=()=>{const t=cfg().target,sc=S.st.sc,mx=Math.max(...sc);return !!t&&mx>=t&&sc.filter(x=>x===mx).length>1;};
+const againBtn=cls=>matchOver()?`<button class="${cls}" data-a="again" ${isHost()?'':'disabled'}>مباراة جديدة</button>`:`<button class="${cls}" data-a="again">جولة جديدة</button>`;
 
 
 /* ================= patching the screen in place ================= */
@@ -315,7 +334,7 @@ function topBar(title,back,extra){
 }
 function renderHome(){
   OUT=`<div class="hero">${LOGO}<h1>ألعابنا</h1><p>${Object.keys(GAMES).length} لعبة، من لاعبين اثنين إلى ${MAXP}</p></div>
-  <button class="big red" data-a="local">على نفس الجهاز<small>كلكم على جوال واحد</small></button>
+  <button class="big red" data-a="local">على نفس الجهاز<small>كلكم على جوال واحد</small></button>${(l=>l?`<button class="link" data-a="lresume">كمّل اللعبة: ${GAMES[l.st.g].name}</button>`:'')(loadLocal())}
   <button class="big blue" data-a="lobby">أونلاين<small>كل واحد من جهازه بغرفة خاصة</small></button>
   <button class="big navy" data-a="vsbot">ضد البوت 🤖<small>العب لحالك، وتختار صعوبة البوت</small></button>
   ${window.NEARROOM&&NEARROOM.available()?'<button class="big green" data-a="near">قريب بدون إنترنت<small>بلوتوث، وكلكم في نفس المكان</small></button>':''}
@@ -389,9 +408,14 @@ function standings(){
   if(!rs.some(r=>S.st.sc[r]>0))return '';const t=cfg().target;
   return `<div class="panel standings"><b>نقاط الجلسة${t?` (الفوز بالمباراة عند ${t})`:''}</b><div class="mlist" style="margin-top:8px">${rs.sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} <b>${S.st.sc[r]}</b></span>`).join('')}</div></div>`;
 }
+// local: the game left with back stays open here, and a game the app closed on can go on
+function localLive(){const d=S.st.d;if(S.st.g&&d&&GAMES[S.st.g]&&d.win==null)return `<div class="panel live"><b>اللعبة الحالية: ${GAMES[S.st.g].name}</b><button class="sm go" data-a="resumegame">ارجع لها</button></div>`;
+  const l=!d&&loadLocal();return l?`<div class="panel live"><b>لعبة ما خلصت: ${GAMES[l.st.g].name}</b><button class="sm go" data-a="lresume">كمّل اللعبة</button></div>`:'';}
+// a table always keeps one human seat: if none is left, the first bot seat becomes a person again
+function keepHuman(){if(humanSeats({pl:[...Array(S.localN).keys()]}).length)return false;delete S.bots[[...Array(S.localN).keys()].find(r=>S.bots[r])];toast('لازم لاعب واحد على الأقل يكون إنسان');save();return true;}
 function renderGrid(){
   let mid='';
-  if(S.mode==='local')mid=`<div class="panel"><div class="stepper" style="box-shadow:none;margin:0"><span>عدد اللاعبين</span><button data-a="dec">−</button><b>${S.localN}</b><button data-a="inc">+</button></div>
+  if(S.mode==='local')mid=localLive()+`<div class="panel"><div class="stepper" style="box-shadow:none;margin:0"><span>عدد اللاعبين</span><button data-a="dec">−</button><b>${S.localN}</b><button data-a="inc">+</button></div>
     <div class="names">${[...Array(S.localN).keys()].map(r=>{const b=S.bots[r];return `<div class="lrow" style="--c:${COLS[r]}"><button class="lbt ${b?'on':''}" data-a="botT" data-i="${r}" aria-label="لاعب أو بوت">${b?'🤖':'👤'}</button>${b?`<div class="lvl">${[1,2,3].map(l=>`<button class="${b===l?'on':''}" data-a="botL" data-i="${r}" data-v="${l}">${BOTL[l]}</button>`).join('')}</div>`:`<input class="field nm" data-draft="ln${r}" value="${escH(S.localNames[r]||'')}" placeholder="${NAMES[r]}" maxlength="14">`}</div>`;}).join('')}</div></div>`;
   else{
     const live=S.st.g&&S.st.d&&GAMES[S.st.g];
@@ -438,13 +462,13 @@ function renderGame(){
   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
 }
 function resultHTML(d,G,ctx){
-  const c=typeof d.win==='number'?col(d,d.win):'var(--ink)';const ml=matchLeader();
+  const c=typeof d.win==='number'?col(d,d.win):'var(--ink)';const ml=Number.isInteger(d.mw)&&d.mw>=0&&d.mw<MAXP?d.mw:null;
   return `<div class="sheet-bg" data-a="closeres"><div class="sheet result">
     <div class="trophy">${d.win==='d'?'🤝':typeof d.win==='number'&&(S.mode==='local'||d.win===ctx.v||(Array.isArray(d.wins)&&d.wins.includes(ctx.v)))?'🏆':'🎖️'}</div>
     <h2 style="color:${c}">${winTitle(d,G,ctx)}</h2>${G.winExtra?`<p class="note">${G.winExtra(d,ctx)}</p>`:''}
-    ${ml!=null?`<p class="hint">🏅 ${ml===S.me?'أنت فزت':pname(ml)+' فاز'} بالمباراة! (${S.st.sc[ml]} نقاط)</p>`:''}
+    ${ml!=null?`<p class="hint">🏅 ${ml===S.me?'أنت فزت':pname(ml)+' فاز'} بالمباراة! (${S.st.sc[ml]} نقاط)</p>`:matchTie()?'<p class="hint">🤝 تعادل على الصدارة، نكمل لين يتقدم واحد</p>':''}
     <p class="lbl" style="margin:10px 0 6px">نقاط الجلسة</p><div class="mlist" style="justify-content:center">${[...d.pl].sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} <b>${S.st.sc[r]}</b></span>`).join('')}</div>
-    <div class="acts"><button class="btn red" data-a="again">جولة جديدة</button><button class="btn navy" data-a="${S.mode==='online'?'browse':'grid'}">قائمة الألعاب</button></div>
+    <div class="acts">${againBtn('btn red')}<button class="btn navy" data-a="${S.mode==='online'?'browse':'grid'}">قائمة الألعاب</button></div>
     <button class="link" data-a="closeres">شوف اللوحة</button></div></div>`;
 }
 const RX=['👏','😂','😮','🔥','👍','❤️','😢','😡','🤔','🙏'];
@@ -504,7 +528,7 @@ app.addEventListener('click',e=>{
     case 'botT':{const r=i;if(S.bots[r])delete S.bots[r];else{S.bots[r]=2;S.localNames[r]='';}if(!humanSeats({pl:[...Array(S.localN).keys()]}).length){delete S.bots[r];toast('لازم لاعب واحد على الأقل يكون إنسان');}save();render();break;}
     case 'botL':S.bots[i]=+t.dataset.v;save();render();break;
     case 'vsbot':S.mode='local';S.me=null;S.localN=2;S.bots={1:S.bots[1]||2};S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;save();render();break;
-    case 'dec':S.localN=Math.max(2,S.localN-1);save();render();break;
+    case 'dec':S.localN=Math.max(2,S.localN-1);keepHuman();save();render();break;
     case 'lobby':S.mode='lobby';S.roomErr=null;render();getRoom();break;
     case 'create':enterRoom(genCode(),true,null);break;
     case 'join':{
@@ -514,14 +538,16 @@ app.addEventListener('click',e=>{
       if(same&&sv.me===0)enterRoom(c,true,sv);else enterRoom(c,false,same?sv:null);break;}
     case 'resume':{const sv=loadSaved();if(sv)enterRoom(sv.code,sv.me===0,sv);break;}
     case 'leave':leaveRoom();break;
-    case 'grid':setGame(null);break;
+    case 'grid':if(S.mode==='local'&&S.st.d&&S.st.d.win==null&&!S.browse){S.browse=true;S.showResult=false;render();break;}setGame(null);break;
+    case 'lresume':localResume();break;
     case 'browse':S.browse=true;S.showResult=false;render();break;
     case 'resumegame':S.browse=false;render();break;
     case 'pick':{const g=t.dataset.g;
       if(S.mode==='online'&&!canPick()){if(S.st.g===g&&S.st.d){S.browse=false;render();}else toast('صاحب الغرفة 👑 هو اللي يختار اللعبة');return;}
-      if(S.mode==='online'&&S.st.g===g&&S.st.d&&S.st.d.win==null){S.browse=false;render();return;}
+      if(S.st.g===g&&S.st.d&&S.st.d.win==null){S.browse=false;render();return;}
+      if(S.mode==='local'&&keepHuman()){render();return;}
       setGame(g);break;}
-    case 'again':newRound();break;
+    case 'again':if(matchOver()&&!isHost())return;newRound();break;
     case 'reveal':S.seen=i;S.tgt=null;render();break;
     case 'closeres':S.showResult=false;render();break;
     case 'skip':{const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];let out=d.out;for(const x of absentSeats(d,G))out=setAt(out,x,'1');const al=aliveSeats(d,out);
