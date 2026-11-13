@@ -145,14 +145,34 @@ function seaPlace(f,L,head,hz){const len=[...f].filter(c=>c===L).length;const r=
   const g=[...f].map(x=>x===L?'.':x);const cells=[...Array(len).keys()].map(k=>hz?head+k:head+k*8);
   if(cells.some(x=>near(g,x)))return null;cells.forEach(x=>g[x]=L);return g.join('');}
 const seaShip=(f,L)=>{const cs=[...f].map((c,i)=>c===L?i:-1).filter(i=>i>=0);return {head:cs[0],hz:cs.length>1&&cs[1]===cs[0]+1};};
-function seaGrid(f,sh,show,click,small,marks,flash){
-  const sunk=seaSunk(f,sh);
-  let s=`<div class="sea ${small?'small':''}">`;
-  for(let i=0;i<64;i++){const c=f?f[i]:'.';const ship=c!=='.'&&(show||sunk.has(c));const st=sh[i];const mk=marks&&marks.includes(i);
-    const cls=`sc ${ship?'ship':''} ${sunk.has(c)?'sunk':''} ${st==='o'?'hit':st==='x'?'miss':''} ${mk?'mark':''} ${flash&&flash.includes(i)?'fl':''} ${click==='ed'&&S.seaSel===c&&c!=='.'?'sel':''}`;
-    s+=click&&(click==='ed'||st==='.')?`<button class="${cls} can" data-ga="${click==='ed'?'ed':'fire'}" data-i="${i}"></button>`:`<div class="${cls}"></div>`;}
+// ships are drawn as hulls under the grid; every cell then shows splash, fire or smoke on top
+function seaHull(cells,cls){const n=cells.length,h=cells[0],r=Math.floor(h/8),c=h%8,hz=n>1&&cells[1]===h+1;
+  const tf=hz?`translate(${c} ${r})`:`translate(${c+1} ${r}) rotate(90)`;
+  const tur=[...Array(Math.max(1,n-1)).keys()].map(k=>`<circle cx="${.75+k*(n-1.1)/Math.max(1,n-1)}" cy=".5" r=".13"/>`).join('');
+  return `<g class="hull ${cls}" transform="${tf}"><path class="hb" d="M.1 .32Q.1 .17 .3 .17L${n-.6} .17Q${n-.12} .22 ${n-.05} .5Q${n-.12} .78 ${n-.6} .83L.3 .83Q.1 .83 .1 .68Z"/>
+    <rect class="hd" x=".32" y=".36" width="${Math.max(.2,n-1.05)}" height=".28" rx=".12"/><rect class="hc" x="${n*.42-.18}" y=".3" width=".42" height=".4" rx=".08"/><g class="ht">${tur}</g></g>`;}
+const SEAFX={};// when each shot was first seen, so its animation survives quick redraws
+function seaNew(key){const now=Date.now();if(!SEAFX[key])SEAFX[key]=now;return now-SEAFX[key]<1600;}
+function seaGrid(f,sh,show,click,small,marks,flash,fk){
+  const sunk=seaSunk(f,sh);let ships='';
+  if(f)for(const L of SL){const cs=[...f].map((x,i)=>x===L?i:-1).filter(i=>i>=0);if(!cs.length)continue;const dn=sunk.has(L);if(!show&&!dn)continue;
+    ships+=seaHull(cs,dn?'wreck':click==='ed'&&S.seaSel===L?'sel':'');}
+  let s=`<div class="sea ${small?'small':''}"><svg class="ships" viewBox="0 0 8 8" preserveAspectRatio="none">${ships}</svg>`;
+  for(let i=0;i<64;i++){const c=f?f[i]:'.';const st=sh[i];const mk=marks&&marks.includes(i);const dn=c!=='.'&&sunk.has(c);
+    const nw=!!(fk&&flash&&flash.includes(i)&&seaNew(fk+':'+i));
+    let fx='';if(st==='x')fx=`<i class="spl"></i>${nw?'<b class="drop"></b><i class="wave"></i><i class="wave w2"></i>':''}`;
+    else if(st==='o')fx=dn?`<i class="smk"></i>${nw?'<b class="drop"></b><i class="boom"></i>':''}`:`<i class="fire">🔥</i>${nw?'<b class="drop"></b><i class="boom sm"></i>':''}`;
+    const cls=`sc ${st==='o'?'hit':st==='x'?'miss':''} ${mk?'mark':''} ${nw?'new':''}`;
+    s+=click&&(click==='ed'||st==='.')?`<button class="${cls} can" data-ga="${click==='ed'?'ed':'fire'}" data-i="${i}">${fx}</button>`:`<div class="${cls}">${fx}</div>`;}
   return s+'</div>';
 }
+// short sounds made on the spot: a dull boom for a hit, a splash for the water
+let seaAC=null;
+function seaSound(kind){if(S.mute)return;try{seaAC=seaAC||new (window.AudioContext||window.webkitAudioContext)();}catch(e){return;}
+  const ac=seaAC,t=ac.currentTime,len=kind==='boom'?.9:kind==='hit'?.5:.45;const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*len),ac.sampleRate);const ch=buf.getChannelData(0);
+  for(let i=0;i<ch.length;i++)ch[i]=(Math.random()*2-1)*Math.pow(1-i/ch.length,kind==='splash'?1.5:2.5);
+  const src=ac.createBufferSource();src.buffer=buf;const flt=ac.createBiquadFilter();flt.type=kind==='splash'?'bandpass':'lowpass';flt.frequency.value=kind==='splash'?1400:kind==='boom'?380:700;
+  const g=ac.createGain();g.gain.value=kind==='boom'?.9:.55;src.connect(flt);flt.connect(g);g.connect(ac.destination);src.start(t+.4);}
 const seaSalvo=d=>d.pl.length>2;
 GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3E8FC4"/><path d="M25 0V100M50 0V100M75 0V100M0 25H100M0 50H100M0 75H100" stroke="#5FAEDF" stroke-width="2"/><path d="M8 46H74L84 52L74 60H14Z" fill="#E8746B" stroke="#2D4763" stroke-width="3"/><path d="M22 48l6 5M32 48l6 5M42 48l6 5" stroke="#2D4763" stroke-width="3"/><path d="M72 52l-9-9 4-2-5-7 9 4 1-6 4 8 6-2-3 7 7 3-7 3" fill="#fff"/><circle cx="72" cy="52" r="7" fill="#2D4763"/><circle cx="70" cy="50" r="2" fill="#fff"/><path d="M14 82l8-8M22 82l-8-8" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
@@ -170,6 +190,9 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
     if(seaSalvo(d))return (d.last?`<small>${d.last}</small><br>`:'')+`الجولة ${d.rd+1}: الكل يطلق مع بعض`;
     return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);},
   winExtra:d=>d.last||'',
+  after(d){const k=d.gid+':'+(d.sn||0)+':'+d.rd;if(!d.ls||!d.ls.length||!once('seasnd'+k))return;let hit=false,sink=false;
+    for(const [o,i] of d.ls){const f=seaFleet(d,o);if(f&&f[i]!=='.'){hit=true;if(seaSunk(f,d.sh[o]).has(f[i]))sink=true;}}
+    seaSound(sink?'boom':hit?'hit':'splash');if(hit)setTimeout(()=>buzz(),420);},
   render(d,ctx){
     const pr=ctx.priv;const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;
     if(v==null||v<0){const o=d.win!=null&&typeof d.win==='number'?d.win:d.turn;return `<p class="lbl">بحر ${nm(d,o)}</p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null,false)}`;}
@@ -183,13 +206,14 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
       const o=curTarget(d,v);if(o==null)return rep;const picked=hasPicked(d,v);const can=ctx.my&&!picked&&!dead&&d.win==null;
       const om=marks.filter(m=>m[0]===o).map(m=>m[1]);const flash=(d.ls||[]).filter(x=>x[0]===o).map(x=>x[1]);
       let s=rep+tabsHTML(d,v,can?'اختار بحر وحط طلقاتك':'بحور الباقين');
-      s+=`<p class="lbl">بحر ${nameTag(d,o)} <small>(${seaAfloat(seaFleet(d,o),d.sh[o])} سفن باقية)</small></p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null||d.out[o]==='1',can?'fire':false,false,om,flash)}`;
+      s+=`<p class="lbl">بحر ${nameTag(d,o)} <small>(${seaAfloat(seaFleet(d,o),d.sh[o])} سفن باقية)</small></p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null||d.out[o]==='1',can?'fire':false,false,om,flash,d.gid+':'+d.rd+':'+o)}`;
       if(can)s+=`<div class="sbar"><span>🎯 ${marks.length} من ${k} طلقات</span><button class="btn red" data-ga="salvo" ${marks.length?'':'disabled'}>أطلق 🚀</button></div>`;
       else if(picked&&d.win==null)s+='<p class="hint">✓ أطلقت، ننتظر الباقين</p>';
       else if(dead)s+='<p class="note">غرقت سفنك، تقدر تتفرج</p>';
-      return s+`<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true,null,(d.ls||[]).filter(x=>x[0]===v).map(x=>x[1]))}`;}
+      return s+`<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true,null,(d.ls||[]).filter(x=>x[0]===v).map(x=>x[1]),d.gid+':'+d.rd+':'+v)}`;}
     const myTurn=ctx.my&&d.turn===v;const o=curTarget(d,v);if(o==null)return '';
-    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1'?'fire':false)}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true)}`;
+    const lso=(d.ls||[]).filter(x=>x[0]===o).map(x=>x[1]),lsv=(d.ls||[]).filter(x=>x[0]===v).map(x=>x[1]);const k2=d.gid+':'+(d.sn||0);
+    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(seaFleet(d,o),d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1'?'fire':false,false,null,lso,k2+':'+o)}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true,null,lsv,k2+':'+v)}`;
   },
   click(a,i,d,ctx){
     if(a==='tgt'){S.tgt=i;S.gw=false;render();return;}
@@ -211,7 +235,7 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
     if(hit){const L=f[i];const sunk=[...f].every((c,k)=>c!==L||sh[o][k]==='o');last=`أصاب ${nm(d,o)}`+(sunk?' وأغرق سفينة! 💥':'! 🎯')+' ويضرب مرة ثانية';
       if(seaDead(f,sh[o])){out=setAt(out,o,'1');last=`أغرق كل سفن ${nm(d,o)}!`;const al=aliveSeats(d,out);if(al.length===1)win=al[0];}}
     else last=`ضرب بحر ${nm(d,o)} وطاحت في الماء 💦`;
-    act({...d,sh,out,last:`${nm(d,t)}: ${last}`,ls:[[o,i]],turn:hit?t:nextSeat(d,t,out),win});
+    act({...d,sh,out,last:`${nm(d,t)}: ${last}`,ls:[[o,i]],sn:(d.sn||0)+1,turn:hit?t:nextSeat(d,t,out),win});
   },
   // all the shots of a round land together
   resolve(d,picks){const sh=[...d.sh],before=[...d.sh];const ls=[],rep=[];
