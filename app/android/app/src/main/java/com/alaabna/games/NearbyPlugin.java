@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
@@ -82,6 +83,15 @@ public class NearbyPlugin extends Plugin {
         return true;
     }
 
+    /** Android 12 lets the player share only approximate location, but nearby rooms there need the precise one. */
+    private boolean coarseOnly() {
+        int v = Build.VERSION.SDK_INT;
+        if (v < 31 || v >= 33) return false;
+        Context c = getContext();
+        return c.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            && c.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED;
+    }
+
     private static String msg(Exception e) {
         String m = e == null ? null : e.getMessage();
         return m == null ? "error" : m;
@@ -127,6 +137,7 @@ public class NearbyPlugin extends Plugin {
             r.put("bt", true);
         }
         r.put("perm", allGranted());
+        r.put("coarseOnly", coarseOnly());
         call.resolve(r);
     }
 
@@ -165,6 +176,7 @@ public class NearbyPlugin extends Plugin {
     private void permsDone(PluginCall call) {
         JSObject r = new JSObject();
         r.put("granted", allGranted());
+        r.put("coarseOnly", coarseOnly());
         call.resolve(r);
     }
 

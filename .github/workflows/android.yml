@@ -9,8 +9,8 @@ on:
       - '.github/workflows/android.yml'
   workflow_dispatch:
 
-permissions:
-  contents: write
+# each job asks only for what it needs: the build (npm and Gradle code) never holds a token that can write
+permissions: {}
 
 concurrency:
   group: android-app
@@ -19,8 +19,12 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -39,16 +43,61 @@ jobs:
         working-directory: app
         run: npx cap sync android
 
+      - name: Signing key
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_B64" ]; then echo "::error::The ANDROID_KEYSTORE_B64 secret is missing, see SETUP.md"; exit 1; fi
+          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 -d -i > "$RUNNER_TEMP/alaabna-release.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/alaabna-release.jks" >> "$GITHUB_ENV"
+
       - name: Build the APK
         working-directory: app/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: app/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk
+
       - name: Publish the APK
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NOTES: "آخر نسخة من التطبيق (بناء رقم ${{ github.run_number }}). نزّل الملف alaabna.apk وثبّته على جوال أندرويد. إذا رفض الجوال يثبّتها فوق النسخة القديمة، احذف التطبيق القديم أول وبعدين ثبّتها."
         run: |
-          cp app/android/app/build/outputs/apk/release/app-release.apk alaabna.apk
-          gh release delete app-latest --cleanup-tag -y || true
-          gh release create app-latest alaabna.apk --target "${{ github.sha }}" --title "تطبيق ألعابنا" --notes "آخر نسخة من التطبيق (بناء رقم ${{ github.run_number }}). نزّل الملف alaabna.apk وثبّته على جوال أندرويد." --latest
+          set -e
+          mv app-release.apk alaabna.apk
+          if ! gh api "repos/$GH_REPO/releases/tags/app-latest" --silent 2>/dev/null; then
+            gh release create app-latest alaabna.apk --target "$GITHUB_SHA" --title "تطبيق ألعابنا" --notes "$NOTES" --latest
+            exit 0
+          fi
+          # swap the file in place: upload it under a second name, then drop the old one and rename,
+          # so the download link keeps working (and keeps the old APK if the upload fails)
+          cp alaabna.apk alaabna-new.apk
+          gh release upload app-latest alaabna-new.apk --clobber
+          asset() { gh api "repos/$GH_REPO/releases/tags/app-latest" --jq ".assets[] | select(.name == \"$1\") | .id"; }
+          old=$(asset alaabna.apk)
+          new=$(asset alaabna-new.apk)
+          [ -n "$new" ]
+          if [ -n "$old" ]; then gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"; fi
+          gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name=alaabna.apk --silent
+          gh release edit app-latest --notes "$NOTES"

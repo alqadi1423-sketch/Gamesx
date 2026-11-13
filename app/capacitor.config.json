@@ -3,6 +3,7 @@
   "appName": "ألعابنا",
   "webDir": "../public",
   "android": {
-    "backgroundColor": "#E9F1FA"
+    "backgroundColor": "#E9F1FA",
+    "zoomEnabled": true
   }
 }
