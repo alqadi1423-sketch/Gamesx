@@ -2,9 +2,10 @@
 /* bots for playing alone on one phone. Level 1 easy, 2 medium, 3 hard.
    G.bot(d,s,lv) returns the next state for a turn, G.botPick(d,s,lv) returns a pick in a simultaneous round. */
 
-// runs a game button for the bot and returns the state it would make, without applying it
-function botDo(d,s,a,i){const G=GAMES[S.st.g];ACT_CAP={v:null};const hold=S.holdRender;S.holdRender=true;
-  try{G.click(a,i,d,botCtx(d,s));}finally{S.holdRender=hold;}const v=ACT_CAP.v;ACT_CAP=null;return v;}
+// runs a game button for the bot and returns the state it would make, without applying it.
+// a button that throws gives undefined (the engine then falls back), and never leaves ACT_CAP set, which would swallow every later move
+function botDo(d,s,a,i){const G=GAMES[S.st.g];ACT_CAP={v:null};const hold=S.holdRender;S.holdRender=true;let v;
+  try{G.click(a,i,d,botCtx(d,s));v=ACT_CAP.v;}catch(e){console.error('bot',e);v=undefined;}finally{S.holdRender=hold;ACT_CAP=null;}return v;}
 const pickR=a=>a[rnd(a.length)];
 const lvRand=lv=>Math.random()<[0,.55,.2,.04][lv];   // how often a bot just plays at random
 const numPts=(d,G,s)=>{try{const p=G.points?G.points(d):d.pts;const v=p?String(p[s]).match(/-?\d+/):null;return v?+v[0]:0;}catch(e){return 0;}};
@@ -61,27 +62,42 @@ GAMES.rev.bot=(d,s,lv)=>{const z=d.z;const mv=[];for(let i=0;i<z*z;i++){const f=
     return f+(corner?50:0)+(edge?4:0)-(nearC&&lv===3?12:0)+Math.random();};
   mv.sort((a,b)=>val(b)-val(a));return botDo(d,s,'m',mv[0].i);};
 
+/* ---------- board searches think for a short while only: the bot runs on the page itself, so a long search freezes the phone ---------- */
+const BOTSTOP={},BOTBUDGET=250;let botEnd=Infinity,botN=0;
+const botTick=()=>{if(!(++botN&31)&&performance.now()>botEnd)throw BOTSTOP;};
+// iterative deepening: each depth that finishes in time replaces the choice, a depth cut short counts only if its best beat the last choice.
+// val(m,depth,alpha) is exact when it is above alpha; each move gets a fixed random nudge ns so equal moves vary
+function botDeep(ms,maxD,ns,val){if(ms.length===1)return ms[0];const t0=performance.now(),ord=ms.map(m=>({m,n:Math.random()*ns,v:0}));let best=ms[0];
+  for(let dep=1;dep<=maxD;dep++){botEnd=dep===1?Infinity:t0+BOTBUDGET;let bv=-Infinity,bm=null;
+    try{for(const o of ord){o.v=val(o.m,dep,bv-o.n)+o.n;if(o.v>bv){bv=o.v;bm=o.m;}}}
+    catch(e){if(e!==BOTSTOP)throw e;if(bm)best=bm;break;}finally{botEnd=Infinity;}
+    best=bm;ord.sort((a,b)=>b.v-a.v);if(performance.now()-t0>BOTBUDGET*.4)break;}
+  return best;}
+
 /* ---------- chess: alpha-beta search ---------- */
 const CHVAL={p:100,n:310,b:330,r:500,q:900,k:0};
 function chEval(b,side){let v=0;for(let i=0;i<64;i++){const p=b[i];if(p==='.')continue;const t=p.toLowerCase(),sd=chSide(p);let x=CHVAL[t];
     const r=i>>3,c=i&7;if(t==='p')x+=(sd?r-1:6-r)*8;if(t==='n'||t==='b')x+=(3.5-Math.abs(3.5-c))*4+(3.5-Math.abs(3.5-r))*4;v+=sd===side?x:-x;}return v;}
-function chSearch(d,depth,a,b,side){const ms=chLegal(d,d.sd);if(!ms.length)return chCheck(d.b,d.sd)?(d.sd===side?-99999:99999):0;
-  if(!depth)return chEval(d.b,side);const max=d.sd===side;
-  ms.sort((x,y)=>(d.b[y.t]!=='.')-(d.b[x.t]!=='.'));
-  for(const m of ms){const ap=chApply(d,m);const v=chSearch({...d,...ap,sd:1-d.sd},depth-1,a,b,side);if(max){if(v>a)a=v;}else{if(v<b)b=v;}if(a>=b)break;}return max?a:b;}
+// big captures by small pieces first, then queen promotions
+const chMvv=(b,m)=>{const t=b[m.t];return (t!=='.'?CHVAL[t.toLowerCase()]*10+1000-CHVAL[b[m.f].toLowerCase()]/10:m.ep?1990:0)+(m.pr==='q'?900:0);};
+function chSearch(d,depth,a,b,side){botTick();const max=d.sd===side,ms=chPseudo(d,d.sd);let any=false;
+  if(depth)ms.sort((x,y)=>chMvv(d.b,y)-chMvv(d.b,x));
+  for(const m of ms){const ap=chApply(d,m);if(chCheck(ap.b,d.sd))continue;any=true;if(!depth)break;
+    const v=chSearch({...d,...ap,sd:1-d.sd},depth-1,a,b,side);if(max){if(v>a)a=v;}else{if(v<b)b=v;}if(a>=b)break;}
+  if(!any)return chCheck(d.b,d.sd)?(d.sd===side?-99999-depth:99999+depth):0;// a sooner mate counts more
+  return depth?(max?a:b):chEval(d.b,side);}
 GAMES.chess.bot=(d,s,lv)=>{const side=d.sd;if(d.offer!=null&&d.offer!==side){if(chEval(d.b,side)<-250)return {...d,win:'d',end:'agree'};}
   const ms=chLegal(d,side);if(!ms.length)return GAMES.chess.onTimeout(d);if(lv===1&&Math.random()<.5)return chMove(d,pickR(ms));
-  const depth=lv===3?3:lv===2?2:1;let best=null,bv=-1e9;
-  for(const m of ms){const ap=chApply(d,m);const v=chSearch({...d,...ap,sd:1-side},depth-1,-1e9,1e9,side)+Math.random()*(lv===3?2:25);if(v>bv){bv=v;best=m;}}
-  return chMove(d,best.pr?{...best,pr:'q'}:best);};
+  const rm=ms.filter(m=>!m.pr||m.pr==='q').sort((x,y)=>chMvv(d.b,y)-chMvv(d.b,x));
+  return chMove(d,botDeep(rm,lv===3?3:lv===2?2:1,lv===3?2:25,(m,dep,a)=>chSearch({...d,...chApply(d,m),sd:1-side},dep-1,a,1e9,side)));};
 GAMES.chess.botDelay=(d,s,lv)=>600+rnd(500);
 
 /* ---------- dama ---------- */
 function dmEval(b,side){let v=0;for(const p of b){const sd=dmSide(p);if(sd<0)continue;v+=(dmKing(p)?3:1)*(sd===side?1:-1);}return v;}
-function dmSearch(b,turn,depth,side){const ms=dmMoves(b,turn);if(!ms.length)return turn===side?-999:999;if(!depth)return dmEval(b,side);
-  let best=turn===side?-1e9:1e9;for(const m of ms.slice(0,24)){const nb=dmApply({b},m).b;const v=dmSearch(nb,1-turn,depth-1,side);best=turn===side?Math.max(best,v):Math.min(best,v);}return best;}
-GAMES.dama.bot=(d,s,lv)=>{const side=d.sd;const ms=dmMoves(d.b,side);if(lvRand(lv))return dmDo(d,pickR(ms));const dep=lv===3?4:2;let best=ms[0],bv=-1e9;
-  for(const m of ms){const v=dmSearch(dmApply(d,m).b,1-side,dep-1,side)+Math.random()*.3;if(v>bv){bv=v;best=m;}}return dmDo(d,best);};
+function dmSearch(b,turn,depth,side,a,z){botTick();const ms=dmMoves(b,turn);if(!ms.length)return turn===side?-999-depth:999+depth;if(!depth)return dmEval(b,side);
+  const max=turn===side;for(const m of ms){const v=dmSearch(dmApply({b},m).b,1-turn,depth-1,side,a,z);if(max){if(v>a)a=v;}else{if(v<z)z=v;}if(a>=z)break;}return max?a:z;}
+GAMES.dama.bot=(d,s,lv)=>{const side=d.sd;const ms=dmMoves(d.b,side);if(lvRand(lv))return dmDo(d,pickR(ms));
+  return dmDo(d,botDeep(ms,lv===3?4:2,.3,(m,dep,a)=>dmSearch(dmApply(d,m).b,1-side,dep-1,side,a,Infinity)));};
 
 /* ---------- backgammon ---------- */
 function tvEvalPos(t,s){let v=0;const one=s?-1:1;// fewer pips to go, more points made, fewer blots
@@ -132,26 +148,32 @@ function handFind(hc){const res=[];let left=[...hc];
   return {res,left};}
 GAMES.hand.bot=(d,s,lv)=>{if(d.ph==='sum')return hNewRound({...d,r:d.r+1});
   let x=d;const t=d.turn;
-  if(x.ph==='draw'){const top=x.disc.slice(-2);if(lv===3&&top&&x.op[t]==='1'){const f=handFind([...cardsOf(x.hands[t]),top]).res;if(f.some(g=>g.includes(top)))return hDraw(x,true);}return hDraw(x,false);}
+  if(x.ph==='draw'){const top=x.disc.slice(-2);if(lv===3&&top&&x.op[t]==='1'){const hc=cardsOf(x.hands[t]),g=handFind([...hc,top]).res.find(g=>g.includes(top));if(g&&hc.length>=g.length)return hDraw(x,true);}return hDraw(x,false);}
+  // the card taken from the ground goes down first; if it cannot, it goes back and the bot draws like everyone else
+  if(x.took){const hc=cardsOf(x.hands[t]),g=handFind(hc).res.find(g=>g.includes(x.took));const r=g&&hc.length>g.length?hLay(x,[g]):null;
+    if(r&&r.d)x=r.d;else{const back=[...x.hands];hc.splice(hc.indexOf(x.took),1);back[t]=hc.join('');x=hDraw({...x,hands:back,disc:x.disc+x.took,took:null,ph:'draw'},false);}}
   if(lv>1||Math.random()<.5){const hc=cardsOf(x.hands[t]);const {res}=handFind(hc);if(res.length){let tot=0,cnt=hc.length;const use=[];for(const g of res){if(cnt-g.length<1)break;use.push(g);cnt-=g.length;tot+=hValue(hMeld(g));}
       if(use.length&&(x.op[t]==='1'||tot>=x.req||cnt===1)){const r=hLay(x,use);if(r.d)x=r.d;}}
     if(x.op[t]==='1'){let ch=true,g=0;while(ch&&g++<20){ch=false;const h2=cardsOf(x.hands[t]);if(h2.length<=1)break;
       for(const c of h2){if(hJ(c)||c===x.took)continue;for(let i=0;i<x.melds.length;i++){const m2=hAdd(x.melds[i],c);if(m2){const melds=[...x.melds];melds[i]={...m2,o:x.melds[i].o};const h3=[...h2];h3.splice(h3.indexOf(c),1);const hands=[...x.hands];hands[t]=h3.join('');x={...x,melds,hands,tm:x.tm+1,lo:x.lo||x.melds[i].o!==t};ch=true;break;}}if(ch)break;}}}}
-  if(x.took){const back=[...x.hands];const hc=cardsOf(back[t]);hc.splice(hc.indexOf(x.took),1);back[t]=hc.join('');x={...x,hands:back,disc:x.disc+x.took,took:null};}
   const hc=cardsOf(x.hands[t]);const keep=new Set(handFind(hc).res.flat());const cand=hc.filter(c=>!hJ(c)&&!keep.has(c));
   const dc=(cand.length?cand:hc.filter(c=>!hJ(c)).length?hc.filter(c=>!hJ(c)):hc).sort((a,b)=>hPen(b)-hPen(a))[lv===1?rnd(Math.min(3,hc.length)):0]||hc[0];
   return hDiscard(x,dc)||x;};
+// the round scores stay on screen long enough to read
+GAMES.hand.botDelay=(d,s,lv)=>d.ph==='sum'?8000:BOTMS[lv]+rnd(600);
 
 /* ---------- uno, domino, 99, old maid, go fish ---------- */
 GAMES.uno.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);
-  if(H.length===2&&Math.random()<[0,.5,.9,1][lv])S.unoSaid=d.gid+':'+d.disc.length;
+  // first catch whoever went down to one card without saying «أونو»
+  if(d.uno>=0&&d.uno!==s&&Math.random()<[0,.5,.8,1][lv])return botDo(d,s,'catch',0);
+  // the bot says «أونو» (easy ones often forget) on its own move, not through the shared button flag
+  const say=H.length===2&&Math.random()<[0,.5,.9,1][lv],uno=nd=>nd&&H.length===2&&cardsOf(nd.hands[s]).length===1?{...nd,uno:say?-1:s}:nd;
   const ok=H.map((c,i)=>uPlayable(c,d,H)?i:-1).filter(i=>i>=0);
   if(!ok.length)return botDo(d,s,d.drew?'pass':'draw',0);
   const next=uStep(d,s,1,d.dir),danger=cardsOf(d.hands[next]).length<=2;
   let i=ok[0];if(lvRand(lv))i=pickR(ok);else{const rank=c=>(c[0]==='k'?(c[1]==='F'?(danger?9:-3):-2):'DSR'.includes(c[1])?(danger?6:1):2)+(c[0]===d.color?.5:0);i=ok.sort((a,b)=>rank(H[b])-rank(H[a]))[0];}
-  if(H[i][0]==='k'){const cnt={};H.forEach(c=>{if(c[0]!=='k')cnt[c[0]]=(cnt[c[0]]||0)+1;});const best=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'rgby'[rnd(4)];S.wild=i;return botDo(d,s,'wc','rgby'.indexOf(best));}
-  return botDo(d,s,'play',i);};
-GAMES.uno.botWatch=true;
+  if(H[i][0]==='k'){const cnt={};H.forEach(c=>{if(c[0]!=='k')cnt[c[0]]=(cnt[c[0]]||0)+1;});const best=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'rgby'[rnd(4)];S.wild=i;return uno(botDo(d,s,'wc','rgby'.indexOf(best)));}
+  return uno(botDo(d,s,'play',i));};
 GAMES.domino.bot=(d,s,lv)=>{const H=d.hands[s].match(/.{2}/g)||[];const ok=H.map((t,i)=>domFits(t,d).some(x=>x)?i:-1).filter(i=>i>=0);
   if(!ok.length)return botDo(d,s,d.bone.length?'draw':'pass',0);
   const i=lvRand(lv)?pickR(ok):ok.sort((a,b)=>(+H[b][0]+ +H[b][1]+(H[b][0]===H[b][1]?3:0))-(+H[a][0]+ +H[a][1]+(H[a][0]===H[a][1]?3:0)))[0];
@@ -208,6 +230,8 @@ GAMES.bj.bot=(d,s,lv)=>{if(d.ph==='done')return bjNewRound(d);const h=d.hs[s][d.
     if(free>=h.b&&(v===11||(v===10&&up<10)||(v===9&&up>=3&&up<=6)))return bjAct(d,'dbl');}
   if(soft)return bjAct(d,v<=17||(v===18&&up>=9)?'hit':'stand');
   return bjAct(d,v<=11||(v<=16&&up>=7)||(v===12&&up<=3)?'hit':'stand');};
+// the dealer's cards and each hand's result stay on screen long enough to read
+GAMES.bj.botDelay=(d,s,lv)=>d.ph==='done'?7000:BOTMS[lv]+rnd(d.ph==='bet'?2500:600);
 GAMES.bj.botPick=(d,s,lv)=>Math.max(10,Math.min(d.chips[s],[0,50+rnd(150),100,Math.round(d.chips[s]*.1/10)*10][lv]));
 
 /* ---------- monopoly ---------- */
@@ -249,9 +273,14 @@ GAMES.memory.bot=(d,s,lv)=>{const K=memOf(d,s);const op=(d.open||[]).length===2?
 GAMES.simon.bot=(d,s,lv)=>{const n=d.seq.length;const okP=Math.pow([0,.9,.96,.99][lv],n);
   if(Math.random()<okP)return {...d,seq:d.seq+rnd(4),turn:nextSeat(d,s),last:`${nm(d,s)} كرر ${n} وزاد لون`};
   const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);return {...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,s,out),last:`${nm(d,s)} غلط وطلع`};};
-GAMES.tanks.bot=(d,s,lv)=>{let best=null;const foes=aliveSeats(d).filter(x=>x!==s);
-  for(let a=5;a<180&&!best;a+=lv===3?2:5)for(let pw=20;pw<=100;pw+=lv===3?2:6){const r=tkFire(d,s,a,pw);if(r.hits.some(h=>foes.includes(h.s)&&h.dmg>=10)&&!r.hits.some(h=>h.s===s)){best=[a,pw];break;}}
-  const noise=[0,18,8,2][lv];const a=best?best[0]+rnd(noise*2+1)-noise:rnd(180),pw=best?best[1]+rnd(noise+1)-noise/2:40+rnd(60);
+GAMES.tanks.bot=(d,s,lv)=>{let best=null,near=null;const foes=aliveSeats(d).filter(x=>x!==s),me=d.tx[s],t0=performance.now();
+  // aim toward the foes only, coarse first, then fine around the nearest miss; stop after ~120 ms so the page never freezes
+  const rt=foes.some(f=>d.tx[f]>me),lf=foes.some(f=>d.tx[f]<me),A0=lf?(rt?5:70):5,A1=rt?(lf?179:110):179;
+  const shot=(a,pw)=>{const r=tkFire(d,s,a,pw);if(r.hits.some(h=>h.s===s))return;if(r.hits.some(h=>foes.includes(h.s)&&h.dmg>=10)){best=[a,pw];return;}
+    if(r.hit){const e=Math.min(...foes.map(f=>Math.abs(r.hit.x-d.tx[f])));if(!near||e<near[2])near=[a,pw,e];}};
+  const scan=(a0,a1,da,p0,p1,dp)=>{for(let a=Math.max(1,a0);a<=Math.min(179,a1)&&!best;a+=da)for(let pw=Math.max(10,p0);pw<=Math.min(100,p1)&&!best;pw+=dp){if(performance.now()-t0>120)return;shot(a,pw);}};
+  scan(A0,A1,10,20,100,10);if(!best&&near)scan(near[0]-9,near[0]+9,lv===3?2:3,near[1]-9,near[1]+9,lv===3?2:3);if(!best)scan(A0,A1,lv===3?2:5,20,100,lv===3?2:6);
+  const noise=[0,18,8,2][lv],aim=best||near;const a=aim?aim[0]+rnd(noise*2+1)-noise:rnd(180),pw=aim?aim[1]+rnd(noise+1)-noise/2:40+rnd(60);
   S.draft.angs=String(180-Math.max(1,Math.min(179,a)));S.draft.pow=String(Math.max(10,Math.min(100,pw)));return botDo(d,s,'fire',null);};
 GAMES.dwars.bot=(d,s,lv)=>{const ts=String(s);const o=[];for(let i=0;i<d.own.length;i++)if(d.own[i]===ts&&+d.dice[i]>1)for(const b of dwNb(i))if(d.own[b]!=='.'&&d.own[b]!==ts&&+d.dice[i]>=+d.dice[b]+(lv===3?1:0))o.push([i,b]);
   if(!o.length||(lv===1&&Math.random()<.3)){return dwEnd(d);}const [a,b]=lv===1?pickR(o):o.sort((x,y)=>(+d.dice[y[0]]-+d.dice[y[1]])-(+d.dice[x[0]]-+d.dice[x[1]]))[0];
@@ -269,13 +298,19 @@ GAMES.bara.botPick=(d,s,lv)=>{if(d.ph==='see')return 1;const o=d.pl.map((_,x)=>x
 GAMES.bara.bot=(d,s,lv)=>{if(d.ph==='cat')return baraStart(d,rnd(BARA.length));if(d.ph==='ask')return baraAsked(d);if(d.ph==='more')return {...d,ph:'vote',rd:d.rd+1,last:'بدأ التصويت'};
   if(d.ph==='guess'){const right=Math.random()<[0,.25,.4,.55][lv];return baraGuess(d,right?d.w:pickR(d.opts.filter(i=>i!==d.w)));}return GAMES.bara.onTimeout(d);};
 GAMES.mafia.botPick=(d,s,lv)=>{const r=d.roles[s];if(d.ph==='role')return 1;const al=aliveSeats(d).filter(x=>x!==s);
-  if(d.ph==='night'){if(r==='m')return pickR(al.filter(x=>d.roles[x]!=='m'));if(r==='d')return pickR(aliveSeats(d).filter(x=>x!==d.ls));if(r==='t')return pickR(al);return -1;}
-  if(d.inv&&d.inv.s===s&&d.inv.m&&d.out[d.inv.t]!=='1')return d.inv.t;if(r==='m')return pickR(al.filter(x=>d.roles[x]!=='m'))??pickR(al);return Math.random()<.15?-1:pickR(al);};
+  // medium and hard mafia bots pick the same victim; the hard detective remembers everyone it checked
+  const K=memOf(d,s),M=memOf(d,'m'),gang=l=>{if(lv<2||!l.length)return pickR(l);if(!l.includes(M[d.rd]))M[d.rd]=pickR(l);return M[d.rd];};
+  if(d.inv&&d.inv.s===s)K['c'+d.inv.t]=d.inv.m;
+  if(d.ph==='night'){if(r==='m')return gang(al.filter(x=>d.roles[x]!=='m'));if(r==='d')return pickR(aliveSeats(d).filter(x=>x!==d.ls));
+    if(r==='t'){const nw=al.filter(x=>!('c'+x in K));return pickR(lv===3&&nw.length?nw:al);}return -1;}
+  const bad=lv===3?al.find(x=>K['c'+x]===true):undefined;if(bad!=null)return bad;
+  if(d.inv&&d.inv.s===s&&d.inv.m&&d.out[d.inv.t]!=='1')return d.inv.t;if(r==='m')return gang(al.filter(x=>d.roles[x]!=='m'))??pickR(al);return Math.random()<.15?-1:pickR(al);};
 GAMES.close.botPick=(d,s,lv)=>{const Q=GAMES.close.q(d,d.rd);const a=Q[1];const err=[0,.45,.22,.08][lv];return Math.max(0,Math.round(a*(1+(Math.random()*2-1)*err)));};
 GAMES.rps.botPick=()=>rnd(3);
 
 /* ---------- race games ---------- */
-GAMES.ludo.bot=(d,s,lv)=>{if(d.roll==null)return luRoll(d,true);const r=d.roll,mv=luMovable(d,s,r);if(!mv.length)return GAMES.ludo.onTimeout(d);
+// rolling returns with roll set when there is a real choice; the bot picks its piece on the next tick
+GAMES.ludo.bot=(d,s,lv)=>{if(S.rolling)return d;if(d.roll==null)return luRoll(d);const r=d.roll,mv=luMovable(d,s,r);if(!mv.length)return GAMES.ludo.onTimeout(d);
   if(lvRand(lv))return luApply(d,s,pickR(mv),r);const n=d.pl.length,T=luT(d),F=T+4,K=d.T;
   const cell=(o,q)=>(armOf(n,o)*13+8+q)%T;
   const danger=(tk,q)=>{if(q<0||q>T-2)return 0;const g=cell(s,q);if(g%13===3||g%13===8)return 0;let x=0;// opponents up to six cells behind
@@ -343,8 +378,8 @@ GAMES.uxo.bot=(d,s,lv)=>{const legal=[];for(let i=0;i<81;i++){const k=Math.floor
 GAMES.bingo.bot=(d,s,lv)=>{const open=[];for(let n=1;n<=25;n++)if(d.called[n-1]==='0')open.push(n);if(lvRand(lv))return botDo(d,s,'m',pickR(open));
   const L5=[];for(let r=0;r<5;r++){L5.push([0,1,2,3,4].map(c=>r*5+c));L5.push([0,1,2,3,4].map(c=>c*5+r));}L5.push([0,6,12,18,24],[4,8,12,16,20]);
   const gain=(card,n)=>{const p=card.indexOf(n);let v=0;for(const L of L5)if(L.includes(p)){const c=L.filter(q=>d.called[card[q]-1]==='1').length;v+=c===4?100:(c+1)*(c+1);}return v;};
-  const mine=bingoCard(d,s),opp=aliveSeats(d).filter(o=>o!==s).map(o=>bingoCard(d,o));
-  const val=n=>gain(mine,n)-(lv===3?Math.max(0,...opp.map(c=>gain(c,n)))*.6:0)+Math.random();
+  const mine=bingoCard(d,s);// only its own card: the others' cards are hidden from players
+  const val=n=>gain(mine,n)+Math.random();
   return botDo(d,s,'m',open.sort((a,b)=>val(b)-val(a))[0]);};
 
 /* ---------- number party games ---------- */
