@@ -6,7 +6,7 @@ const RANKS='A23456789TJQK',SUITS='shdc',SUITCH={s:'♠',h:'♥',d:'♦',c:'♣'
 const deck52=(k=1)=>{const a=[];for(let n=0;n<k;n++)for(const s of SUITS)for(const r of RANKS)a.push(r+s);return a;};
 const rv=c=>RANKS.indexOf(c[0])+1;
 const cardHTML=(c,big,extra)=>c==='??'?`<div class="card back ${big?'big':''}"></div>`:
-  `<div class="card ${'hd'.includes(c[1])?'red':'blk'} ${big?'big':''} ${extra||''}">${c[0]==='T'?'10':c[0]}<small style="font-size:60%">${SUITCH[c[1]]}</small></div>`;
+  `<div class="card ${'hd'.includes(c[1])?'red':'blk'} ${big?'big':''} ${extra||''}"><span class="ci">${c[0]==='T'?'10':c[0]}<br>${SUITCH[c[1]]}</span>${'JQK'.includes(c[0])?`<span class="fc">${c[0]}<small>${SUITCH[c[1]]}</small></span>`:`<span class="cs">${SUITCH[c[1]]}</span>`}<span class="ci b">${c[0]==='T'?'10':c[0]}<br>${SUITCH[c[1]]}</span></div>`;
 const cardsOf=s=>s.match(/.{2}/g)||[];
 
 /* ---------- memory ---------- */

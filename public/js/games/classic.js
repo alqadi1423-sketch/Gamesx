@@ -188,40 +188,58 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const MN=['أحمد','خالد','فهد','سعد','ناصر','عمر','يوسف','سلطان','ماجد','تركي','بدر','حمد'],FN=['سارة','نورة','ريم','هند','لمى','دانة','جود','مها','عبير','لينا','رهف','شهد'];
 const HC={black:'#2B2B2B',brown:'#7A4A2A',blond:'#E8C15A',red:'#C8512E',gray:'#B9B9B9'};
-const SKIN=['#F6D6B8','#E7B98F','#C9905F','#8E5B3A'],SHIRT=['#5CC08C','#F2A93B','#9C7BD6','#4AB1E8','#E8746B','#3D5A80'],HIJ=['#3D5A80','#9C7BD6','#2D4763','#C76A8A','#5C8D89'];
-const PEOPLE=(()=>{const R=mulberry(20261112);const pick=a=>a[Math.floor(R()*a.length)];const out=[];const seen=new Set();
-  const make=(m,name)=>{for(let k=0;k<200;k++){const p={m,name,gl:R()<.3,sm:R()<.5,sk:pick(SKIN),shirt:pick(SHIRT)};
-      if(m){p.sh=R()<.3;p.hj=false;p.hair=p.sh?'none':pick(['black','brown','blond','red','gray','bald','black']);p.bd=R()<.4;p.mu=p.bd||R()<.35;p.er=false;}
-      else{p.hj=R()<.35;p.sh=false;p.hair=p.hj?'none':pick(['black','brown','blond','red','gray']);p.bd=false;p.mu=false;p.er=!p.hj&&R()<.5;p.hjc=pick(HIJ);}
-      const sig=[p.m,p.gl,p.sm,p.sh,p.hj,p.hair,p.bd,p.mu,p.er].join();if(!seen.has(sig)){seen.add(sig);return p;}}};
+const SKIN=['#F6D6B8','#EBC09A','#C9905F','#8E5B3A'],SHIRTS=[['#4CB97F','أخضر'],['#F2A93B','برتقالي'],['#9C7BD6','بنفسجي'],['#4AB1E8','أزرق'],['#E8574E','أحمر'],['#3D5A80','كحلي']],HIJ=['#3D5A80','#9C7BD6','#2D4763','#C76A8A','#5C8D89','#A0522D'];
+const CARDBG=['#FDECEA','#E8F4FD','#EAF7EF','#FFF6DD','#F1ECFA','#FDEFE4'],CAPC=['#2D4763','#E5483F','#2F7F86','#F0B429'];
+const PEOPLE=(()=>{const R=mulberry(20261113);const pick=a=>a[Math.floor(R()*a.length)];const out=[];const seen=new Set();
+  const make=(m,name)=>{for(let k=0;k<400;k++){const sh=pick(SHIRTS);const p={m,name,gl:R()<.3,sm:R()<.5,sk:pick(SKIN),shirt:sh[0],shn:sh[1],bg:pick(CARDBG)};
+      if(m){p.sh=R()<.28;p.cap=!p.sh&&R()<.25;p.hj=false;p.hair=p.sh?'none':pick(['black','brown','blond','red','gray','bald','black']);if(p.cap&&p.hair==='bald')p.hair='black';p.hs=pick(['short','curly','spiky']);p.bd=R()<.4;p.mu=p.bd||R()<.35;p.er=false;p.capc=pick(CAPC);}
+      else{p.hj=R()<.35;p.sh=false;p.cap=false;p.hair=p.hj?'none':pick(['black','brown','blond','red','gray']);p.hs=p.hj?'none':pick(['long','bob','bun','long']);p.bd=false;p.mu=false;p.er=!p.hj&&R()<.5;p.hjc=pick(HIJ);}
+      const sig=[p.m,p.gl,p.sm,p.sh,p.cap,p.hj,p.hair,p.hs==='long',p.bd,p.mu,p.er,p.shn].join();if(!seen.has(sig)){seen.add(sig);return p;}}};
   for(let i=0;i<12;i++){out.push(make(true,MN[i]));out.push(make(false,FN[i]));}return out;})();
 function faceSVG(p){
-  const hc=HC[p.hair]||'#2B2B2B';let s=`<svg viewBox="0 0 60 66">`;
-  s+=`<path d="M8 66C8 52 18 47 30 47S52 52 52 66Z" fill="${p.shirt}" stroke="#2D4763" stroke-width="1.2"/><rect x="25" y="40" width="10" height="9" fill="${p.sk}"/>`;
-  if(p.hj)s+=`<path d="M12 30C12 14 20 9 30 9S48 14 48 30C48 40 46 48 52 58H8C14 48 12 40 12 30Z" fill="${p.hjc}" stroke="#2D4763" stroke-width="1.2"/>`;
-  if(!p.m&&!p.hj&&p.hair!=='none')s+=`<path d="M15 28C15 12 22 9 30 9S45 12 45 28V50H15Z" fill="${hc}" stroke="#2D4763" stroke-width="1.2"/>`;
-  if(p.sh)s+=`<path d="M13 30C13 14 20 9 30 9S47 14 47 30L50 52H10Z" fill="url(#shm)" stroke="#2D4763" stroke-width="1.2"/>`;
-  s+=`<ellipse cx="30" cy="30" rx="12" ry="14" fill="${p.sk}" stroke="#2D4763" stroke-width="1.2"/>`;
-  if(p.er)s+=`<circle cx="18" cy="35" r="1.8" fill="#F2C14E" stroke="#2D4763" stroke-width=".5"/><circle cx="42" cy="35" r="1.8" fill="#F2C14E" stroke="#2D4763" stroke-width=".5"/>`;
-  if(p.m&&p.hair!=='none'&&p.hair!=='bald')s+=`<path d="M18 26C17 14 24 12 30 12S43 14 42 26C40 20 36 18 30 18S20 20 18 26Z" fill="${hc}" stroke="#2D4763" stroke-width="1"/>`;
-  if(p.m&&p.hair==='bald')s+=`<path d="M18 30C17 27 18 25 19 24M42 30C43 27 42 25 41 24" stroke="#8b8b8b" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
-  if(!p.m&&!p.hj&&p.hair!=='none')s+=`<path d="M18 25C19 15 26 13 31 14S41 17 42 24C36 21 28 22 18 25Z" fill="${hc}"/>`;
-  if(p.sh)s+=`<path d="M16 19C20 13 40 13 44 19" stroke="#1d1d1d" stroke-width="2.6" fill="none"/><path d="M17 22C21 17 39 17 43 22" stroke="#1d1d1d" stroke-width="2" fill="none"/>`;
-  s+=`<circle cx="25" cy="29" r="1.6" fill="#2D4763"/><circle cx="35" cy="29" r="1.6" fill="#2D4763"/>`;
-  if(p.gl)s+=`<circle cx="25" cy="29" r="4.2" fill="none" stroke="#2D4763" stroke-width="1.3"/><circle cx="35" cy="29" r="4.2" fill="none" stroke="#2D4763" stroke-width="1.3"/><path d="M29.2 29H30.8" stroke="#2D4763" stroke-width="1.3"/>`;
+  const hc=HC[p.hair]||'#2B2B2B',sk=p.sk,dk=shade(sk,-.2),O='stroke="#2D4763" stroke-width=".9"';let s=`<svg viewBox="0 0 60 66"><rect width="60" height="66" fill="${p.bg}"/><circle cx="30" cy="70" r="34" fill="#fff" opacity=".45"/>`;
+  if(!p.m&&!p.hj&&p.hs==='long')s+=`<path d="M13 31C13 13 21 8 30 8S47 13 47 31V59C42 61 18 61 13 59Z" fill="${hc}" ${O}/>`;
+  if(!p.m&&!p.hj&&p.hs==='bob')s+=`<path d="M14 30C14 13 21 9 30 9S46 13 46 30V43C46 46 43 47 41 45H19C17 47 14 46 14 43Z" fill="${hc}" ${O}/>`;
+  if(!p.m&&!p.hj&&p.hs==='bun')s+=`<circle cx="30" cy="9" r="6" fill="${hc}" ${O}/>`;
+  if(p.hj)s+=`<path d="M11 31C11 13 19 7 30 7S49 13 49 31C49 42 47 51 53 66H7C13 51 11 42 11 31Z" fill="${p.hjc}" ${O}/>`;
+  if(p.sh)s+=`<path d="M12 30C12 14 20 9 30 9S48 14 48 30L52 56C45 51 38 50 30 50S15 51 8 56Z" fill="url(#shm)" ${O}/>`;
+  s+=`<path d="M6 66C6 53 17 47 30 47S54 53 54 66Z" fill="${p.shirt}" ${O}/><path d="M6 66C6 60 9 56 13 53" stroke="rgba(0,0,0,.12)" stroke-width="3" fill="none"/>`;
+  s+=`<path d="M25 39H35V49C33 51.5 27 51.5 25 49Z" fill="${dk}"/>`;
+  if(!p.hj)s+=p.m&&!p.sh?`<path d="M23 47L30 54L37 47" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.6"/>`:'';
+  if(!p.hj&&!p.sh)s+=`<ellipse cx="17.6" cy="31" rx="2.6" ry="3.6" fill="${sk}" ${O}/><ellipse cx="42.4" cy="31" rx="2.6" ry="3.6" fill="${sk}" ${O}/>`;
+  s+=`<ellipse cx="30" cy="30" rx="12.5" ry="14.5" fill="${sk}" ${O}/>`;
+  if(p.er)s+=`<circle cx="17.4" cy="36.2" r="1.6" fill="#F2C14E" stroke="#B8860B" stroke-width=".5"/><circle cx="42.6" cy="36.2" r="1.6" fill="#F2C14E" stroke="#B8860B" stroke-width=".5"/>`;
+  if(p.m&&p.hair==='bald')s+=`<path d="M18 29C17 26 18 24 19.5 23M42 29C43 26 42 24 40.5 23" stroke="#8b8b8b" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M24 18Q27 16.5 30 17" stroke="#fff" stroke-width="1.2" opacity=".6" fill="none" stroke-linecap="round"/>`;
+  else if(p.m&&p.hair!=='none'){if(p.hs==='curly')s+=`<path d="M17.5 27C15.5 22 17 16 21 15C22 11.5 26 11 28 12.5C30 10.5 34 11 35.5 13C39.5 12.5 43.5 17 42.5 27C41 21.5 37 19 30 19S19 21.5 17.5 27Z" fill="${hc}" ${O}/>`;
+    else if(p.hs==='spiky')s+=`<path d="M17.5 27C17 19 19 15 21 15L22 10.5L25.5 13.5L28 9.5L30.5 13L34 10L35.5 14L39 12.5L39.5 16C42 18 43 22 42.5 27C41 21.5 37 19 30 19S19 21.5 17.5 27Z" fill="${hc}" ${O}/>`;
+    else s+=`<path d="M17.5 27C17 15 23 12.5 30 12.5S43 15 42.5 27C41 21 37 18.5 30 18.5S19 21 17.5 27Z" fill="${hc}" ${O}/>`;}
+  if(!p.m&&!p.hj&&p.hair!=='none')s+=p.hs==='bun'?`<path d="M17.5 27C17 16 23 13 30 13S43 16 42.5 27C40 21 36 19 30 19S20 21 17.5 27Z" fill="${hc}" ${O}/>`:`<path d="M17.5 28C18 16 24 13 31 14S42 18 42.5 26C37 20 28 22 17.5 28Z" fill="${hc}" ${O}/>`;
+  if(p.hj)s+=`<path d="M16.5 30C16.5 19 22 14.5 30 14.5S43.5 19 43.5 30" fill="none" stroke="${p.hjc}" stroke-width="3.4"/><path d="M16.5 30C16.5 19 22 14.5 30 14.5S43.5 19 43.5 30" fill="none" stroke="rgba(0,0,0,.18)" stroke-width=".8"/>`;
+  if(p.sh)s+=`<path d="M17 21.5C17 16 22 14 30 14S43 16 43 21.5" fill="none" stroke="#fff" stroke-width="2.6"/><path d="M15.5 18C20 12.5 40 12.5 44.5 18" stroke="#1d1d1d" stroke-width="2.4" fill="none"/><path d="M16.5 20.8C21 16 39 16 43.5 20.8" stroke="#1d1d1d" stroke-width="1.8" fill="none"/>`;
+  if(p.cap)s+=`<path d="M17 22C17 12.5 23 10.5 30 10.5S43 12.5 43 22Z" fill="${p.capc}" ${O}/><path d="M29 21.5H48C48 24 45 25.5 41 25H29Z" fill="${shade(p.capc,-.25)}" ${O}/><circle cx="30" cy="11" r="1.3" fill="${shade(p.capc,.3)}"/>`;
+  const bw=p.hair==='blond'||p.hair==='gray'||p.hair==='none'||p.hair==='bald'?'#5a4636':shade(hc,-.2);
+  s+=`<path d="M21.5 24.6Q25 22.6 28 24.4M32 24.4Q35 22.6 38.5 24.6" stroke="${bw}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
+  s+=`<ellipse cx="25" cy="29" rx="2.5" ry="2" fill="#fff"/><ellipse cx="35" cy="29" rx="2.5" ry="2" fill="#fff"/><circle cx="25.3" cy="29.2" r="1.3" fill="#2D2D2D"/><circle cx="35.3" cy="29.2" r="1.3" fill="#2D2D2D"/><circle cx="25.8" cy="28.7" r=".45" fill="#fff"/><circle cx="35.8" cy="28.7" r=".45" fill="#fff"/>`;
+  s+=`<path d="M30 30.5Q28.4 34.6 30.4 35.2" stroke="${dk}" stroke-width="1.1" fill="none" stroke-linecap="round"/>`;
+  if(!p.m||p.sm)s+=`<ellipse cx="21.5" cy="35" rx="2.2" ry="1.2" fill="#F08080" opacity=".35"/><ellipse cx="38.5" cy="35" rx="2.2" ry="1.2" fill="#F08080" opacity=".35"/>`;
+  if(p.gl)s+=`<rect x="20.4" y="26" width="9" height="6.4" rx="2.4" fill="rgba(255,255,255,.18)" stroke="#2D4763" stroke-width="1.2"/><rect x="30.6" y="26" width="9" height="6.4" rx="2.4" fill="rgba(255,255,255,.18)" stroke="#2D4763" stroke-width="1.2"/><path d="M29.4 28.4H30.6M20.4 28.6L17.8 27.6M39.6 28.6L42.2 27.6" stroke="#2D4763" stroke-width="1.1"/>`;
   const bc=p.hair==='gray'||p.hair==='bald'?'#7d7d7d':(p.hair==='none'?'#2B2B2B':hc);
-  if(p.bd)s+=`<path d="M18 31C18 44 24 45 30 45S42 44 42 31C40 38 36 39 30 39S20 38 18 31Z" fill="${bc}" stroke="#2D4763" stroke-width=".8"/>`;
-  if(p.mu)s+=`<path d="M24 36.5C27 34.5 33 34.5 36 36.5C33 36 27 36 24 36.5Z" fill="${bc}" stroke="${bc}" stroke-width="1.6" stroke-linejoin="round"/>`;
-  s+=p.sm?`<path d="M26 38.5Q30 42 34 38.5" stroke="#2D4763" stroke-width="1.3" fill="none" stroke-linecap="round"/>`:`<path d="M27 39.5H33" stroke="#2D4763" stroke-width="1.3" stroke-linecap="round"/>`;
+  if(p.bd)s+=`<path d="M17.8 31C17.8 45 24 46.5 30 46.5S42.2 45 42.2 31C40 38.5 36 39.5 30 39.5S20 38.5 17.8 31Z" fill="${bc}" ${O}/>`;
+  if(p.mu)s+=`<path d="M24 37C26.5 35 33.5 35 36 37C33.5 36.4 26.5 36.4 24 37Z" fill="${bc}" stroke="${bc}" stroke-width="1.8" stroke-linejoin="round"/>`;
+  s+=p.sm?`<path d="M25.6 38.6Q30 43 34.4 38.6Z" fill="#fff" stroke="#2D4763" stroke-width="1.1" stroke-linejoin="round"/>`:`<path d="M27 40H33" stroke="#2D4763" stroke-width="1.3" stroke-linecap="round"/>`;
   return s+'</svg>';
 }
 const FACES=PEOPLE.map(faceSVG);
-const QS=[['رجل',p=>p.m],['امرأة',p=>!p.m],['شماغ',p=>p.sh],['حجاب',p=>p.hj],['نظارة',p=>p.gl],['لحية',p=>p.bd],['شنب',p=>p.mu],['مبتسم',p=>p.sm],['شعر أسود',p=>p.hair==='black'],['شعر بني',p=>p.hair==='brown'],['شعر أشقر',p=>p.hair==='blond'],['شعر أحمر',p=>p.hair==='red'],['شعر رمادي',p=>p.hair==='gray'],['أصلع',p=>p.hair==='bald'],['حلق',p=>p.er]];
-const pc=(i,cls,attrs)=>`<${attrs?'button':'div'} class="pc ${cls}" ${attrs||''}>${FACES[i]}${PEOPLE[i].name}</${attrs?'button':'div'}>`;
+const QS=[['رجل',p=>p.m,0],['امرأة',p=>!p.m,0],['مبتسم',p=>p.sm,0],['نظارة',p=>p.gl,0],['حلق',p=>p.er,0],
+  ['شماغ',p=>p.sh,1],['حجاب',p=>p.hj,1],['كاب',p=>p.cap,1],['أصلع',p=>p.hair==='bald',1],['شعر طويل',p=>p.hs==='long',1],['لحية',p=>p.bd,1],['شنب',p=>p.mu,1],
+  ['شعر أسود',p=>p.hair==='black',2],['شعر بني',p=>p.hair==='brown',2],['شعر أشقر',p=>p.hair==='blond',2],['شعر أحمر',p=>p.hair==='red',2],['شعر رمادي',p=>p.hair==='gray',2],
+  ...SHIRTS.map(([c,n])=>['لبس '+n,p=>p.shn===n,3,c])];
+const QCAT=['الشخص','الرأس والوجه','لون الشعر','لون اللبس'];
+const pc=(i,cls,attrs)=>`<${attrs?'button':'div'} class="pc ${cls}" ${attrs||''}><div class="fr">${FACES[i]}<b>${PEOPLE[i].name}</b></div><div class="bk"><span>؟</span><b>${PEOPLE[i].name}</b></div></${attrs?'button':'div'}>`;
 const elSeg=(d,a,t)=>d.el[a].slice(t*24,t*24+24);
 GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8C5BA8"/>${[[4,4,0],[36,4,1],[68,4,2],[4,36,3],[36,36,4],[68,36,6],[4,68,9],[36,68,10],[68,68,13]].map(([x,y,k])=>`<g transform="translate(${x} ${y}) scale(.47)"><rect width="60" height="66" rx="8" fill="#fff"/>${FACES[k].replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g>`).join('')}</svg>`,
-  init:n=>({el:Array(n).fill('0'.repeat(24*n)),last:''}),
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B4FA0"/>${[[4,4,0],[36,4,1],[68,4,2],[4,36,3],[36,36,4],[68,36,6],[4,68,9],[36,68,10],[68,68,13]].map(([x,y,k])=>`<g transform="translate(${x} ${y}) scale(.47)"><rect width="60" height="66" rx="8" fill="#fff"/>${FACES[k].replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g>`).join('')}</svg>`,
+  init:n=>({el:Array(n).fill('0'.repeat(24*n)),last:'',qa:[]}),
   privInit:()=>({sec:rnd(24)}),
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
@@ -232,15 +250,21 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
     const spect=v<0;if(spect)v=d.turn;
     const mine=ctx.priv[d.pl[v]];const myTurn=ctx.my&&d.turn===v;const gm=myTurn&&S.gw;
     const o=curTarget(d,v);if(o==null)return '';
-    let s=!spect&&mine&&mine.gid===d.gid?`<div class="secret">${pc(mine.sec,'')}<div><b>شخصيتك السرية</b><br><small class="note">الباقين يحاولون يعرفونها</small></div></div>`:'';
+    let s=!spect&&mine&&mine.gid===d.gid?`<div class="secret">${pc(mine.sec,'')}<div><b>شخصيتك السرية: ${PEOPLE[mine.sec].name}</b><br><small class="note">الباقين يحاولون يعرفونها، جاوب بصدق 😉</small></div></div>`:'';
     s+=tabsHTML(d,v,myTurn?'اختر مين تسأل عنه':'لوحتك عن كل لاعب');
-    s+=`<p class="lbl" style="text-align:center">شخصية ${nameTag(d,o)}</p>`;
-    if(gm)s+=`<p class="hint" style="text-align:center">اضغط على الشخص اللي تتوقعه (لو غلطت تطلع)</p>`;
-    const el=elSeg(d,v,o);
-    s+=`<div class="gw">${PEOPLE.map((p,i)=>{const out=el[i]==='1';return gm&&!out?pc(i,'pick',`data-ga="guess" data-i="${i}"`):pc(i,out?'out':'');}).join('')}</div>`;
+    const el=elSeg(d,v,o);const left=[...el].filter(c=>c==='0').length;
+    const key=d.gid+'_'+v+'_'+o;S.gPrev=S.gPrev||{};const prev=S.gPrev[key]||el;S.gPrev[key]=el;
+    s+=`<div class="gwh"><span>شخصية ${nameTag(d,o)}</span><b>باقي ${left} من 24</b></div>`;
+    if(gm)s+=`<p class="hint" style="text-align:center">اضغط على الشخص اللي تتوقعه (لو غلطت تطلع من الجولة)</p>`;
+    s+=`<div class="gw ${gm?'gm':''}">${PEOPLE.map((p,i)=>{const out=el[i]==='1';const nw=out&&prev[i]!=='1'?' flip':'';return gm&&!out?pc(i,'pick',`data-ga="guess" data-i="${i}"`):pc(i,(out?'out':'')+nw);}).join('')}</div>`;
+    const log=(d.qa||[]).filter(q=>q[0]===v&&q[1]===o);
+    if(log.length)s+=`<div class="qlog">${log.map(q=>`<span class="${q[3]?'y':'n'}">${QS[q[2]][0]}؟ ${q[3]?'✓':'✗'}</span>`).join('')}</div>`;
     if(myTurn){
-      if(gm)s+=`<div class="row"><button class="sm" data-ga="gmode">رجوع للأسئلة</button></div>`;
-      else s+=`<p class="lbl" style="text-align:center">اسأل: هل شخصية ${nm(d,o)} فيها…</p><div class="qs">${QS.map((q,k)=>`<button class="q" data-ga="ask" data-i="${k}">${q[0]}؟</button>`).join('')}</div><div class="acts"><button class="btn navy" data-ga="gmode">أعرفه! أبي أخمّن</button></div>`;
+      if(gm)s+=`<div class="acts"><button class="btn navy" data-ga="gmode">رجوع للأسئلة</button></div>`;
+      else{const rem=PEOPLE.filter((p,i)=>el[i]==='0');
+        s+=`<p class="lbl" style="text-align:center">اسأل: هل شخصية ${nm(d,o)} فيها…</p>`+QCAT.map((cn,ci)=>{const qs=QS.map((q,k)=>[q,k]).filter(([q])=>q[2]===ci);
+          return `<div class="qcat"><small>${cn}</small><div class="qs">${qs.map(([q,k])=>{const y=rem.filter(q[1]).length;const useful=y>0&&y<rem.length;return `<button class="q" data-ga="ask" data-i="${k}" ${useful?'':'disabled'}>${q[3]?`<i style="background:${q[3]}"></i>`:''}${q[0]}؟</button>`;}).join('')}</div></div>`;}).join('')+
+          `<div class="acts"><button class="btn red" data-ga="gmode">🎯 أعرفه! أبي أخمّن</button></div>`;}
     }
     return s;
   },
@@ -251,8 +275,8 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
     if(!op||op.gid!==d.gid){toast('انتظر اللاعب');return;}
     const P=PEOPLE[op.sec];
     if(a==='ask'){const f=QS[i][1];const ans=!!f(P);const el=[...d.el];const seg=[...elSeg(d,t,o)].map((c,k)=>c==='1'||!!f(PEOPLE[k])!==ans?'1':'0').join('');
-      el[t]=el[t].slice(0,o*24)+seg+el[t].slice(o*24+24);
-      act({...d,el,turn:nextSeat(d,t),last:`${nm(d,t)} سأل عن ${nm(d,o)} «${QS[i][0]}؟» والجواب: ${ans?'نعم ✓':'لا ✗'}`});}
+      el[t]=el[t].slice(0,o*24)+seg+el[t].slice(o*24+24);const qa=[...(d.qa||[]),[t,o,i,ans?1:0]].slice(-60);
+      act({...d,el,qa,turn:nextSeat(d,t),last:`${nm(d,t)} سأل عن ${nm(d,o)}: «${QS[i][0]}؟» والجواب ${ans?'نعم ✓':'لا ✗'}`});}
     else if(a==='guess'&&S.gw){S.gw=false;const right=i===op.sec;const out=setAt(d.out,right?o:t,'1');const al=aliveSeats(d,out);
       act({...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),
         last:right?`${nm(d,t)} عرف شخصية ${nm(d,o)}: ${P.name} 🎉`:`${nm(d,t)} خمّن ${PEOPLE[i].name} لـ${nm(d,o)} وطلع غلط`});}

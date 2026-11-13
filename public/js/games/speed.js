@@ -13,7 +13,7 @@ function spdResolve(d,picks){
   const rd=d.rd+1;return {...d,pts,rd,res,win:rd>=SPD_ROUNDS?mostPts(pts):null};
 }
 const spdSubmit=(d,ctx,ok)=>{const st=spdState(d,ctx.v);const ms=Math.round(performance.now()-st.t0);S.sp={...st,phase:'sent'};simulPick(d,ctx.v,{ok:!!ok,ms});};
-const readyCard=(title)=>`<div class="spd"><div class="spdt">${title}</div><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>`;
+const readyCard=(title,art)=>`<div class="spd">${art||''}<div class="spdt">${title}</div><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>`;
 const waitCard=()=>'<div class="spd"><div class="spdt">✓ أرسلت</div><p class="note">ننتظر الباقين</p></div>';
 function spdBase(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
   init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
@@ -21,7 +21,7 @@ function spdBase(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
   status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,SPD_ROUNDS)} من ${SPD_ROUNDS}</small><br>`),
   winExtra:d=>d.res,resolve:spdResolve,noTimer:false,
   render(d,ctx){if(d.win!=null)return '';if(!ctx.my)return ctx.v>=0&&hasPicked(d,ctx.v)?waitCard():'';const st=spdState(d,ctx.v);
-    if(st.phase==='ready')return readyCard(o.title);return o.view(d,ctx,st);},
+    if(st.phase==='ready')return readyCard(o.title,o.art);return o.view(d,ctx,st);},
   click(a,i,d,ctx){if(!ctx.my)return;const st=spdState(d,ctx.v);
     if(a==='start'){o.start(d,st);render();return;}
     o.click(a,i,d,ctx,st);},
