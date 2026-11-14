@@ -179,7 +179,8 @@ function c2Frame(d,ctx,o){const v=ctx.local?d.turn:ctx.v,{mine,me,watch}=c2Me(d,
   if(d.ph==='play')h+=d.lt&&d.tk?c2Last(d,o.lastX?o.lastX(d):''):'<div class="blast c2off" aria-hidden="true"></div>';
   const my=ctx.my&&mine.includes(ah)&&d.ctl[ah]===d.turn;
   if(d.ph==='sum')h+=o.sum(d,ctx,me);
-  else{if(my&&o.panel)h+=o.panel(d,ctx,me)||'';else if(o.wait)h+=o.wait(d,me)||'';
+  // bidding and choosing: the panel has a fixed room, so the hand does not move when the turn passes
+  else{const pn=my&&o.panel?o.panel(d,ctx,me)||'':o.wait?o.wait(d,me)||'':'';h+=d.ph!=='play'?`<div class="c2pn">${pn}</div>`:pn;
     if(watch)h+=c2Backs(cardsOf(d.hands[me]).length);
     else{const can=my&&o.canCard(d,me);const L=can?o.legal(d,me):[];h+=c2Hand(d,me,L,can,o.sel?o.sel(d,me):null);}}
   return h+'</div>';}

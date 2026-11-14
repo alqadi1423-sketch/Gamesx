@@ -81,7 +81,7 @@
 .fs-floor .note{color:rgba(255,255,255,.75)}
 .fs-play{position:absolute;top:6px;left:8px;display:flex;align-items:center;gap:5px;color:#fff;font-size:12px;font-weight:800;--cwm:22px;background:rgba(0,0,0,.32);border-radius:12px;padding:3px 8px 3px 4px;direction:ltr;max-width:calc(100% - 16px);flex-wrap:wrap}
 .fs-play>span b{color:#fff!important}.fs-play .card.card.card.mini{margin-left:-6px}.fs-play .card.card.card.mini:first-of-type{margin-left:0}
-.fs-floor{padding-top:40px}
+.fs-floor{padding-top:40px;min-height:212px}
 .fs-play .card.mini{margin:0}
 .fs-basra{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
 .fs-basra b{background:var(--gold);color:#2D4763;font-size:24px;font-weight:900;border-radius:99px;padding:2px 18px;box-shadow:0 6px 16px rgba(0,0,0,.35);animation:cd-pop var(--t3) var(--spring)}
@@ -129,3 +129,4 @@ button.sh-stk:active{transform:scale(.95)}
 /* the last-trick strip: same height whether it shows or only keeps its place */
 .c2 .blast{min-height:36px}
 .c2 .blast.c2off{visibility:hidden;width:120px}
+.c2pn{min-height:96px;display:flex;flex-direction:column;justify-content:center}
