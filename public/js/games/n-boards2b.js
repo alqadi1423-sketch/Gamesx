@@ -407,8 +407,9 @@ function b2mbPlans(d,s){const out=new Map();const rec=(t,dice,first,dep)=>{const
     const seen=new Set();for(const m of al){const sk=m.from+':'+m.die;if(seen.has(sk))continue;seen.add(sk);const nt=b2mbMove(t,s,m.from,m.to),rest=[...dice];rest.splice(rest.indexOf(m.die),1);rec(nt,rest,first||m,dep+1);}};
   rec(b2mbT(d),d.mv,null,0);return [...out.values()].filter(x=>x.first);}
 // (the same number of answers for every roll and every plan, so no plan looks better only because fewer answers were seen)
-function b2mbReply(t,o,lv){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];let bo=-1e9;
-    for(const x of b2mbPlans({...t,mv},o).slice(0,16)){const v=x.t.off[o]===15?1e5:b2mbJudge(x.t,o,lv);if(v>bo)bo=v;}if(bo===-1e9)bo=b2mbJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
+// tEnd: a slow phone stops after the rolls it had time for (the average is over those)
+function b2mbReply(t,o,lv,tEnd){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){if(w&&tEnd&&performance.now()>tEnd)return tot/w;const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];let bo=-1e9;
+    for(const x of b2mbPlans({...t,mv},o).slice(0,25)){const v=x.t.off[o]===15?1e5:b2mbJudge(x.t,o,lv);if(v>bo)bo=v;}if(bo===-1e9)bo=b2mbJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
 // where the j-th checker of a stack on point p (1..24 as side 0 counts, 25 borne off) sits, in board units
 const B2MB={W:340,H:280,PW:24,L:6,BAR:20,OFF:26,TOP:8,CR:10.5};
 function b2mbXY(flip,p,side,j){const {H,PW,L,BAR,OFF,TOP,CR}=B2MB,offX=L+12*PW+BAR+8;j=Math.max(0,j);
@@ -475,8 +476,8 @@ GAMES.b_mahbusa={...B2TEAM,name:'المحبوسة',cat:'board',lbc:'#7A2B26',
     if(d.ph!=='move')return b2mbAuto(d);const al=b2mbAllowed(b2mbT(d),side,d.mv);if(!al.length)return b2mbAuto(d);
     if(lv===1&&Math.random()<.35)return b2mbPlay(d,b2Rnd(al));
     const k=d.gid+':'+b2mbKey(d,d.mv);const P=S.b2mbPlan;if(P&&P.k===k){const m=al.find(x=>x.from===P.m.from&&x.to===P.m.to&&x.die===P.m.die);if(m)return b2mbPlay(d,m);}
-    const ns=[0,8,3,.5][lv];let best=null,bv=-1e9;const all=b2mbPlans(d,side);for(const x of all){x.v=b2mbJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
-    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;const tEnd=performance.now()+B2MS/2;for(const x of all.slice(0,2)){if(bv>-1e9&&performance.now()>tEnd)break;const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
+    const ns=[0,8,3,.5][lv],tEnd=performance.now()+B2MS*.6;let best=null,bv=-1e9;const all=b2mbPlans(d,side);for(const x of all){x.v=b2mbJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
+    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;for(const x of all.slice(0,3)){if(performance.now()>tEnd)break;const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv,tEnd+B2MS*.3);if(v>bv){bv=v;best=x;}}}
     if(!best)return b2mbPlay(d,al[0]);const nd=b2mbPlay(d,best.first);S.b2mbPlan=null;
     if(nd.ph==='move'&&nd.sd===side){const rest=b2mbPlans(nd,side).find(x=>b2mbKey(x.t,[])===b2mbKey(best.t,[])&&x.t.off+''===best.t.off+'');if(rest)S.b2mbPlan={k:nd.gid+':'+b2mbKey(nd,nd.mv),m:rest.first};}
     return nd;},

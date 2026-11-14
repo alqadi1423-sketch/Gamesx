@@ -130,3 +130,5 @@ button.sh-stk:active{transform:scale(.95)}
 .c2 .blast{min-height:36px}
 .c2 .blast.c2off{visibility:hidden;width:120px}
 .c2pn{min-height:96px;display:flex;flex-direction:column;justify-content:center}
+/* the hand keeps its room when it is empty for a moment (between deals) */
+.c2 .bhand.c2hand{min-height:88px}
