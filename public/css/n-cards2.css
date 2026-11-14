@@ -1,0 +1,128 @@
+/* n-cards2: Arab and Gulf card games (tarneeb, kout, spades, hearts, trix, estimation, basra, shakba, konkan,
+   crazy eights, cheat, scat, president). Uses the tokens at the top of style.css and the shared card in g-cards.css. */
+
+/* ---------- the felt: an oval table with a wooden rim; seats round it, the trick in the middle ---------- */
+.c2{width:min(100%,470px);margin:0 auto}
+.c2felt{position:relative;width:100%;height:296px;margin:0 0 6px;border-radius:140px/104px;--cw:44px;
+  background:radial-gradient(90% 70% at 50% 42%,rgba(255,255,255,.10),transparent 70%) padding-box,
+    repeating-linear-gradient(45deg,rgba(0,0,0,.035) 0 1px,transparent 1px 3px) padding-box,
+    radial-gradient(130% 100% at 50% 40%,var(--felt-1) 0%,var(--felt-2) 72%,#11432A 100%) padding-box,
+    linear-gradient(160deg,#A8743F,#6E4522 45%,#8A5A2B 70%,#5C391B) border-box;
+  border:7px solid transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 0 38px rgba(0,0,0,.38),0 6px 16px rgba(14,28,46,.22)}
+.c2felt.many{height:340px;--cw:38px;border-radius:150px/130px}
+.c2seat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;z-index:3;max-width:36%;pointer-events:none}
+.c2felt.many .c2seat{max-width:30%}
+.c2nm{display:block;max-width:100%;background:rgba(8,30,20,.62);color:#fff;border-radius:99px;padding:1px 9px 2px;font-size:13px;font-weight:800;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 1.5px var(--c)}
+.c2felt.many .c2nm{font-size:12px;padding:0 7px 1px}
+.c2nm b{color:#fff!important}.c2nm small{font-size:10px;opacity:.85}
+.c2seat.on .c2nm{background:var(--c);box-shadow:0 0 0 2px #fff,0 0 0 4px var(--c),0 4px 10px rgba(0,0,0,.3)}
+.c2seat.on::after{content:'';position:absolute;left:50%;top:0;width:100%;height:22px;margin-left:-50%;border-radius:99px;box-shadow:0 0 0 2px var(--c);animation:c2halo 1.4s var(--ease) 3;pointer-events:none}
+@keyframes c2halo{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.2,1.6)}}
+.c2seat.mk .c2nm{outline:2px dashed #FFD84D;outline-offset:2px}
+.c2inf{display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap;color:#fff;font-size:12px;font-weight:800;text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.c2inf:empty{display:none}
+.c2inf small{font-size:11px;opacity:.9}
+.c2bid,.c2tw,.c2pt{font-style:normal;background:#F0B429;color:#2D4763;border-radius:8px;padding:0 6px;font-size:12px;line-height:1.5;text-shadow:none}
+.c2tw{background:rgba(255,255,255,.92)}
+.c2pt{background:rgba(0,0,0,.35);color:#fff}
+.c2pt.bad{background:#E5534B;color:#fff}
+.c2bk{display:flex;align-items:center;gap:3px;font-style:normal;color:#fff;font-size:12px;font-weight:800;text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.c2bk::before{content:'';width:13px;height:18px;border-radius:2.5px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 21' preserveAspectRatio='none'%3E%3Crect x='1.2' y='1.2' width='12.6' height='18.6' rx='1.2' fill='%232D4763'/%3E%3Crect x='2.6' y='2.6' width='9.8' height='15.8' rx='.6' fill='none' stroke='%234AB1E8' stroke-opacity='.7' stroke-width='.6'/%3E%3Ccircle cx='7.5' cy='10.5' r='2.2' fill='%23EC6158'/%3E%3C/svg%3E") center/100% 100%;box-shadow:1px 1px 0 #DCE3EC,2px 2px 0 rgba(0,0,0,.25)}
+.c2mid{position:absolute;inset:0;pointer-events:none}
+.c2tk{position:absolute;transform:translate(-50%,-50%);z-index:1}
+.c2tk .card.card.card{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 3px 8px rgba(0,0,0,.35);animation:c2fly var(--t3) var(--ease)}
+@keyframes c2fly{from{transform:translate(var(--fx),var(--fy)) scale(.8);opacity:.25}}
+.c2tk.old{opacity:.74}
+.c2tk.old.win{opacity:1;z-index:2}
+.c2tk.win .card.card.card{box-shadow:0 0 0 2.5px var(--gold),0 4px 12px rgba(0,0,0,.35)}
+/* jokers (kout): the shared joker face with a word under it */
+.card.c2jk{overflow:hidden}
+.c2jl{position:absolute;left:0;right:0;bottom:6%;font-style:normal;font-size:calc(var(--w)*.2);font-weight:900;text-align:center;color:#C9302C;line-height:1}
+.c2jk.b .c2jl{color:#1F3249}
+.c2jk.b{background:linear-gradient(162deg,#fff,#E3E8EF)}
+.card.mini.c2jb b{color:#1F3249}
+/* header, choices, hand */
+.c2sc .bmode{font-size:16px}
+.c2s{font-style:normal;font-size:20px;color:#1F3249}.c2s.rs{color:#D43C33}
+@media (prefers-color-scheme:dark){.c2s{color:#E7EEF6}.c2s.rs{color:#FF7A70}}
+.c2lb{text-align:center;margin:4px 0 0}
+.c2opts{margin:8px 0}.c2opts .btn{min-height:44px;min-width:50px;padding:0 14px;font-size:17px}
+.c2opts .btn.bsuit{min-width:60px;font-size:26px}
+.c2hand.bhand.bhand{--cw:50px}
+.c2hand.big.bhand.bhand{--cw:44px}
+.bhand .bcard.sel .card.card.card{transform:translateY(-18px);box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),var(--ring),0 8px 14px rgba(14,28,46,.24)}
+.c2 .bsum{margin:8px 0}
+.c2 .bsr em small{font-size:11px;color:var(--mut)}
+.c2wait{text-align:center;margin:6px 0}
+
+/* ---------- trix: the contract chips and the layout of the four suits ---------- */
+.trx-k{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0}
+.trx-k .btn{min-height:44px;padding:0 12px;font-size:16px}
+.trx-k .btn.done{opacity:.35}
+.trx-lay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;gap:3px;padding:6px 8px;direction:ltr;--cwm:22px;background:rgba(0,0,0,.14);border-radius:14px}
+.trx-row{display:flex;align-items:center;gap:6px;min-height:31px;min-width:170px}
+.trx-row>em{font-style:normal;font-size:18px;width:18px;color:#fff;text-align:center}.trx-row>em.rs{color:#FFB3AD}
+.trx-row .lc{display:flex}
+.trx-row .card.card.card.mini{margin-left:-11px;padding:2px 0 0 3px}.trx-row .card.card.mini:first-child{margin-left:0}
+.trx-row .card.mini b{font-size:11px}.trx-row .card.mini .sv{width:8px;height:8px}
+.trx-row .lc>.card{animation:cd-pop var(--t2) var(--spring)}
+.trx-fin{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:4px 0}
+.trx-fin span{background:rgba(0,0,0,.3);color:#fff;border-radius:99px;padding:0 9px;font-weight:800;font-size:12px}
+.trx-dbl{display:inline-flex;gap:2px;--cwm:20px}
+.trx-dbl .card.card.card.mini{margin:0;padding:1px 0 0 2px;box-shadow:0 0 0 2px #E5534B}
+
+/* ---------- fishing games (basra, shakba): the floor and the capture piles ---------- */
+.fs-floor{position:relative;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:center;min-height:150px;padding:14px 10px;margin:0 0 6px;border-radius:var(--r-xl);--cw:46px;
+  background:radial-gradient(90% 70% at 50% 42%,rgba(255,255,255,.10),transparent 70%) padding-box,radial-gradient(130% 100% at 50% 40%,var(--felt-1) 0%,var(--felt-2) 72%,#11432A 100%) padding-box,linear-gradient(160deg,#A8743F,#6E4522 45%,#8A5A2B 70%,#5C391B) border-box;
+  border:7px solid transparent;box-shadow:inset 0 0 38px rgba(0,0,0,.38),0 6px 16px rgba(14,28,46,.22)}
+.fs-floor .fsc{animation:cd-land var(--t3) var(--spring)}
+.fs-floor .fsc.tk .card.card.card{box-shadow:0 0 0 3px var(--sel),0 4px 10px rgba(0,0,0,.35)}
+.fs-floor .fsc.opt .card.card.card{box-shadow:0 0 0 3px #4AB1E8,0 4px 10px rgba(0,0,0,.35)}
+.fs-floor .note{color:rgba(255,255,255,.75)}
+.fs-play{position:absolute;top:6px;left:8px;display:flex;align-items:center;gap:5px;color:#fff;font-size:12px;font-weight:800;--cwm:22px;background:rgba(0,0,0,.32);border-radius:12px;padding:3px 8px 3px 4px;direction:ltr;max-width:calc(100% - 16px);flex-wrap:wrap}
+.fs-play>span b{color:#fff!important}.fs-play .card.card.card.mini{margin-left:-6px}.fs-play .card.card.card.mini:first-of-type{margin-left:0}
+.fs-floor{padding-top:40px}
+.fs-play .card.mini{margin:0}
+.fs-basra{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.fs-basra b{background:var(--gold);color:#2D4763;font-size:24px;font-weight:900;border-radius:99px;padding:2px 18px;box-shadow:0 6px 16px rgba(0,0,0,.35);animation:cd-pop var(--t3) var(--spring)}
+.fs-piles{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0}
+.fs-pile{display:flex;align-items:center;gap:6px;background:var(--surface);border-radius:99px;padding:3px 10px 3px 4px;box-shadow:var(--e1);font-size:13px;font-weight:800;border:2px solid transparent}
+.fs-pile.on{border-color:var(--c)}
+.fs-pile i{width:22px;height:22px;border-radius:50%;background:var(--c);display:grid;place-items:center;color:#fff;font-style:normal;font-size:11px}
+.fs-pile em{font-style:normal;color:var(--mut);font-weight:700}
+.fs-pile u{text-decoration:none;background:var(--gold);color:#2D4763;border-radius:8px;padding:0 5px}
+.fs-opts{display:flex;flex-direction:column;gap:6px;align-items:center;margin:6px 0}
+.fs-opts .btn{min-height:40px;gap:4px;--cwm:22px;padding:0 10px}
+.fs-opts .btn .card.mini{margin:0}
+
+/* ---------- shedding games (eights, cheat, president, scat): one pile in the middle ---------- */
+.sh-tab{position:relative;display:flex;align-items:center;justify-content:center;gap:28px;min-height:170px;padding:18px 10px 30px;margin:0 0 6px;border-radius:var(--r-xl);--cwb:66px;
+  background:radial-gradient(90% 70% at 50% 42%,rgba(255,255,255,.10),transparent 70%) padding-box,radial-gradient(130% 100% at 50% 40%,var(--felt-1) 0%,var(--felt-2) 72%,#11432A 100%) padding-box,linear-gradient(160deg,#A8743F,#6E4522 45%,#8A5A2B 70%,#5C391B) border-box;
+  border:7px solid transparent;box-shadow:inset 0 0 38px rgba(0,0,0,.38),0 6px 16px rgba(14,28,46,.22)}
+.sh-stk{display:flex;flex-direction:column;align-items:center;gap:5px;color:#fff;font-size:13px;font-weight:800;background:none;padding:0}
+.sh-stk small{background:rgba(0,0,0,.25);border-radius:99px;padding:0 9px}
+.sh-stk .card.card.card{box-shadow:1px 1px 0 #E9EEF4,2px 2px 0 rgba(0,0,0,.2),3px 3px 0 #E2E8F0,4px 4px 0 rgba(0,0,0,.2),5px 6px 8px rgba(0,0,0,.3)}
+button.sh-stk .card.card.card{box-shadow:0 0 0 3px var(--sel),3px 3px 0 #E2E8F0,4px 4px 0 rgba(0,0,0,.2),5px 6px 8px rgba(0,0,0,.3)}
+button.sh-stk:active{transform:scale(.95)}
+.sh-top{display:block;animation:cd-land var(--t3) var(--spring)}
+.sh-pile{position:relative;display:flex;direction:ltr;min-width:66px;min-height:92px;align-items:center;justify-content:center}
+.sh-pile>.sh-top+.sh-top{margin-left:-38px}
+.sh-suit{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.3);color:#fff;border-radius:99px;padding:0 10px;font-weight:800;font-size:13px;white-space:nowrap}
+.sh-suit em{font-style:normal;font-size:17px}.sh-suit em.rs{color:#FFB3AD}
+.sh-seats{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:4px 0 6px}
+.sh-seat{display:flex;align-items:center;gap:5px;background:var(--surface);border-radius:99px;padding:2px 9px 2px 3px;box-shadow:var(--e1);font-size:13px;font-weight:800;border:2px solid transparent}
+.sh-seat.on{border-color:var(--c);box-shadow:0 0 0 2px var(--c),var(--e1)}
+.sh-seat.done{opacity:.55}
+.sh-seat i{min-width:22px;height:22px;border-radius:99px;background:var(--c);display:grid;place-items:center;color:#fff;font-style:normal;font-size:11px;padding:0 4px}
+.sh-seat em{font-style:normal;color:var(--mut)}
+.sh-seat u{text-decoration:none;background:var(--gold);color:#2D4763;border-radius:8px;padding:0 5px;font-size:11px}
+.sh-claim{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;border-radius:99px;padding:1px 12px;font-weight:800;font-size:14px;white-space:nowrap;animation:cd-pop var(--t2) var(--spring)}
+.sh-reveal{display:flex;gap:4px;direction:ltr;justify-content:center}
+.sh-reveal .card{animation:cd-pop var(--t3) var(--spring)}
+.sh-msg{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:900;font-size:15px;color:#fff;background:rgba(0,0,0,.32);border-radius:99px;padding:1px 12px;white-space:nowrap}
+.sh-msg.bad{background:#E5534B}.sh-msg.ok{background:#3FAE5C}
+.sh-lives{letter-spacing:-2px}
+.sh-rk{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0}
+.sh-rk .btn{min-width:46px;min-height:44px;padding:0 10px;font-size:18px}
+/* a hand that is not playable now lies flat; playable cards rise with the gold edge */
+.c2hand.bhand button.bcard:disabled .card.card.card{transform:none;box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 2px 6px rgba(14,28,46,.13)}
