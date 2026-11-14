@@ -499,3 +499,51 @@ button.pv.can:active{transform:scale(.94)}
 .cupsw .cupb{left:0;transition:transform var(--sp,400ms) ease-in-out}
 /* رتّب الحروف: the word's group as a hint */
 .scrh{display:block;margin-top:6px;font-size:13px;font-weight:800;color:var(--mut)}
+
+/* وين شخصيتك؟ polish B: the «متأكد» toggle (×2 if right, −1 if wrong) */
+.cupx{display:block;margin:10px auto 0;padding:9px 18px;border-radius:99px;font-weight:800;font-size:15px;color:#4A2A00;background:#FFE7B3;box-shadow:0 3px 0 #D9B565;animation:pa-pop var(--t3) var(--spring)}
+.cupx.on{color:#fff;background:linear-gradient(#E5483F,#B8322B);box-shadow:0 3px 0 #7E1F1A}
+@media (prefers-color-scheme:dark){.cupx{background:#4A3A12;color:#FFE09A;box-shadow:0 3px 0 #2A200A}}
+
+/* أقرب تخمين polish B: the ×2 chip and each guess's points on the last round; لو خيروك: the minority round banner */
+.clx{display:flex;align-items:center;gap:8px;margin:0 auto 8px;padding:7px 14px;border-radius:99px;font-weight:800;font-size:14px;color:#4A2A00;background:#FFE7B3;box-shadow:0 3px 0 #D9B565;transition:transform var(--t1)}
+.clx b{font-size:17px}
+.clx small{font-size:11px;font-weight:700;opacity:.8}
+.clx.on{color:#fff;background:linear-gradient(#8B6BBE,#5F3F94);box-shadow:0 3px 0 #3E2766;animation:pa-pop var(--t3) var(--spring)}
+.clx:active{transform:translateY(2px)}
+.pqlr span .clg{font-style:normal;font-weight:800;font-size:12px;color:#fff;background:#2E8B57;border-radius:99px;padding:0 6px;animation:pa-pop var(--t3) var(--spring) both;animation-delay:.15s}
+.pqlr span .clg.neg{background:#C0392B}
+.majmin{margin:0 auto 6px;padding:6px 14px;border-radius:99px;width:fit-content;max-width:100%;text-align:center;font-size:14px;color:#fff;background:linear-gradient(#E5483F,#B8322B);box-shadow:0 3px 0 rgba(0,0,0,.2);animation:pa-pop var(--t3) var(--spring)}
+.pq-major.minr .wyrc{box-shadow:inset 0 0 0 3px rgba(229,72,63,.55),var(--e1)}
+@media (prefers-color-scheme:dark){.clx{background:#4A3A12;color:#FFE09A;box-shadow:0 3px 0 #2A200A}}
+
+/* وصلة polish B: the hint row and its button, the winning row hops once letter by letter */
+.wasla .wrow i.wh{background:repeating-linear-gradient(-45deg,var(--surface-2) 0 5px,var(--surface) 5px 10px);box-shadow:inset 0 0 0 1.5px var(--line)}
+.wasla .wrow.whn i.w2{box-shadow:inset 0 0 0 3px #FFD84D,inset 0 -3px 0 rgba(0,0,0,.16)}
+.wasla .wrow.won i{animation:pa-wflip .34s var(--ease) both,wa-hop .4s var(--spring) both;animation-delay:calc(var(--i) * 90ms),calc(var(--i) * 90ms + .5s)}
+@keyframes wa-hop{0%,100%{transform:none}40%{transform:translateY(-12px)}}
+.wasla .whint{margin:10px auto 0;padding:8px 16px;border-radius:99px;font-weight:800;font-size:14px;color:#2E5E45;background:#DDF3E6;box-shadow:0 3px 0 #A9D7BC}
+.wasla .whint small{font-weight:600;font-size:11px;opacity:.8}
+.wasla .whint:active{transform:translateY(2px)}
+@media (prefers-color-scheme:dark){.wasla .whint{background:#1F3A2C;color:#BDECCF;box-shadow:0 3px 0 #10241A}}
+
+/* ارسم وخمّن polish B: how hard each word is (a harder word is worth more), on the choices, the top bar and the reveal */
+.pdraw .pwc{position:relative}
+.pdraw .ptier{font-style:normal;display:inline-block;margin-top:3px;padding:1px 9px;border-radius:99px;font-size:11.5px;font-weight:800;color:#fff;background:#3FAE5C}
+.pdraw .pwc.t1 .ptier,.pdraw .ptier.t1{background:#E3A92B}
+.pdraw .pwc.t2 .ptier,.pdraw .ptier.t2{background:#E5483F}
+.pdraw .pwc.t2{box-shadow:inset 0 0 0 2px rgba(229,72,63,.5),0 4px 0 #E2D3B2}
+.pdraw .pcat .ptier{margin:0 2px 0 0;padding:0 6px;font-size:11px}
+.pdraw .pshow h3 .ptier{font-size:14px;vertical-align:middle;animation:pa-pop var(--t3) var(--spring) both;animation-delay:.2s}
+.pdraw .pres span:nth-child(2){animation-delay:.06s}.pdraw .pres span:nth-child(3){animation-delay:.12s}.pdraw .pres span:nth-child(4){animation-delay:.18s}
+
+/* إنسان حيوان جماد polish B: the golden column (×2) on the sheet, at the review and under the letter reel; round points pop in */
+.catsb .cgold{font-style:normal;display:inline-block;padding:0 6px;border-radius:99px;font-size:11px;font-weight:800;color:#5B4300;background:linear-gradient(#FFE27A,#F0B429);box-shadow:0 1px 0 #C88F12}
+.catsb .cform label.gold span{flex-wrap:wrap;color:#9A6B00}
+.catsb .cform label.gold .field{box-shadow:inset 0 0 0 2px #F0B429}
+.catsb .cform label.gold.ok .field{box-shadow:inset 0 0 0 2px var(--ok),0 0 0 2px #F0B429}
+.catsb .ccat.gold{box-shadow:inset 0 0 0 2px rgba(240,180,41,.75),var(--e1)}
+.catsb .cgoldp{color:#9A6B00!important;animation:pa-pop var(--t3) var(--spring) both;animation-delay:.3s}
+.catsb .cround span{animation:pa-pop var(--t3) var(--spring) both}
+.catsb .cround span:nth-child(2){animation-delay:.06s}.catsb .cround span:nth-child(3){animation-delay:.12s}.catsb .cround span:nth-child(n+4){animation-delay:.18s}
+@media (prefers-color-scheme:dark){.catsb .cgoldp{color:#FFD86B!important}.catsb .cform label.gold span{color:#FFD86B}}
