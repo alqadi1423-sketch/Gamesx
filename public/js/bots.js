@@ -200,17 +200,18 @@ GAMES.tapwar.botPick=(d,s,lv)=>({ok:true,ms:[0,18,27,35][lv]+rnd(8)});
 GAMES.wasla.botPick=(d,s,lv)=>{const mine=(d.gs||[])[s]||[];const ans=WNORM(WASLA[d.ans]);
   let c=WASLA.map(WNORM).filter(w=>mine.every(g=>wScore(g,w).join()===wScore(g,ans).join()));
   if(lvRand(lv)||!c.length||(lv===2&&Math.random()<.3))return WNORM(pickR(WASLA));return pickR(c);};
-GAMES.bara.botPick=(d,s,lv)=>{if(d.ph==='see')return 1;const o=d.pl.map((_,x)=>x).filter(x=>x!==s);return pickR(o);};
-GAMES.bara.bot=(d,s,lv)=>{if(d.ph==='cat')return baraStart(d,rnd(BARA.length));if(d.ph==='ask')return baraAsked(d);if(d.ph==='more')return {...d,ph:'vote',rd:d.rd+1,last:'بدأ التصويت'};
-  if(d.ph==='guess'){const right=Math.random()<[0,.25,.4,.55][lv];return baraGuess(d,right?d.w:pickR(d.opts.filter(i=>i!==d.w)));}return GAMES.bara.onTimeout(d);};
-GAMES.mafia.botPick=(d,s,lv)=>{const r=d.roles[s];if(d.ph==='role')return 1;const al=aliveSeats(d).filter(x=>x!==s);
-  // medium and hard mafia bots pick the same victim; the hard detective remembers everyone it checked
-  const K=memOf(d,s),M=memOf(d,'m'),gang=l=>{if(lv<2||!l.length)return pickR(l);if(!l.includes(M[d.rd]))M[d.rd]=pickR(l);return M[d.rd];};
-  if(d.inv&&d.inv.s===s)K['c'+d.inv.t]=d.inv.m;
-  if(d.ph==='night'){if(r==='m')return gang(al.filter(x=>d.roles[x]!=='m'));if(r==='d')return pickR(aliveSeats(d).filter(x=>x!==d.ls));
-    if(r==='t'){const nw=al.filter(x=>!('c'+x in K));return pickR(lv===3&&nw.length?nw:al);}return -1;}
-  const bad=lv===3?al.find(x=>K['c'+x]===true):undefined;if(bad!=null)return bad;
-  if(d.inv&&d.inv.s===s&&d.inv.m&&d.out[d.inv.t]!=='1')return d.inv.t;if(r==='m')return gang(al.filter(x=>d.roles[x]!=='m'))??pickR(al);return Math.random()<.15?-1:pickR(al);};
+// برة السالفة: a bot in the loop checks the other bots' answers against the word; the one out of the loop blames someone
+GAMES.bara.botPick=(d,s,lv)=>{if(d.ph==='see')return 1;const o=d.pl.map((_,x)=>x).filter(x=>x!==s&&d.out[x]!=='1');if(!o.length)return -1;
+  if(s===d.bo){const hum=o.filter(x=>!isBot(d,x));return pickR(lv===3&&hum.length?hum:o)+200;}
+  if(lv===1&&Math.random()<.3)return pickR(o)+200;const W=baraWord(d);const sc={},bad={},good={};
+  for(const x of o){sc[x]=Math.random()*[0,8,3,1][lv];for(const h of d.hn||[])if(h[0]===x){if(bOk(d,h,W)){sc[x]-=1.5;good[x]=1;}else{sc[x]+=10;bad[x]=1;}}}
+  const b=o.reduce((a,x)=>sc[x]>sc[a]?x:a,o[0]);return b+100*(bad[b]?1:good[b]?3:2);};
+GAMES.bara.bot=(d,s,lv)=>{if(d.ph==='cat')return baraStart(d,rnd(BARA.length));if(d.ph==='ask')return baraAsked(d);
+  if(d.ph==='more'){const W=baraWord(d);const caught=(d.hn||[]).some(h=>!bOk(d,h,W));return lv>1&&!d.q2&&!caught&&s!==d.bo&&Math.random()<.6?baraAgain(d):{...d,ph:'vote',rd:d.rd+1,last:'بدأ التصويت'};}
+  // the guess: a bot out of the loop keeps the options that fit what the other bots answered
+  if(d.ph==='guess'){const hs=(d.hn||[]).filter(h=>h[0]!==d.bo);const fit=d.opts.filter(i=>hs.every(h=>bOk(d,h,BARA[d.cat][1][i])));
+    const i=lv===3&&fit.length?pickR(fit):lv===2&&fit.length&&Math.random()<.7?pickR(fit):pickR(d.opts);return baraGuess(d,i);}
+  return GAMES.bara.onTimeout(d);};
 GAMES.close.botPick=(d,s,lv)=>{const Q=GAMES.close.q(d,d.rd);const a=Q[1];const err=[0,.45,.22,.08][lv];return Math.max(0,Math.round(a*(1+(Math.random()*2-1)*err)));};
 GAMES.rps.botPick=()=>rnd(3);
 
@@ -282,7 +283,8 @@ GAMES.bingo.bot=(d,s,lv)=>{const open=[];for(let n=1;n<=25;n++)if(d.called[n-1]=
   return botDo(d,s,'m',open.sort((a,b)=>val(b)-val(a))[0]);};
 
 /* ---------- number party games ---------- */
-GAMES.major.botPick=()=>rnd(2);
+// لو خيروك: the cleverer bots vote as one block (the same side for this question), so together they are the majority more often
+GAMES.major.botPick=(d,s,lv)=>{const bloc=Math.floor(srng(d,'mjb'+d.rd)()*2);return lv===3?bloc:lv===2&&Math.random()<.75?bloc:rnd(2);};
 
 /* ---------- sea battle: hunt with a pattern, then finish the ship that was hit ---------- */
 function seaAim(d,s,o,lv,avoid){const sh=d.sh[o],f=seaFleet(d,o)||'.'.repeat(64),sunk=seaSunk(f,sh);
