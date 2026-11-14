@@ -17,7 +17,7 @@ function netReset(){S.seenHost=false;clearTimeout(S.takeT);clearTimeout(S.pubT);
     needUpd:false,hostGoneAt:null,vgen:0,peersByFp:{},qByFp:{},lostAt:Date.now(),hostSince:0,badC:new Set(),oldSeen:false,ackN:0,sentN:0,hostKeyC:null,vwC:{},bkCache:null,seatGone:{},
     restore:null,takeT:null,pubT:null,pubBusy:false,pubAgain:false,pubRx:null,procBusy:false,procAgain:false,sendTimes:[],bigWarn:false,
     hbSeen:{},vh:{},vtry:{},fpPeer:{},vwSig:null,lastPubAt:0,tickAt:Date.now(),rxAt:Date.now(),myPv:null,resend:null,selfPubLast:undefined,dRef:null,dS:0,
-    hist:[],ab:{},abR:[],abQ:{},synced:false,clickSnap:null});}
+    hist:[],ab:{},abR:[],abQ:{},synced:false,clickSnap:null,prevHost:null,splitAt:null});}
 netReset();
 const amHost=()=>S.mode==='online'&&!!S.hostFp&&S.hostFp===SEAL.fp;
 const roleOfFp=fp=>fp?S.ids.indexOf(fp):-1;
@@ -128,6 +128,15 @@ function onPeers(ch){
   if(amHost()&&H){const mine=[S.epoch,roleOfFp(SEAL.fp),SEAL.fp];
     const could=hr[0]>S.epoch?now-(S.lostAt||0)<60000:hr[0]===S.epoch&&now-(S.hostSince||0)<30000;
     if(could&&better(hr,mine))demote();else H=null;}
+  /* two hosts that both stay (one was not heard for a while without knowing it: its sends were lost, so the others took over).
+     Each player says which host it follows (hf). The host fewer seated players follow steps down; with as many on each side,
+     the newer one (higher epoch) does, and with nobody on either side the one that took over gives the room back to the host it
+     followed before. A peer that only claims to be host never wins this: nobody else follows it, and it was nobody's host before */
+  if(amHost()){let worse=null;const mine=[S.epoch,roleOfFp(SEAL.fp),SEAL.fp];
+    const sup=fp=>Object.keys(P).filter(q=>q!==fp&&P[q].pr.hf===fp&&roleOfFp(q)>=0&&freshFp(q)).length,me=sup(SEAL.fp);
+    for(const fp in P){const r=rank(fp);if(!r)continue;const o=sup(fp);
+      if(o>me||o===me&&o>0&&(r[0]<S.epoch||r[0]===S.epoch&&better(r,mine))||o===me&&fp===S.prevHost&&r[0]<S.epoch)worse=fp;}
+    if(worse){S.splitAt=S.splitAt||now;if(now-S.splitAt>4000){S.splitAt=null;demote();}}else S.splitAt=null;}
   if(H&&!amHost())followHost(H);
   else if(!H&&!amHost())maybeTakeOver();
   if(S.mode!=='online')return;
@@ -251,7 +260,7 @@ function maybeTakeOver(){
   takeOver(resume?'resume':bkOk?'bk':secret?'redeal':'public');
 }
 function takeOver(mode){
-  clearTimeout(S.takeT);const sv=S.restore;S.restore=null;
+  clearTimeout(S.takeT);const sv=S.restore;S.restore=null;S.prevHost=S.hostFp!==SEAL.fp?S.hostFp:null;
   const prevAck=S.lastAck||{};
   if(mode==='resume'){S.epoch=Math.max(1,sv.ep||1);S.st={...sv.st,cfg:cleanCfg(sv.st.cfg),sc:cleanSc(sv.st.sc)||Array(MAXP).fill(0)};
     S.priv=Array(MAXP).fill(null).map((x,r)=>(Array.isArray(sv.priv)?sv.priv[r]:null)??null);S.lastN={...(sv.lastN||{})};S.ids=validIds(sv.ids)||S.ids;}
@@ -469,8 +478,8 @@ async function doPublish(){
       else jobs.push(SEAL.seal(pk,JSON.parse(plain),'b'+S.code).then(c=>{bk={to:succ,c};S.bkCache={plain,pk,bk};},e=>console.warn('seal backup',e)));}
     await Promise.all(jobs);if(S.nr!==nr||!amHost())return;
     S.vwSig=sig;
-    Object.assign(o,{q:null,...pub,vw,bk});}
-  else{for(const k of HOSTK)o[k]=null;o.q=S.outQ.filter(x=>x.c&&x.k===S.hostK).map(x=>({n:x.m.n,c:x.c}));
+    Object.assign(o,{q:null,hf:null,...pub,vw,bk});}
+  else{for(const k of HOSTK)o[k]=null;o.hf=S.hostFp||null;o.q=S.outQ.filter(x=>x.c&&x.k===S.hostK).map(x=>({n:x.m.n,c:x.c}));
     const G=GAMES[S.st.g],d=S.st.d;o.pp=G&&G.selfPub&&d&&S.me!=null&&S.priv[S.me]?privFor(G,d,-1,S.me,S.priv[S.me]):null;S.selfPubLast=o.pp;}
   // Claude rooms take about 4 KB per player: drop the backup copy, then (only while still too big) the oldest chat lines, then the self-published part
   const max=nr.max||3800;const size=()=>new Blob([JSON.stringify(o)]).size;let sz=size();
