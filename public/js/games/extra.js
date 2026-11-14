@@ -20,9 +20,12 @@ GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',onTimeout:d=>{const n=d.pl.
   points:d=>cntSeat(d.b,d.pl.length),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra(d){const c=cntSeat(d.b,d.pl.length);return 'القطع: '+c.map((x,s)=>`${nm(d,s)} ${x}`).join('، ');},
   render(d,ctx){const z=d.z,t=d.turn;
-    return `<div class="cellgrid" style="grid-template-columns:repeat(${z},minmax(0,1fr));background:#1F6B4A;gap:2px">${[...d.b].map((v,i)=>{
-      if(v!=='.')return `<div class="cg" style="background:#2E8B5E;padding:8%">${disc(col(d,+v))}</div>`;
-      const ok=ctx.my&&revFlips(d.b,z,i,t).length;return `<button class="cg" style="background:#2E8B5E;padding:30%" data-ga="m" data-i="${i}" ${ok?'':'disabled'}>${ok?`<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="${col(d,t)}" opacity=".45"/></svg>`:''}</button>`;}).join('')}</div>`;},
+    // last move, kept on this phone only (S.rvL): the cell that was empty in the board seen before and holds a disc now
+    let L=S.rvL;if(!L||L.gid!==d.gid||L.b!==d.b){let pl=-1;if(L&&L.gid===d.gid&&L.b.length===d.b.length)for(let i=0;i<d.b.length;i++)if(L.b[i]==='.'&&d.b[i]!=='.'){pl=i;break;}L=S.rvL={gid:d.gid,b:d.b,pl};}
+    // a disc is keyed by its owner, so a flipped one is a new node and turns over; a legal cell shows a soft dot in the mover's colour
+    return `<div class="cellgrid revb" style="grid-template-columns:repeat(${z},minmax(0,1fr));--c:${col(d,t)}">${[...d.b].map((v,i)=>{
+      if(v!=='.')return `<div class="cg rc ${i===L.pl?'last':''}" style="--d:${col(d,+v)}"><i class="rd" data-k="${v}"></i></div>`;
+      const ok=ctx.my&&revFlips(d.b,z,i,t).length;return `<button class="cg rc ${ok?'ok':''}" data-ga="m" data-i="${i}" ${ok?'':'disabled'}></button>`;}).join('')}</div>`;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const z=d.z,t=d.turn;const f=revFlips(d.b,z,i,t);if(!f.length)return;let b=setAt(d.b,i,String(t));f.forEach(k=>b=setAt(b,k,String(t)));
     let out=d.out;const n=d.pl.length;for(let s=0;s<n;s++)if(out[s]!=='1'&&!b.includes(String(s)))out=setAt(out,s,'1');
@@ -51,8 +54,10 @@ GAMES.oldmaid={name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,hide:{
     let s='';
     if(d.win!=null||v<0)return s;
     const tg=nextSeat(d,d.turn);const my=ctx.my&&d.turn===v;
-    if(my&&tg!==d.turn)s+=`<p class="lbl" style="text-align:center">اسحب ورقة من ${nameTag(d,tg)}</p><div class="hand">${cardsOf(d.hands[tg]).map((c,i)=>`<button class="card back pick" data-ga="take" data-i="${i}"></button>`).join('')}</div>`;
-    s+=`<p class="lbl" style="text-align:center">أوراقك</p><div class="hand">${cardsOf(d.hands[v]).map(c=>cardHTML(c)).join('')||'<span class="note">خلّصت</span>'}</div>`;
+    // the felt: the next player's cards face down to draw from (or a fan of how many they hold while waiting)
+    const th=cardsOf(d.hands[tg]);
+    s+=`<div class="omt" style="--c:${col(d,tg)}"><p class="lbl">${my&&tg!==d.turn?`اسحب ورقة من ${nameTag(d,tg)}`:`ورق ${nameTag(d,tg)}`}</p><div class="hand omfrom">${my&&tg!==d.turn?th.map((c,i)=>`<button class="card back pick" data-ga="take" data-i="${i}" aria-label="ورقة ${i+1}"></button>`).join(''):th.map(()=>'<div class="card back"></div>').join('')}</div></div>`;
+    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand omhand">${cardsOf(d.hands[v]).map(c=>cardHTML(c)).join('')||'<span class="note">خلّصت</span>'}</div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn,tg=nextSeat(d,t);if(tg===t)return;const th=cardsOf(d.hands[tg]);const c=th.splice(i,1)[0];if(!c)return;
@@ -76,7 +81,8 @@ GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',noTimer:tru
   key:d=>d.gid+':'+d.seq.length+':'+d.turn+':'+d.out,
   render(d,ctx){if(ctx.my&&(!S.simon||S.simon.key!==this.key(d)))S.simon={key:this.key(d),phase:d.seq.length?'show':'input',inp:[],run:false};
     const ok=ctx.my&&S.simon&&S.simon.phase==='input',lit=ctx.my&&S.simon?S.simon.lit:null;
-    return `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;width:min(100%,320px)">${SIM.map((c,k)=>`<button class="simp" data-ga="p" data-i="${k}" style="aspect-ratio:1;border-radius:${['14px 160px 14px 14px','160px 14px 14px 14px','14px 14px 160px 14px','14px 14px 14px 160px'][k]};background:${c};opacity:${k===lit?1:.75};${k===lit?'transform:scale(1.06);':''}transition:opacity .15s,transform .15s" ${ok?'':'disabled'}></button>`).join('')}</div>`;},
+    // a round device: four pads around a hub that shows the sequence's length; a lit pad brightens and glows
+    return `<div class="simon ${ok?'in':''}">${SIM.map((c,k)=>`<button class="simp s${k} ${k===lit?'on':''}" data-ga="p" data-i="${k}" style="--c:${c}" ${ok?'':'disabled'} aria-label="لون ${k+1}"></button>`).join('')}<div class="shub"><b>${d.seq.length}</b></div></div>`;},
   after(d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='show'||ss.run||app.querySelector('.cover'))return;ss.run=true;const key=ss.key;const seq=[...d.seq].map(Number);let k=0;
     const flash=()=>{if(!S.simon||S.simon.key!==key)return;if(k>=seq.length){S.simon.phase='input';S.simon.lit=null;render();return;}
       S.simon.lit=seq[k];render();

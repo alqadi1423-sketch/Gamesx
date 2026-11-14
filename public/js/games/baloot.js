@@ -14,7 +14,7 @@ const BPT={A:11,T:10,K:4,Q:3,J:2,9:0,8:0,7:0},BPTT={J:20,9:14,A:11,T:10,K:4,Q:3,
 const BSN={s:'♠',h:'♥',d:'♦',c:'♣'},BSA={s:'شريا',h:'هاص',d:'ديمن',c:'سبيت'};
 const bTeam=h=>h%2;
 // small card: rank over suit, readable even when cards overlap
-const miniCard=c=>`<div class="card mini ${'hd'.includes(c[1])?'red':'blk'}"><b>${c[0]==='T'?'10':c[0]}</b><i>${SUITCH[c[1]]}</i></div>`;
+const miniCard=c=>`<div class="card mini ${'hd'.includes(c[1])?'red':'blk'}"><b>${c[0]==='T'?'10':c[0]}</b>${suitSVG(c[1])}</div>`;
 const bDeck=()=>{const a=[];for(const s of 'shdc')for(const r of BR)a.push(r+s);return a;};
 function bCtl(n,k,out){// which seat controls each hand in deal k (seats that left are out)
   const m=[[],[]];for(let s=0;s<n;s++)if((out||'')[s]!=='1')m[s%2].push(s);
@@ -214,7 +214,8 @@ GAMES.baloot={name:'بلوت',cat:'cards',lbc:'#1E6B52',noTimer:false,
     h+='<div class="bmid">';
     if(d.ph==='bid'||(d.ph==='dbl'&&false))h+=`<div class="bpub">${cardHTML(d.pub,true)}</div>`;
     else if(d.ph==='play'||d.ph==='dbl'){const tk=cardsOf(d.tk);const show=tk.length?tk.map((c,i)=>[(d.tl+i)%4,c]):(d.lt?d.lt.c.map((c,i)=>[(d.lt.from+i)%4,c]):[]);
-      for(const [hh,c] of show)h+=`<div class="btk ${pos(hh)} ${!tk.length?'old':''}">${cardHTML(c)}</div>`;}
+      // each trick card is keyed by the card, so one just played is a new node and slides in from its seat; the last trick marks its winner
+      for(const [hh,c] of show)h+=`<div class="btk ${pos(hh)} ${!tk.length?'old':''} ${!tk.length&&d.lt&&d.lt.w===hh?'win':''}" data-k="${c}">${cardHTML(c)}</div>`;}
     h+='</div></div>';
     // actions
     const my=ctx.my;

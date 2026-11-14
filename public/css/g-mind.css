@@ -336,3 +336,7 @@
 .gm-n99 .n9c small{font-size:12px;font-weight:800;padding:0 8px;border-radius:99px;background:var(--surface);color:var(--mut);box-shadow:var(--e1);white-space:nowrap}
 .gm-n99 .n9c.no small{opacity:.5}
 .gm-n99 .legend{margin:2px 0 0}
+/* war: seven cards in one even row, not the overlapping fan the shared .hand uses for big hands */
+.gm-war .whand.hand{gap:4px;padding-top:6px}
+.gm-war .whand.hand>*+*{margin-left:0}
+.gm-war .whand.hand>.card.wc{width:calc((100% - 24px) / 7);max-width:54px;height:auto;aspect-ratio:5/7;transform:none}

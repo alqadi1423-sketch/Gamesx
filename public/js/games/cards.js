@@ -5,9 +5,34 @@ const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],
 const RANKS='A23456789TJQK',SUITS='shdc',SUITCH={s:'♠',h:'♥',d:'♦',c:'♣'};
 const deck52=(k=1)=>{const a=[];for(let n=0;n<k;n++)for(const s of SUITS)for(const r of RANKS)a.push(r+s);return a;};
 const rv=c=>RANKS.indexOf(c[0])+1;
-// '??' is a card nobody may see (a masked card online keeps its length): drawn face down, still clickable when extra makes it a button
+/* ---------- the playing card: one inline SVG face (corner indices, pips or a court emblem) on a paper card ---------- */
+// suit shapes in a 10 by 10 box around 0,0, so the same shape serves as corner index, pip and ace
+const SUITP={h:'M0 4.7C-1.7 3.3-4.9 1-4.9-1.7-4.9-3.4-3.7-4.7-2.3-4.7-1.2-4.7-.4-4 0-3.1.4-4 1.2-4.7 2.3-4.7 3.7-4.7 4.9-3.4 4.9-1.7 4.9 1 1.7 3.3 0 4.7Z',
+  d:'M0-5.2C1.2-3.3 2.6-1.7 4.1 0 2.6 1.7 1.2 3.3 0 5.2-1.2 3.3-2.6 1.7-4.1 0-2.6-1.7-1.2-3.3 0-5.2Z',
+  s:'M0-5C1.7-3.3 4.9-1.3 4.9 1.3 4.9 2.9 3.7 4 2.3 4 1.5 4 .8 3.6.4 3 .6 4 1.1 4.6 1.9 5.1H-1.9C-1.1 4.6-.6 4-.4 3-.8 3.6-1.5 4-2.3 4-3.7 4-4.9 2.9-4.9 1.3-4.9-1.3-1.7-3.3 0-5Z',
+  c:'M-2.4-2.6a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0ZM-5 1.1a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0ZM.2 1.1a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0ZM-1.2-.6h2.4v2.4h-2.4ZM-.55 1C-.55 3-1 4.4-1.9 5.1H1.9C1 4.4.55 3 .55 1Z'};
+const suitSVG=s=>`<svg class="sv" viewBox="-5.2 -5.2 10.4 10.4" aria-hidden="true"><path d="${SUITP[s]}" fill="currentColor"/></svg>`;
+const cPip=(s,x,y,k,flip)=>`<path d="${SUITP[s]}" transform="translate(${x} ${y})${flip?' rotate(180)':''}${k!==1?` scale(${k})`:''}"/>`;
+// pip layouts on the 60 by 84 face: three columns, pips in the lower half drawn upside down as on a real card
+const PIPXY=(()=>{const L=20,C=30,R=40,T=16,B=68,M=42;const six=[[L,T],[R,T],[L,M],[R,M],[L,B],[R,B]];return {
+  2:[[C,T],[C,B]],3:[[C,T],[C,M],[C,B]],4:[[L,T],[R,T],[L,B],[R,B]],5:[[L,T],[R,T],[C,M],[L,B],[R,B]],6:six,7:[...six,[C,29]],8:[...six,[C,29],[C,55]],
+  9:[[L,T],[R,T],[L,33.3],[R,33.3],[C,M],[L,50.7],[R,50.7],[L,B],[R,B]],T:[[L,T],[R,T],[C,24.7],[L,33.3],[R,33.3],[L,50.7],[R,50.7],[C,59.3],[L,B],[R,B]]};})();
+// court emblems for the upper half of the face (the lower half is the same turned round): crown, tiara with pearls, plumed cap
+const COURT={K:'<path class="gd" d="M21 30 19.4 17.8 24.8 23 30 14.8 35.2 23 40.6 17.8 39 30Z"/><rect class="gd2" x="20.4" y="28.6" width="19.2" height="3.6" rx="1"/><circle cx="19.4" cy="17.6" r="1.5"/><circle cx="30" cy="14.6" r="1.7"/><circle cx="40.6" cy="17.6" r="1.5"/><circle class="wt" cx="30" cy="30.4" r="1"/>',
+  Q:'<path class="gd" d="M21 30C21 24.5 22.8 21.6 25.4 21.8 26.4 24.6 27.8 25 30 18.6 32.2 25 33.6 24.6 34.6 21.8 37.2 21.6 39 24.5 39 30Z"/><rect class="gd2" x="20.6" y="28.6" width="18.8" height="3.6" rx="1.8"/><circle class="wt" cx="25.4" cy="20.8" r="1.5"/><circle class="wt" cx="30" cy="17.4" r="1.7"/><circle class="wt" cx="34.6" cy="20.8" r="1.5"/><circle cx="30" cy="25.6" r="1.6"/>',
+  J:'<path class="pl" d="M35.5 22.5C38.5 18.2 41.8 15.4 45.6 14.2 43.8 17.6 41.2 20.8 37.8 24Z"/><path d="M20.8 30C20.8 23.4 25 20.2 30 20.2S39.2 23.4 39.2 30Z"/><rect class="gd2" x="19.8" y="28.4" width="20.4" height="3.6" rx="1.8"/><circle class="gd" cx="30" cy="20" r="1.6"/>'};
+const CFACE={};
+function cardFace(c){if(CFACE[c])return CFACE[c];const r=c[0],s=c[1],lab=r==='T'?'10':r;
+  const ix=`<text x="7.2" y="15.2" text-anchor="middle" font-size="${r==='T'?11:13.5}"${r==='T'?' letter-spacing="-1.2"':''}>${lab}</text>${cPip(s,7.2,22.6,.6)}`;
+  let f;
+  if(r==='A')f=s==='s'?`<circle class="ar" cx="30" cy="42" r="17"/>${cPip(s,30,42,2.7)}`:cPip(s,30,42,2.3);
+  else if(COURT[r]){const half=COURT[r]+cPip(s,30,37.4,.66);f=`<rect class="cp" x="14" y="10.5" width="32" height="63" rx="3"/><g>${half}</g><g transform="rotate(180 30 42)">${half}</g><path class="cl" d="M14.8 42H45.2"/>`;}
+  else f=PIPXY[r].map(([x,y])=>cPip(s,x,y,1,y>42)).join('');
+  return CFACE[c]=`<svg class="cf" viewBox="0 0 60 84" aria-hidden="true">${ix}<g transform="rotate(180 30 42)">${ix}</g>${f}</svg>`;}
+// '??' is a card nobody may see (a masked card online keeps its length): drawn face down, still clickable when extra makes it a button.
+// extra goes last in the class attribute (some callers close the attribute in it to add data-ga); the card holds no inner div
 const cardHTML=(c,big,extra)=>c==='??'?`<div class="card back ${big?'big':''} ${extra||''}"></div>`:
-  `<div class="card ${'hd'.includes(c[1])?'red':'blk'} ${big?'big':''} ${extra||''}"><span class="ci">${c[0]==='T'?'10':c[0]}<br>${SUITCH[c[1]]}</span>${'JQK'.includes(c[0])?`<span class="fc">${c[0]}<small>${SUITCH[c[1]]}</small></span>`:`<span class="cs">${SUITCH[c[1]]}</span>`}<span class="ci b">${c[0]==='T'?'10':c[0]}<br>${SUITCH[c[1]]}</span></div>`;
+  `<div class="card ${'hd'.includes(c[1])?'red':'blk'} ${big?'big':''} ${extra||''}" aria-label="${c[0]==='T'?'10':c[0]}${SUITCH[c[1]]}">${cardFace(c)}</div>`;
 const cardsOf=s=>s.match(/.{2}/g)||[];
 
 /* ---------- memory ---------- */
@@ -21,11 +46,11 @@ GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout
   init:n=>{const p=MEMP[n]||15;return {p,dk:'?'.repeat(p*2),own:'.'.repeat(p*2),open:[]};},
   points:d=>cntSeat(d.own,d.pl.length).map(x=>x/2),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra(d){const c=cntSeat(d.own,d.pl.length);return 'الأزواج: '+c.map((x,s)=>`${nm(d,s)} ${x/2}`).join('، ');},
-  render(d,ctx){const op=d.open||[];
-    return `<div class="cellgrid" style="grid-template-columns:repeat(${MEMC[d.p]},minmax(0,1fr));background:#2F6E62">${[...d.dk].map((e,i)=>{
-      const own=d.own[i];if(own!=='.')return `<div class="cg" style="background:${lit(d,+own)};font-size:26px;box-shadow:inset 0 0 0 3px ${col(d,+own)}">${EMO[e.charCodeAt(0)-97]}</div>`;
-      if(op.includes(i))return `<div class="cg" style="background:#fff;font-size:26px">${EMO[e.charCodeAt(0)-97]}</div>`;
-      return `<button class="cg" style="background:#7FCBB9" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>❔</button>`;}).join('')}</div>`;},
+  render(d,ctx){const op=d.open||[];const miss=op.length===2&&d.dk[op[0]]!==d.dk[op[1]];
+    return `<div class="cellgrid memg c${MEMC[d.p]}" style="grid-template-columns:repeat(${MEMC[d.p]},minmax(0,1fr))">${[...d.dk].map((e,i)=>{
+      const own=d.own[i];if(own!=='.')return `<div class="cg mm own" style="--c:${col(d,+own)};--l:${lit(d,+own)}"><span>${EMO[e.charCodeAt(0)-97]}</span></div>`;
+      if(op.includes(i))return `<div class="cg mm up ${miss?'miss':''}"><span>${EMO[e.charCodeAt(0)-97]}</span></div>`;
+      return `<button class="cg mm dn" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'} aria-label="ورقة مقلوبة"></button>`;}).join('')}</div>`;},
   click(a,i,d,ctx){
     if(!ctx.my||d.own[i]!=='.')return;let op=d.open||[];if(op.length===2)op=[];if(op.includes(i))return;op=[...op,i];
     let dk=d.dk;if(dk[i]==='?'){const left=[];for(let k=0;k<d.p;k++){const e=String.fromCharCode(97+k);for(let m=dk.split(e).length-1;m<2;m++)left.push(e);}dk=setAt(dk,i,left[rnd(left.length)]);}
@@ -45,7 +70,8 @@ GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>d.last,
   render(d,ctx){const c=d.dk.slice(d.p*2,d.p*2+2);
-    return `<div class="hilo">${cardHTML(c,true)}<div class="hl-next">${cardHTML('??',true)}<small>باقي ${hiloLeft(d).length}</small></div></div><div class="acts"><button class="btn blue" data-ga="hi" ${ctx.my?'':'disabled'}>أعلى ⬆</button><button class="btn red" data-ga="lo" ${ctx.my?'':'disabled'}>أقل ⬇</button></div>`;},
+    const prev=cardsOf(d.dk.slice(Math.max(0,d.p-3)*2,d.p*2));
+    return `<div class="hilo"><div class="hl-cur">${prev.length?`<div class="hl-prev">${prev.map(x=>cardHTML(x)).join('')}</div>`:''}<span class="hl-top" data-k="h${d.p}">${cardHTML(c,true)}</span></div><div class="hl-next">${cardHTML('??',true)}<small>باقي ${hiloLeft(d).length}</small></div></div><div class="acts"><button class="btn blue" data-ga="hi" ${ctx.my?'':'disabled'}>أعلى ⬆</button><button class="btn red" data-ga="lo" ${ctx.my?'':'disabled'}>أقل ⬇</button></div>`;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn,c=d.dk.slice(d.p*2,d.p*2+2),left=hiloLeft(d);if(!left.length)return;const n=left[rnd(left.length)];
     const ok=a==='hi'?rv(n)>rv(c):rv(n)<rv(c);const pts=[...d.pts];if(ok)pts[t]++;
@@ -117,11 +143,13 @@ GAMES.bj={name:'بلاك جاك 21',cat:'cards',lbc:'#1E6B45',
   render(d,ctx){const done=d.ph==='done';
     if(d.ph==='bet'){const v=ctx.v;if(v==null||v<0)return '<p class="note">ننتظر الرهانات…</p>';if(!ctx.my)return '<p class="note">ننتظر رهانات الباقين…</p>';
       const b=Math.max(10,Math.min(+(S.draft.bet||50),d.chips[v]));
-      return `<div class="bjd"><b>رصيدك 🪙 ${d.chips[v]}</b><div class="mbid"><button class="sm" data-ga="bm" data-i="50">−50</button><button class="sm" data-ga="bm" data-i="10">−10</button><b>${b}</b><button class="sm" data-ga="bp" data-i="10">+10</button><button class="sm" data-ga="bp" data-i="50">+50</button></div></div><div class="acts"><button class="btn red" data-ga="bet">راهن بـ ${b}</button><button class="btn navy" data-ga="allin">كل الرصيد</button></div>`;}
-    let s=`<div class="bjd"><b>الديلر ${done?`<em>${bjVal(d.dl)}</em>`:''}</b><div class="hand">${cardsOf(d.dl).map((c,i)=>cardHTML(!done&&i===1?'??':c)).join('')}${!done&&d.dl.length===2?cardHTML('??'):''}</div></div>`;
-    s+=`<div class="bjp">${d.pl.map((r,i)=>{if(d.out[i]==='1'||!(d.hs[i]||[]).length)return '';return (d.hs[i]).map((h,k)=>{const v=bjVal(h.c),act=!done&&d.turn===i&&d.hi[i]===k;const w=done&&d.res?d.res[i][k]:null;
+      return `<div class="bjd bjbet"><b>رصيدك 🪙 ${d.chips[v]}</b><div class="bjchip" data-k="${b}"><span>${b}</span></div><div class="mbid"><button class="sm" data-ga="bm" data-i="50">−50</button><button class="sm" data-ga="bm" data-i="10">−10</button><b>${b}</b><button class="sm" data-ga="bp" data-i="10">+10</button><button class="sm" data-ga="bp" data-i="50">+50</button></div></div><div class="acts"><button class="btn red" data-ga="bet">راهن بـ ${b}</button><button class="btn navy" data-ga="allin">كل الرصيد</button></div>`;}
+    const dc=cardsOf(d.dl).map((c,i)=>!done&&i===1?'??':c);if(!done&&d.dl.length===2)dc.push('??');
+    let s=`<div class="bjt"><div class="bjd"><b>الديلر ${done?`<em>${bjVal(d.dl)}</em>`:''}</b><div class="hand" data-k="r${d.rd}">${dc.map(c=>`<span class="bjc" data-k="${c}">${cardHTML(c)}</span>`).join('')}</div></div>`;
+    const nh=d.pl.reduce((x,_,i)=>x+(d.out[i]==='1'?0:(d.hs[i]||[]).length),0);
+    s+=`<div class="bjp" style="grid-template-columns:repeat(${nh>4?3:nh===1?1:2},minmax(0,1fr))">${d.pl.map((r,i)=>{if(d.out[i]==='1'||!(d.hs[i]||[]).length)return '';return (d.hs[i]).map((h,k)=>{const v=bjVal(h.c),act=!done&&d.turn===i&&d.hi[i]===k;const w=done&&d.res?d.res[i][k]:null;
       const st=v>21?'تعدّى':bjNat(h.c,h.sp)?'بلاك جاك!':h.dbl?'دبل':h.st&&!done?'وقف':'';
-      return `<div class="bjh ${act?'on':''} ${v>21?'bust':''}" style="--c:${col(d,i)}"><b>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}${d.hs[i].length>1?` ${k+1}`:''}<em>${v}</em></b><div class="hand">${cardsOf(h.c).map(c=>cardHTML(c)).join('')}</div><small>🪙 ${h.b}${st?' • '+st:''}${w!=null?` • ${w>0?'+':''}${w}`:''}</small></div>`;}).join('');}).join('')}</div>`;
+      return `<div class="bjh ${act?'on':''} ${v>21?'bust':''}" style="--c:${col(d,i)}"><b>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}${d.hs[i].length>1?` ${k+1}`:''}<em>${v}</em></b><div class="hand" data-k="r${d.rd}">${cardsOf(h.c).map(c=>cardHTML(c)).join('')}</div><small>🪙 ${h.b}${st?' • '+st:''}${w!=null?` • ${w>0?'+':''}${w}`:''}</small></div>`;}).join('');}).join('')}</div></div>`;
     if(ctx.my&&d.ph==='play'){const t=d.turn,h=d.hs[t][d.hi[t]];const free=d.chips[t]-bjCommitted(d.hs[t]);
       const canD=h&&h.c.length===4&&free>=h.b,canS=h&&d.hs[t].length===1&&h.c.length===4&&bj10(h.c)===bj10(h.c.slice(2))&&free>=h.b;
       s+=`<div class="acts"><button class="btn blue" data-ga="hit">اسحب</button><button class="btn navy" data-ga="stand">اكتفيت</button>${canD?'<button class="btn red" data-ga="dbl">دبل</button>':''}${canS?'<button class="btn green" data-ga="split">قسّم</button>':''}</div>`;}
@@ -138,7 +166,32 @@ GAMES.bj={name:'بلاك جاك 21',cat:'cards',lbc:'#1E6B45',
 const UC={r:'#E5483F',g:'#3FAE5C',b:'#3D8FD8',y:'#F0B429',k:'#2D4763'},UCN={r:'الأحمر',g:'الأخضر',b:'الأزرق',y:'الأصفر'};
 function unoDeck(){const a=[];for(const c of 'rgby'){a.push(c+'0');for(const v of '123456789SRD')a.push(c+v,c+v);}for(let k=0;k<4;k++)a.push('kW','kF');return shuffle(a);}
 const uLabel=v=>({S:'⊘',R:'⇄',D:'<span class="ltr">+2</span>',W:'🎨',F:'<span class="ltr">+4</span>'})[v]||v;
-const uCard=(c,cls,attrs)=>`<${attrs?'button':'div'} class="card ${cls||''}" style="background:${UC[c[0]]};color:#fff;font-size:${c[1].length>1||'DF'.includes(c[1])?18:24}px" ${attrs||''}>${uLabel(c[1])}</${attrs?'button':'div'}>`;
+// the card: colour body in a white margin, the tilted white oval, the value in the middle with a dark drop and small corner labels
+const UDK='#1B2838';
+const uOval=(rx,ry)=>{const q=[[`M0 0H${rx}A${rx} ${ry} 0 0 1 0 ${ry}Z`,'b'],[`M0 0V${ry}A${rx} ${ry} 0 0 1 -${rx} 0Z`,'y'],[`M0 0H-${rx}A${rx} ${ry} 0 0 1 0 -${ry}Z`,'g'],[`M0 0V-${ry}A${rx} ${ry} 0 0 1 ${rx} 0Z`,'r']];
+  return q.map(([d,c])=>`<path d="${d}" fill="${UC[c]}"/>`).join('')+`<ellipse rx="${rx}" ry="${ry}" fill="none" stroke="#fff" stroke-width="${rx/10}"/>`;};
+// a symbol drawn around 0,0 in colour f (the middle one gets a dark copy under it)
+function uSym(v,f){const st=`stroke="${f}" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+  if(v==='S')return `<circle r="9" ${st} stroke-width="3.6"/><path d="M-6.2 6.2 6.2-6.2" ${st} stroke-width="3.6"/>`;
+  if(v==='R')return `<g transform="rotate(-45)" fill="${f}"><path d="M-10.5-7.2H1.5V-12.4L10.5-4.8 1.5 2.8V-2.4H-10.5Z"/><path d="M10.5 7.2H-1.5V12.4L-10.5 4.8-1.5-2.8V2.4H10.5Z"/></g>`;
+  if(v==='D')return `<rect x="-10" y="-11" width="12" height="17" rx="2.4" fill="${f}" stroke="#fff" stroke-width="1.6" transform="rotate(-12)"/><rect x="-2" y="-5" width="12" height="17" rx="2.4" fill="${f}" stroke="#fff" stroke-width="1.6" transform="rotate(-12)"/>`;
+  if(v==='F')return ['g','b','r','y'].map((c,k)=>`<rect x="${-13+k*5.4}" y="${-10+k*2.6}" width="10" height="14" rx="2" fill="${f===UDK?UDK:UC[c]}" stroke="#fff" stroke-width="1.3" transform="rotate(-14)"/>`).join('');
+  return '';}
+const uTxt=(v,x,y,fs,f,sw)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${fs}" fill="${f}"${sw?` stroke="${UDK}" stroke-width="${sw}" paint-order="stroke" stroke-linejoin="round"`:''}>${v}</text>`;
+const UFACE={};
+function uFace(c){if(UFACE[c])return UFACE[c];const v=c[1],wild=c[0]==='k',f=wild?UDK:UC[c[0]];
+  const lab=v==='D'?'+2':v==='F'?'+4':v;
+  // corner label: the number, +2/+4, a small symbol, or a small four-colour oval for the wild card
+  const corner=/[0-9]/.test(v)||v==='D'||v==='F'?uTxt(lab,10,15.5,lab.length>1?10.5:13,'#fff',1.1):v==='W'?`<g transform="translate(10 11.5) rotate(32)">${uOval(3.6,6)}</g>`:`<g transform="translate(10 11) scale(.42)">${uSym(v,'#fff')}</g>`;
+  let mid;
+  if(wild)mid=`<g transform="translate(30 42) rotate(32)">${uOval(19,31.5)}</g>`+(v==='F'?`<g transform="translate(31.4 43.6)">${uSym('F',UDK)}</g><g transform="translate(30 42)">${uSym('F','')}</g>`:'');
+  else{mid=`<ellipse cx="30" cy="42" rx="19" ry="31.5" transform="rotate(32 30 42)" fill="#fff"/>`;
+    if(/[0-9]/.test(v))mid+=uTxt(v,31.2,55.4,35,UDK)+uTxt(v,30,54,35,f)+('69'.includes(v)?`<rect x="23.6" y="57" width="12.8" height="2.6" rx="1.3" fill="${f}"/>`:'');
+    else mid+=`<g transform="translate(31.2 43.4)">${uSym(v,UDK)}</g><g transform="translate(30 42)">${uSym(v,f)}</g>`;}
+  return UFACE[c]=`<svg class="cf" viewBox="0 0 60 84" aria-hidden="true"><rect x="2.6" y="2.6" width="54.8" height="78.8" rx="5" fill="${f}"/>${mid}${corner}<g transform="rotate(180 30 42)">${corner}</g></svg>`;}
+const uCard=(c,cls,attrs)=>`<${attrs?'button':'div'} class="card uno ${cls||''}" ${attrs||''}>${uFace(c)}</${attrs?'button':'div'}>`;
+// the back of the pile: dark card, red oval with the game's name
+const uBack=cls=>`<div class="card uback ${cls||''}"><svg class="cf" viewBox="0 0 60 84" aria-hidden="true"><rect x="2.6" y="2.6" width="54.8" height="78.8" rx="5" fill="${UDK}"/><ellipse cx="30" cy="42" rx="19" ry="31.5" transform="rotate(32 30 42)" fill="#E5483F" stroke="#fff" stroke-width="1.6"/><text x="30" y="47" text-anchor="middle" font-size="15" fill="#FFD84D" stroke="${UDK}" stroke-width="2.4" paint-order="stroke" transform="rotate(-24 30 42)">ألوان</text></svg></div>`;
 const uPlayable=(c,d,hand)=>{const top=d.disc.slice(-2);if(d.drew&&typeof d.drew==='string'&&c!==d.drew)return false;
   if(c==='kF'&&hand&&hand.some(x=>x[0]===d.color))return false;return c[0]==='k'||c[0]===d.color||c[1]===top[1];};
 const uPts=c=>c[0]==='k'?50:/[0-9]/.test(c[1])?+c[1]:20;
@@ -163,13 +216,18 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>اللون الحالي: <b style="color:${UC[d.color]}">${UCN[d.color]}</b>، والدور ${d.dir>0?'⟲':'⟳'}</small>`,
   render(d,ctx){
     const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;const top=d.disc.slice(-2);
-    let s='';
-    s+=`<div class="row" style="align-items:center">${uCard(top,'big')}<div class="card big back"></div></div>`;
+    let s='';const my=v>=0&&ctx.my&&d.turn===v;const canDraw=my&&!d.drew;
+    // the table: draw pile with depth, the discard pile (the cards under it slightly turned), a ring in the current colour
+    // that shows the direction of play; the top card is keyed by the pile's length so a new one lands
+    const under=cardsOf(d.disc).slice(-3,-1),nd=d.disc.length/2;
+    s+=`<div class="utable" style="--uc:${UC[d.color]}"><div class="udeck">${canDraw?'<button class="ustack" data-ga="draw" aria-label="اسحب ورقة">':'<div class="ustack">'}${uBack('big')}${canDraw?'</button>':'</div>'}<small>${d.draw.length/2}</small></div>
+      <div class="upile"><svg class="uring ${d.dir>0?'':'ccw'}" viewBox="-50 -50 100 100" aria-hidden="true"><path d="M-43.2-15.7A46 46 0 0 1 39.8-23"/><path d="M43.2 15.7A46 46 0 0 1-39.8 23"/><path class="ah" d="M43.3-16.9 44.1-25.5 35.5-20.5Z"/><path class="ah" d="M-43.3 16.9-44.1 25.5-35.5 20.5Z"/></svg>${under.map((c,k)=>`<div class="uold" style="--r:${((nd-under.length+k)*47)%26-13}deg">${uCard(c,'big')}</div>`).join('')}<div class="utop" data-k="u${nd}">${uCard(top,'big')}</div></div>
+      <span class="ucol"><i></i>${UCN[d.color]}</span></div>`;
     if(v<0)return s;
-    const my=ctx.my&&d.turn===v;const hand=cardsOf(d.hands[v]);
-    if(my&&S.wild!=null&&(hand[S.wild]||'')[0]==='k')s+=`<p class="lbl" style="text-align:center">اختر اللون</p><div class="row">${'rgby'.split('').map((c,k)=>`<button class="btn swatch" style="background:${UC[c]}" data-ga="wc" data-i="${k}"></button>`).join('')}</div>`;
+    const hand=cardsOf(d.hands[v]);
+    if(my&&S.wild!=null&&(hand[S.wild]||'')[0]==='k')s+=`<div class="uwild"><p class="lbl">اختر اللون</p><div class="row">${'rgby'.split('').map((c,k)=>`<button class="btn swatch" style="--sw:${UC[c]}" data-ga="wc" data-i="${k}" aria-label="${UCN[c]}"></button>`).join('')}</div></div>`;
     if(d.uno>=0&&d.win==null&&(ctx.local||ctx.v!==d.uno))s+=`<div class="row"><button class="btn red" data-ga="catch">${nm(d,d.uno)} ما قال أونو! امسكه (+2)</button></div>`;
-    s+=`<p class="lbl" style="text-align:center">أوراقك</p><div class="hand">${hand.map((c,i)=>my&&uPlayable(c,d,hand)?uCard(c,'pick',`data-ga="play" data-i="${i}"`):uCard(c,my?'dim':'')).join('')}</div>`;
+    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand uhand ${my?'my':''}">${hand.map((c,i)=>my&&uPlayable(c,d,hand)?uCard(c,'pick'+(S.wild===i?' sel':''),`data-ga="play" data-i="${i}"`):uCard(c,my?'dim':'')).join('')}</div>`;
     if(my)s+=`<div class="row">${d.drew?'<button class="btn navy" data-ga="pass">مرّر الدور</button>':'<button class="btn blue" data-ga="draw">اسحب ورقة</button>'}${hand.length===2?`<button class="btn ${S.unoSaid===d.gid+':'+d.disc.length?'green':'red'}" data-ga="say">أونو!</button>`:''}</div>`;
     return s;},
   click(a,i,d,ctx){
@@ -198,10 +256,10 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
 /* ---------- dominoes ---------- */
 const DOMH={2:7,3:6,4:6,5:4,6:4,7:3,8:3};
 const PIP={0:[],1:[[10,10]],2:[[5,5],[15,15]],3:[[5,5],[10,10],[15,15]],4:[[5,5],[15,5],[5,15],[15,15]],5:[[5,5],[15,5],[10,10],[5,15],[15,15]],6:[[5,4],[15,4],[5,10],[15,10],[5,16],[15,16]]};
-const half=(n,x)=>PIP[n].map(([a,b])=>`<circle cx="${a+x}" cy="${b}" r="1.9" fill="#2D4763"/>`).join('');
-const domSVG=(t,w)=>`<svg viewBox="0 0 40 20" width="${w||52}"><line x1="20" y1="3" x2="20" y2="17" stroke="#2D4763" stroke-width="1"/>${half(+t[0],0)}${half(+t[1],20)}</svg>`;
-const halfV=(n,y)=>PIP[n].map(([a,b])=>`<circle cx="${a}" cy="${b+y}" r="1.9" fill="#2D4763"/>`).join('');
-const domV=(t,h)=>`<svg viewBox="0 0 20 40" height="${h||84}"><line x1="3" y1="20" x2="17" y2="20" stroke="#2D4763" stroke-width="1"/>${halfV(+t[0],0)}${halfV(+t[1],20)}</svg>`;
+const half=(n,x)=>PIP[n].map(([a,b])=>`<circle cx="${a+x}" cy="${b}" r="1.95"/>`).join('');
+const domSVG=(t,w)=>`<svg class="dsv" viewBox="0 0 40 20" width="${w||52}" aria-hidden="true"><path class="dl" d="M20 2.6V17.4"/><circle class="dp" cx="20" cy="10" r="1.15"/><g class="dpp">${half(+t[0],0)}${half(+t[1],20)}</g></svg>`;
+const halfV=(n,y)=>PIP[n].map(([a,b])=>`<circle cx="${a}" cy="${b+y}" r="1.95"/>`).join('');
+const domV=(t,h)=>`<svg class="dsv" viewBox="0 0 20 40" height="${h||84}" aria-hidden="true"><path class="dl" d="M2.6 20H17.4"/><circle class="dp" cx="10" cy="20" r="1.15"/><g class="dpp">${halfV(+t[0],0)}${halfV(+t[1],20)}</g></svg>`;
 function domEnds(d){if(!d.ch)return null;return [d.ch[0],d.ch[d.ch.length-1]];}
 const domFits=(t,d)=>{const e=domEnds(d);if(!e)return [true,true];return [t.includes(e[0]),t.includes(e[1])];};
 GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',hide:{seat:['hands'],all:['bone']},
@@ -218,11 +276,11 @@ GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',hide:{seat:['hands']
     let s='';
     const ch=d.ch.match(/.{2}/g)||[];
     // the chain is drawn left to right, so its end labels and the side buttons are laid out left to right too
-    const e=domEnds(d);s+=`<div class="table">${ch.length?`<div class="chain">${ch.map((t,i)=>`<span class="dom ${i===0||i===ch.length-1?'end':''}">${t[0]===t[1]?domV(t,54):domSVG(t,56)}</span>`).join('')}</div><div class="ends" style="direction:ltr"><span>اليسار: <b>${e[0]}</b></span><span>اليمين: <b>${e[1]}</b></span></div>`:'<p class="note" style="margin:24px 0">أول قطعة تفتح اللعب</p>'}<span class="bone">المخزن ${d.bone.length/2}</span></div>`;
+    const e=domEnds(d);s+=`<div class="table">${ch.length?`<div class="chain">${ch.map((t,i)=>`<span class="dom ${t[0]===t[1]?'dbl':''} ${i===0||i===ch.length-1?'end':''}" data-k="${t}">${t[0]===t[1]?domV(t,54):domSVG(t,56)}</span>`).join('')}</div><div class="ends" style="direction:ltr"><span>اليسار: <b>${e[0]}</b></span><span>اليمين: <b>${e[1]}</b></span></div>`:'<p class="note" style="margin:24px 0">أول قطعة تفتح اللعب</p>'}<span class="bone"><i></i>المخزن ${d.bone.length/2}</span></div>`;
     if(v<0)return s;const my=ctx.my&&d.turn===v;const hand=d.hands[v].match(/.{2}/g)||[];
     const any=hand.some(t=>domFits(t,d).some(x=>x));
     if(my&&S.dside!=null&&e)s+=`<div class="acts" style="direction:ltr"><button class="btn navy" data-ga="L" data-i="${S.dside}">⬅ على طرف ${e[0]}</button><button class="btn navy" data-ga="R" data-i="${S.dside}">على طرف ${e[1]} ➡</button></div>`;
-    s+=`<p class="lbl" style="text-align:center">قطعك</p><div class="hand">${hand.map((t,i)=>{const f=domFits(t,d).some(x=>x);return my&&f?`<button class="dom pick" data-ga="play" data-i="${i}">${domV(t)}</button>`:`<span class="dom ${my?'dim':''}">${domV(t)}</span>`;}).join('')}</div>`;
+    s+=`<p class="lbl hlbl">قطعك</p><div class="hand dhand">${hand.map((t,i)=>{const f=domFits(t,d).some(x=>x);return my&&f?`<button class="dom pick" data-ga="play" data-i="${i}">${domV(t)}</button>`:`<span class="dom ${my?'dim':''}">${domV(t)}</span>`;}).join('')}</div>`;
     if(my&&!any)s+=`<div class="row">${d.bone.length?'<button class="btn blue" data-ga="draw">اسحب من المخزن</button>':'<button class="btn navy" data-ga="pass">مرّر الدور</button>'}</div>`;
     return s;},
   click(a,i,d,ctx){
@@ -257,9 +315,9 @@ GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:
   points:d=>d.pl.map((r,s)=>(d.ln?d.ln[s]:bingoLines(bingoCard(d,s),d.called))+'/5'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;if(v<0)return '';
     const card=bingoCard(d,v);const lines=BLINES.filter(L=>L.every(i=>d.called[card[i]-1]==='1')).flat();
-    const ln=bingoLines(card,d.called);return `<div class="bprog"><div><i style="width:${ln*20}%;background:${col(d,v)}"></i></div></div>
-    <div class="cellgrid" style="grid-template-columns:repeat(5,minmax(0,1fr));background:${col(d,v)};max-width:360px">${card.map((n,i)=>{const c=d.called[n-1]==='1';
-      return c?`<div class="cg" style="background:${lines.includes(i)?'#ffd84d':lit(d,v)};text-decoration:line-through;font-size:22px">${n}</div>`:`<button class="cg" style="font-size:22px" data-ga="m" data-i="${n}" ${ctx.my?'':'disabled'}>${n}</button>`;}).join('')}</div>`;},
+    const ln=bingoLines(card,d.called);return `<div class="bingo" style="--c:${col(d,v)};--l:${lit(d,v)}"><div class="bprog"><div><i style="width:${ln*20}%"></i></div><b>${'بنقو'.split('').map((ch,k)=>`<span class="${k<Math.min(ln,4)||ln>=5?'on':''}">${ch}</span>`).join('')}</b></div>
+    <div class="cellgrid bgrid" style="grid-template-columns:repeat(5,minmax(0,1fr))">${card.map((n,i)=>{const c=d.called[n-1]==='1';
+      return c?`<div class="cg bc ${lines.includes(i)?'ln':''}"><span>${n}</span></div>`:`<button class="cg" data-ga="m" data-i="${n}" ${ctx.my?'':'disabled'}>${n}</button>`;}).join('')}</div></div>`;},
   click(a,n,d,ctx){
     if(!ctx.my||!(n>=1&&n<=25)||d.called[n-1]==='1')return;const t=d.turn;const called=setAt(d.called,n-1,'1');
     const ln=d.pl.map((r,s)=>bingoLines(bingoCard(d,s),called));
@@ -277,7 +335,9 @@ GAMES.pig={points:d=>d.sc,name:'زهر المخاطرة',cat:'cards',lbc:'#A0522
   init:n=>({sc:Array(n).fill(0),tot:0,dice:0,goal:100,last:''}),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const anim=S.rolled;S.rolled=false;
-    return `<div class="row" style="align-items:center;gap:22px">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}<div style="text-align:center"><div class="lbl" style="margin:0">جمع الدور</div><div class="big-num" style="color:${col(d,d.turn)}">${d.tot}</div></div></div>
+    const sc=d.sc[d.turn]||0,g=d.goal||100;
+    return `<div class="pigp ${d.dice===1&&!d.tot?'bust':''}" style="--c:${col(d,d.turn)}"><div class="row" style="align-items:center;gap:22px;margin:0">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}<div class="pigpot"><div class="lbl" style="margin:0">جمع الدور</div><div class="big-num" data-k="t${d.tot}">${d.tot}</div></div></div>
+    <div class="pigbar" aria-hidden="true"><i style="width:${Math.min(100,sc/g*100)}%"></i><u style="left:${Math.min(100,sc/g*100)}%;width:${Math.max(0,Math.min(100,(sc+d.tot)/g*100)-Math.min(100,sc/g*100))}%"></u><span>${sc}${d.tot?` + ${d.tot}`:''} / ${g}</span></div></div>
     <div class="acts"><button class="btn navy" data-ga="hold" ${ctx.my&&d.tot>0?'':'disabled'}>احفظ النقاط${d.tot?` (${d.tot})`:''}</button></div>`;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn;

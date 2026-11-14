@@ -1,1 +1,400 @@
 /* cards games: look and motion (loaded after style.css; uses the tokens at the top of style.css) */
+
+/* =====================================================================
+   1. The playing card (shared: cards.js, baloot, hand, extra, more.js, race.js)
+   Size comes from the container: --cw (normal), --cwb (big), --cwm (mini).
+   ".card.card.card" beats the older size rules in style.css (all at most 0,3,0).
+   ===================================================================== */
+.card{--w:var(--cw,50px)}
+.card.big{--w:var(--cwb,66px)}
+.card.mini{--w:var(--cwm,28px)}
+.card.card.card{width:var(--w);height:calc(var(--w)*1.4);flex:none;padding:0;position:relative;overflow:visible;
+  border-radius:calc(var(--w)*.12);font-size:calc(var(--w)*.44);font-weight:800;line-height:1;color:#22364D;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(162deg,#fff 0%,#FBFCFE 52%,#EAEFF5 100%);
+  box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),inset 0 1px 0 #fff,0 1px 1px rgba(14,28,46,.14),0 2px 6px rgba(14,28,46,.13);
+  transition:transform var(--t1) var(--ease),box-shadow var(--t1) var(--ease),filter var(--t1)}
+.card .cf{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;fill:currentColor;pointer-events:none}
+.card.red>.cf,.card.red .sv{color:#CC2F2A}
+.card.blk>.cf,.card.blk .sv{color:#1F3249}
+.card .cf text{font-family:'Baloo Bhaijaan 2',system-ui,sans-serif;font-weight:800;direction:ltr;unicode-bidi:bidi-override}
+.card:not(.uno):not(.uback) .cf text{fill:currentColor}
+.card .cf .cp{fill:#FFF7E3;stroke:currentColor;stroke-opacity:.45;stroke-width:.8}
+.card .cf .cl{stroke:currentColor;stroke-opacity:.3;stroke-width:.6}
+.card .cf .gd{fill:#F0B429;stroke:#A86E12;stroke-width:.55}
+.card .cf .gd2{fill:#D99A1E;stroke:#A86E12;stroke-width:.5}
+.card .cf .wt{fill:#fff;stroke:#A86E12;stroke-width:.45}
+.card .cf .pl{fill:#4AB1E8;stroke:#2A7FB0;stroke-width:.5}
+.card .cf .ar{fill:none;stroke:currentColor;stroke-opacity:.28;stroke-width:.9}
+/* the back: navy lattice in a white margin with the app's two-dice mark */
+.card.card.back{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 84' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cpattern id='p' width='5' height='5' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'%3E%3Cpath d='M0 0H5M0 0V5' stroke='%2363B9EA' stroke-opacity='.3' stroke-width='.9' fill='none'/%3E%3C/pattern%3E%3CradialGradient id='g' cx='.5' cy='.42' r='.75'%3E%3Cstop offset='0' stop-color='%233A6189'/%3E%3Cstop offset='1' stop-color='%231C3149'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect x='2.6' y='2.6' width='54.8' height='78.8' rx='3.6' fill='url(%23g)'/%3E%3Crect x='2.6' y='2.6' width='54.8' height='78.8' rx='3.6' fill='url(%23p)'/%3E%3Crect x='5.4' y='5.4' width='49.2' height='73.2' rx='2.2' fill='none' stroke='%234AB1E8' stroke-opacity='.6' stroke-width='.7'/%3E%3Ccircle cx='30' cy='42' r='12.6' fill='%232D4763' stroke='%23fff' stroke-opacity='.85' stroke-width='1.1'/%3E%3Crect x='20.6' y='37.2' width='8.8' height='8.8' rx='2.3' fill='%23EC6158' transform='rotate(-10 25 41.6)'/%3E%3Crect x='30.6' y='37.2' width='8.8' height='8.8' rx='2.3' fill='%234AB1E8' transform='rotate(10 35 41.6)'/%3E%3Ccircle cx='23.4' cy='39.8' r='1' fill='%23fff'/%3E%3Ccircle cx='26.6' cy='43.4' r='1' fill='%23fff'/%3E%3Ccircle cx='33.4' cy='39.6' r='.9' fill='%23fff'/%3E%3Ccircle cx='36.8' cy='40.2' r='.9' fill='%23fff'/%3E%3Ccircle cx='33' cy='43' r='.9' fill='%23fff'/%3E%3Ccircle cx='36.4' cy='43.6' r='.9' fill='%23fff'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.card.back>*{display:none}
+/* a plain number card (war, 1 to 7) */
+.card.card:not(.red):not(.blk):not(.back):not(.uno):not(.jk):not(.hempty):not(.mini){color:#22364D;font-size:calc(var(--w)*.5)}
+/* states: tappable lifts with a gold edge, selected gets the --sel ring, not playable now is shaded */
+.card.card.card.pick{cursor:pointer;transform:translateY(-6px);box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 0 0 2.5px var(--sel),0 6px 12px rgba(14,28,46,.22)}
+.card.card.card.dim{opacity:1;filter:none}
+.card.dim::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(18,30,48,.24);pointer-events:none}
+.card.card.card.sel{transform:translateY(-12px);box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),var(--ring),0 8px 14px rgba(14,28,46,.24)}
+.card.card.card.pick:active,button:active>.card.card.card,button.card.card.card:active:not(:disabled){transform:translateY(-3px) scale(.96)}
+@media (hover:hover){.card.card.card.pick:hover,button:not(:disabled):hover>.card.card.card{transform:translateY(-10px)}}
+.card.card.hempty{background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+/* mini card for melds and side hands: rank over suit at the top left, so an overlap never hides it */
+.card.card.card.mini{flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:3px 0 0 4px;gap:1px;border-radius:5px;margin-left:-7px;
+  box-shadow:inset 0 0 0 1px rgba(34,54,77,.2),-2px 0 4px rgba(14,28,46,.12)}
+.card.card.mini:first-child{margin-left:0}
+.card.mini b{font-size:13px;font-weight:800;line-height:1;letter-spacing:-.5px}
+.card.mini i{display:none}
+.card.mini .sv{width:10px;height:10px;display:block}
+.card.mini.red b{color:#CC2F2A}.card.mini.blk b{color:#1F3249}
+/* a new card on the table lands; a whole hand is dealt in */
+@keyframes cd-land{from{transform:translateY(-18px) scale(.86) rotate(-6deg);opacity:0}}
+@keyframes cd-deal{from{transform:translateY(-26px) scale(.8);opacity:0}}
+@keyframes cd-pop{from{transform:scale(.6);opacity:0}}
+
+/* =====================================================================
+   2. Hands: one fanned row that always fits. Left to right like held cards,
+   so each card's top-left index stays visible under its neighbour.
+   The overlap is (row width - n*card width)/(n-1), never more than a small gap;
+   n comes from the number of children (quantity queries below).
+   ===================================================================== */
+.hand.hand,.bhand.bhand,.hhand.hhand{direction:ltr;display:flex;flex-wrap:nowrap;justify-content:center;align-items:flex-end;width:100%;max-width:100%;gap:0;padding:10px 0 4px;margin:4px 0}
+.hand.hand>*,.bhand.bhand>*,.hhand.hhand>*{margin:0;flex:none}
+.hand.hand>*+*,.bhand.bhand>*+*,.hhand.hhand>*+*{margin-left:min(var(--fg,6px),calc((100% - var(--n,1)*var(--fw,var(--cw,50px)))/(var(--n,1) - 1)))}
+.hand>.note{margin:6px auto}
+.hand>.card.big{--fw:var(--cwb,66px)}
+.hand>:first-child:nth-last-child(2),.hand>:first-child:nth-last-child(2)~*,.bhand>:first-child:nth-last-child(2),.bhand>:first-child:nth-last-child(2)~*,.hhand>:first-child:nth-last-child(2),.hhand>:first-child:nth-last-child(2)~*{--n:2}
+.hand>:first-child:nth-last-child(3),.hand>:first-child:nth-last-child(3)~*,.bhand>:first-child:nth-last-child(3),.bhand>:first-child:nth-last-child(3)~*,.hhand>:first-child:nth-last-child(3),.hhand>:first-child:nth-last-child(3)~*{--n:3}
+.hand>:first-child:nth-last-child(4),.hand>:first-child:nth-last-child(4)~*,.bhand>:first-child:nth-last-child(4),.bhand>:first-child:nth-last-child(4)~*,.hhand>:first-child:nth-last-child(4),.hhand>:first-child:nth-last-child(4)~*{--n:4}
+.hand>:first-child:nth-last-child(5),.hand>:first-child:nth-last-child(5)~*,.bhand>:first-child:nth-last-child(5),.bhand>:first-child:nth-last-child(5)~*,.hhand>:first-child:nth-last-child(5),.hhand>:first-child:nth-last-child(5)~*{--n:5}
+.hand>:first-child:nth-last-child(6),.hand>:first-child:nth-last-child(6)~*,.bhand>:first-child:nth-last-child(6),.bhand>:first-child:nth-last-child(6)~*,.hhand>:first-child:nth-last-child(6),.hhand>:first-child:nth-last-child(6)~*{--n:6}
+.hand>:first-child:nth-last-child(7),.hand>:first-child:nth-last-child(7)~*,.bhand>:first-child:nth-last-child(7),.bhand>:first-child:nth-last-child(7)~*,.hhand>:first-child:nth-last-child(7),.hhand>:first-child:nth-last-child(7)~*{--n:7}
+.hand>:first-child:nth-last-child(8),.hand>:first-child:nth-last-child(8)~*,.bhand>:first-child:nth-last-child(8),.bhand>:first-child:nth-last-child(8)~*,.hhand>:first-child:nth-last-child(8),.hhand>:first-child:nth-last-child(8)~*{--n:8}
+.hand>:first-child:nth-last-child(9),.hand>:first-child:nth-last-child(9)~*,.bhand>:first-child:nth-last-child(9),.bhand>:first-child:nth-last-child(9)~*,.hhand>:first-child:nth-last-child(9),.hhand>:first-child:nth-last-child(9)~*{--n:9}
+.hand>:first-child:nth-last-child(10),.hand>:first-child:nth-last-child(10)~*,.bhand>:first-child:nth-last-child(10),.bhand>:first-child:nth-last-child(10)~*,.hhand>:first-child:nth-last-child(10),.hhand>:first-child:nth-last-child(10)~*{--n:10}
+.hand>:first-child:nth-last-child(11),.hand>:first-child:nth-last-child(11)~*,.bhand>:first-child:nth-last-child(11),.bhand>:first-child:nth-last-child(11)~*,.hhand>:first-child:nth-last-child(11),.hhand>:first-child:nth-last-child(11)~*{--n:11}
+.hand>:first-child:nth-last-child(12),.hand>:first-child:nth-last-child(12)~*,.bhand>:first-child:nth-last-child(12),.bhand>:first-child:nth-last-child(12)~*,.hhand>:first-child:nth-last-child(12),.hhand>:first-child:nth-last-child(12)~*{--n:12}
+.hand>:first-child:nth-last-child(13),.hand>:first-child:nth-last-child(13)~*,.bhand>:first-child:nth-last-child(13),.bhand>:first-child:nth-last-child(13)~*,.hhand>:first-child:nth-last-child(13),.hhand>:first-child:nth-last-child(13)~*{--n:13}
+.hand>:first-child:nth-last-child(14),.hand>:first-child:nth-last-child(14)~*,.bhand>:first-child:nth-last-child(14),.bhand>:first-child:nth-last-child(14)~*,.hhand>:first-child:nth-last-child(14),.hhand>:first-child:nth-last-child(14)~*{--n:14}
+.hand>:first-child:nth-last-child(15),.hand>:first-child:nth-last-child(15)~*,.bhand>:first-child:nth-last-child(15),.bhand>:first-child:nth-last-child(15)~*,.hhand>:first-child:nth-last-child(15),.hhand>:first-child:nth-last-child(15)~*{--n:15}
+.hand>:first-child:nth-last-child(16),.hand>:first-child:nth-last-child(16)~*,.bhand>:first-child:nth-last-child(16),.bhand>:first-child:nth-last-child(16)~*,.hhand>:first-child:nth-last-child(16),.hhand>:first-child:nth-last-child(16)~*{--n:16}
+.hand>:first-child:nth-last-child(17),.hand>:first-child:nth-last-child(17)~*,.bhand>:first-child:nth-last-child(17),.bhand>:first-child:nth-last-child(17)~*,.hhand>:first-child:nth-last-child(17),.hhand>:first-child:nth-last-child(17)~*{--n:17}
+.hand>:first-child:nth-last-child(18),.hand>:first-child:nth-last-child(18)~*,.bhand>:first-child:nth-last-child(18),.bhand>:first-child:nth-last-child(18)~*,.hhand>:first-child:nth-last-child(18),.hhand>:first-child:nth-last-child(18)~*{--n:18}
+.hand>:first-child:nth-last-child(19),.hand>:first-child:nth-last-child(19)~*,.bhand>:first-child:nth-last-child(19),.bhand>:first-child:nth-last-child(19)~*,.hhand>:first-child:nth-last-child(19),.hhand>:first-child:nth-last-child(19)~*{--n:19}
+.hand>:first-child:nth-last-child(20),.hand>:first-child:nth-last-child(20)~*,.bhand>:first-child:nth-last-child(20),.bhand>:first-child:nth-last-child(20)~*,.hhand>:first-child:nth-last-child(20),.hhand>:first-child:nth-last-child(20)~*{--n:20}
+.hand>:first-child:nth-last-child(21),.hand>:first-child:nth-last-child(21)~*,.bhand>:first-child:nth-last-child(21),.bhand>:first-child:nth-last-child(21)~*,.hhand>:first-child:nth-last-child(21),.hhand>:first-child:nth-last-child(21)~*{--n:21}
+.hand>:first-child:nth-last-child(22),.hand>:first-child:nth-last-child(22)~*,.bhand>:first-child:nth-last-child(22),.bhand>:first-child:nth-last-child(22)~*,.hhand>:first-child:nth-last-child(22),.hhand>:first-child:nth-last-child(22)~*{--n:22}
+.hand>:first-child:nth-last-child(23),.hand>:first-child:nth-last-child(23)~*,.bhand>:first-child:nth-last-child(23),.bhand>:first-child:nth-last-child(23)~*,.hhand>:first-child:nth-last-child(23),.hhand>:first-child:nth-last-child(23)~*{--n:23}
+.hand>:first-child:nth-last-child(24),.hand>:first-child:nth-last-child(24)~*,.bhand>:first-child:nth-last-child(24),.bhand>:first-child:nth-last-child(24)~*,.hhand>:first-child:nth-last-child(24),.hhand>:first-child:nth-last-child(24)~*{--n:24}
+.hand>:first-child:nth-last-child(25),.hand>:first-child:nth-last-child(25)~*,.bhand>:first-child:nth-last-child(25),.bhand>:first-child:nth-last-child(25)~*,.hhand>:first-child:nth-last-child(25),.hhand>:first-child:nth-last-child(25)~*{--n:25}
+.hand>:first-child:nth-last-child(26),.hand>:first-child:nth-last-child(26)~*,.bhand>:first-child:nth-last-child(26),.bhand>:first-child:nth-last-child(26)~*,.hhand>:first-child:nth-last-child(26),.hhand>:first-child:nth-last-child(26)~*{--n:26}
+.hand>:first-child:nth-last-child(27),.hand>:first-child:nth-last-child(27)~*,.bhand>:first-child:nth-last-child(27),.bhand>:first-child:nth-last-child(27)~*,.hhand>:first-child:nth-last-child(27),.hhand>:first-child:nth-last-child(27)~*{--n:27}
+.hand>:first-child:nth-last-child(28),.hand>:first-child:nth-last-child(28)~*,.bhand>:first-child:nth-last-child(28),.bhand>:first-child:nth-last-child(28)~*,.hhand>:first-child:nth-last-child(28),.hhand>:first-child:nth-last-child(28)~*{--n:28}
+.hand>:first-child:nth-last-child(29),.hand>:first-child:nth-last-child(29)~*,.bhand>:first-child:nth-last-child(29),.bhand>:first-child:nth-last-child(29)~*,.hhand>:first-child:nth-last-child(29),.hhand>:first-child:nth-last-child(29)~*{--n:29}
+.hand>:first-child:nth-last-child(30),.hand>:first-child:nth-last-child(30)~*,.bhand>:first-child:nth-last-child(30),.bhand>:first-child:nth-last-child(30)~*,.hhand>:first-child:nth-last-child(30),.hhand>:first-child:nth-last-child(30)~*{--n:30}
+.hand>:first-child:nth-last-child(31),.hand>:first-child:nth-last-child(31)~*,.bhand>:first-child:nth-last-child(31),.bhand>:first-child:nth-last-child(31)~*,.hhand>:first-child:nth-last-child(31),.hhand>:first-child:nth-last-child(31)~*{--n:31}
+.hand>:first-child:nth-last-child(32),.hand>:first-child:nth-last-child(32)~*,.bhand>:first-child:nth-last-child(32),.bhand>:first-child:nth-last-child(32)~*,.hhand>:first-child:nth-last-child(32),.hhand>:first-child:nth-last-child(32)~*{--n:32}
+.hand>:first-child:nth-last-child(33),.hand>:first-child:nth-last-child(33)~*,.bhand>:first-child:nth-last-child(33),.bhand>:first-child:nth-last-child(33)~*,.hhand>:first-child:nth-last-child(33),.hhand>:first-child:nth-last-child(33)~*{--n:33}
+.hand>:first-child:nth-last-child(34),.hand>:first-child:nth-last-child(34)~*,.bhand>:first-child:nth-last-child(34),.bhand>:first-child:nth-last-child(34)~*,.hhand>:first-child:nth-last-child(34),.hhand>:first-child:nth-last-child(34)~*{--n:34}
+.hand>:first-child:nth-last-child(35),.hand>:first-child:nth-last-child(35)~*,.bhand>:first-child:nth-last-child(35),.bhand>:first-child:nth-last-child(35)~*,.hhand>:first-child:nth-last-child(35),.hhand>:first-child:nth-last-child(35)~*{--n:35}
+.hand>:first-child:nth-last-child(36),.hand>:first-child:nth-last-child(36)~*,.bhand>:first-child:nth-last-child(36),.bhand>:first-child:nth-last-child(36)~*,.hhand>:first-child:nth-last-child(36),.hhand>:first-child:nth-last-child(36)~*{--n:36}
+.hand>:first-child:nth-last-child(37),.hand>:first-child:nth-last-child(37)~*,.bhand>:first-child:nth-last-child(37),.bhand>:first-child:nth-last-child(37)~*,.hhand>:first-child:nth-last-child(37),.hhand>:first-child:nth-last-child(37)~*{--n:37}
+.hand>:first-child:nth-last-child(38),.hand>:first-child:nth-last-child(38)~*,.bhand>:first-child:nth-last-child(38),.bhand>:first-child:nth-last-child(38)~*,.hhand>:first-child:nth-last-child(38),.hhand>:first-child:nth-last-child(38)~*{--n:38}
+.hand>:first-child:nth-last-child(39),.hand>:first-child:nth-last-child(39)~*,.bhand>:first-child:nth-last-child(39),.bhand>:first-child:nth-last-child(39)~*,.hhand>:first-child:nth-last-child(39),.hhand>:first-child:nth-last-child(39)~*{--n:39}
+.hand>:first-child:nth-last-child(40),.hand>:first-child:nth-last-child(40)~*,.bhand>:first-child:nth-last-child(40),.bhand>:first-child:nth-last-child(40)~*,.hhand>:first-child:nth-last-child(40),.hhand>:first-child:nth-last-child(40)~*{--n:40}
+/* =====================================================================
+   3. uno ("ألوان وأرقام")
+   ===================================================================== */
+.board .hlbl{text-align:center;margin:8px 0 0;font-size:14px}
+.utable{--cwb:72px;position:relative;width:100%;display:flex;align-items:center;justify-content:center;gap:34px;padding:22px 12px 34px;margin:0 0 4px;border-radius:var(--r-xl);
+  background:radial-gradient(120% 100% at 50% 35%,var(--felt-1) 0%,var(--felt-2) 72%,#14512F 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),inset 0 0 36px rgba(0,0,0,.32),var(--e2)}
+.udeck{display:flex;flex-direction:column;align-items:center;gap:6px}
+.udeck small{color:rgba(255,255,255,.85);font-weight:800;font-size:13px;background:rgba(0,0,0,.22);border-radius:99px;padding:0 9px}
+.ustack{position:relative;display:block;padding:0;background:none;border-radius:calc(var(--cwb)*.12);
+  box-shadow:2px 2px 0 #E9EEF4,3px 3px 0 rgba(0,0,0,.18),4px 4px 0 #E2E8F0,5px 5px 0 rgba(0,0,0,.18),6px 6px 0 #DCE3EC,7px 8px 8px rgba(0,0,0,.3)}
+button.ustack{cursor:pointer;transition:transform var(--t1) var(--ease)}
+button.ustack .card{box-shadow:0 0 0 3px var(--sel),inset 0 0 0 1px rgba(0,0,0,.2)}
+button.ustack:active{transform:translate(2px,2px)}
+.upile{position:relative;width:var(--cwb);height:calc(var(--cwb)*1.4)}
+.upile>.uold,.upile>.utop{position:absolute;inset:0}
+.upile>.uold{transform:rotate(var(--r))}
+.upile>.uold .card{box-shadow:inset 0 0 0 1px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.25)}
+.upile>.utop .card{box-shadow:inset 0 0 0 1px rgba(0,0,0,.12),0 4px 10px rgba(0,0,0,.35)}
+.upile>.utop{animation:cd-land var(--t3) var(--spring)}
+.upile::before{content:'';position:absolute;left:50%;top:50%;width:140px;height:140px;margin:-70px 0 0 -70px;border-radius:50%;background:var(--uc);opacity:.28}
+.uring{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;overflow:visible;pointer-events:none}
+.uring path{fill:none;stroke:var(--uc);stroke-width:4.5;stroke-linecap:round}
+.uring path.ah{fill:var(--uc);stroke-width:2;stroke-linejoin:round}
+.uring.ccw{transform:scaleX(-1)}
+.ucol{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.28);color:#fff;font-weight:800;font-size:13px;border-radius:99px;padding:1px 10px 1px 4px;white-space:nowrap}
+.ucol i{width:14px;height:14px;border-radius:50%;background:var(--uc);box-shadow:0 0 0 2px #fff}
+.uhand{--cw:54px;min-height:96px}
+.uwild{width:100%;text-align:center;background:var(--surface);border-radius:var(--r-l);padding:4px 10px 0;box-shadow:var(--e2);margin:8px 0 0;animation:cd-pop var(--t2) var(--spring)}
+.uwild .lbl{margin:6px 0 0}.uwild .row{margin:8px 0 12px;gap:14px}
+.uwild .btn.swatch{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55),transparent 45%),var(--sw);box-shadow:0 0 0 3px #fff,0 4px 0 rgba(0,0,0,.18)}
+.uwild .btn.swatch:active{transform:translateY(3px) scale(.95)}
+
+/* =====================================================================
+   4. Card tables: felt with a vignette inside a wooden rim
+   (baloot .btable, hand .htable, blackjack .bjt, old maid .omt, dominoes .table)
+   ===================================================================== */
+.btable,.htable,.bjt,.omt,.board .table{
+  background:radial-gradient(90% 70% at 50% 42%,rgba(255,255,255,.10),transparent 70%) padding-box,
+    repeating-linear-gradient(45deg,rgba(0,0,0,.035) 0 1px,transparent 1px 3px) padding-box,
+    radial-gradient(130% 100% at 50% 40%,var(--felt-1) 0%,var(--felt-2) 72%,#11432A 100%) padding-box,
+    linear-gradient(160deg,#A8743F,#6E4522 45%,#8A5A2B 70%,#5C391B) border-box;
+  border:7px solid transparent;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 0 38px rgba(0,0,0,.38),0 1px 0 rgba(255,255,255,.25),0 6px 16px rgba(14,28,46,.22)}
+
+/* =====================================================================
+   5. baloot
+   ===================================================================== */
+.blt{--cw:46px}
+.bsc{box-shadow:var(--e1);border-radius:var(--r-l)}
+.btable{height:300px;border-radius:130px/100px}
+.bseat{gap:4px}
+.bseat .bnm{background:rgba(8,30,20,.55);box-shadow:0 0 0 1.5px var(--c);padding:1px 10px 2px;font-size:13px;line-height:1.5}
+.bseat.on .bnm{animation:none;background:var(--c);box-shadow:0 0 0 2px #fff,0 0 0 4px var(--c),0 4px 10px rgba(0,0,0,.3)}
+.bseat.on .bnm::after{content:'';position:absolute;inset:-3px;border-radius:99px;box-shadow:0 0 0 2px var(--c);animation:bl-halo 1.4s var(--ease) 3;pointer-events:none}
+.bseat .bnm{position:relative}
+@keyframes bl-halo{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.25,1.6)}}
+/* the other hands: a small fan of backs; the side seats hold theirs upright */
+.bbacks{display:flex;direction:ltr}
+.bbacks i{width:15px;height:21px;margin-left:-8px;border-radius:2.5px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 21' preserveAspectRatio='none'%3E%3Crect x='1.2' y='1.2' width='12.6' height='18.6' rx='1.2' fill='%232D4763'/%3E%3Crect x='2.6' y='2.6' width='9.8' height='15.8' rx='.6' fill='none' stroke='%234AB1E8' stroke-opacity='.7' stroke-width='.6'/%3E%3Ccircle cx='7.5' cy='10.5' r='2.2' fill='%23EC6158'/%3E%3C/svg%3E") center/100% 100%;box-shadow:-1px 0 2px rgba(0,0,0,.3)}
+.bbacks i:first-child{margin-left:0}
+.bseat.l .bbacks,.bseat.r .bbacks{flex-direction:column;align-items:center}
+.bseat.l .bbacks i,.bseat.r .bbacks i{width:21px;height:15px;margin:-9px 0 0;box-shadow:0 -1px 2px rgba(0,0,0,.3)}
+.bseat.l .bbacks i:first-child,.bseat.r .bbacks i:first-child{margin-top:0}
+.bseat.t{top:10px}.bseat.b{bottom:8px}.bseat.r{right:8px}.bseat.l{left:8px}
+.bmini{direction:ltr;max-width:200px;padding-left:7px;row-gap:3px}
+.bmini .card.mini{--cwm:26px}
+/* the exposed card while buying, and the trick: each card slides in from its player's side */
+.bpub .card{box-shadow:0 0 0 3px rgba(255,216,77,.85),0 8px 18px rgba(0,0,0,.35);animation:cd-land var(--t3) var(--spring)}
+.btk .card.card.card{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 3px 8px rgba(0,0,0,.35)}
+.btk.b{transform:translate(-50%,4%)}.btk.t{transform:translate(-50%,-104%)}.btk.r{transform:translate(18%,-50%)}.btk.l{transform:translate(-118%,-50%)}
+.btk.b .card{animation:bl-fb var(--t3) var(--ease)}.btk.t .card{animation:bl-ft var(--t3) var(--ease)}
+.btk.r .card{animation:bl-fr var(--t3) var(--ease)}.btk.l .card{animation:bl-fl var(--t3) var(--ease)}
+@keyframes bl-fb{from{transform:translateY(110px) scale(1.1);opacity:.2}}
+@keyframes bl-ft{from{transform:translateY(-100px) scale(.8);opacity:.2}}
+@keyframes bl-fr{from{transform:translateX(120px) scale(.8);opacity:.2}}
+@keyframes bl-fl{from{transform:translateX(-120px) scale(.8);opacity:.2}}
+.btk.old{opacity:.72}
+.btk.old.win{opacity:1;z-index:1}
+.btk.win .card.card.card{box-shadow:0 0 0 2.5px var(--gold),0 4px 12px rgba(0,0,0,.35)}
+/* the hand: fanned, playable cards raised with a gold edge, the rest shaded */
+.bhand.bhand{--cw:50px;padding:14px 0 4px}
+.bhand.bhand .bcard{padding:0;background:none;border-radius:6px;transform:none;filter:none;transition:none}
+.bhand button.bcard .card.card.card{transform:translateY(-10px);box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 0 0 2.5px var(--sel),0 6px 12px rgba(14,28,46,.24)}
+.bhand button.bcard:active .card.card.card{transform:translateY(-6px) scale(.96)}
+@media (hover:hover){.bhand button.bcard:hover .card.card.card{transform:translateY(-14px)}}
+.bhand .bcard.dim .card::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(18,30,48,.26)}
+.bopts{gap:8px}
+@media (prefers-color-scheme:dark){.btable,.htable,.bjt,.omt,.board .table{box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),inset 0 0 38px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.45)}}
+
+/* =====================================================================
+   6. hand (هند)
+   ===================================================================== */
+.htable{width:100%;border-radius:var(--r-xl);padding:12px 8px 10px;margin:0 0 4px;--cw:48px}
+.hpile{gap:26px;margin:0 0 6px}
+.hstock,.hdisc{color:rgba(255,255,255,.85);font-size:13px;gap:5px;padding:0}
+.hstock small,.hdisc small{background:rgba(0,0,0,.22);border-radius:99px;padding:0 9px;line-height:1.5}
+.hstock .card.card.card{box-shadow:1px 1px 0 #E9EEF4,2px 2px 0 rgba(0,0,0,.2),3px 3px 0 #E2E8F0,4px 4px 0 rgba(0,0,0,.2),5px 6px 8px rgba(0,0,0,.3)}
+.hstock:not(:disabled) .card.card.card,.hdisc[data-ga] .card.card.card{box-shadow:0 0 0 3px var(--sel),3px 3px 0 #E2E8F0,4px 4px 0 rgba(0,0,0,.2),5px 6px 8px rgba(0,0,0,.3)}
+.hstock:not(:disabled):active,.hdisc[data-ga]:active{transform:scale(.95)}
+.hdisc .card.card.card{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 4px 10px rgba(0,0,0,.35)}
+.hdisc .card.card.card.hempty{box-shadow:inset 0 0 0 2px rgba(255,255,255,.3);background:rgba(0,0,0,.08)}
+.hdk{display:block;animation:cd-land var(--t3) var(--spring)}
+.htable .hmelds{gap:8px 10px;max-width:none}
+.htable .hm,.hpend .hm{direction:ltr;background:rgba(0,0,0,.2);box-shadow:inset 0 -3px 0 var(--c);border-radius:9px;padding:4px 5px 7px;animation:cd-pop var(--t2) var(--spring)}
+.hpend .hm{background:var(--surface-2)}
+.htable .hm.can{background:rgba(255,216,77,.22);box-shadow:inset 0 -3px 0 var(--c),0 0 0 2.5px var(--sel);cursor:pointer}
+.htable .hm.can:active{transform:scale(.96)}
+.card.card.card.jk{color:#C9302C}
+.card.jk .cf .jkt{fill:#C9302C;font-size:7.4px;text-anchor:middle}
+.card.mini.jk b{color:#C9302C;font-size:12px}
+.card.mini.jk .sv{width:13px;height:11px}
+.hhand.hhand{--cw:50px;padding:16px 0 4px}
+.hhand.hhand .hc{padding:0;background:none;margin:0;transition:none;border-radius:6px}
+.hhand.hhand>.hc+.hc{margin-left:min(var(--fg,6px),calc((100% - var(--n,1)*var(--cw))/(var(--n,1) - 1)))}
+.hhand .hc .card.card.card{transition:transform var(--t1) var(--ease),box-shadow var(--t1)}
+.hhand .hc.sel{transform:none}
+.hhand .hc.sel .card.card.card{transform:translateY(-14px);box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),var(--ring),0 8px 14px rgba(14,28,46,.24)}
+.hhand .hc.took .card.card.card{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 0 0 2.5px var(--gold),0 3px 8px rgba(14,28,46,.2)}
+.hhand .hc.took.sel .card.card.card{box-shadow:var(--ring),0 8px 14px rgba(14,28,46,.24)}
+.hhand button.hc:active .card.card.card{transform:translateY(-4px) scale(.96)}
+.hact{margin-top:6px}
+
+/* =====================================================================
+   7. blackjack: dealer and spots on one felt, chips for the bet
+   ===================================================================== */
+.bjt{width:100%;border-radius:var(--r-xl);padding:8px 6px 10px;margin:0 0 6px;--cw:44px}
+.bjt .bjd{background:none;box-shadow:none;padding:2px 0 8px;margin:0;border-bottom:1.5px dashed rgba(255,255,255,.22);border-radius:0}
+.bjt .bjd>b{font-size:15px;color:rgba(255,255,255,.9)}
+.bjd em,.bjh em{font-weight:800}
+.bjt .bjd .hand{--cw:46px;min-height:70px;padding:4px 0 0}
+.bjt .hand .card,.bjt .bjc{animation:cd-deal var(--t3) var(--ease) backwards}
+.bjt .hand>:nth-child(2) .card,.bjt .hand>.card:nth-child(2),.bjt .hand>:nth-child(2){animation-delay:.07s}
+.bjt .hand>:nth-child(3),.bjt .hand>:nth-child(3) .card{animation-delay:.14s}
+.bjt .bjc .card{animation:none}
+.bjt .bjc{display:block}
+.bjt .bjp{margin-top:10px;gap:8px}
+.bjt .bjh{background:rgba(0,0,0,.2);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.12);border-radius:var(--r-m);padding:6px 4px 6px;color:#fff}
+.bjt .bjh>b{color:#fff;font-size:14px;margin-bottom:2px}
+.bjt .bjh>b em{background:var(--c);color:#fff}
+.bjt .bjh.on{background:rgba(0,0,0,.28);box-shadow:inset 0 0 0 2px var(--c),0 0 0 2px rgba(255,255,255,.5)}
+.bjt .bjh.bust{opacity:.62}
+.bjt .bjh small{color:rgba(255,255,255,.78);font-size:12.5px}
+.bjt .bjh .hand{padding:4px 0 0;min-height:66px}
+.bjp .bjh:only-child{max-width:260px;margin:0 auto;width:100%}
+.bjp[style*="repeat(3"]{gap:6px}.bjp[style*="repeat(3"] .bjh{--cw:34px;padding:5px 3px}.bjp[style*="repeat(3"] .bjh .hand{min-height:54px}
+.bjp[style*="repeat(3"] .bjh>b{font-size:13px}.bjp[style*="repeat(3"] .bjh small{font-size:11.5px}
+/* the bet: felt with a stake of chips */
+.bjd.bjbet{border:7px solid transparent;border-radius:var(--r-xl);padding:12px 10px 10px;
+  background:radial-gradient(130% 100% at 50% 40%,var(--felt-1) 0%,var(--felt-2) 72%,#11432A 100%) padding-box,linear-gradient(160deg,#A8743F,#6E4522 45%,#8A5A2B 70%,#5C391B) border-box;
+  box-shadow:inset 0 0 30px rgba(0,0,0,.35),var(--e2)}
+.bjchip{width:74px;height:74px;margin:6px auto 4px;border-radius:50%;display:grid;place-items:center;animation:cd-pop var(--t2) var(--spring);
+  background:repeating-conic-gradient(#fff 0 15deg,#EC6158 15deg 45deg) ;box-shadow:0 3px 0 #a83a33,0 5px 0 #fff,0 7px 0 #a83a33,0 10px 10px rgba(0,0,0,.35)}
+.bjchip span{width:52px;height:52px;border-radius:50%;background:#EC6158;color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85),inset 0 0 0 4px #EC6158,inset 0 0 0 5px rgba(255,255,255,.5)}
+.bjbet .mbid .sm{background:rgba(255,255,255,.92);color:var(--navy);box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.bjbet .mbid .sm:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.bjbet .mbid b{display:none}
+.bjbet .mbid{gap:8px}
+
+/* =====================================================================
+   8. old maid
+   ===================================================================== */
+.omt{width:100%;border-radius:var(--r-xl);padding:8px 8px 10px;margin:0 0 4px;text-align:center;--cw:46px}
+.omt .lbl{color:rgba(255,255,255,.92);margin:2px 0 0}
+.omt .lbl b{background:rgba(255,255,255,.92);border-radius:99px;padding:0 8px}
+.omfrom{min-height:86px}
+.omfrom .card.back.pick{transform:none;box-shadow:0 0 0 1.5px rgba(255,216,77,.85),0 2px 5px rgba(0,0,0,.35)}
+.omfrom .card.back.pick:active{transform:translateY(-4px) scale(.96)}
+@media (hover:hover){.omfrom .card.card.card.back.pick:hover{transform:translateY(-10px);box-shadow:0 0 0 2.5px var(--sel),0 8px 12px rgba(0,0,0,.35)}}
+.omhand{--cw:50px;min-height:84px}
+
+/* =====================================================================
+   9. dominoes: ivory tiles on the felt
+   ===================================================================== */
+.board .table{border-radius:var(--r-xl);padding:14px 8px 34px;min-height:150px;display:flex;flex-direction:column;justify-content:center}
+.board .table .chain{gap:3px;row-gap:6px}
+.dom.dom{background:linear-gradient(155deg,#FFFDF7 0%,#F7F1E3 55%,#E9DFC8 100%);border-radius:7px;padding:2px;
+  box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,0 0 0 1px rgba(80,60,30,.25),0 2px 4px rgba(0,0,0,.35)}
+.dom .dsv .dl{stroke:#B3A27F;stroke-width:.8;stroke-linecap:round}
+.dom .dsv .dp{fill:#C9A34A;stroke:#8D6D23;stroke-width:.35}
+.dom .dsv .dpp circle{fill:#1E2B3A}
+.chain .dom{animation:cd-pop var(--t3) var(--spring)}
+.chain .dom.end{box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,0 0 0 2px rgba(255,216,77,.9),0 2px 6px rgba(0,0,0,.35)}
+.ends{margin-top:12px}
+.ends span{background:rgba(0,0,0,.22);border-radius:99px;padding:1px 4px 1px 10px;font-size:14px}
+.ends b{display:inline-block;min-width:24px;text-align:center}
+.bone{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.22);border-radius:99px;padding:0 10px;color:#fff;font-weight:700;bottom:8px}
+.bone i{width:9px;height:14px;border-radius:2px;background:#F7F1E3;box-shadow:2px 1px 0 #E9DFC8,3px 2px 0 rgba(0,0,0,.25)}
+.table .note{color:rgba(255,255,255,.85)}
+.dhand.dhand{--cw:46px;--fg:8px;min-height:104px}
+.dhand .dom.pick{cursor:pointer;transform:translateY(-8px);box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,0 0 0 2.5px var(--sel),0 8px 12px rgba(0,0,0,.22)}
+.dhand .dom.pick:active{transform:translateY(-4px) scale(.96)}
+.dhand .dom.dim{opacity:1;position:relative}
+.dhand .dom.dim::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(18,30,48,.22)}
+.dom{transition:transform var(--t1) var(--ease)}
+
+/* =====================================================================
+   10. higher or lower
+   ===================================================================== */
+.hilo{--cwb:92px;gap:26px;align-items:center;padding:16px 10px 14px;margin:0 0 8px;width:100%;border-radius:var(--r-xl);
+  background:radial-gradient(130% 100% at 50% 40%,var(--felt-1) 0%,var(--felt-2) 72%,#11432A 100%);box-shadow:inset 0 0 36px rgba(0,0,0,.32),var(--e2)}
+.hilo .card.card.card.big{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 6px 14px rgba(0,0,0,.35)}
+.hl-cur{position:relative;display:flex;align-items:center}
+.hl-prev{display:flex;direction:ltr;--cw:34px;margin-inline-end:-6px;opacity:.85}
+.hl-prev .card+.card{margin-left:-20px}
+.hl-prev .card.card.card{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 2px 4px rgba(0,0,0,.3)}
+.hl-top{display:block;animation:hl-flip var(--t3) var(--ease)}
+@keyframes hl-flip{from{transform:translateX(-60px) rotateY(80deg) scale(.9);opacity:.3}}
+.hl-next{opacity:1}
+.hl-next .card.card.card.big{--cwb:70px;box-shadow:2px 2px 0 #E9EEF4,3px 3px 0 rgba(0,0,0,.2),4px 4px 0 #E2E8F0,5px 5px 0 rgba(0,0,0,.2),6px 8px 10px rgba(0,0,0,.3)}
+.hl-next small{color:#fff;background:rgba(0,0,0,.22);border-radius:99px;padding:0 9px;margin-top:4px}
+
+/* =====================================================================
+   11. memory: face-down tiles show the card back, turned ones flip in
+   ===================================================================== */
+.memg{gap:6px;padding:8px;border-radius:var(--r-xl);width:min(100%,420px);
+  background:radial-gradient(130% 100% at 50% 40%,var(--felt-1) 0%,var(--felt-2) 72%,#11432A 100%);box-shadow:inset 0 0 30px rgba(0,0,0,.32),var(--e2)}
+.memg .cg.mm{aspect-ratio:4/5;border-radius:9px;font-size:clamp(20px,7vw,30px);padding:0;perspective:300px;color:var(--ink)}
+.memg.c6 .cg.mm{font-size:clamp(18px,6vw,26px)}
+.memg .cg.dn{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 62' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cpattern id='p' width='5' height='5' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'%3E%3Cpath d='M0 0H5M0 0V5' stroke='%2363B9EA' stroke-opacity='.3' stroke-width='.9' fill='none'/%3E%3C/pattern%3E%3C/defs%3E%3Crect x='2.4' y='2.4' width='45.2' height='57.2' rx='3.4' fill='%232A4766'/%3E%3Crect x='2.4' y='2.4' width='45.2' height='57.2' rx='3.4' fill='url(%23p)'/%3E%3Ccircle cx='25' cy='31' r='8' fill='%232D4763' stroke='%23fff' stroke-opacity='.85' stroke-width='1'/%3E%3Crect x='18.6' y='27.6' width='6' height='6' rx='1.6' fill='%23EC6158'/%3E%3Crect x='25.4' y='27.6' width='6' height='6' rx='1.6' fill='%234AB1E8'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  box-shadow:0 2px 0 rgba(0,0,0,.25),0 3px 6px rgba(0,0,0,.2);transition:transform var(--t1) var(--ease)}
+.memg .cg.dn:not(:disabled):active{transform:scale(.92)}
+@media (hover:hover){.memg .cg.dn:not(:disabled):hover{transform:translateY(-3px)}}
+.memg .cg.up{background:linear-gradient(162deg,#fff,#EDF2F7);box-shadow:0 0 0 2.5px var(--sel),0 4px 10px rgba(0,0,0,.3);animation:mm-flip var(--t3) var(--ease)}
+.memg .cg.up.miss{box-shadow:0 0 0 2.5px rgba(229,83,75,.85),0 4px 10px rgba(0,0,0,.3)}
+.memg .cg.own{background:var(--l);box-shadow:inset 0 0 0 3px var(--c),0 2px 0 rgba(0,0,0,.2);animation:mm-own var(--t3) var(--spring)}
+.memg .cg.own span{transform:scale(.86);opacity:.9}
+.memg .cg span{display:block;line-height:1}
+@keyframes mm-flip{from{transform:rotateY(90deg) scale(.96)}}
+@keyframes mm-own{from{transform:scale(1.12)}}
+
+/* =====================================================================
+   12. bingo
+   ===================================================================== */
+.bingo{width:min(100%,380px);background:var(--c);border-radius:var(--r-xl);padding:10px 10px 10px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),var(--e2)}
+.bingo .bprog{max-width:none;display:flex;align-items:center;gap:10px;margin:0 2px 10px;flex-direction:row-reverse}
+.bingo .bprog>div{flex:1;background:rgba(0,0,0,.2);height:10px}
+.bingo .bprog i{background:#fff}
+.bingo .bprog>b{display:flex;gap:3px;margin:0;direction:rtl}
+.bingo .bprog>b span{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:rgba(0,0,0,.18);color:rgba(255,255,255,.55);font-size:15px;transition:background var(--t2),color var(--t2)}
+.bingo .bprog>b span.on{background:var(--gold);color:#5A3A00;animation:cd-pop var(--t3) var(--spring)}
+.bgrid{width:100%;max-width:none;padding:0;gap:6px;background:none}
+.bgrid .cg{border-radius:11px;font-size:22px;background:linear-gradient(170deg,#fff,#F1F5FA);color:#22364D;box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.bgrid button.cg:not(:disabled):active{transform:scale(.92)}
+.bgrid .cg.bc{position:relative;background:var(--l);color:rgba(34,54,77,.75)}
+.bgrid .cg.bc::before{content:'';position:absolute;inset:14%;border-radius:50%;background:var(--c);opacity:.55;animation:bg-stamp var(--t3) var(--spring)}
+.bgrid .cg.bc span{position:relative}
+.bgrid .cg.bc.ln{background:#FFE7A3;box-shadow:0 0 0 2px var(--gold),0 2px 0 rgba(0,0,0,.18)}
+.bgrid .cg.bc.ln::before{background:var(--gold);opacity:.8}
+@keyframes bg-stamp{from{transform:scale(1.6);opacity:0}}
+@media (prefers-color-scheme:dark){.bgrid .cg{color:#22364D}}
+
+/* =====================================================================
+   13. risky dice
+   ===================================================================== */
+.pigp{width:100%;background:var(--surface);border-radius:var(--r-xl);padding:16px 14px 14px;box-shadow:var(--e2);margin:0 0 6px}
+.pigpot{text-align:center;min-width:96px}
+.pigpot .big-num{color:var(--c);line-height:1.1;animation:cd-pop var(--t2) var(--spring)}
+.pigp.bust .pigpot .big-num{color:var(--bad)}
+.pigbar{position:relative;height:22px;border-radius:99px;background:var(--surface-2);margin-top:14px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
+.pigbar i,.pigbar u{position:absolute;top:0;bottom:0;left:0;transition:width var(--t3) var(--ease),left var(--t3) var(--ease)}
+.pigbar i{background:var(--c)}
+.pigbar u{background:var(--c);opacity:.4;text-decoration:none}
+.pigbar span{position:relative;display:block;text-align:center;font-size:13px;font-weight:800;line-height:22px;color:var(--ink);direction:ltr}
+
+/* =====================================================================
+   14. reversi: felt board, glossy discs that turn over
+   ===================================================================== */
+.revb{gap:2px;padding:7px;border-radius:var(--r-l);
+  background:linear-gradient(160deg,#A8743F,#6E4522 45%,#8A5A2B 70%,#5C391B);box-shadow:0 6px 16px rgba(14,28,46,.25),inset 0 1px 0 rgba(255,255,255,.25)}
+.revb .cg.rc{border-radius:3px;padding:0;background:radial-gradient(120% 120% at 30% 25%,#35A06D,#237A50);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25);display:grid;place-items:center}
+.revb .cg.rc.last{background:radial-gradient(120% 120% at 30% 25%,#4DB683,#2E8D5E);box-shadow:inset 0 0 0 2px rgba(255,216,77,.75)}
+.revb .rd{display:block;width:80%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.65) 0,rgba(255,255,255,0) 38%),radial-gradient(circle at 50% 60%,rgba(0,0,0,0) 55%,rgba(0,0,0,.28) 100%),var(--d);
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 2px 0 rgba(0,0,0,.35),0 3px 4px rgba(0,0,0,.3);animation:rv-flip var(--t3) var(--ease)}
+.revb .cg.rc.ok::before{content:'';width:34%;aspect-ratio:1;border-radius:50%;background:var(--c);opacity:.5;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.revb .cg.rc.ok:active{transform:scale(.9)}
+@media (hover:hover){.revb .cg.rc.ok:hover::before{opacity:.8}}
+@keyframes rv-flip{from{transform:rotateY(90deg) scale(.85)}}
+
+/* =====================================================================
+   15. colour memory (simon)
+   ===================================================================== */
+.simon{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(100%,320px);aspect-ratio:1;padding:14px;border-radius:50%;
+  background:radial-gradient(circle at 50% 40%,#33475E,#1A2533);box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 10px 24px rgba(14,28,46,.3)}
+.simp{position:relative;padding:0;background:var(--c);filter:saturate(.7) brightness(.78);transition:filter var(--t1),transform var(--t1);box-shadow:inset 0 -6px 0 rgba(0,0,0,.18),inset 0 4px 0 rgba(255,255,255,.18)}
+/* the grid runs right to left: pad 0 sits top right, 1 top left, 2 bottom right, 3 bottom left; each rounds its outer corner */
+.simp.s0{border-radius:12px 100% 12px 12px}.simp.s1{border-radius:100% 12px 12px 12px}
+.simp.s2{border-radius:12px 12px 100% 12px}.simp.s3{border-radius:12px 12px 12px 100%}
+.simon.in .simp{filter:saturate(.85) brightness(.9)}
+.simp.on,.simon.in .simp.on{filter:none;transform:scale(1.04);box-shadow:inset 0 -6px 0 rgba(0,0,0,.1),inset 0 4px 0 rgba(255,255,255,.35),0 0 26px var(--c)}
+.simp:disabled{opacity:1;cursor:default}
+.simon.in .simp:active{transform:scale(.96)}
+.shub{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 35%,#3C5672,#22344A);box-shadow:0 0 0 6px #1A2533,inset 0 2px 0 rgba(255,255,255,.15);pointer-events:none}
+.shub b{color:#fff;font-size:30px;font-weight:800;line-height:1}

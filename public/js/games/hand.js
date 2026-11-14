@@ -10,9 +10,12 @@ const HRK='A23456789TJQK';
 const hRank=c=>HRK.indexOf(c[0])+1;                 // A=1 .. K=13
 const hJ=c=>c==='XX';
 const hPen=c=>hJ(c)?15:c[0]==='A'?11:'TJQK'.includes(c[0])?10:+c[0];
-const hCard=(c,cls)=>hJ(c)?`<div class="card jk ${cls||''}"><span>🃏</span></div>`:cardHTML(c,false,cls);
+// the joker: JOKER down the corners, a three-pointed jester's hat with bells over a smiling face
+const HJKF=(()=>{const ix='<text x="6.4" y="12" font-size="7.4" class="jkt">J</text><text x="6.4" y="19.4" font-size="7.4" class="jkt">O</text><text x="6.4" y="26.8" font-size="7.4" class="jkt">K</text><text x="6.4" y="34.2" font-size="7.4" class="jkt">E</text><text x="6.4" y="41.6" font-size="7.4" class="jkt">R</text>';
+  return `<svg class="cf" viewBox="0 0 60 84" aria-hidden="true">${ix}<g transform="rotate(180 30 42)">${ix}</g><path fill="#EC6158" d="M19.5 46C18.5 38 15.6 31.4 12 26.4 19.5 27.6 24.6 33 27 40Z"/><path fill="#3FAE5C" d="M40.5 46C41.5 38 44.4 31.4 48 26.4 40.5 27.6 35.4 33 33 40Z"/><path fill="#4AB1E8" d="M22 46C22 34.5 25.6 24.4 30 16.4 34.4 24.4 38 34.5 38 46Z"/><circle cx="12" cy="26.2" r="2.4" fill="#F0B429"/><circle cx="30" cy="16" r="2.6" fill="#F0B429"/><circle cx="48" cy="26.2" r="2.4" fill="#F0B429"/><rect x="17.4" y="44.4" width="25.2" height="5" rx="2.5" fill="#F0B429" stroke="#A86E12" stroke-width=".5"/><circle cx="30" cy="58" r="8.4" fill="#FFE3C4" stroke="#C99A6B" stroke-width=".6"/><circle cx="27" cy="56.4" r="1" fill="#2D4763"/><circle cx="33" cy="56.4" r="1" fill="#2D4763"/><path d="M26.4 60Q30 63.6 33.6 60" fill="none" stroke="#EC6158" stroke-width="1.2" stroke-linecap="round"/></svg>`;})();
+const hCard=(c,cls)=>hJ(c)?`<div class="card jk ${cls||''}" aria-label="جوكر">${HJKF}</div>`:cardHTML(c,false,cls);
 // small card for melds on the table: rank over suit, readable even when overlapped
-const hMini=c=>hJ(c)?'<div class="card mini jk">🃏</div>':miniCard(c);
+const hMini=c=>hJ(c)?'<div class="card mini jk"><b>★</b><svg class="sv" viewBox="0 0 20 16" aria-hidden="true"><path fill="#EC6158" d="M5 14C4.6 10.6 3 7.6 .6 5.4 4.4 5.6 7 8 8 11Z"/><path fill="#3FAE5C" d="M15 14C15.4 10.6 17 7.6 19.4 5.4 15.6 5.6 13 8 12 11Z"/><path fill="#4AB1E8" d="M6 14C6 8.6 7.8 4.4 10 1 12.2 4.4 14 8.6 14 14Z"/></svg></div>':miniCard(c);
 function hDeck(n){const k=n>5?3:2;const a=[];for(let i=0;i<k;i++){for(const s of 'shdc')for(const r of HRK)a.push(r+s);a.push('XX');}return shuffle(a);}
 function hSortHand(h){const cs=cardsOf(h);const so='shcd';return cs.sort((a,b)=>hJ(a)-hJ(b)||(hJ(a)?0:so.indexOf(a[1])-so.indexOf(b[1])||hRank(a)-hRank(b))).join('');}
 // checks a set of cards as one meld. Returns {t,c,jk} with the joker written as the card it stands for, or null
@@ -116,12 +119,14 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
       ${my&&d.win==null?'<button class="big green" data-ga="nextr">الجولة التالية</button>':''}</div>`;return h;}
     // stock and discard
     const top=d.disc.slice(-2);const canDraw=my&&d.ph==='draw';
-    h+=`<div class="hpile"><button class="hstock" data-ga="stock" ${canDraw?'':'disabled'}><div class="card back"></div><small>${d.stock.length/2}</small></button>
-      <${canDraw&&top?'button':'div'} class="hdisc" ${canDraw&&top?'data-ga="take"':''}>${top?hCard(top):'<div class="card hempty"></div>'}<small>الأرض</small></${canDraw&&top?'button':'div'}></div>`;
+    // the felt holds the stock, the discard (keyed by the pile's length so a new discard lands) and the melds
+    h+=`<div class="htable"><div class="hpile"><button class="hstock" data-ga="stock" ${canDraw?'':'disabled'}><div class="card back"></div><small>${d.stock.length/2}</small></button>
+      <${canDraw&&top?'button':'div'} class="hdisc" ${canDraw&&top?'data-ga="take"':''}><span class="hdk" data-k="h${d.disc.length}">${top?hCard(top):'<div class="card hempty"></div>'}</span><small>الأرض</small></${canDraw&&top?'button':'div'}></div>`;
     // melds on the table
     if(d.melds.length){const selC=U.sel.map(i=>cardsOf(d.hands[d.turn])[i]);const canAdd=my&&d.ph==='play'&&d.op[d.turn]==='1'&&!d.took&&selC.length;
       h+=`<div class="hmelds">${d.melds.map((m,i)=>{const ok=canAdd&&((selC.length===1&&hAdd(m,selC[0]))||hSwap(m,selC));
         return `<${ok?'button':'div'} class="hm ${ok?'can':''}" style="--c:${col(d,m.o)}" ${ok?`data-ga="add" data-i="${i}"`:''}>${m.c.map((c,j)=>hMini(j===m.jk?'XX':c)).join('')}</${ok?'button':'div'}>`;}).join('')}</div>`;}
+    h+='</div>';
     // what this player is building before opening
     if(my&&U.pend.length){const val=U.pend.reduce((x,g)=>x+hValue(hMeld(g)),0);
       h+=`<div class="panel hpend"><div class="hmelds">${U.pend.map(g=>`<div class="hm">${hMeld(g).c.map((c,j)=>hMini(j===hMeld(g).jk?'XX':c)).join('')}</div>`).join('')}</div>
