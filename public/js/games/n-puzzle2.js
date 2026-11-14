@@ -177,11 +177,16 @@ GAMES.u_nono=u2Game({name:'نونوغرام',cls:'nn',lbc:'#3B5B7A',
   spoil:(pz,s)=>{const i=u2R(s.length);return s.slice(0,i)+(s[i]==='1'?'0':'1')+s.slice(i+1);},
   init:pz=>'0'.repeat(pz.w*pz.h),sub:(pz,w)=>w.replace(/2/g,'0'),
   tap(a,i,pz,st){if(a==='md'&&(i===1||i===2)){st.md=i;return false;}return false;},
-  // a drag paints every cell it crosses the way the first cell turned
-  drag(kind,c,pz,st){if(kind==='up'){st.pv=null;return true;}if(c.i<0)return false;const md=st.md||1;
-    if(kind==='down'){u2Push(st);const cur=st.w[c.i];st.pv=cur===String(md)?'0':String(md);}
-    if(st.pv==null)return false;const cur=st.w[c.i];if(cur===st.pv)return false;if(kind==='move'&&st.pv!=='0'&&cur!=='0'&&cur!==st.pv)return false;
-    st.w=setAt(st.w,c.i,st.pv);return kind==='down'?true:'r';},
+  // a drag paints the cells it crosses the way the first cell turned; it stays on the row or column it started along,
+  // and a quick finger that skips cells still paints the ones between
+  drag(kind,c,pz,st){if(kind==='up'){const was=st.pv!=null;st.pv=null;return was;}if(c.i<0)return false;const md=st.md||1,W=pz.w;
+    const paint=i=>{const cur=st.w[i];if(cur===st.pv||st.pv!=='0'&&cur!=='0')return;st.w=setAt(st.w,i,st.pv);};
+    if(kind==='down'){u2Push(st);const cur=st.w[c.i];st.pv=cur===String(md)?'0':String(md);st.w=setAt(st.w,c.i,st.pv);st.a=c.i;st.ax=null;st.lc=c.i;return 'r';}
+    if(st.pv==null||c.i===st.lc)return false;const a=st.a,ar=Math.floor(a/W),ac=a%W;let r=Math.floor(c.i/W),cc=c.i%W;
+    if(st.ax==null)st.ax=r===ar?'r':cc===ac?'c':Math.abs(cc-ac)>=Math.abs(r-ar)?'r':'c';if(st.ax==='r')r=ar;else cc=ac;
+    const j=r*W+cc,lr=Math.floor(st.lc/W),lcc=st.lc%W;if(j===st.lc)return false;
+    if(st.ax==='r')for(let x=Math.min(lcc,cc);x<=Math.max(lcc,cc);x++)paint(ar*W+x);else for(let y=Math.min(lr,r);y<=Math.max(lr,r);y++)paint(y*W+ac);
+    st.lc=j;return 'r';},
   view(pz,w,st){const {R,C}=nnPz(pz),W=pz.w,H=pz.h,g=[...w].map(Number);
     const rs=u2Rng(H,r=>nnLineSt(g.slice(r*W,r*W+W),R[r])),cs=u2Rng(W,c=>nnLineSt(u2Rng(H,r=>g[r*W+c]),C[c]));
     const mx=Math.max(...R.map(x=>x.length)),my=Math.max(...C.map(x=>x.length));
