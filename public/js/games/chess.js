@@ -8,7 +8,8 @@ const tmSeats=(d,side)=>d.pl.map((_,s)=>s).filter(s=>s%2===side&&(d.out||'')[s]!
 const tmNow=(d,side)=>{const m=tmSeats(d,side);return m.length?m[(d.tr[side]||0)%m.length]:d.turn;};
 // after `side` moved: its next member moves next time, and the other side's current member moves now
 function tmPass(d,side){const tr=[...d.tr];tr[side]=(tr[side]+1)%(tmSeats(d,side).length||1);return {tr,turn:tmNow({...d,tr},1-side)};}
-const tmName=(d,side)=>{const m=tmSeats(d,side);return m.length===1?nameTag(d,m[0]):m.map(s=>nameTag(d,s)).join(' و');};
+// three or more on a side: the one whose move it is "and team", so the status line never runs past two lines
+const tmName=(d,side)=>{const m=tmSeats(d,side);return m.length===1?nameTag(d,m[0]):m.length===2?m.map(s=>nameTag(d,s)).join(' و'):`${nameTag(d,tmNow(d,side))} وفريقه`;};
 const tmWin=(d,side)=>{let m=tmSeats(d,side);if(!m.length)m=d.pl.map((_,s)=>s).filter(s=>s%2===side);return {win:m[0],wins:m};};
 // a member left (skip or kick): each side keeps its rotation on the member due next (or the next one still here);
 // a side with nobody left loses. While a double is offered (tavla) the asked side acts
@@ -80,7 +81,8 @@ function chMove(d,m){const s=d.sd,a=chApply(d,m),ns=1-s;const key=chKey(a.b,ns,a
   if(chk)nd.last+=' • كش ملك';
   return nd;}
 // piece drawings (40x40, shared base); .cut lines are details drawn with the outline colour
-const CHB='<path d="M9.4 36.2c0-2.9 2-4.8 4.8-4.8h11.6c2.8 0 4.8 1.9 4.8 4.8z"/>';
+// the base, with a flat shadow drawn under it (no filter: 32 filtered pieces cost a layer each)
+const CHB='<path class="gs" d="M9.2 37.8c0-2.9 2-4.8 4.8-4.8h12c2.8 0 4.8 1.9 4.8 4.8z"/><path d="M9.4 36.2c0-2.9 2-4.8 4.8-4.8h11.6c2.8 0 4.8 1.9 4.8 4.8z"/>';
 const CHP={
   p:'<circle cx="20" cy="11.4" r="5.4"/><rect x="14.4" y="16.4" width="11.2" height="3.2" rx="1.6"/><path d="M16.6 19.6h6.8c1.6 3.6 3.8 7.4 4.8 11.8H11.8c1-4.4 3.2-8.2 4.8-11.8z"/>'+CHB,
   r:'<path d="M11.4 6.6h4.2v3.4h2.7V6.6h3.4v3.4h2.7V6.6h4.2v7.2l-2.9 2.3v12.1l2.6 3.2H11.7l2.6-3.2V16.1l-2.9-2.3z"/><path d="M14.3 16.1h11.4M14.3 28.2h11.4" class="cut"/>'+CHB,
@@ -161,7 +163,7 @@ function chScore(B){let v=0,npm=0,bw=0,bb=0,kw=0,kb=0;
 const CHMATE=100000;
 function chThink(d,lv){
   const B=[...d.b],K=[B.indexOf('K'),B.indexOf('k')];let side=d.sd,cr=d.cr,ep=d.ep,nodes=0,lim=Infinity;
-  const STOP={},kill=[],qsOn=lv>1,t0=performance.now(),budget=[0,60,220,480][lv]||220;
+  const STOP={},kill=[],qsOn=lv>1,t0=performance.now(),budget=[0,50,150,300][lv]||150;
   const gen=()=>chPseudo({b:B,cr,ep},side).filter(m=>!m.pr||m.pr==='q');
   function make(m){const p=B[m.f],cs=m.ep?m.t+(side?-8:8):m.t,u={m,p,cap:B[cs],cs,cr,ep,k0:K[0],k1:K[1]};
     B[m.t]=m.pr?(side?m.pr:m.pr.toUpperCase()):p;B[m.f]='.';if(m.ep)B[cs]='.';
@@ -289,7 +291,7 @@ function dmScore(b,side){let v=0,n0=0,n1=0;for(let i=0;i<64;i++){const p=b[i],sd
   // ahead in material: trading down helps
   const me=side?n1:n0,op=side?n0:n1;if(me!==op)v+=(me-op)*Math.round(120/(me+op));return v;}
 function dmThink(d,lv){const side=d.sd,ms=dmMoves(d.b,side);if(ms.length===1)return ms[0];
-  const t0=performance.now(),budget=[0,40,160,420][lv]||160,STOP={};let lim=Infinity,nodes=0;
+  const t0=performance.now(),budget=[0,40,120,300][lv]||120,STOP={};let lim=Infinity,nodes=0;
   const cap=[0,3000,30000,120000][lv]||30000;
   function srch(b,turn,dep,a,z,q){if(!(++nodes&127)&&(performance.now()>lim||lim<Infinity&&nodes>cap))throw STOP;const mv=dmMoves(b,turn);
     if(!mv.length)return -(9000+dep);

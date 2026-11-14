@@ -75,7 +75,7 @@ GAMES.bara={teams:'none',name:'برة السالفة',cat:'quiz',lbc:'#B5452B',m
   coverMsg:d=>d.res||'',
   winText(d){if(d.bo<0)return null;return d.win===d.bo?`${nm(d,d.bo)} كان برة السالفة وفاز!`:d.out[d.bo]==='1'&&d.guess==null?`${nm(d,d.bo)} طلع وهو برة السالفة`:`كشفتوا ${nm(d,d.bo)}، كان برة السالفة!`;},
   winExtra:d=>d.cat<0?'':`السالفة: ${baraWord(d)} (${BARA[d.cat][0]})${d.guess!=null&&d.guess>=0?` • خمّن: ${BARA[d.cat][1][d.guess]}`:''}`,
-  points:d=>d.pl.map((_,s)=>d.votes&&d.votes[s]!=null&&d.ph!=='vote'?(d.votes[s]>=0?'صوّت لـ '+nm(d,d.votes[s]):'ما صوّت'):''),
+  points:d=>d.pl.map((_,s)=>d.votes&&d.votes[s]!=null&&d.ph!=='vote'?(d.votes[s]>=0?'🗳 '+nm(d,d.votes[s]):'ما صوّت'):''),
   onTimeout(d){if(d.ph==='cat')return baraStart(d,rnd(BARA.length));if(d.ph==='ask')return baraAsked(d);if(d.ph==='more')return {...d,ph:'vote',rd:d.rd+1,last:'بدأ التصويت'};
     if(d.ph==='guess')return baraGuess(d,d.opts[rnd(d.opts.length)]);return d;},
   // a player left: if it was the one out of the loop the round ends, otherwise the questions go on without them

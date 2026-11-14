@@ -229,7 +229,7 @@ GAMES.tavla.bot=(d,s,lv)=>{const side=d.sd;
     const ns=lv===3?.5:4;let best=null,bv=-1e9;const all=tvPlans(d,side);for(const x of all){x.v=tvJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
     // hard also looks at every roll the other side may throw next and its best answer to each (the best few plans only, for a short time)
     if(lv===3&&all.length>1){const t0=performance.now();all.sort((a,b)=>b.v-a.v);bv=-1e9;
-      for(const x of all.slice(0,6)){if(performance.now()-t0>260&&best)break;const v=x.t.off[side]===15?1e6:tvReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
+      for(const x of all.slice(0,6)){if(performance.now()-t0>150&&best)break;const v=x.t.off[side]===15?1e6:tvReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
     if(!best)return tvPlay(d,al[0]);const m=best.first;const nd=tvPlay(d,m);
     // the rest of the plan: replayed from the board after this move
     S.tvPlan=null;if(nd.ph==='move'&&nd.sd===side){const rest=tvPlans(nd,side).find(x=>x.t.pts.join(',')===best.t.pts.join(',')&&x.t.bar+''===best.t.bar+''&&x.t.off+''===best.t.off+'');

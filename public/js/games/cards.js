@@ -97,14 +97,14 @@ GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
   // online the next card is turned on the host's phone, so no player can pick it
   net:{host:['hi','lo','bank','sw']},
   points:d=>d.pts,
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>أول واحد يوصل ${d.goal} يفوز</small>`,
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>d.last,
   render(d,ctx){const c=d.dk.slice(d.p*2,d.p*2+2);const my=ctx.my&&d.win==null;
     const prev=cardsOf(d.dk.slice(Math.max(0,d.p-3)*2,d.p*2));
     return `<div class="hilo"><div class="hl-cur">${prev.length?`<div class="hl-prev">${prev.map(x=>cardHTML(x)).join('')}</div>`:''}<span class="hl-top" data-k="h${d.p}">${cardHTML(c,true)}</span></div><div class="hl-next">${cardHTML('??',true)}<small>باقي ${hiloLeft(d).length}</small></div></div>
       <div class="hstreak ${d.stk?'on':''}"><small>السلسلة</small><b data-k="s${d.stk}">${d.stk} 🔥</b><span class="hs-goal">${d.win==null?`${escH(d.pts[d.turn])} + ${d.stk} من ${d.goal}`:''}</span></div>
       <div class="acts"><button class="btn blue" data-ga="hi" ${my?'':'disabled'}>أعلى ⬆</button><button class="btn red" data-ga="lo" ${my?'':'disabled'}>أقل ⬇</button></div>
-      ${my&&(d.stk||hiloSw(d))?`<div class="acts">${d.stk?`<button class="btn green" data-ga="bank">💰 ثبّت ${d.stk} نقاط</button>`:''}${hiloSw(d)?`<button class="btn navy" data-ga="sw">🔄 بدّل الورقة <small>(باقي ${hiloSw(d)})</small></button>`:''}</div>`:''}`;},
+      <div class="acts"><button class="btn green" data-ga="bank" ${my&&d.stk?'':'disabled'}>💰 ثبّت ${d.stk||''}</button><button class="btn navy" data-ga="sw" ${my&&hiloSw(d)?'':'disabled'}>🔄 بدّل (${hiloSw(d)})</button></div>`;},
   click(a,i,d,ctx){
     if(!ctx.my||d.win!=null)return;const t=d.turn;
     if(a==='bank'){if(!d.stk)return;const pts=[...d.pts];pts[t]+=d.stk;act({...d,pts,stk:0,win:pts[t]>=d.goal?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} ثبّت ${d.stk} نقاط 💰`});return;}

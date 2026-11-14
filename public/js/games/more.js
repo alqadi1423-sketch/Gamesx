@@ -25,9 +25,10 @@ GAMES.war={name:'حرب الأوراق',cat:'cards',lbc:'#3A5F8F',
     let s=`<div class="gm gm-war"><div class="mtab wtab"><div class="wprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${d.prize+pot}</b>${pot?`<em>${d.prize} + ${pot} من التعادل</em>`:''}</div>
     <div class="wrds"><span class="wrd">${[0,1,2,3,4,5,6].map(k=>`<i class="${k<d.rd?'done':k===d.rd?'on':''}"></i>`).join('')}</span><small>جولة ${d.rd+1} من 7</small>
     ${d.left.length?`<span class="wnext"><small>الجوائز الجاية</small>${[...d.left].sort((a,b)=>b-a).map(x=>`<i>${x}</i>`).join('')}</span>`:''}</div></div>${warLast(d)}`;
-    s+=`<div class="wfoes">${d.pl.map((_,o)=>o===v||d.out[o]==='1'?'':`<span style="--c:${col(d,o)}"><b>${nm(d,o)}</b>${warFree(d,o).map(c=>`<i>${c}</i>`).join('')}</span>`).join('')}</div>`;
+    // your cards first (the move), then what the others still hold
+    const foes=`<div class="wfoes">${d.pl.map((_,o)=>o===v||d.out[o]==='1'?'':`<span style="--c:${col(d,o)}"><b>${nm(d,o)}</b>${warFree(d,o).map(c=>`<i>${c}</i>`).join('')}</span>`).join('')}</div>`;
     s+=`<div class="hand whand">${[1,2,3,4,5,6,7].map(c=>!free.includes(c)?`<div class="card big wc dim">${c}</div>`:c===mp?`<div class="card big wc sel">${c}</div>`:`<button class="card ${ctx.my?'pick':''} big wc" data-ga="m" data-i="${c}" ${ctx.my?'':'disabled'}>${c}</button>`).join('')}</div>`;
-    return s+(me?`<p class="wmine">نقاطك <b class="ltr">${d.pts[v]}</b></p>`:'')+'</div>';},
+    return s+(me?`<p class="wmine">نقاطك <b class="ltr">${d.pts[v]}</b></p>`:'')+foes+'</div>';},
   click(a,c,d,ctx){if(!ctx.my||!warFree(d,ctx.v).includes(c))return;simulPick(d,ctx.v,c);},
   // a tie keeps the prize on the table and it adds to the next one (on the last round it is lost)
   resolve(d,picks){const val=d.prize+(d.pot||0);const v=picks.map(x=>x==null?-1:x);const mx=Math.max(...v);const top=v.map((x,s)=>x===mx&&x>0?s:-1).filter(s=>s>=0);const pts=[...d.pts];
@@ -58,7 +59,7 @@ GAMES.lowu={name:'أصغر رقم فريد',cat:'quiz',lbc:'#2E6F73',
   init:n=>({rd:0,max:n>4?15:10,pts:Array(n).fill(0),res:'',rounds:8,used:Array(n).fill(0).map(()=>[]),prize:LUP[rnd(LUP.length)],pot:0}),
   privOk:(d,r,o,p)=>p.pick==null||p.pick===NOPICK||Number.isInteger(p.pick)&&luFree(d,d.pl.indexOf(r)).includes(p.pick),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,d.rounds)} من ${d.rounds}. أصغر رقم ما اختاره غيرك ياخذ الجائزة، وكل رقم مرة وحدة باللعبة</small><br>`),
+  status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,d.rounds)} من ${d.rounds}</small><br>`),
   winExtra:d=>d.res,
   // the prize (with what a round without a winner left on it), the rounds, last round's numbers with the winner in gold,
   // and the numbers: the ones this player has used are spent
@@ -360,7 +361,7 @@ GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
     const kb=v>=0&&Array.isArray(d.kn[v])?d.kn[v].filter(i=>i<-0.5).map(i=>-i-1):[];const scan=my&&d.ps[d.turn]!=='1'&&S.wscan===d.gid+':'+d.nb+':'+d.turn;
     const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const boom=!d.cut.length&&/^💥/.test(d.last||'');
     let s=`<div class="gm gm-wires"><div class="bombx ${boom?'boom':''}" data-k="b${d.nb}"><div class="bhd">${BOMB}<div class="blcd"><b class="ltr">${String(left.length).padStart(2,'0')}</b><small>أسلاك باقية</small></div><i class="bled"></i></div>
-    <div class="wset">${[...Array(d.k).keys()].map(i=>{const c=WCOL[i][0];if(d.cut.includes(i))return `<div class="wire cut ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}"><i class="wh a"></i><i class="wh b"></i></div>`;
+    <div class="wset ${d.k>8?'two':''}">${[...Array(d.k).keys()].map(i=>{const c=WCOL[i][0];if(d.cut.includes(i))return `<div class="wire cut ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}"><i class="wh a"></i><i class="wh b"></i></div>`;
       const known=kn.includes(i),bad=kb.includes(i),tag=my?'button':'div';
       return `<${tag} class="wire ${known?'known':''} ${bad?'bad':''} ${d.win!=null&&i===d.bomb?'deadly':''} ${scan?'wscn':''}" style="--c:${c}" ${my?`data-ga="${scan?'scan':'cut'}" data-i="${i}" aria-label="${scan?'افحص':'قص'} السلك ${WCOL[i][1]}"`:''}><i class="wh"></i>${known?'<s class="wsafe">سليم ✓</s>':bad?'<s class="wsafe wbad">💣 هذا هو!</s>':''}</${tag}>`;}).join('')}</div></div>`;
     if(v>=0&&d.out[v]!=='1'&&d.win==null){const k2=kn.filter(i=>!d.cut.includes(i)),b2=kb.filter(i=>!d.cut.includes(i));
@@ -369,7 +370,7 @@ GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
     // the pass: with three or more still in, you choose who gets the bomb next (the turn goes on from them)
     // the one move per bomb: scan a wire in secret (then cut), or pass (with three or more: choose who gets the bomb)
     if(my&&d.ps[d.turn]!=='1'){const al=aliveSeats(d).filter(x=>x!==d.turn);
-      s+=`<div class="wpass"><p>ورقة وحدة لكل قنبلة: <b>🔍 افحص</b> سلك بالسر وبعدها قص، أو <b>⏭ مرّر</b></p><div><button class="wpt scm ${scan?'on':''}" data-ga="scm">🔍 ${scan?'إلغاء الفحص':'افحص سلك'}</button>`+
+      s+=`<div class="wpass"><p>حركة وحدة لكل قنبلة: <b>🔍 افحص</b> أو <b>⏭ مرّر</b></p><div><button class="wpt scm ${scan?'on':''}" data-ga="scm">🔍 ${scan?'إلغاء الفحص':'افحص سلك'}</button>`+
         (al.length>1?al.map(x=>`<button class="wpt ${d.ps[x]==='1'?'used':''}" style="--c:${col(d,x)}" data-ga="pass" data-i="${x}">⏭ ${nm(d,x)}${d.ps[x]==='1'?'<small>ما عنده ورقة</small>':''}</button>`).join(''):`<button class="wpt" data-ga="pass" data-i="${al[0]??-1}">⏭ مرّر</button>`)+'</div></div>';}
     return s+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;

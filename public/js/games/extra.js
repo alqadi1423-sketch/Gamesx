@@ -162,7 +162,7 @@ const simN=d=>d.vr===1?6:4;
 GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4B50A8"/><path d="M50 50L50 12A38 38 0 0 1 88 50Z" fill="#E5483F"/><path d="M50 50L88 50A38 38 0 0 1 50 88Z" fill="#3D8FD8"/><path d="M50 50L50 88A38 38 0 0 1 12 50Z" fill="#3FAE5C"/><path d="M50 50L12 50A38 38 0 0 1 50 12Z" fill="#F0B429"/><circle cx="50" cy="50" r="13" fill="#2D4763"/></svg>`,
   init:()=>({seq:'',vr:SIMV,last:''}),
-  status(d,ctx){const ss=S.simon,my=ctx.my,rev=d.vr===2;let s=(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>طول السلسلة: ${d.seq.length}. ${rev?'كررها بالعكس (من آخر لون لأول لون)':'كرر السلسلة كاملة'} وبعدها زيد لون جديد، واللي يغلط يطلع</small>`;
+  status(d,ctx){const ss=S.simon,my=ctx.my,rev=d.vr===2;let s=`<small>${d.last||`طول السلسلة ${d.seq.length}${rev?' • بالعكس 🔁':''}`}</small><br>`+turnTxt(d,ctx);
     if(my&&ss)s+='<br><b>'+(ss.phase==='show'?'ركّز…':ss.inp.length<d.seq.length?`${rev?'بالعكس 🔁 ':''}كرر (${ss.inp.length} من ${d.seq.length})`:ss.two?`🔥 زيد لونين (${(ss.add||[]).length} من 2)`:'زيد لون جديد')+'</b>';return s;},
   key:d=>d.gid+':'+d.seq.length+':'+d.turn+':'+d.out,
   render(d,ctx){if(ctx.my&&(!S.simon||S.simon.key!==this.key(d)))S.simon={key:this.key(d),phase:d.seq.length?'show':'input',inp:[],add:[],run:false};

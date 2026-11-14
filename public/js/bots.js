@@ -92,9 +92,9 @@ function c4Think(d,s){const C=d.C,R=d.R,b=[...d.b].map(x=>x==='.'?-1:+x),h=[],vr
     let best=-Infinity;for(const m of moves){const v=play(p,m,dep,()=>-ng(1-p,dep-1,-z,-a,vr?left:left-1));if(v==null)continue;if(v>best)best=v;if(v>a)a=v;if(a>=z)break;}
     return best===-Infinity?0:best;}
   const free=b.filter(x=>x<0).length;let best=moves.find(m=>m<C?h[m]>=0:canPull(m-C,s));if(best==null)return null;
-  for(let dep=1;dep<=Math.min(12,vr?12:free);dep++){lim=dep<=2?Infinity:t0+300;let bv=-Infinity,bm=null;
+  for(let dep=1;dep<=Math.min(12,vr?12:free);dep++){lim=dep<=2?Infinity:t0+200;let bv=-Infinity,bm=null;
     try{for(const m of moves){let v=play(s,m,dep,()=>-ng(1-s,dep-1,-Infinity,-bv,vr?free+1:free-1));if(v==null)continue;if(v>=1e6)v+=1e6;v+=Math.random()*.5;if(v>bv){bv=v;bm=m;}}}
-    catch(e){if(e!==STOP)throw e;break;}if(bm!=null)best=bm;if(Math.abs(bv)>9e5||performance.now()-t0>120)break;}
+    catch(e){if(e!==STOP)throw e;break;}if(bm!=null)best=bm;if(Math.abs(bv)>9e5||performance.now()-t0>90)break;}
   return best;}
 GAMES.c4.bot=(d,s,lv)=>{const C=d.C,R=d.R;const cols=[],cells=[];for(let c=0;c<C;c++){for(let r=R-1;r>=0;r--)if(d.b[r*C+c]==='.'){cols.push(c);cells.push(r*C+c);break;}}
   if(lv===3&&d.pl.length===2){const m=c4Think(d,s);if(m!=null)return botDo(d,s,m>=C?'pop':'m',m%C);}
