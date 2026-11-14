@@ -438,6 +438,7 @@ function render(){
   if(fid&&document.activeElement!==app.querySelector(`[data-draft="${fid}"]`)){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(cs,cs);}catch(e){}}}
   const strip=app.querySelector('.players');if(strip&&strip.scrollWidth>strip.clientWidth+2){const on=strip.querySelector('.pt.on');const k=S.st.g+':'+(S.st.d&&S.st.d.turn);if(on&&S.stripKey!==k){S.stripKey=k;const c=strip.getBoundingClientRect(),e=on.getBoundingClientRect();strip.scrollBy({left:(e.left+e.width/2)-(c.left+c.width/2),behavior:'smooth'});}}
   const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(dView(),mkCtx());}catch(e){console.error(e);}
+  noteHere();
 }
 function topBar(title,back,extra){
   return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="الصوت">${S.mute?'🔇':'🔊'}</button></div>`;
@@ -799,4 +800,13 @@ function infoScreen(){
   aspect-ratio: ${sup('aspect-ratio:1')} • color-mix: ${sup('color:color-mix(in srgb,red,blue)')}<br>
   screen: ${screen.width}x${screen.height} • dpr: ${devicePixelRatio} • font: ${getComputedStyle(document.documentElement).fontSize}<br>
   v: ${(document.querySelector('script[src*="core.js"]')||{}).src||''}</div>`;}
-function boot(){if(/[?&]info\b/.test(location.search)){infoScreen();return;}render();if(isApp())appSetup();}
+// where this tab is (home, lobby, the game list, a game, a room), kept for this tab only, so reloading the page comes back to it
+const HEREK='alaabna.here';
+function noteHere(){try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);}}catch(e){}}
+function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)||'null');}catch(e){}if(!h||typeof h!=='object')return false;
+  if(h.m==='local'){const l=h.g&&loadLocal();if(l){localResume();if(h.b){S.browse=true;render();}return true;}if(h.g)return false;
+    S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0,...localTeams()}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();return true;}
+  if(h.m==='online'){const sv=loadSaved();if(sv&&sv.code&&sv.code===h.c&&sv.via!=='near'){S.mode='lobby';render();enterRoom(sv.code,false,sv);return true;}S.mode='lobby';render();getRoom();return true;}
+  if(h.m==='lobby'){S.mode='lobby';render();getRoom();return true;}
+  return false;}
+function boot(){if(/[?&]info\b/.test(location.search)){infoScreen();return;}if(!restoreHere())render();if(isApp())appSetup();}
