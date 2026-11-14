@@ -55,7 +55,7 @@
 .pndp.lm::before{outline:2.5px solid #F0B429;outline-offset:0}
 
 /* ---------- Kayles: a bowling lane with a row of pins ---------- */
-.pnkl{width:min(100%,430px);margin:4px auto 4px;padding:18px 8px 14px;border-radius:14px;direction:ltr;
+.pnkl{width:min(100%,430px);margin:4px auto 4px;padding:18px 8px 14px;border-radius:14px;direction:ltr;overflow:hidden;
  background:linear-gradient(90deg,rgba(0,0,0,.05) 1px,transparent 1px) 0 0/18px 100%,linear-gradient(180deg,#EBC98F,#DDB070);box-shadow:0 0 0 3px #A47336,0 7px 0 3px rgba(0,0,0,.14),0 12px 20px rgba(0,0,0,.14)}
 .pnkr{display:flex;align-items:flex-end;gap:1px}
 .pnkp{position:relative;flex:1 1 0;min-width:0;height:min(96px,22vw);padding:0;background:none;border-radius:8px}
@@ -72,7 +72,7 @@
 .pnkp.lm.up::after{background:rgba(240,180,41,.55)}
 
 /* ---------- light cycles: a night arena with glowing trails ---------- */
-.pncy{width:min(100%,400px);margin:4px auto 6px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 3px #22314F,0 7px 0 3px rgba(0,0,0,.18),0 12px 22px rgba(0,0,0,.2)}
+.pncy{width:min(100%,400px,max(220px,calc(100vh - 420px)));margin:4px auto 6px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 3px #22314F,0 7px 0 3px rgba(0,0,0,.18),0 12px 22px rgba(0,0,0,.2)}
 .pncy svg{display:block;width:100%;height:auto}
 .pncbg{fill:#0F1A2E}
 .pncgr{stroke:#1E2D49;stroke-width:.6;fill:none}
@@ -163,11 +163,11 @@
 /* ---------- towers of blocks ---------- */
 .pntw{width:min(100%,400px);margin:4px auto;padding:12px 8px 0;border-radius:14px;background:linear-gradient(180deg,#CFE6F4,#E9F4FB 70%);box-shadow:0 0 0 1px var(--edge),0 6px 14px rgba(0,0,0,.08)}
 @media (prefers-color-scheme:dark){.pntw{background:linear-gradient(180deg,#22384D,#1B2A3A 70%)}}
-.pntr{display:flex;justify-content:center;align-items:flex-end;gap:8px;min-height:180px;border-bottom:10px solid #6FA95F;padding-bottom:0;flex-wrap:wrap}
+.pntr{display:flex;justify-content:center;align-items:flex-end;gap:8px;min-height:212px;border-bottom:10px solid #6FA95F;padding-bottom:0;flex-wrap:wrap}
 .pntt{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;animation:pnpop .25s var(--ease)}
 .pntt b{font-size:14px;font-weight:900;color:var(--mut);margin-top:2px}
 .pnts{display:flex;flex-direction:column;gap:2px}
-.pntb{width:46px;height:18px;padding:0;border-radius:4px;background:var(--c);box-shadow:inset 0 2px 0 rgba(255,255,255,.3),inset 0 -2px 0 rgba(0,0,0,.2),0 1px 0 #5A3818;transition:transform var(--t2) var(--ease),opacity var(--t2)}
+.pntb{width:46px;height:24px;padding:0;border-radius:4px;background:var(--c);box-shadow:inset 0 2px 0 rgba(255,255,255,.3),inset 0 -2px 0 rgba(0,0,0,.2),0 1px 0 #5A3818;transition:transform var(--t2) var(--ease),opacity var(--t2)}
 .pntb.can{cursor:pointer}
 .pntb.can:active{transform:translateY(-2px)}
 .pntb.up{transform:translateY(-10px) rotate(-4deg);opacity:.55;box-shadow:0 0 0 2px #F0B429}

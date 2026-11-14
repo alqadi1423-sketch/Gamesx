@@ -175,7 +175,8 @@ function c2TeamGame(o){return {teams:'native',teamsOk:z=>z.length===2&&Math.abs(
 function c2Frame(d,ctx,o){const v=ctx.local?d.turn:ctx.v,{mine,me,watch}=c2Me(d,v),ah=d.ah;
   let h=`<div class="blt c2 ${o.cls||''}">${o.head(d,me)}`;
   h+=c2Table(d,me,{on:d.ph==='sum'?-1:ah,info:k=>o.info(d,k),mark:o.mark?k=>o.mark(d,k):null,center:o.center?o.center(d,me):null});
-  if(d.ph==='play'&&d.lt&&d.tk)h+=c2Last(d,o.lastX?o.lastX(d):'');
+  // the strip keeps its place (hidden) while the old trick still lies on the felt, so the hand under it never jumps
+  if(d.ph==='play')h+=d.lt&&d.tk?c2Last(d,o.lastX?o.lastX(d):''):'<div class="blast c2off" aria-hidden="true"></div>';
   const my=ctx.my&&mine.includes(ah)&&d.ctl[ah]===d.turn;
   if(d.ph==='sum')h+=o.sum(d,ctx,me);
   else{if(my&&o.panel)h+=o.panel(d,ctx,me)||'';else if(o.wait)h+=o.wait(d,me)||'';

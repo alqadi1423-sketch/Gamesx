@@ -539,7 +539,7 @@ GAMES.c_konkan={name:'كونكان',cat:'cards',lbc:'#7B2D4F',
     return {...nd,hands,disc,ph:'draw',took:'',tc:0,lo:false,op0:-1,kk:false,last:`${nm(d,t)} طلع`};},
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
     if(d.ph==='sum')return s+`انتهت الجولة ${d.r}`;
-    return s+`${who}: ${d.ph==='draw'?'اسحب من الكومة أو خذ ورقة الأرض':d.took?'نزّل ورقة الأرض بمجموعة، وبعدها ارمِ ورقة':'نزّل أو أضف، وبعدها ارمِ ورقة'}<br><small>الجولة ${d.r} من 5 • أول نزول ${C2KK_REQ} أو أكثر وفيه تسلسل</small>`;},
+    return s+`${who}: ${d.ph==='draw'?'اسحب من الكومة أو خذ ورقة الأرض':d.took?'نزّل ورقة الأرض بمجموعة، وبعدها ارمِ ورقة':'نزّل أو أضف، وبعدها ارمِ ورقة'}<br><small>الجولة ${d.r}/5${d.op&&d.op[d.turn]==='1'?'':` • أول نزول ${C2KK_REQ}+ وفيه تسلسل`}</small>`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my;const k=c2kkKey(d);
     if(!S.kk||S.kk.k!==k)S.kk={k,sel:[],pend:[]};const U=S.kk;let h='';
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${nm(d,r.w)} خلّص الجولة ${d.r}${r.konkan?' بكونكان 👑':r.full?' بهند كامل':''}</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${r.pts[s]>0?'+':''}${r.pts[s]}${d.op[s]!=='1'&&s!==r.w?' <small>ما نزّل</small>':''}</em><b>${d.tot[s]}</b></div>`).join('')}

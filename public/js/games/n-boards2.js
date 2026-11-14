@@ -14,11 +14,12 @@ const b2Pass=(d,s,x)=>({...d,...x,sd:1-s,...tmPass(d,s),mvn:(d.mvn||0)+1});
 const b2Won=(d,s,end,x)=>({...d,...x,...tmWin(d,s),end,mvn:(d.mvn||0)+1});
 const b2Rnd=a=>a[rnd(a.length)];
 function b2Stat(d,ctx,names,tail,dk){let s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;
-  s+=`${me?'<b class="yt">دورك</b>':`دور ${tmName(d,d.sd)}`} <span class="chside ${d.sd===(dk==null?1:dk)?'bk':''}">${names[d.sd]}</span>`;
+  s+=`${me?'<b class="yt">دورك</b>':`دور ${b2Tm(d,d.sd)}`} <span class="chside ${d.sd===(dk==null?1:dk)?'bk':''}">${names[d.sd]}</span>`;
   return s+(tail?' '+tail:'');}
 function b2Resign(d){if(!S.b2Sure){S.b2Sure=1;toast('اضغط استسلم مرة ثانية للتأكيد');setTimeout(()=>{S.b2Sure=0;},2500);return;}
-  S.b2Sure=0;const s=d.sd;act(b2Won(d,1-s,'resign',{last:`${tmName(d,s)} استسلم`}));}
-const b2ResignBtn=ctx=>ctx.my?'<div class="row chact"><button class="btn" data-ga="resign">استسلم</button></div>':'';
+  S.b2Sure=0;const s=d.sd;act(b2Won(d,1-s,'resign',{last:`${b2Tm(d,s)} استسلم`}));}
+// the action row keeps its place when it is not your turn (hidden), so the page under the board never jumps
+const b2ResignBtn=(ctx,extra)=>`<div class="row chact${ctx.my?'':' b2off'}">${ctx.my&&extra||''}<button class="btn" data-ga="resign"${ctx.my?'':' disabled tabindex="-1"'}>استسلم</button></div>`;
 function b2WinTxt(d,names,why){if(d.win==='d')return (why&&why[d.end])||'تعادل';const sd=d.win%2;
   return `فاز ${names[sd]}${d.end==='resign'?' بالاستسلام':d.end==='left'?'، الخصم طلع':why&&why[d.end]?'، '+why[d.end]:''}`;}
 // the side whose view is drawn at the bottom: online a side-1 player sees the board turned round
@@ -49,6 +50,8 @@ const b2Line=(a,b,c)=>`<path d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"${c?` class="${
 /* the search: negamax with alpha-beta and iterative deepening over whole turns, capped by a node budget (never by time
    alone). P.moves(p), P.play(p,m) -> position, P.ev(p) for the side to move p.sd, P.end(p,ply) null or a final value.
    A move after which the same side moves again keeps the window. Each level has its own depth, budget and noise */
+// a side of three or more players is named by the one who plays now (a list of four names does not fit the status line)
+const b2Tm=(d,s)=>{const m=tmSeats(d,s);return m.length>2&&m.includes(d.turn)?nameTag(d,d.turn):tmName(d,s);};
 const B2STOP={};
 // a slow phone stops thinking after this long (the node caps keep a desktop well under it)
 const B2MS=350;
@@ -82,7 +85,7 @@ function b2owFinish(nd,why){const kp=[...nd.kp],p=[...nd.p];for(const s of [0,1]
   const x={...nd,p,kp};if(kp[0]===kp[1])return {...x,win:'d',end:why};return {...x,...tmWin(nd,kp[0]>kp[1]?0:1),end:why};}
 function b2owDo(d,i){const s=d.sd,r=b2owMove(d.p,s,i);const kp=[...d.kp];kp[s]+=r.n;const quiet=r.n?0:(d.quiet||0)+1;
   const key=r.p.join(',')+(1-s);const hist=r.n?[key]:[...(d.hist||[]),key].slice(-60);
-  let nd=b2Pass(d,s,{p:r.p,kp,quiet,hist,lm:[i],got:r.got,cp:r.caps,last:`${tmName(d,s)} وزّع ${d.p[i]} حبة${r.n?` وأخذ ${r.n}`:r.slam?' (ما ياخذ كل حب الخصم)':''}`});
+  let nd=b2Pass(d,s,{p:r.p,kp,quiet,hist,lm:[i],got:r.got,cp:r.caps,last:`${b2Tm(d,s)} وزّع ${d.p[i]} حبة${r.n?` وأخذ ${r.n}`:r.slam?' (ما ياخذ كل حب الخصم)':''}`});
   if(kp[s]>24)return {...nd,...tmWin(d,s),end:'more'};if(kp[0]===24&&kp[1]===24)return {...nd,win:'d',end:'half'};
   if(!b2owLegal(r.p,1-s).length)return b2owFinish(nd,'stuck');
   if(quiet>=100||b2Rep(hist,key)>=3)return b2owFinish(nd,'loop');
@@ -134,9 +137,9 @@ const b2m9Lost=(b,o,hand)=>b2m9Cnt(b,o)+hand[o]<3||!b2m9Steps(b,o,hand).length;
 // a step by the side to move; after it, either a piece must be taken (rm) or the turn passes
 function b2m9Step(d,f,t){const s=d.sd,c=String(s),b=b2m9Set(d.b,f,t,c),hand=[...d.hand];if(f<0)hand[s]--;
   const mill=b2m9In(b,t,c)&&b2m9Cnt(b,1-s)>0;const lm=f<0?[t]:[f,t];
-  const x={...d,b,hand,lm,lc:[],mvn:(d.mvn||0)+1,last:`${tmName(d,s)} ${f<0?'حط حجر':'حرّك حجر'}${mill?' وسكّر خط! يشيل حجر':''}`};
+  const x={...d,b,hand,lm,lc:[],mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} ${f<0?'حط حجر':'حرّك حجر'}${mill?' وسكّر خط! يشيل حجر':''}`};
   if(mill)return {...x,rm:1};return b2m9Turn(x,s,false);}
-function b2m9Take(d,i){const s=d.sd,b=setAt(d.b,i,'.');return b2m9Turn({...d,b,rm:0,lc:[[i,1-s]],mvn:(d.mvn||0)+1,last:`${tmName(d,s)} سكّر خط وشال حجر`},s,true);}
+function b2m9Take(d,i){const s=d.sd,b=setAt(d.b,i,'.');return b2m9Turn({...d,b,rm:0,lc:[[i,1-s]],mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} سكّر خط وشال حجر`},s,true);}
 function b2m9Turn(x,s,took){const quiet=took?0:(x.quiet||0)+1,mov=!x.hand[0]&&!x.hand[1];const key=x.b+(1-s);const hist=mov&&!took?[...(x.hist||[]),key].slice(-80):[key];
   const nd=b2Pass(x,s,{quiet,hist,mvn:x.mvn});
   if(b2m9Lost(x.b,1-s,x.hand))return {...nd,...tmWin(x,s),end:b2m9Cnt(x.b,1-s)+x.hand[1-s]<3?'two':'block'};
@@ -187,7 +190,7 @@ function b2m3Steps(b,s){const c=String(s),n=[...b].filter(x=>x===c).length,o=[];
   if(n<3){const first=b==='.........';for(let i=0;i<9;i++)if(b[i]==='.'&&!(first&&i===4))o.push([-1,i]);return o;}
   for(let f=0;f<9;f++)if(b[f]===c)for(const t of B2M3A[f])if(b[t]==='.')o.push([f,t]);return o;}
 function b2m3Do(d,f,t){const s=d.sd,c=String(s),b=b2m9Set(d.b,f,t,c);const L=b2m3Line(b,c);const lm=f<0?[t]:[f,t];
-  const x={...d,b,lm,ln:L||null,last:`${tmName(d,s)} ${f<0?'حط حجر':'حرّك حجر'}`};
+  const x={...d,b,lm,ln:L||null,last:`${b2Tm(d,s)} ${f<0?'حط حجر':'حرّك حجر'}`};
   if(L)return b2Won(x,s,'line');const key=b+(1-s),mov=[...b].filter(v=>v!=='.').length===6;const hist=mov?[...(d.hist||[]),key].slice(-60):[];
   const nd=b2Pass(x,s,{hist,nmv:(d.nmv||0)+1});if(!b2m3Steps(b,1-s).length)return {...nd,...tmWin(d,s),end:'block'};
   if(b2Rep(hist,key)>=3||nd.nmv>=80)return {...nd,win:'d',end:'rep'};return nd;}
@@ -237,7 +240,7 @@ function b2aqApply(b,m,c){const a=[...b];a[m.f]='.';m.caps.forEach(x=>{a[x]='.';
 const b2aqCnt=(b,s)=>{let n=0;const c=String(s);for(const x of b)if(x===c)n++;return n;};
 const B2AQ0='11111'+'11111'+'11.00'+'00000'+'00000';
 function b2aqDo(d,m){const s=d.sd,b=b2aqApply(d.b,m,String(s));const quiet=m.caps.length?0:(d.quiet||0)+1;
-  const nd=b2Pass(d,s,{b,quiet,lm:[m.f,...m.path],lc:m.caps.map(x=>[x,1-s]),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`});
+  const nd=b2Pass(d,s,{b,quiet,lm:[m.f,...m.path],lc:m.caps.map(x=>[x,1-s]),last:`${b2Tm(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`});
   if(!b2aqMoves(b,1-s).length)return {...nd,...tmWin(d,s),end:b2aqCnt(b,1-s)?'block':'all'};
   if(quiet>=60){const a=b2aqCnt(b,0),z=b2aqCnt(b,1);return a===z?{...nd,win:'d',end:'q'}:{...nd,...tmWin(d,a>z?0:1),end:'more'};}
   return nd;}
@@ -269,7 +272,7 @@ GAMES.b_alquerq={...B2TEAM,name:'القِرْق',cat:'board',lbc:'#A0522D',
     const pts=B2AQXY.map(([x,y],i)=>{let v=d.b[i];if(V.P&&V.P.path.length){if(i===V.P.f)v='.';if(i===V.at)v=d.b[V.P.f];}
       const tap=my&&(V.to.has(i)||(!V.P||!V.P.path.length)&&V.starts.has(i));
       return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:V.at,to:V.to,mv:V.P?null:V.starts})+(V.gone.has(i)?' gone':''),p:v!=='.'?b2Stone(+v):b2Ghost(d,i)};});
-    let h=b2Board('b2aq bd-b2',80,80,12,B2AQBG,pts,flip,my);if(my&&V.P&&V.P.path.length)h+='<div class="row chact"><button class="btn" data-ga="undo">تراجع عن القفزة</button></div>';return h+b2ResignBtn(ctx);},
+    let h=b2Board('b2aq bd-b2',80,80,12,B2AQBG,pts,flip,my);return h+b2ResignBtn(ctx,my&&V.P&&V.P.path.length?'<button class="btn" data-ga="undo">تراجع عن القفزة</button>':'');},
   after:d=>b2Fly('aq',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a==='undo'){b2Pick(d,null);return;}if(a!=='pt')return;
     const m=b2Chain(d,b2aqMoves(d.b,d.sd),i);if(m)act(b2aqDo(d,m));},
@@ -296,12 +299,12 @@ function b2sgAfter(x,s,took){const b=x.b,o=1-s;const quiet=took?0:(x.quiet||0)+1
   if(!b2sgMoves(b,o,-1).length){if(!b2sgMoves(b,s,-1).length||quiet>=60)return b2sgEnd({...x,quiet,mvn:(x.mvn||0)+1},b);return {...x,quiet,ch:-1,mvn:(x.mvn||0)+1,last:x.last+'، والخصم محبوس فيلعب مرة ثانية'};}
   const nd=b2Pass(x,s,{quiet,ch:-1});if(quiet>=60)return b2sgEnd(nd,b);return nd;}
 function b2sgPlace(d,i){const s=d.sd,b=setAt(d.b,i,String(s)),hand=[...d.hand];hand[s]--;const pp=(d.pp||0)+1;
-  const x={...d,b,hand,lm:[i],lc:[],last:`${tmName(d,s)} حط حجر`};
+  const x={...d,b,hand,lm:[i],lc:[],last:`${b2Tm(d,s)} حط حجر`};
   if(!hand[0]&&!hand[1]){const tr=[...d.tr];tr[1]=(tr[1]+1)%(tmSeats(d,1).length||1);const y={...x,tr,pp:0,ph:'move',sd:1,mvn:(d.mvn||0)+1,last:'خلص التحطيط، الأسود يبدأ يحرّك'};
     y.turn=tmNow(y,1);if(!b2sgMoves(b,1,-1).length){if(!b2sgMoves(b,0,-1).length)return b2sgEnd(y,b);return {...y,sd:0,turn:tmNow(y,0),last:'خلص التحطيط، والأسود محبوس فيبدأ الأبيض'};}return y;}
   if(pp<2&&hand[s])return {...x,pp,mvn:(d.mvn||0)+1};return b2Pass(x,s,{pp:0});}
-function b2sgDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2sgAfter({...d,last:`${tmName(d,s)} وقف الأكل`},s,true);
-  const b=b2sgApply(d.b,m,c);const x={...d,b,lm:d.ch>=0&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`};
+function b2sgDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2sgAfter({...d,last:`${b2Tm(d,s)} وقف الأكل`},s,true);
+  const b=b2sgApply(d.b,m,c);const x={...d,b,lm:d.ch>=0&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${b2Tm(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`};
   if(m.caps.length&&b2sgCnt(b,1-s)&&b2sgMoves(b,s,m.t).length)return {...x,ch:m.t,quiet:0,mvn:(d.mvn||0)+1,last:x.last+'، ويقدر يكمّل بنفس الحجر'};
   return b2sgAfter(x,s,m.caps.length>0);}
 function b2sgNext(b,s,took,q){const o=1-s;q=took?0:(q||0)+1;if(!b2sgCnt(b,o))return {b,sd:o,ch:-1,q,w:s};
@@ -332,7 +335,7 @@ GAMES.b_seega={...B2TEAM,name:'السيجة',cat:'board',lbc:'#9B6A2F',
       return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:f,to:place?null:to,mv:f>=0?null:mv})+(place&&tap?' to':''),p:v!=='.'?b2Stone(+v):b2Ghost(d,i)};});
     let h=b2Board('b2sg bd-b2',100,100,17,B2SGBG,pts,flip,my);
     if(place)h+=`<div class="b2hand">${[0,1].map(x=>`<span class="${x===s?'on':''}">${b2Stone(x)}<b>${d.hand[x]}</b></span>`).join('')}</div>`;
-    if(my&&d.ch>=0)h+='<div class="row chact"><button class="btn green" data-ga="stop">خلاص، أنهي دوري</button></div>';return h+(place?'':b2ResignBtn(ctx));},
+    return h+(place?'':b2ResignBtn(ctx,my&&d.ch>=0?'<button class="btn green" data-ga="stop">خلاص، أنهي دوري</button>':''));},
   after:d=>b2Fly('sg',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a==='stop'){if(d.ch>=0)act(b2sgDo(d,{stop:1}));return;}if(a!=='pt')return;
     if(d.ph==='place'){if(d.b[i]==='.'&&i!==12)act(b2sgPlace(d,i));return;}
@@ -367,9 +370,9 @@ function b2fnApply(b,m,c){const a=[...b];a[m.f]='.';a[m.t]=c;m.caps.forEach(x=>{
 function b2fnPass(x,s,took){const o=1-s,b=x.b,quiet=took?0:(x.quiet||0)+1;const nd=b2Pass(x,s,{ch:null,quiet,nt:(x.nt||0)+1});
   if(!b2fnCnt(b,o))return {...nd,...tmWin(x,s),end:'all'};if(!b2fnMoves(b,o,null).length)return {...nd,...tmWin(x,s),end:'block'};
   if(quiet>=60){const a=b2fnCnt(b,0),z=b2fnCnt(b,1);return a===z?{...nd,win:'d',end:'q'}:{...nd,...tmWin(x,a>z?0:1),end:'more'};}return nd;}
-function b2fnDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2fnPass({...d,last:`${tmName(d,s)} وقف الأكل`},s,true);
+function b2fnDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2fnPass({...d,last:`${b2Tm(d,s)} وقف الأكل`},s,true);
   const b=b2fnApply(d.b,m,c);const vis=d.ch?[...d.ch.vis,m.t]:[m.f,m.t];
-  const x={...d,b,lm:d.ch&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length} ${m.k==='a'?'بالتقدّم':'بالتراجع'}`:' تحرّك'}`};
+  const x={...d,b,lm:d.ch&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${b2Tm(d,s)}${m.caps.length?` أكل ${m.caps.length} ${m.k==='a'?'بالتقدّم':'بالتراجع'}`:' تحرّك'}`};
   // the very first turn of the game takes one capture only
   if(m.caps.length&&(d.nt||0)>0&&b2fnCnt(b,1-s)){const ch={at:m.t,ld:m.dir,vis};if(b2fnCaps(b,s,ch).length)return {...x,ch,mvn:(d.mvn||0)+1,last:x.last+'، ويقدر يكمّل'};}
   return b2fnPass(x,s,m.caps.length>0);}
@@ -397,7 +400,7 @@ GAMES.b_fanoron={...B2TEAM,name:'فانورونا',cat:'board',lbc:'#4E7A3A',
       return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:f,to:cap.size?new Set([P.t]):to,mv:f>=0?null:mv,cap})+(vis.has(i)&&i!==f?' vis':''),p:v!=='.'?b2Stone(+v):b2Ghost(d,i)};});
     let h=b2Board('b2fn bd-b2',100,56,9.4,B2FNBG,pts,flip,my);
     if(my&&cap.size)h+='<p class="note">تقدر تاكل بطريقتين: اضغط أول حجر من الخط اللي تبي تاكله</p>';
-    if(my&&d.ch)h+='<div class="row chact"><button class="btn green" data-ga="stop">خلاص، أنهي دوري</button></div>';return h+b2ResignBtn(ctx);},
+    return h+b2ResignBtn(ctx,my&&d.ch?'<button class="btn green" data-ga="stop">خلاص، أنهي دوري</button>':'');},
   after:d=>b2Fly('fn',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a==='stop'){if(d.ch)act(b2fnDo(d,{stop:1}));return;}if(a!=='pt')return;
     const ms=b2fnMoves(d.b,d.sd,d.ch),P=b2Sel(d),f=d.ch?d.ch.at:P&&P.f!=null?P.f:-1;
@@ -434,7 +437,7 @@ function b2tbApply(b,m){const a=[...b],p=a[m.f];a[m.f]='.';a[m.t]=p;const s=p===
 const b2tbCnt=(b,c)=>{let n=0;for(const x of b)if(x===c)n++;return n;};
 function b2tbDo(d,m){const s=d.sd,r=b2tbApply(d.b,m);const key=r.b+(1-s);const hist=r.caps.length?[key]:[...(d.hist||[]),key].slice(-90);
   const lc=r.caps.map(q=>[q,s]);if(r.kd!==false)lc.push([r.kd,2]);
-  const nd=b2Pass(d,s,{b:r.b,hist,lm:[m.f,m.t],lc,nmv:(d.nmv||0)+1,last:`${tmName(d,s)} ${d.b[m.f]==='k'?'حرّك الملك':'تحرّك'}${r.caps.length?` وأكل ${r.caps.length}`:''}`});
+  const nd=b2Pass(d,s,{b:r.b,hist,lm:[m.f,m.t],lc,nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} ${d.b[m.f]==='k'?'حرّك الملك':'تحرّك'}${r.caps.length?` وأكل ${r.caps.length}`:''}`});
   if(r.esc)return {...nd,...tmWin(d,1),end:'esc'};if(r.kd!==false)return {...nd,...tmWin(d,0),end:'king'};
   if(!b2tbMoves(r.b,1-s).length)return {...nd,...tmWin(d,s),end:'block'};
   if(b2Rep(hist,key)>=3||nd.nmv>=200)return {...nd,win:'d',end:nd.nmv>=200?'long':'rep'};return nd;}
@@ -504,7 +507,7 @@ function b2azSplit(b,n){const N=n*n,seen=new Uint8Array(N),area=[0,0];
     if(who.size>1)return null;for(const s of who)area[s]+=sz;}
   return area;}
 function b2azDo(d,m){const s=d.sd,c=String(s),n=d.n,b=b2azApply(d.b,m,c);
-  const nd=b2Pass(d,s,{b,ph:'move',at:-1,lm:[m.f,m.t],ar:m.a,nmv:(d.nmv||0)+1,last:`${tmName(d,s)} حرّك ملكة ورمى سهم`});
+  const nd=b2Pass(d,s,{b,ph:'move',at:-1,lm:[m.f,m.t],ar:m.a,nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} حرّك ملكة ورمى سهم`});
   if(!b2azCan(b,n,1-s))return {...nd,...tmWin(d,s),end:'block'};
   const ar=b2azSplit(b,n);if(ar){const w=ar[0]===ar[1]?s:ar[0]>ar[1]?0:1;return {...nd,...tmWin(d,w),end:'area',area:ar};}
   return nd;}
@@ -544,7 +547,7 @@ GAMES.b_amazons={...B2TEAM,name:'الملكات والسهام',cat:'board',lbc:
     if(a==='size'){if(!d.nmv&&d.ph==='move'&&(i===8||i===10)&&i!==n){S.b2=null;act({...d,n:i,b:b2azInit(i),mvn:(d.mvn||0)+1,last:`صارت اللوحة ${i}×${i}`});}return;}
     if(a!=='pt')return;
     if(d.ph==='shoot'){if(b2azRay(d.b,n,d.at).includes(i)){const f=d.lm[0];act(b2azDo({...d,b:b2m9Set(d.b,d.at,f,c)},{f,t:d.at,a:i}));}return;}
-    const P=b2Sel(d);if(P&&b2azRay(d.b,n,P.f).includes(i)){S.b2=null;act({...d,b:b2m9Set(d.b,P.f,i,c),ph:'shoot',at:i,lm:[P.f,i],ar:-1,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} حرّك ملكة، الحين يرمي سهم`});return;}
+    const P=b2Sel(d);if(P&&b2azRay(d.b,n,P.f).includes(i)){S.b2=null;act({...d,b:b2m9Set(d.b,P.f,i,c),ph:'shoot',at:i,lm:[P.f,i],ar:-1,mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} حرّك ملكة، الحين يرمي سهم`});return;}
     b2Pick(d,d.b[i]===c&&b2azRay(d.b,n,i).length&&(!P||P.f!==i)?{f:i}:null);},
   bot(d,s,lv){const n=d.n,c=String(d.sd);
     if(d.ph==='shoot'){// a half-played turn (a human's timer or a seat change): shoot at the best square from here

@@ -124,7 +124,7 @@ const mxRoll=d=>{const a=R6(),b=R6();return {...d,cup:d.cup.map((c,s)=>s===d.tur
 const mxClaim=(d,v)=>({...d,cl:{v,s:d.turn,p:d.cl?d.cl.v:-1},ph:'roll',rv:null,turn:nextSeat(d,d.turn),last:`${nm(d,d.turn)} يقول: ${mxName(v)}`});
 function mxDoubt(d){const t=d.turn,c=d.cl,real=mxRank(d.cup[c.s]),ok=real>=c.v;const loser=ok?t:c.s,k=ok&&c.v===20?2:1;
   const rv={s:c.s,dv:d.cup[c.s],v:c.v,by:t,ok,ls:loser,k};
-  return mxLose(d,loser,k,`${nm(d,t)} كشف الكاسة: ${nm(d,c.s)} قال ${mxName(c.v)} وطلع ${mxName(real)}، ${ok?'صادق':'كذاب'}! ${nm(d,loser)} خسر ${k===2?'حياتين':'حياة'}`,rv);}
+  return mxLose(d,loser,k,`${nm(d,t)} كشف: ${ok?'صادق':'كذاب'}! ${nm(d,loser)} خسر ${k===2?'حياتين':'حياة'}`,rv);}
 const mxGive=d=>mxLose(d,d.turn,1,`${nm(d,d.turn)} سلّم لمكسيكو وخسر حياة`,null);
 GAMES.d_mex={name:'مكسيكو',cat:'dice',lbc:'#8E3B2F',
   // the dice under the cup are seen only by the one who threw them; the lift shows them to everyone
@@ -617,7 +617,9 @@ const fbKeep=sd=>sd===0?1:7;
 const P2GE=n=>{let p=0;for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)if(a+b>=n)p++;return p/36;};
 const fbPG=dist=>dist<=3?P2GE(FB_NEED[dist]):0;
 const fbMin=tk=>Math.round(tk*90/FB_T);
-const fbSideName=(d,sd)=>tmName(d,sd);
+// a side of three or more is shown as its first player and how many more (four names do not fit a label)
+const d2Tm=(d,sd)=>{const m=tmSeats(d,sd);return m.length>2?`${nameTag(d,m[0])} +${m.length-1}`:tmName(d,sd);};
+const fbSideName=(d,sd)=>d2Tm(d,sd);
 // after a move by side `sd`: that side's next member plays its next move, and the side with the ball plays now
 function fbPass(x,sd){const tr=[...x.tr];tr[sd]=(tr[sd]+1)%(tmSeats(x,sd).length||1);const y={...x,tr};return {...y,turn:tmNow(y,y.sd)};}
 function fbTick(x,sd){let y={...x,tk:x.tk+1};
@@ -650,10 +652,10 @@ GAMES.d_foot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,nam
   onTimeout:d=>d.ph==='pen'?fbKick(d):fbAct(d,'short'),onSkip:(nd,d)=>tmSkip(nd,d),
   render(d,ctx){const my=ctx.my&&d.win==null,sd=d.sd,c0=col(d,0),c1=col(d,1),dist=fbDist(sd,d.z),fr=d.lr&&once(`fb${d.gid}_${d.rc}`);
     const gn=d.gl&&once(`fbg${d.gid}_${d.gl.rc}`);
-    let s=`<div class="d2-fbs"><span style="--c:${c0}"><i>${tmName(d,0)}</i></span><b class="${gn?'gl':''}">${d.sc[0]} - ${d.sc[1]}</b><span style="--c:${c1}"><i>${tmName(d,1)}</i></span><em>${d.ph==='pen'?'ترجيح':d.tk>=FB_T?'90\'':fbMin(d.tk)+'\''}${d.ph==='play'?` • ${d.tk<FB_H?'الشوط الأول':'الشوط الثاني'}`:''}</em></div>`;
+    let s=`<div class="d2-fbs"><span style="--c:${c0}"><i>${d2Tm(d,0)}</i></span><b class="${gn?'gl':''}">${d.sc[0]} - ${d.sc[1]}</b><span style="--c:${c1}"><i>${d2Tm(d,1)}</i></span><em>${d.ph==='pen'?'ترجيح':d.tk>=FB_T?'90\'':fbMin(d.tk)+'\''}${d.ph==='play'?` • ${d.tk<FB_H?'الشوط الأول':'الشوط الثاني'}`:''}</em></div>`;
     s+=`<div class="d2-pitch" dir="ltr" style="--c0:${c0};--c1:${c1}"><i class="gl0"></i>${[...Array(9)].map((_,k)=>`<div class="d2-z ${k===4?'mid':''} ${k===d.z?'ball':''} ${d.ph==='play'&&fbDist(sd,k)<=3?'box'+sd:''}">${k===d.z&&d.ph==='play'?`<span class="d2-ball" style="--c:${sd?c1:c0}">⚽</span>`:''}</div>`).join('')}<i class="gl1"></i></div>`;
     if(d.lr){const L=d.lr;s+=`<div class="d2-fbl ${L.ok?'ok':'no'}" style="--c:${col(d,L.sd)}">${miniD(L.dv)}<span>${{short:'تمريرة قصيرة',long:'كورة طويلة',shot:'تسديدة',kick:'ركلة ترجيح'}[L.a]} ${L.ok?'✓':'✗'}</span></div>`.replace('class="d2-md"',`class="d2-md ${fr?'roll':''}"`);}
-    if(d.ph==='pen'){s+=`<div class="d2-pens">${[0,1].map(q=>`<div style="--c:${q?c1:c0}"><i>${tmName(d,q)}</i><span>${[...d.pk[q]].map(c=>`<u class="${c==='o'?'d2o':'d2x'}">${c==='o'?'⚽':'✗'}</u>`).join('')}${'<u></u>'.repeat(Math.max(0,5-d.pk[q].length))}</span></div>`).join('')}</div>`;
+    if(d.ph==='pen'){s+=`<div class="d2-pens">${[0,1].map(q=>`<div style="--c:${q?c1:c0}"><i>${d2Tm(d,q)}</i><span>${[...d.pk[q]].map(c=>`<u class="${c==='o'?'d2o':'d2x'}">${c==='o'?'⚽':'✗'}</u>`).join('')}${'<u></u>'.repeat(Math.max(0,5-d.pk[q].length))}</span></div>`).join('')}</div>`;
       if(my)s+=`<div class="acts"><button class="btn d2-roll" style="background:${col(d,d.turn)}" data-ga="kick">🥅 سدّد الركلة <small>(6+ على زهرتين)</small></button></div>`;return s;}
     if(my){const pct=p=>Math.round(p*100)+'%';
       s+=`<div class="d2-fba"><button class="btn" data-ga="short" style="background:#3F8EDB">قصيرة <small>+1 • ${pct(5/6)}</small></button><button class="btn" data-ga="long" style="background:#8A5BD1">طويلة <small>+2/+3 • ${pct(4/6)}</small></button><button class="btn red" data-ga="shot" ${dist<=3?'':'disabled'}>سدّد ⚽ <small>${dist<=3?`${FB_NEED[dist]}+ • ${pct(fbPG(dist))}`:'بعيد'}</small></button></div>`;}
