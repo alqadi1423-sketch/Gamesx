@@ -280,7 +280,8 @@ const sjTF=t=>Math.max(0,Math.ceil((t-SJ_TA)/10));
 const sjScore=(d,s)=>(d.ft[s]+sjTF(d.tt[s]))*100000+d.tt[s];
 function sjJump(d,t,pc,v){const ty=d.cs[d.fx],w=SJ_T[ty][1]*SJ_P[pc][1]/2,e=Math.abs(v-sjC(d)),sid=(d.sid||0)+1;
   const r=e<=w?0:e<=w*2.3?(Math.random()<.7?1:0):2;const ft=[...d.ft],tt=[...d.tt],rf=[...d.rf];let out=d.out;
-  tt[t]+=SJ_P[pc][2]+(r===2?60:0);let tx;
+  // the clock: the pace, a little more for an awkward take-off, a few tenths of luck (drawn on the host)
+  tt[t]+=SJ_P[pc][2]+Math.round(Math.min(e/w,3)*2)+rnd(3)+(r===2?60:0);let tx;
   if(r===0)tx=`${nm(d,t)} قفز ${SJ_T[ty][0]} نظيف ✓`;
   else if(r===1){ft[t]+=4;tx=`${nm(d,t)}: ${ty===3?'رجله في الماي 💦':'طاح العارض'} (+4)`;}
   else{ft[t]+=4;rf[t]++;tx=`${nm(d,t)}: الحصان رفض القفزة! (+4)`;if(rf[t]>=2){out=setAt(out,t,'1');tx+=' • ثاني رفض: خرج من المسابقة';}}
