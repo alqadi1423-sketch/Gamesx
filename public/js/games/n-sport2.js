@@ -51,8 +51,9 @@ function r2Best(d,vals,low){const o=r2Sides(d,vals),ks=Object.keys(o).map(Number
 function r2SimStat(d,ctx,extra,ask){if(d.win!=null)return '';let s=d.last?`<small>${d.last}</small><br>`:(extra||'');
   if(ctx.local)return s+(ctx.v!=null&&ctx.v>=0?`دور ${nameTag(d,ctx.v)} ${ask}`:'');
   return s+(ctx.v>=0&&d.out[ctx.v]!=='1'?(hasPicked(d,ctx.v)?'<b>اخترت، ننتظر الباقين…</b>':`<b class="yt">دورك ${ask}</b>`):'');}
-// one quiet line: what just happened, or (when nothing did yet) the round's facts, which the board also shows
-const r2Stat=(d,ctx,extra)=>(d.last?`<small>${d.last}</small><br>`:(extra||''))+turnTxt(d,ctx);
+const r2Stat=(d,ctx,extra)=>(d.last?`<small>${d.last}</small><br>`:'')+(extra||'')+turnTxt(d,ctx);
+// one quiet line for games with long news: what just happened, or (when nothing did yet) the round's facts, which their board also shows
+const r2StatL=(d,ctx,extra)=>(d.last?`<small>${d.last}</small><br>`:(extra||''))+turnTxt(d,ctx);
 const R2TM=' ولو لعبتوا فرق، كل فريق يجمع نقاط لاعبينه (ولو الفرق مو متساوية ينحسب المعدّل)، والفريق الأعلى يفوز.';
 // a small one-off move (transform/opacity only, 450 ms at most); light mode skips it
 function r2Anim(el,frames,ms,delay,ease){if(!el||!el.animate||liteFx())return;try{el.animate(frames,{duration:Math.min(ms||380,450),delay:delay||0,easing:ease||'cubic-bezier(.2,.8,.2,1)',fill:'backwards'});}catch(e){}}
