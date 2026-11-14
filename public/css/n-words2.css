@@ -22,8 +22,8 @@
 .w2k.hit{background:var(--ok);color:#fff;opacity:1;box-shadow:0 3px 0 #2C7149}
 .w2k.miss{background:#8E9BAA;color:#E9EEF3;opacity:.6;box-shadow:none;text-decoration:line-through}
 @media (prefers-color-scheme:dark){.w2k.wide{background:#E7EEF6;color:#111923;box-shadow:0 3px 0 #8A9AB0}}
-.w2typed{min-height:52px;width:100%;display:flex;align-items:center;justify-content:center;border-radius:var(--r-m);background:var(--w2t);color:var(--w2ti);font-size:26px;font-weight:900;box-shadow:inset 0 0 0 2px var(--w2tb);letter-spacing:1px}
-.w2typed.ph{font-size:16px;font-weight:700;opacity:.7;letter-spacing:0}
+.w2typed{min-height:52px;width:100%;display:flex;align-items:center;justify-content:center;border-radius:var(--r-m);background:var(--w2t);color:var(--w2ti);font-size:26px;font-weight:900;box-shadow:inset 0 0 0 2px var(--w2tb)}
+.w2typed.ph{font-size:16px;font-weight:700;opacity:.7}
 /* a turn clock */
 .w2clock{position:relative;width:100%;height:24px;border-radius:12px;background:var(--surface-2);overflow:hidden;box-shadow:inset 0 0 0 1px var(--edge)}
 .w2clock i{position:absolute;inset:0;background:var(--c,var(--ok));opacity:.75;transform-origin:right center;transition:transform .25s linear}
@@ -147,7 +147,7 @@ html.lite .w2 *{animation:none!important;transition:none!important}
 .w2xc.sel{background:#FFE08A}
 .w2xls{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
 .w2xls h4{margin:0 0 4px;font-size:14px;color:var(--mut)}
-.w2xl{display:block;width:100%;text-align:start;padding:5px 8px;margin-bottom:4px;border-radius:9px;background:var(--surface);font-size:13px;font-weight:700;line-height:1.4;box-shadow:var(--e1)}
+.w2xl{display:block;width:100%;min-height:38px;text-align:start;padding:8px;margin-bottom:4px;border-radius:9px;background:var(--surface);font-size:13px;font-weight:700;line-height:1.4;box-shadow:var(--e1)}
 .w2xl b{display:inline-block;min-width:18px;color:var(--blue);font-weight:900}
 .w2xl small{color:var(--mut);margin-inline-start:3px}
 .w2xl.on{box-shadow:0 0 0 2px var(--blue)}
@@ -178,6 +178,6 @@ html.lite .w2 *{animation:none!important;transition:none!important}
 .w2vb,.w2cb{flex-direction:column;line-height:1.2}.w2vb small,.w2cb small{font-size:12px;opacity:.85}
 .w2keep{text-align:center;color:var(--mut);font-weight:700;font-size:14px}
 .w2keep b{color:var(--ink);font-size:18px}
-.w2pl{letter-spacing:3px;color:var(--ink)}
+.w2pl{word-spacing:3px;color:var(--ink)}
 .w2kok{width:100%;min-height:46px;margin-top:2px;background:var(--ok);box-shadow:0 3px 0 #2C7149}
 .w2kok.soft{background:var(--surface-2);color:var(--ink);box-shadow:0 3px 0 var(--edge)}

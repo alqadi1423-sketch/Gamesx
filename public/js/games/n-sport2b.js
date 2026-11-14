@@ -83,7 +83,7 @@ function fcFly(d,t,k,v){const c=fcC(d),w=fcW(d,k)/2,e=Math.abs(v-c),[n0,p0,,,cos
   if(lx.r===0){const x={...d,sta,sid,lx,bag:d.bag+p0,fl:d.fl+1,pr:fcOpts(),last:`${nm(d,t)}: الصقر صاد ${n0}! (+${p0})`};
     return Math.min(...x.pr.map(q=>FC_P[q][4]))>sta[t]?fcHome(x,t,' • الصقر تعب'):x;}
   if(lx.r===1)return fcHome({...d,sta,sid,lx,last:`${nm(d,t)}: فاته ${n0} ورجع`},t,'');
-  sta[t]=Math.max(0,sta[t]-1);return fcNext({...d,sta,sid,lx,last:`${nm(d,t)}: الصقر لحق ${n0} بعيد وما رجع إلا بالليل! راحت الحصيلة (${d.bag})`},t);}
+  sta[t]=Math.max(0,sta[t]-1);return fcNext({...d,sta,sid,lx,last:`${nm(d,t)}: الصقر ما رجع إلا بالليل، راحت الحصيلة (${d.bag})`},t);}
 function fcHome(d,t,why){const pts=[...d.pts];pts[t]+=d.bag;return fcNext({...d,pts,last:d.last+why+(d.bag?` • رجع المخيم بـ${d.bag}`:'')},t);}
 const fcOk=(d,t,k)=>Number.isInteger(k)&&d.pr.includes(k)&&FC_P[k][4]<=d.sta[t];
 // the chance a stop lands in [0,w] off the centre for a hand that scatters by sig
@@ -100,7 +100,7 @@ GAMES.r_falcon={name:'الصقور',cat:'sport',lbc:'#A0522D',
   start:d=>({...d,pr:fcOpts()}),
   net:{host:['fly','home','rest'],local:['fp']},redeal:d=>d,
   points:d=>d.pts,
-  status:(d,ctx)=>r2Stat(d,ctx,`<small>اليوم ${Math.min(d.rn+1,d.D)} من ${d.D}${d.win==null&&d.bag?` • الحصيلة ${d.bag}`:''}</small><br>`),
+  status:(d,ctx)=>r2StatL(d,ctx,`<small>اليوم ${Math.min(d.rn+1,d.D)} من ${d.D}${d.win==null&&d.bag?` • الحصيلة ${d.bag}`:''}</small><br>`),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.pts[s]}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx;
     const sel=r2Dr('fp',0,4,-1),k=fcOk(d,t,sel)?sel:-1;
@@ -165,7 +165,7 @@ GAMES.r_fish={name:'الحداق',cat:'sport',lbc:'#1F6F8B',
   start:d=>({...d,td:rnd(3)}),
   net:{host:['cast','pull'],local:['fsp','fsb']},redeal:d=>d,
   points:d=>d.kg,
-  status:(d,ctx)=>r2Stat(d,ctx,d.win==null?`<small>${FS_TD[d.td]} • الطُعم الباقي ${d.ba[d.turn].reduce((a,b)=>a+b,0)}</small><br>`:''),
+  status:(d,ctx)=>r2StatL(d,ctx,d.win==null?`<small>${FS_TD[d.td]} • الطُعم الباقي ${d.ba[d.turn].reduce((a,b)=>a+b,0)}</small><br>`:''),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.kg[s]} (${d.nc[s]} سمكة)`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx,p=r2Dr('fsp',0,2,0),b0=r2Dr('fsb',0,2,0),b=d.ba[t][b0]>0?b0:d.ba[t].findIndex(x=>x>0);
     const SX=[60,150,240],hk=d.ph==='bite'?d.fp:L?L.p:p,fsh=(f,x,y,sc)=>`<g class="fs-f" style="transform:translate(${x}px,${y}px) scale(${sc})"><path d="M-14 0q12-10 24 0q-12 10-24 0zM10 0l8-6v12z" fill="${['#C0603A','#E0A04A','#8FA86B','#7C93A8','#B9C2C8','#C8C0B0'][f]}"/><circle cx="-8" cy="-1.5" r="1.4" fill="#111"/></g>`;
@@ -231,13 +231,13 @@ GAMES.r_dhow={name:'سباق السفن الشراعية',cat:'sport',lbc:'#1D6F
       ${d.pv.map((p,s)=>p&&d.out[s]!=='1'?`<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)}L${d.bt[s][0].toFixed(1)} ${d.bt[s][1].toFixed(1)}" stroke="#fff" stroke-width=".5" stroke-dasharray="1 1" opacity=".55"/>`:'').join('')}
       ${me&&my?`<path d="M${b[0].toFixed(1)} ${b[1].toFixed(1)}l${(Math.sin(h*Math.PI/6)*12).toFixed(1)} ${(-Math.cos(h*Math.PI/6)*12).toFixed(1)}" stroke="#FFD84D" stroke-width=".8" stroke-dasharray="1.6 1"/>`:''}
       ${d.bt.map((bb,s)=>d.out[s]==='1'?'':boat(s,bb,s===v?'me':'')).join('')}</svg>`;
-    s+=`<div class="dt-list">${d.pl.map((_,i)=>{const bb=d.bt[i],tg=dhTarget(bb);return `<span class="${i===v?'on':''}" style="--c:${col(d,i)}">${nm(d,i)} ${bb[4]?'⬇':'⬆'} <b>${Math.round(Math.hypot(bb[0]-tg[0],bb[1]-tg[1]))}</b></span>`;}).join('')}</div>`;
+    const ls=`<div class="dt-list">${d.pl.map((_,i)=>{const bb=d.bt[i],tg=dhTarget(bb);return `<span class="${i===v?'on':''}" style="--c:${col(d,i)}">${nm(d,i)} ${bb[4]?'⬇':'⬆'} <b>${Math.round(Math.hypot(bb[0]-tg[0],bb[1]-tg[1]))}</b></span>`;}).join('')}</div>`;
     if(my){const m=r2mPar(key,1150),cur=b[2];
       s+=`<p class="r2lbl">${b[4]?'ارجع لخط النهاية تحت':'روح للمنارة فوق ودور حولها'}: اختر اتجاهك</p><div class="dh-rose">${[...Array(12).keys()].map(k=>{const tw=Math.abs(dhDiff(k*30,d.wd)),sp=dhPol(tw),sd=dhDiff(k*30,d.wd)>=0?1:-1,tk=b[3]&&sd!==b[3];
         return `<button class="dh-h ${k===h?'on':''} ${sp<.3?'dead':''}" data-ga="dh" data-i="${k}" style="--a:${k*30}deg;--q:${Math.round(sp*100)}%"><i></i><small>${tw<30?'✋':Math.round(sp*10)}${tk?'↺':''}</small></button>`;}).join('')}<div class="dh-mid"><b>${h===cur?'نفس الاتجاه':'اتجاه جديد'}</b><small>↺ = تغيير جهة الشراع (يبطّي)</small></div></div>
         ${r2Meter(key,m,[[0,1000,'z0'],[220,780,'z1'],[380,620,'z2']],sv==null,sv,'ضبط الشراع: كل ما قربت للنص أسرع')}${r2Stop(key,'sail','⛵ أبحر',sv==null)}`;}
     else if(me&&d.win==null)s+=`<p class="note">${hasPicked(d,v)?'اخترت، ننتظر الباقين…':''}</p>`;
-    return s+'</div>';},
+    return s+ls+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
     if(a==='dh'){if(Number.isInteger(i)&&i>=0&&i<12){S.draft.dh=String(i);render();}return;}
     if(a==='sail'){const v=r2Read(i);r2Hold(d.gid+':'+d.rd+':'+ctx.v,v,ctx);simulPick(d,ctx.v,r2Dr('dh',0,11,d.bt[ctx.v][2])*1001+v);S.draft.dh=undefined;}},
@@ -301,7 +301,7 @@ GAMES.r_jump={name:'قفز الحواجز',cat:'sport',lbc:'#6E8B3D',
   start:d=>({...d,cs:sjCourse(d.gid)}),
   net:{host:['jump'],local:['jp']},redeal:d=>d,
   points:d=>d.ft.map((f,s)=>d.out[s]==='1'?'خرج':f+sjTF(d.tt[s])),
-  status:(d,ctx)=>r2Stat(d,ctx,`<small>الحاجز ${d.fx+1} من ${SJ_N}: ${SJ_T[d.cs[d.fx]][0]} • الوقت المسموح ${SJ_TA/10} ث</small><br>`),
+  status:(d,ctx)=>r2StatL(d,ctx,`<small>الحاجز ${d.fx+1} من ${SJ_N}: ${SJ_T[d.cs[d.fx]][0]} • الوقت المسموح ${SJ_TA/10} ث</small><br>`),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.out[s]==='1'?'خرج':`${d.ft[s]+sjTF(d.tt[s])} أخطاء، ${(d.tt[s]/10).toFixed(1)} ث`}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx,pc=r2Dr('jp',0,2,1);
     const fi=L&&L.f!==d.fx&&!my?L.f:d.fx,ty=d.cs[fi],[tn,,tc]=SJ_T[ty],r=L&&L.f===fi?L.r:-1;
@@ -365,7 +365,7 @@ GAMES.r_hop={name:'الحجلة',cat:'sport',lbc:'#C2577A',
   init:n=>({pr:Array(n).fill(0),hs:Array(n).fill(0),ph:'throw',tg:0,ok:0,jc:-1,tn:0,sid:0,lx:null,last:''}),
   net:{host:['throw','hop','house'],local:['hb']},redeal:d=>d,
   points:d=>d.pr.map(p=>p+'/10'),
-  status:(d,ctx)=>r2Stat(d,ctx,d.win==null?`<small>${d.ph==='hop'?`انقز للمربع ${d.tg} وارجع`:`ارمِ الحجر`} • نجاحات هالدور ${d.ok} من 2</small><br>`:''),
+  status:(d,ctx)=>r2StatL(d,ctx,d.win==null?`<small>${d.ph==='hop'?`انقز للمربع ${d.tg} وارجع`:`ارمِ الحجر`} • نجاحات هالدور ${d.ok} من 2</small><br>`:''),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.pr[s]}/10`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx,bold=r2Dr('hb',0,1,0)===1&&d.pr[t]<=8,tg=d.ph==='hop'?d.tg:hsTg(d,t,bold);
     const own=k=>d.hs.findIndex(h=>h===k);

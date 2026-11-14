@@ -12,7 +12,7 @@
 .r2row .btn{min-height:44px;padding:0 14px;font-size:16px}
 
 /* ---------- the stop meter: a track with its zones and a needle (moved by transform only) ---------- */
-.r2m{position:relative;direction:ltr;height:46px;margin:2px 4px 0;border-radius:14px;background:var(--surface);box-shadow:var(--e1);padding:16px 10px 8px}
+.r2m{position:relative;direction:ltr;height:46px;overflow:hidden;margin:2px 4px 0;border-radius:14px;background:var(--surface);box-shadow:var(--e1);padding:16px 10px 8px}
 .r2m-l{position:absolute;top:1px;inset-inline:0;text-align:center;font-size:11.5px;font-weight:800;color:var(--mut);direction:rtl}
 .r2m-tr{position:relative;height:100%;border-radius:8px;overflow:hidden;background:#C9D6E3}
 .r2m-tr i{position:absolute;top:0;bottom:0}
@@ -40,6 +40,7 @@
 .pn-row em{font-style:normal;font-weight:800;text-align:center}
 .pn-z{fill:rgba(255,255,255,.05);stroke:rgba(255,255,255,.55);stroke-width:1.5;stroke-dasharray:5 4;cursor:pointer}
 .pn-kp,.pn-ball{pointer-events:none}
+.pn-z:active{fill:rgba(255,216,77,.25)}
 .pn-z.on{fill:rgba(255,216,77,.42);stroke:#FFD84D;stroke-width:3;stroke-dasharray:none}
 .pn-tag{font-size:20px;font-weight:800;fill:#fff;paint-order:stroke;stroke:#1F3B5A;stroke-width:4px}
 .pn-tag.ok{fill:#7CE19B}.pn-tag.no{fill:#FFB4AC}
@@ -59,6 +60,7 @@
 .r2 .dt-svg{background:#3B2A22;border-radius:50%;width:min(100%,340px);margin:0 auto}
 .dt-svg:not(.can) .dt-s{pointer-events:none}
 .dt-svg.can .dt-s{cursor:pointer}
+.dt-svg.can .dt-s:active{opacity:.7}
 .dt-n{font-size:17px;font-weight:800;fill:#F3E6C8}
 .dt-list{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
 .dt-list span{font-size:13px;padding:2px 9px;border-radius:99px;background:var(--surface);box-shadow:inset 0 -3px 0 var(--c);font-weight:700}
@@ -79,7 +81,7 @@
 .bw-row.on span{box-shadow:inset 0 0 0 1px var(--c)}
 
 /* ---------- mini golf ---------- */
-.r2 .gl-svg{width:min(100%,330px);margin:0 auto;touch-action:manipulation}
+.r2 .gl-svg{width:min(100%,300px);margin:0 auto;touch-action:manipulation}
 .gl-svg.can{cursor:crosshair}
 .gl-card{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(var(--h),minmax(0,1fr)) minmax(0,1fr);gap:2px 3px;background:var(--surface);border-radius:var(--r-m);padding:6px 8px;box-shadow:var(--e1);font-size:13px;align-items:center}
 .gl-card b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -91,19 +93,20 @@
 /* ---------- hoops ---------- */
 .hp-sp text{font-size:7.5px;font-weight:800;fill:#2D4763;pointer-events:none}
 .hp-sp.can{cursor:pointer}
+.hp-sp.can:active circle{opacity:.7}
 .hp-sp.ban circle{opacity:.35}
 .hp-sp.on circle{stroke-width:2}
-.hp-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px}
+.hp-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px}
 .hp-row{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--surface);border-radius:var(--r-s);padding:3px 8px;box-shadow:inset 0 -3px 0 var(--c),var(--e1)}
-.hp-row b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hp-row b{min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hp-row.on{box-shadow:inset 0 0 0 2px var(--c)}
 .hp-row.off{opacity:.45}
-.hp-row span{display:flex;gap:2px}
-.hp-row i{font-style:normal;width:19px;height:21px;display:grid;place-items:center;border-radius:5px;background:var(--surface-2);color:var(--mut);font-weight:800;font-size:13px}
+.hp-row span{display:flex;gap:2px;flex:none}
+.hp-row i{font-style:normal;width:16px;height:21px;display:grid;place-items:center;border-radius:5px;background:var(--surface-2);color:var(--mut);font-weight:800;font-size:13px}
 .hp-row i.got{background:var(--bad);color:#fff}
 
 /* ---------- archery ---------- */
-.r2 .ar-svg{width:min(100%,360px);margin:0 auto}
+.r2 .ar-svg{width:min(100%,320px);margin:0 auto}
 .ar-wt{font-size:12px;font-weight:800;fill:#1B4F72}
 .ar-tab{display:grid;grid-template-columns:minmax(0,1.8fr) repeat(4,minmax(0,1fr)) minmax(0,1.1fr) minmax(0,.8fr);gap:2px 3px;background:var(--surface);border-radius:var(--r-m);padding:6px 8px;box-shadow:var(--e1);font-size:13px;align-items:center}
 .ar-tab b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -160,7 +163,7 @@
 .fs-info{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13px;font-weight:700;color:var(--mut);padding:0 4px}
 
 /* ---------- dhow race ---------- */
-.r2 .dh-svg{width:min(100%,290px);margin:0 auto}
+.r2 .dh-svg{width:min(100%,210px);margin:0 auto}
 .dh-wt{font-size:3.4px;font-weight:800;fill:#1B4F72}
 .dh-b.me>g>path:first-child{stroke:#FFD84D;stroke-width:.8}
 .dh-rose{position:relative;width:216px;height:216px;margin:0 auto;border-radius:50%;background:radial-gradient(circle,var(--surface) 0 38%,var(--surface-2) 39% 100%);box-shadow:var(--e1)}

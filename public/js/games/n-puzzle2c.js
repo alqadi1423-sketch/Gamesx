@@ -136,8 +136,8 @@ function slkGen(w,h,keep,tries){for(let t=0;t<(tries||300);t++){const N=w*h,inR=
     while(cnt<target&&guard++<N*20){const fr=[];for(let i=0;i<N;i++)if(inR[i])for(const j of nb(i))if(!inR[j])fr.push(j);const j=fr[u2R(fr.length)];inR[j]=1;if(holeFree())cnt++;else inR[j]=0;}
     if(!holeFree())continue;
     const clue=u2Rng(N,i=>{const r=Math.floor(i/w),c=i%w;let k=0;for(const [rr,cc] of [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){const o=rr>=0&&rr<h&&cc>=0&&cc<w?inR[rr*w+cc]:0;if(o!==inR[i])k++;}return k;});
-    const pz={w,h,c:clue.join('')};const c0=slkCount(pz,2,30000);if(c0.sols.length!==1)continue;
-    for(const i of u2Sh(u2Rng(N))){if([...pz.c].filter(x=>x!=='.').length<=N*keep)break;const old=pz.c;pz.c=setAt(old,i,'.');const c1=slkCount(pz,2,30000);if(c1.sols.length!==1||c1.cut)pz.c=old;}
+    const pz={w,h,c:clue.join('')};const c0=slkCount(pz,2,8000);if(c0.sols.length!==1)continue;
+    for(const i of u2Sh(u2Rng(N))){if([...pz.c].filter(x=>x!=='.').length<=N*keep)break;const old=pz.c;pz.c=setAt(old,i,'.');const c1=slkCount(pz,2,1000);if(c1.sols.length!==1||c1.cut)pz.c=old;}
     return pz;}return null;}
 function slkCheck(pz,s){const w=pz.w,h=pz.h,{H,V}=slkE(w,h);if(s.length!==H+V||!/^[01]+$/.test(s))return false;const e=[...s].map(Number);if(!slkLoop(w,h,e))return false;
   return [...pz.c].every((ch,i)=>ch==='.'||slkCellE(w,h,i).filter(k=>e[k]===1).length===+ch);}

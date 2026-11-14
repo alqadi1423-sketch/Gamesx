@@ -48,10 +48,12 @@ function r2Best(d,vals,low){const o=r2Sides(d,vals),ks=Object.keys(o).map(Number
   const b=low?Math.min(...ks.map(k=>o[k])):Math.max(...ks.map(k=>o[k]));const top=ks.filter(k=>Math.abs(o[k]-b)<1e-9);if(top.length>1)return 'd';
   const s=d.pl.map((_,i)=>i).find(i=>r2Side(d,i)===top[0]&&vals[i]!=null);return s==null?'d':s;}
 // the status of a simultaneous round: who picks now (one phone), or whether this phone has picked
-function r2SimStat(d,ctx,extra,ask){if(d.win!=null)return '';let s=(d.last?`<small>${d.last}</small><br>`:'')+(extra||'');
+function r2SimStat(d,ctx,extra,ask){if(d.win!=null)return '';let s=d.last?`<small>${d.last}</small><br>`:(extra||'');
   if(ctx.local)return s+(ctx.v!=null&&ctx.v>=0?`دور ${nameTag(d,ctx.v)} ${ask}`:'');
   return s+(ctx.v>=0&&d.out[ctx.v]!=='1'?(hasPicked(d,ctx.v)?'<b>اخترت، ننتظر الباقين…</b>':`<b class="yt">دورك ${ask}</b>`):'');}
 const r2Stat=(d,ctx,extra)=>(d.last?`<small>${d.last}</small><br>`:'')+(extra||'')+turnTxt(d,ctx);
+// one quiet line for games with long news: what just happened, or (when nothing did yet) the round's facts, which their board also shows
+const r2StatL=(d,ctx,extra)=>(d.last?`<small>${d.last}</small><br>`:(extra||''))+turnTxt(d,ctx);
 const R2TM=' ولو لعبتوا فرق، كل فريق يجمع نقاط لاعبينه (ولو الفرق مو متساوية ينحسب المعدّل)، والفريق الأعلى يفوز.';
 // a small one-off move (transform/opacity only, 450 ms at most); light mode skips it
 function r2Anim(el,frames,ms,delay,ease){if(!el||!el.animate||liteFx())return;try{el.animate(frames,{duration:Math.min(ms||380,450),delay:delay||0,easing:ease||'cubic-bezier(.2,.8,.2,1)',fill:'backwards'});}catch(e){}}
@@ -91,9 +93,9 @@ GAMES.r_pen={name:'ركلات الترجيح',cat:'sport',lbc:'#2E8B57',outDone:
     // the replay: this phone's kick of last round (else the first one)
     const L=d.lr||[],fe=L.find(x=>x[0]===v)||L[0];
     let s=`<div class="r2 r2pen">`;
-    // the shoot-out sheet: one row per player, a dot per kick
+    // the shoot-out sheet: one row per player, a dot per kick (shown under the picks, so they never need a scroll)
     const cols=Math.max(d.R,...d.kr.map(x=>x.length));
-    s+=`<div class="pn-sheet">${d.pl.map((r,i)=>`<div class="pn-row ${d.out[i]==='1'?'off':''}"><b style="--c:${col(d,i)}">${nm(d,i)}</b><span>${Array(cols).fill(0).map((_,j)=>{const c=d.kr[i][j];return `<i class="${c==='o'?'ok':c==='x'?'no':''}"></i>`;}).join('')}</span><em>${d.g[i]}</em></div>`).join('')}</div>`;
+    const sheet=`<div class="pn-sheet">${d.pl.map((r,i)=>`<div class="pn-row ${d.out[i]==='1'?'off':''}"><b style="--c:${col(d,i)}">${nm(d,i)}</b><span>${Array(cols).fill(0).map((_,j)=>{const c=d.kr[i][j];return `<i class="${c==='o'?'ok':c==='x'?'no':''}"></i>`;}).join('')}</span><em>${d.g[i]}</em></div>`).join('')}</div>`;
     s+=penScene(d,fe,pick?U.z:null,pick);
     if(L.length)s+=`<div class="pn-res" data-k="pr${d.rd}">${L.map(([a,b,z,p,dv,r])=>`<span class="${r===0?'ok':'no'} ${a===v?'me':''}"><b style="color:${col(d,a)}">${nm(d,a)}</b> ${r===0?'⚽ هدف':r===1?`🧤 صدّها ${nm(d,b)}`:z<0?'⌛ ما سدد':'❌ برّا'}</span>`).join('')}</div>`;
     if(pick&&pr){const t=(a,arr)=>arr.map((x,j)=>`${a[j]} ${x}`).join(' • '),hk=[0,1,2].map(j=>kp.reduce((q,k)=>q+d.kc[k][j],0));
@@ -105,7 +107,7 @@ GAMES.r_pen={name:'ركلات الترجيح',cat:'sport',lbc:'#2E8B57',outDone:
         ${r2Seg('pd',PEN_D.map((x,j)=>(j===0?'⬅ ':j===2?'':'⬆ ')+x+(j===2?' ➡':'')),U.v,true)}`:'<small class="r2tip">ما أحد يسدد عليك هالجولة</small>'}
         <button class="btn red wide" data-ga="go" ${U.z!=null&&(U.v!=null||!kp.length)?'':'disabled'}>ثبّت اختياري</button></div>`;}
     else if(me&&d.win==null)s+=`<p class="note">${hasPicked(d,v)?'اخترت، ننتظر الباقين…':''}</p>`;
-    return s+'</div>';},
+    return s+sheet+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const U=S.r2pen;if(!U||U.k!==d.gid+':'+d.rd+':'+ctx.v)return;
     if(a==='pz'&&i>=0&&i<6){U.z=i;render();return;}if(a==='pp'&&i>=0&&i<3){U.p=i;render();return;}if(a==='pd'&&i>=0&&i<3){U.v=i;render();return;}
     if(a==='go'&&U.z!=null){const kp=penPairs(d).filter(x=>x[1]===ctx.v);if(U.v==null&&kp.length)return;simulPick(d,ctx.v,U.z*9+U.p*3+(U.v==null?1:U.v));}},
@@ -311,15 +313,15 @@ GAMES.r_bowl={name:'البولينج',cat:'sport',lbc:'#5B3FA0',
       ${my?`<path class="bw-line" d="M${X((a-8)/2)} 222V40" stroke="#FFD84D" stroke-width="1.6" stroke-dasharray="4 3"/><path d="M${X((a-8)/2)} 228l-4 7h8z" fill="#FFD84D"/>`:''}
       ${[...Array(10).keys()].filter(k=>showPn[k]==='1'&&fall[k]!=='1').map(k=>pin(k,false)).join('')}${[...Array(10).keys()].filter(k=>fall[k]==='1').map(k=>pin(k,true)).join('')}
       ${L&&showPn===L.pn?`<g class="bw-ball" style="transform:translate(${r2Clamp(X(L.e),26,114)}px,${L.gut?100:26}px)"><circle r="6.2" fill="#2F80ED"/><circle cx="-1.6" cy="-2" r="1" fill="#173F78"/><circle cx="1.4" cy="-2.3" r="1" fill="#173F78"/><circle cx="0" cy=".4" r="1" fill="#173F78"/></g>`:''}</svg>`;
-    // the score sheet: one row per bowler, ten frames, the running totals
-    s+=`<div class="bw-sheet">${d.pl.map((_,i)=>{const F=bwFrames(d.rolls[i]),C=bwCum(d.rolls[i]);
+    // the score sheet (one row per bowler, ten frames, the running totals): kept under the controls so the throw never needs a scroll
+    let sh=`<div class="bw-sheet">${d.pl.map((_,i)=>{const F=bwFrames(d.rolls[i]),C=bwCum(d.rolls[i]);
       return `<div class="bw-row ${i===t&&d.win==null?'on':''}" style="--c:${col(d,i)}"><b>${nm(d,i)}</b>${[...Array(10).keys()].map(f=>{const x=F[f]||[],m=bwMarks(x,f);return `<span class="${f===9?'ten':''}"><i>${[0,1,2].slice(0,f===9?3:2).map(j=>`<u>${m[j]||''}</u>`).join('')}</i><em>${C[f]!=null?C[f]:''}</em></span>`;}).join('')}</div>`;}).join('')}</div>`;
     if(my){const m=r2mPar(key,1100);
       s+=`<div class="r2row"><button class="btn soft" data-ga="ba" data-i="${a-1}" ${a>0?'':'disabled'}>◀</button><span class="r2lbl">التصويب</span><button class="btn soft" data-ga="ba" data-i="${a+1}" ${a<16?'':'disabled'}>▶</button></div>
         ${r2Seg('bs',BW_SP,sp,true)}
         ${r2Meter(key,m,[[0,1000,'z0'],[300,700,'z1'],[410,590,'z2']],sv==null,sv,'الإطلاق: وقّف المؤشر في النص')}
         ${r2Stop(key,'roll','🎳 ارمِ الكرة',sv==null)}`;}
-    return s+'</div>';},
+    return s+sh+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
     if(a==='ba'){if(Number.isInteger(i)&&i>=0&&i<=16){S.draft.ba=String(i);render();}return;}
     if(a==='bs'){if(Number.isInteger(i)&&i>=0&&i<3){S.draft.bs=String(i);render();}return;}
@@ -405,13 +407,14 @@ GAMES.r_golf={name:'الغولف الصغير',cat:'sport',lbc:'#3E9D4A',
       ${my?`<path class="gl-aim" d="M${d.bx[t]} ${d.by[t]}l${(Math.sin(a*Math.PI/180)*26).toFixed(1)} ${(-Math.cos(a*Math.PI/180)*26).toFixed(1)}" stroke="#fff" stroke-width="1" stroke-dasharray="2.4 2" stroke-linecap="round"/>`:''}
       ${d.pl.map((_,i)=>{const done=d.hin[i]==='1';if(d.hin[i]==='x'||(done&&!(L&&L.s===i)))return '';
         return `<g class="gl-ball ${i===t&&d.win==null?'on':''} ${L&&L.s===i?'mv':''}" style="transform:translate(${done?c.cup[0]:d.bx[i]}px,${done?c.cup[1]:d.by[i]}px)">${i===t&&d.win==null?'<circle r="3.6" fill="none" stroke="#FFD84D" stroke-width=".8"/>':''}<circle r="${GL_BR}" fill="#fff" stroke="${col(d,i)}" stroke-width="1"/></g>`;}).join('')}</svg>`;
-    s+=`<div class="gl-card" style="--h:${d.H}"><span></span>${[...Array(d.H).keys()].map(h=>`<span class="hd ${h===d.hl?'on':''}">${h+1}</span>`).join('')}<span class="hd">∑</span>
+    // the score card sits under the controls so the shot never needs a scroll
+    const card=`<div class="gl-card" style="--h:${d.H}"><span></span>${[...Array(d.H).keys()].map(h=>`<span class="hd ${h===d.hl?'on':''}">${h+1}</span>`).join('')}<span class="hd">∑</span>
       ${d.pl.map((_,i)=>`<b style="color:${col(d,i)}">${nm(d,i)}</b>${[...Array(d.H).keys()].map(h=>`<span class="${h===d.hl?'on':''}">${d.sc[i][h]!=null?d.sc[i][h]:h===d.hl&&d.sk[i]?`<i>${d.sk[i]}</i>`:''}</span>`).join('')}<span><b>${d.sc[i].reduce((p,q)=>p+q,0)}</b></span>`).join('')}</div>`;
     if(my){const m=r2mPar(key,1500);
       s+=`<p class="r2lbl">اضغط على الملعب عشان تصوّب، أو عدّل بالأسهم</p><div class="r2row">${[[-10,'⟲ 10'],[-2,'⟲ 2'],[2,'2 ⟳'],[10,'10 ⟳']].map(([k,tx])=>`<button class="btn soft" data-ga="ga" data-i="${(a+k+360)%360}">${tx}</button>`).join('')}</div>
         ${r2Meter(key,m,[[0,1000,'zl'],[0,250,'z2'],[250,550,'z1'],[550,1000,'z0']],sv==null,sv,'القوة: وقّف المؤشر على القوة اللي تبيها')}
         ${r2Stop(key,'hit','⛳ اضرب',sv==null)}`;}
-    return s+'</div>';},
+    return s+card+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
     if(a==='ga'){if(Number.isInteger(i)&&i>=0&&i<360){S.draft.ga=String(i);render();}return;}
     if(a!=='hit')return;const v=r2Read(i);r2Hold(d.gid+':'+(d.sid||0),v,ctx);act(glPlay(d,d.turn,glA(d,d.turn),v));},
@@ -533,12 +536,12 @@ GAMES.r_arch={name:'الرماية بالقوس',cat:'sport',lbc:'#B23A48',
       ${my?`<g class="ar-aim" style="transform:translateX(${ax}px)"><circle r="9" fill="none" stroke="#1E2328" stroke-width="1.6"/><path d="M-15 0h10M5 0h10M0-15v10M0 5v10" stroke="#1E2328" stroke-width="1.6"/></g>`:''}
       <g transform="translate(-112 -100)"><rect width="66" height="22" rx="11" fill="rgba(255,255,255,.88)"/><text x="33" y="15.5" text-anchor="middle" class="ar-wt">💨 ${w===0?'هادي':(w>0?'→ ':'← ')+Math.abs(w)}</text></g>
       <g transform="translate(96 -98)"><path d="M0 0v34" stroke="#555" stroke-width="2"/><path d="M0 2l${w*3.4||1} ${3+Math.abs(w)*.4}l${-(w*3.4||1)} ${3+Math.abs(w)*.4}z" fill="#EC6158"/></g></svg>`;
-    s+=`<div class="ar-tab"><span></span>${[1,2,3,4].map(e=>`<span class="hd ${e-1===end?'on':''}">${e}</span>`).join('')}<span class="hd">∑</span><span class="hd">X</span>
+    const tab=`<div class="ar-tab"><span></span>${[1,2,3,4].map(e=>`<span class="hd ${e-1===end?'on':''}">${e}</span>`).join('')}<span class="hd">∑</span><span class="hd">X</span>
       ${d.pl.map((_,i)=>`<b style="color:${col(d,i)}">${nm(d,i)}</b>${[0,1,2,3].map(e=>{const q=d.ar[i].slice(e*3,e*3+3);return `<span class="${e===end?'on':''}">${q.length?arTot(q):''}</span>`;}).join('')}<span><b>${arTot(d.ar[i])}</b></span><span>${arX(d.ar[i])}</span>`).join('')}</div>`;
     if(my){const m=r2mPar(key,1100);
       s+=`<p class="r2lbl">صوّب عكس الريح (${w===0?'ما فيه ريح':w>0?'الريح تدفع لليمين':'الريح تدفع لليسار'})</p><div class="r2row"><button class="btn soft" data-ga="ax" data-i="${ax-9}" ${ax>-60?'':'disabled'}>◀◀</button><button class="btn soft" data-ga="ax" data-i="${ax-3}" ${ax>-60?'':'disabled'}>◀</button><button class="btn soft" data-ga="ax" data-i="0">⊙</button><button class="btn soft" data-ga="ax" data-i="${ax+3}" ${ax<60?'':'disabled'}>▶</button><button class="btn soft" data-ga="ax" data-i="${ax+9}" ${ax<60?'':'disabled'}>▶▶</button></div>
         ${r2Meter(key,m,[[0,1000,'z0'],[320,680,'z1'],[430,570,'z2']],sv==null,sv,'ثبات القوس: وقّف المؤشر في النص')}${r2Stop(key,'shot','🏹 أطلق',sv==null)}`;}
-    return s+'</div>';},
+    return s+tab+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
     if(a==='ax'){if(Number.isInteger(i)){S.draft.ax=String(r2Clamp(i,-60,60));render();}return;}
     if(a!=='shot')return;const v=r2Read(i);r2Hold(d.gid+':'+(d.sid||0),v,ctx);act({...arShoot(d,d.turn,r2Dr('ax',-60,60,0),v),lxS:d.turn});},
@@ -572,7 +575,7 @@ function plSim(bl,a,p,rec,n){const B=bl.map(b=>b?{x:b[0],y:b[1],vx:0,vy:0,on:1}:
     const sub=Math.max(1,Math.ceil(mx/.6));subs+=sub;
     for(let k=0;k<sub;k++){for(const b of B)if(b&&b.on){b.x+=b.vx/sub;b.y+=b.vy/sub;}
       for(let i=0;i<10;i++){const b=B[i];if(!b||!b.on)continue;
-        for(const [px,py,pr] of PL_P)if(Math.hypot(b.x-px,b.y-py)<pr){b.on=0;b.vx=b.vy=0;b.x=px;b.y=py;pot.push(i);break;}if(!b.on)continue;
+        if(b.x<10||b.x>190||b.y<10||b.y>90)for(const [px,py,pr] of PL_P)if(Math.hypot(b.x-px,b.y-py)<pr){b.on=0;b.vx=b.vy=0;b.x=px;b.y=py;pot.push(i);break;}if(!b.on)continue;
         if(b.x<PL_R&&!(b.y<13||b.y>87)){b.x=2*PL_R-b.x;b.vx=-b.vx*E;}if(b.x>200-PL_R&&!(b.y<13||b.y>87)){b.x=2*(200-PL_R)-b.x;b.vx=-b.vx*E;}
         if(b.y<PL_R&&!(b.x<13||b.x>187||Math.abs(b.x-100)<9)){b.y=2*PL_R-b.y;b.vy=-b.vy*E;}if(b.y>100-PL_R&&!(b.x<13||b.x>187||Math.abs(b.x-100)<9)){b.y=2*(100-PL_R)-b.y;b.vy=-b.vy*E;}
         if(b.x<-7||b.x>207||b.y<-7||b.y>107){b.on=0;b.vx=b.vy=0;const q=PL_P.reduce((m,P)=>Math.hypot(P[0]-b.x,P[1]-b.y)<Math.hypot(m[0]-b.x,m[1]-b.y)?P:m);b.x=q[0];b.y=q[1];pot.push(i);}}
@@ -611,7 +614,7 @@ function plGhost(bl,a){const c=bl[0],ux=Math.cos(a*Math.PI/180),uy=Math.sin(a*Ma
   return [c[0]+ux*tm,c[1]+uy*tm,-1];}
 // a bot: cuts on the lowest ball into each pocket at a few strengths, all played out (the steps are counted); the best
 // legal pot wins, else the safest legal touch
-function plBot(d,s,lv){const bl=d.bl,c=bl[0],low=plLow(bl),L=bl[low];const cap={c:0},max=[0,30000,150000,400000][lv];let best=null;
+function plBot(d,s,lv){const bl=d.bl,c=bl[0],low=plLow(bl),L=bl[low];const cap={c:0},max=[0,30000,70000,110000][lv];let best=null;
   const deg=(x,y)=>((Math.atan2(y-c[1],x-c[0])*180/Math.PI)+360)%360;
   const tryS=(a,p)=>{if(cap.c>max)return;const r=plSim(bl,a,p,false,cap),obj=r.pot.filter(k=>k>0),foul=r.pot.includes(0)||r.first!==low;
     let sc=foul?-60:obj.length?40+obj.reduce((x,y)=>x+y,0)*3:0;if(!foul&&r.bl[0]){const nl=plLow(r.bl);if(nl>0){const g=plGhost(r.bl,deg(r.bl[nl][0],r.bl[nl][1]));sc+=g[2]===nl?6:0;}}

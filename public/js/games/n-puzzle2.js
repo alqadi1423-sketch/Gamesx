@@ -214,9 +214,11 @@ function bnCount(n,g0,lim,cap,rand){const h=n/2;let nodes=0;const sols=[];
   return {sols,nodes,cut:nodes>cap};}
 const bnArr=s=>[...s].map(x=>x==='.'?-1:+x);
 function bnGen(lv){const n=[0,6,8,10][lv];
-  for(;;){const full=bnCount(n,Array(n*n).fill(-1),1,20000,true).sols[0];if(!full)continue;const g=bnArr(full);
-    const keep=[0,.5,.36,0][lv],order=u2Sh(u2Rng(n*n));let holes=0;
-    for(const i of order){if(holes>=n*n*(1-keep))break;const v=g[i];g[i]=-1;const r=bnCount(n,g,2,4000);if(r.sols.length===1&&!r.cut)holes++;else g[i]=v;}
+  for(;;){const full=bnCount(n,Array(n*n).fill(-1),1,3000,true).sols[0];if(!full)continue;const g=bnArr(full);
+    // a cell is taken out only when the board still has one answer; on 10×10 that answer must come out by reasoning with very
+    // little guessing (a small search cap), which keeps the board fair and makes it quick to deal on a slow phone
+    const keep=[0,.5,.36,0][lv],order=u2Sh(u2Rng(n*n)),cap=lv===3?20:4000;let holes=0;
+    for(const i of order){if(holes>=n*n*(1-keep))break;const v=g[i];g[i]=-1;const r=bnCount(n,g,2,cap);if(r.sols.length===1&&!r.cut)holes++;else g[i]=v;}
     return {n,g:g.map(x=>x<0?'.':x).join('')};}}
 function bnCheck(pz,s){const n=pz.n;if(s.length!==n*n||!/^[01]+$/.test(s))return false;for(let i=0;i<n*n;i++)if(pz.g[i]!=='.'&&pz.g[i]!==s[i])return false;
   const r=bnCount(n,bnArr(s),1,10);return r.sols.length===1;}
@@ -272,11 +274,16 @@ function slDist(n,g){let s=0;for(let i=0;i<n*n;i++){const v=SL_CH.indexOf(g[i]);
 function slGen(lv){const n=lv===1?3:4;
   if(lv===2){for(;;){let g=slGoal(n),last='';for(let k=0;k<44;k++){const opts='UDLR'.split('').filter(m=>m!=={U:'D',D:'U',L:'R',R:'L'}[last]&&slPlay(n,g,m));last=opts[u2R(opts.length)];g=slPlay(n,g,last);}if(slDist(n,g)>=22)return {n,g};}}
   for(;;){const a=u2Sh([...slGoal(n)]);if(slOk(n,a)&&slDist(n,a.join(''))>=(n===3?12:30))return {n,g:a.join('')};}}
-// a bot's way through: best-first search on distance (weighted, so it is quick, not shortest)
-function slSolve(n,g){const goal=slGoal(n),W=n===3?1:5.5;const seen=new Set([g]);const open=[[slDist(n,g)*W,g,'']];let nodes=0;
+// distance plus linear conflicts (two tiles in their own row or column but in the wrong order must pass each other)
+function slH(n,g){let s=0;const pos=[];for(let i=0;i<n*n;i++){const v=SL_CH.indexOf(g[i]);if(!v)continue;const gr=Math.floor((v-1)/n),gc=(v-1)%n;s+=Math.abs(Math.floor(i/n)-gr)+Math.abs(i%n-gc);pos[i]=[gr,gc];}
+  for(let r=0;r<n;r++)for(let a=0;a<n;a++){const pa=pos[r*n+a];if(!pa||pa[0]!==r)continue;for(let b=a+1;b<n;b++){const pb=pos[r*n+b];if(pb&&pb[0]===r&&pb[1]<pa[1])s+=2;}}
+  for(let c=0;c<n;c++)for(let a=0;a<n;a++){const pa=pos[a*n+c];if(!pa||pa[1]!==c)continue;for(let b=a+1;b<n;b++){const pb=pos[b*n+c];if(pb&&pb[1]===c&&pb[0]<pa[0])s+=2;}}
+  return s;}
+// a bot's way through: best-first search (weighted, so it is quick, not shortest), capped by nodes
+function slSolve(n,g){const goal=slGoal(n),W=n===3?2:3,H=slH;const seen=new Set([g]);const open=[[H(n,g)*W,g,'']];let nodes=0;
   const push=x=>{open.push(x);let i=open.length-1;while(i>0){const p=(i-1)>>1;if(open[p][0]<=open[i][0])break;[open[p],open[i]]=[open[i],open[p]];i=p;}};
   const pop=()=>{const top=open[0],last=open.pop();if(open.length){open[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<open.length&&open[l][0]<open[m][0])m=l;if(r<open.length&&open[r][0]<open[m][0])m=r;if(m===i)break;[open[m],open[i]]=[open[i],open[m]];i=m;}}return top;};
-  while(open.length&&nodes++<300000){const [,s,p]=pop();if(s===goal)return p;for(const m of 'UDLR'){const t=slPlay(n,s,m);if(!t||seen.has(t))continue;seen.add(t);push([p.length+1+slDist(n,t)*W,t,p+m]);}}
+  while(open.length&&nodes++<60000){const [,s,p]=pop();if(s===goal)return p;for(const m of 'UDLR'){const t=slPlay(n,s,m);if(!t||seen.has(t))continue;seen.add(t);push([p.length+1+H(n,t)*W,t,p+m]);}}
   return null;}
 GAMES.u_slide=u2Game({name:'لغز الخمسطعش',cls:'sl',lbc:'#8B5A2B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#A06A38"/><rect x="10" y="10" width="80" height="80" rx="9" fill="#6E4422"/>${u2Rng(15,i=>{const r=Math.floor(i/4),c=i%4;return `<rect x="${13+c*19}" y="${13+r*19}" width="17" height="17" rx="4" fill="#F3D9A6"/><text x="${21.5+c*19}" y="${26+r*19}" font-size="10" font-weight="900" fill="#6E4422" text-anchor="middle">${[3,1,7,4,9,2,15,8,5,13,10,12,14,6,11][i]}</text>`;}).join('')}</svg>`,
