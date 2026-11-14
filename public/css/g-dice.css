@@ -307,7 +307,7 @@ button.dice:disabled{cursor:default}
 .tw .memnum{font-size:56px;padding:10px 20px;letter-spacing:2px;color:var(--ink);background:var(--surface);box-shadow:var(--e1)}
 .tapbtn{background:radial-gradient(circle at 38% 30%,#7EE2A6,#2ECC71 38%,#1E8449 75%);box-shadow:inset 0 -8px 0 rgba(0,0,0,.18),inset 0 6px 0 rgba(255,255,255,.3),0 0 0 8px rgba(30,132,73,.18),0 10px 0 #145A32,0 16px 28px rgba(0,0,0,.25);text-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform 60ms ease-out,box-shadow 60ms ease-out}
 .tapbtn:active{transform:translateY(8px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),inset 0 6px 0 rgba(255,255,255,.3),0 0 0 12px rgba(30,132,73,.22),0 2px 0 #145A32,0 4px 10px rgba(0,0,0,.25)}
-.tw .tbar{max-width:320px;margin-left:auto;margin-right:auto}
+.tw .tbar{width:100%;max-width:320px;margin-left:auto;margin-right:auto}
 
 /* ================= dark mode: the boards stay light materials but lose their glare ================= */
 @media (prefers-color-scheme:dark){
