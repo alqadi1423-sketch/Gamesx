@@ -1,4 +1,12 @@
 :root{--navy:#2D4763;--card:#fff;--txt:#2D4763;--red:#EC6158;--blue:#4AB1E8;--ink:#2D4763;--bg:#E9F1FA;--mut:#5F7590;--line:#d3e0ee}
+/* ===== design tokens (one source for every screen and game; names are a contract, values may be tuned) ===== */
+:root{--surface:var(--card);--surface-2:#F4F8FC;--gold:#F0B429;--ok:#3FAE5C;--bad:#E5534B;--sel:#FFD84D;
+ --r-s:10px;--r-m:14px;--r-l:18px;--r-xl:24px;
+ --e1:0 1px 0 var(--line),0 2px 8px rgba(29,52,84,.06);--e2:0 1px 0 var(--line),0 6px 18px rgba(29,52,84,.10);--e3:0 14px 36px rgba(15,30,50,.22);
+ --lip:0 4px 0 rgba(0,0,0,.16);--ring:0 0 0 3px var(--sel);
+ --ease:cubic-bezier(.2,.8,.2,1);--spring:cubic-bezier(.34,1.56,.64,1);--t1:.12s;--t2:.22s;--t3:.36s;
+ --wood-1:#EED3A8;--wood-2:#D4A56A;--wood-3:#8A5A2B;--felt-1:#2E9A62;--felt-2:#1C6B43;--sea-1:#4FA3D8;--sea-2:#2F7DB3}
+@media (prefers-color-scheme:dark){:root{--surface-2:#243241;--e1:0 1px 0 #0b1118,0 2px 8px rgba(0,0,0,.3);--e2:0 1px 0 #0b1118,0 6px 18px rgba(0,0,0,.4);--e3:0 14px 36px rgba(0,0,0,.55)}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Baloo Bhaijaan 2',system-ui,sans-serif}
 #app{max-width:540px;margin:0 auto;padding:14px 14px 48px;min-height:100vh}
