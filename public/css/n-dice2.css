@@ -1,0 +1,234 @@
+/* dice, second set (n-dice2.js): every rule here is scoped to a d2- class. Motion is transform/opacity only, at most .45s */
+@keyframes d2-pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:none}}
+@keyframes d2-rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@keyframes d2-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@keyframes d2-glow{0%{transform:scale(1)}50%{transform:scale(1.14)}100%{transform:none}}
+
+.d2-roll{gap:8px}
+.d2-roll small{font-size:12px;opacity:.85;font-weight:600}
+.d2-big{font-size:22px}
+/* round line: round number on one side, the turn's own counter on the other */
+.d2-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;max-width:440px;margin:0 auto 8px;padding:6px 12px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1);font-weight:700;color:var(--mut);font-size:14px}
+.d2-hd b{color:var(--ink)}
+.d2-hd .dice.d2-tg{display:inline-grid;width:30px;height:30px;padding:3px;vertical-align:middle;margin-inline-start:4px}
+/* the felt tray (yatzy's .ytray) with a total next to the dice */
+.d2-tray{min-height:86px;flex-wrap:wrap;row-gap:12px}
+.d2-tray .dice{width:56px;height:56px;padding:7px;flex:none}
+.d2-sum{min-width:44px;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.28);color:#fff;font-size:20px;font-weight:800;text-align:center;animation:d2-pop .3s var(--spring)}
+.d2-sum.hit{background:var(--gold);color:#3a2a00}
+.d2-tray .dice.hit{box-shadow:var(--dc-edge),0 0 0 3px var(--gold),0 4px 0 rgba(0,0,0,.25)}
+.d2-tray .dice.cg{box-shadow:var(--dc-edge),0 0 0 3px #F2C14E,0 4px 0 rgba(0,0,0,.25)}
+.d2-tray.cargo{background:radial-gradient(120% 140% at 50% 0%,#3F86B8,#245E87);box-shadow:inset 0 3px 10px rgba(0,0,0,.35),0 3px 0 #1B4868,var(--e1)}
+.d2-tray.d2-green{background:radial-gradient(120% 140% at 50% 0%,#6CC070,#3E8E41)}
+.d2-tray.d2-bunco{animation:d2-glow .45s ease}
+.dice.zero{box-shadow:var(--dc-edge),0 0 0 3px #3FAE5C,0 4px 0 rgba(0,0,0,.2)}
+/* the little dice inside a line of text */
+.d2-md{display:inline-flex;gap:3px;vertical-align:middle}
+.d2-md .dice{display:inline-grid;width:24px;height:24px;padding:2px;border-radius:6px}
+.d2-md.roll .dice{animation:d2-pop .35s var(--spring)}
+/* this round's results: one chip per player */
+.d2-rr{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:6px;width:100%;max-width:440px;margin:12px auto 0}
+.d2-rr.many{grid-template-columns:repeat(4,minmax(0,1fr))}
+.d2-rc{display:flex;flex-direction:column;align-items:center;padding:5px 4px;border-radius:12px;background:var(--surface);box-shadow:inset 0 3px 0 var(--c),var(--e1);min-width:0}
+.d2-rc i{font-style:normal;font-size:12px;color:var(--mut);max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.d2-rc b{font-size:15px;color:var(--ink);white-space:nowrap}
+.d2-rc.on{box-shadow:inset 0 3px 0 var(--c),0 0 0 2px var(--c),var(--e1)}
+.d2-rc.done b{animation:d2-rise .3s var(--ease)}
+.d2-lt{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;width:100%;max-width:440px;margin:8px auto 0;padding:6px 10px;border-radius:12px;background:var(--surface-2);box-shadow:inset 4px 0 0 var(--c);font-size:14px}
+.d2-lt small{color:var(--mut);font-weight:700}
+
+/* ship, captain and crew: three berths that fill in order */
+.d2-scc{display:flex;justify-content:center;gap:12px;margin:0 auto 10px}
+.d2-slot{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 8px 6px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1);min-width:86px}
+.d2-slot .dice{width:52px;height:52px;padding:7px}
+.d2-slot small{font-weight:800;color:var(--mut);font-size:13px}
+.d2-slot.got{box-shadow:inset 0 0 0 2px var(--gold),var(--e1)}
+.d2-slot.got small{color:var(--ink)}
+
+/* mexico: the cups around the table, the claim plaque, your dice */
+.d2-cups{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:440px;margin:0 auto 8px}
+.d2-cup{display:flex;flex-direction:column;align-items:center;width:78px;padding:4px;border-radius:12px;transition:transform var(--t2) var(--ease)}
+.d2-cups.many .d2-cup{width:70px}
+.d2-cup svg{width:40px;height:38px}
+.d2-cup i{font-style:normal;font-size:12px;font-weight:700;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.d2-cup b{font-size:10px;letter-spacing:-1px;line-height:1.3}
+.d2-cup.on{background:var(--surface);box-shadow:0 0 0 2px var(--c),var(--e1);transform:translateY(-3px)}
+.d2-cup.full svg{animation:d2-shake .35s ease}
+.d2-cup.out{opacity:.35}
+.d2-claim{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;max-width:300px;margin:6px auto;padding:10px;border-radius:var(--r-l);background:linear-gradient(180deg,#FFF6DD,#F3DFAE);color:#3a2a00;box-shadow:inset 0 0 0 3px var(--c),0 4px 0 rgba(0,0,0,.15);animation:d2-pop .3s var(--spring)}
+.d2-claim small{font-weight:700;opacity:.8}
+.d2-claim b{font-size:30px;font-weight:900;line-height:1.1}
+.d2-claim.none{background:var(--surface);color:var(--mut);box-shadow:var(--e1)}
+.d2-claim.rv b{font-size:20px}
+.d2-claim.rv.ok b{color:#2C8A47}.d2-claim.rv.no b{color:#C2392F}
+.d2-pair{display:flex;gap:8px;margin:4px 0}
+.d2-pair .dice{width:46px;height:46px;padding:6px}
+.d2-under{display:flex;flex-direction:column;align-items:center;gap:2px;max-width:300px;margin:8px auto;padding:8px 14px;border-radius:var(--r-l);background:radial-gradient(120% 140% at 50% 0%,var(--felt-1),var(--felt-2));color:#fff;box-shadow:inset 0 3px 10px rgba(0,0,0,.35)}
+.d2-under small{opacity:.85;font-weight:700}
+.d2-under b{font-size:20px}
+.d2-mx{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;max-width:440px;margin:4px auto 0}
+.d2-mxv{min-height:42px;border-radius:10px;background:var(--surface);color:var(--ink);font-weight:800;font-size:15px;box-shadow:0 3px 0 var(--edge);direction:ltr;transition:transform var(--t1) var(--ease)}
+.d2-mxv:active:not(:disabled){transform:translateY(2px);box-shadow:none}
+.d2-mxv:disabled{opacity:.3;box-shadow:none}
+.d2-mxv.dbl{background:#E8F1FB;color:#2D4763}
+.d2-mxv.mx{grid-column:span 7;background:#F2C14E;color:#3a2a00;font-size:17px}
+.d2-mxv.tru{box-shadow:0 0 0 3px var(--ok),0 3px 0 var(--edge)}
+@media (prefers-color-scheme:dark){.d2-mxv.dbl{background:#2A3D52;color:#E7EEF6}}
+
+/* chicago: the eleven targets, and everyone's hits */
+.d2-chi{display:flex;gap:3px;justify-content:center;max-width:440px;margin:0 auto 8px;direction:ltr}
+.d2-chi span{flex:1;min-width:0;padding:4px 0;border-radius:8px;text-align:center;font-weight:800;font-size:14px;background:var(--surface);color:var(--mut);box-shadow:var(--e1)}
+.d2-chi span.past{opacity:.45}
+.d2-chi span.on{background:var(--navy);color:#fff;transform:scale(1.12)}
+@media (prefers-color-scheme:dark){.d2-chi span.on{background:#E7EEF6;color:#111923}}
+.d2-chit{display:flex;flex-direction:column;gap:3px;max-width:440px;margin:10px auto 0;padding:6px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1)}
+.d2-chit>div{display:grid;grid-template-columns:64px 1fr 34px;align-items:center;gap:6px;font-size:12px}
+.d2-chit i{font-style:normal;font-weight:700;color:var(--c);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.d2-chit span{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:2px;direction:ltr}
+.d2-chit u{height:18px;border-radius:4px;background:var(--surface-2);text-decoration:none;font-size:10px;font-weight:800;text-align:center;line-height:18px}
+.d2-chit u.y{background:var(--gold);color:#3a2a00}
+.d2-chit u.n{background:var(--line);opacity:.5}
+.d2-chit b{text-align:center}
+
+/* balut: the card of seven rows with four boxes */
+.d2-bl{width:100%;max-width:440px;margin:12px auto 0;padding:6px 8px 8px;border-radius:var(--r-l);background:#FFFBF1;color:#2D4763;box-shadow:inset 0 4px 0 var(--c),var(--e1)}
+@media (prefers-color-scheme:dark){.d2-bl{background:#22303F;color:var(--ink)}}
+.d2-blh{font-size:13px;font-weight:700;opacity:.75;padding:2px 2px 4px}
+.d2-blr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr) 34px 54px;align-items:center;gap:6px;width:100%;min-height:38px;padding:2px 4px;margin:0;background:none;border-bottom:1px dashed rgba(45,71,99,.2);border-radius:8px;text-align:start;color:inherit;font-size:14px;font-weight:700}
+.d2-bln{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden}
+.d2-bln i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--c);color:#fff;font-size:12px}
+.d2-blb{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+.d2-blb u{height:22px;border-radius:5px;background:rgba(45,71,99,.08);text-decoration:none;font-size:12px;text-align:center;line-height:22px}
+.d2-blb u.f{background:rgba(45,71,99,.16)}
+.d2-blb u.z{color:#C2392F}
+.d2-blp{text-align:center;font-size:16px}
+.d2-blr em{font-style:normal;font-size:11px;text-align:center;opacity:.75}
+.d2-blr em.ok{color:#2C8A47;opacity:1;font-weight:900}.d2-blr em.no{color:#C2392F;opacity:1}
+.d2-blr.pv{background:rgba(63,174,92,.12);cursor:pointer}
+.d2-blr.pv.top{background:rgba(240,180,41,.28);box-shadow:inset 0 0 0 2px var(--gold)}
+.d2-blr.zero .d2-blp{color:#C2392F}
+.d2-blr:active:not(:disabled){transform:scale(.98)}
+.d2-blt{display:flex;justify-content:space-between;gap:6px;padding:8px 4px 0;font-size:13px;font-weight:700}
+
+/* bunco: each side's race to 21 */
+.d2-bu{display:flex;flex-direction:column;gap:6px;max-width:440px;margin:12px auto 0}
+.d2-bur{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 48px auto;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;background:var(--surface);box-shadow:inset 4px 0 0 var(--c),var(--e1);font-size:13px}
+.d2-bur i{font-style:normal;font-weight:800;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.d2-bur span{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.d2-bur span u{display:block;height:100%;background:var(--c);transform-origin:right;transition:transform var(--t3) var(--ease)}
+.d2-bur.on{box-shadow:inset 4px 0 0 var(--c),0 0 0 2px var(--c)}
+.d2-bur em{font-style:normal;font-size:12px}
+
+/* knucklebones: two wooden boards facing each other */
+.d2-kb{max-width:340px;margin:0 auto;padding:6px 8px 8px;border-radius:var(--r-l);background:linear-gradient(180deg,var(--wood-2),#B98448);box-shadow:inset 0 0 0 3px rgba(0,0,0,.12),0 4px 0 var(--wood-3),var(--e1);transition:opacity var(--t2)}
+.d2-kb:not(.on){opacity:.82}
+.d2-kb.on{box-shadow:inset 0 0 0 3px var(--c),0 4px 0 var(--wood-3),var(--e1);opacity:1}
+.d2-kbn{text-align:center;font-weight:800;color:#3B2410;font-size:14px;padding:2px}
+.d2-kbn b{display:inline-block;min-width:34px;margin-inline-start:6px;padding:0 6px;border-radius:8px;background:#3B2410;color:#FFE9C2}
+.d2-kbg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;direction:ltr}
+.d2-kb.top .d2-kbg{margin-top:2px}
+.d2-kcol{display:flex;flex-direction:column;gap:5px;padding:6px 5px 4px;border-radius:12px;background:rgba(59,36,16,.28);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);color:#FFE9C2;align-items:center}
+.d2-kcol em{font-style:normal;font-weight:800;font-size:13px}
+.d2-kb.top .d2-kcol{flex-direction:column-reverse}
+.d2-kcol.can{cursor:pointer;box-shadow:inset 0 0 0 2px var(--gold),inset 0 2px 6px rgba(0,0,0,.25)}
+.d2-kcol.can:active{transform:scale(.97)}
+.d2-kcol.hit{animation:d2-shake .4s ease}
+.d2-kc{width:100%;aspect-ratio:1;max-width:60px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.08)}
+.d2-kc .dice{width:100%;height:100%;padding:6px}
+.d2-kc .dice.m2{box-shadow:var(--dc-edge),0 0 0 3px #F2C14E,0 3px 0 rgba(0,0,0,.25)}
+.d2-kc .dice.m3{box-shadow:var(--dc-edge),0 0 0 3px #E5534B,0 3px 0 rgba(0,0,0,.25)}
+.d2-kbm{display:flex;align-items:center;justify-content:center;gap:12px;min-height:84px;margin:8px auto}
+.d2-kbm .dice.d2-kbd{width:64px;height:64px;padding:8px}
+.d2-kbm small{font-weight:800;color:var(--mut)}
+
+/* poker dice, cee-lo */
+.d2-hand{text-align:center;font-weight:900;font-size:20px;margin:8px 0 0;color:var(--ink);animation:d2-rise .25s var(--ease)}
+.d2-ladder{display:flex;justify-content:center;gap:4px;margin:10px auto 0;max-width:440px;font-size:12px;font-weight:700;color:var(--mut)}
+.d2-ladder span{padding:3px 8px;border-radius:8px;background:var(--surface);box-shadow:var(--e1)}
+.d2-ladder span+span::before{content:'›';margin-inline-end:4px;opacity:.6}
+
+/* threes: the dice already kept */
+.d2-kept{display:flex;align-items:center;justify-content:center;gap:6px;min-height:52px;max-width:440px;margin:0 auto 8px;padding:6px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1)}
+.d2-kept small{font-weight:700;color:var(--mut)}
+.d2-kept em{font-style:normal;color:var(--mut);font-size:13px}
+.d2-kept .dice{width:38px;height:38px;padding:4px;animation:d2-pop .3s var(--spring)}
+
+/* golf: the score card */
+.d2-gf{max-width:440px;margin:12px auto 0;padding:6px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1);font-size:12px}
+.d2-gf>div{display:grid;grid-template-columns:60px repeat(9,minmax(0,1fr)) 30px;gap:2px;align-items:center;padding:2px;border-radius:8px}
+.d2-gf>div.on{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--c)}
+.d2-gf i{font-style:normal;font-weight:700;color:var(--c);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.d2-gf u{height:20px;border-radius:5px;background:var(--surface-2);text-decoration:none;text-align:center;line-height:20px;font-weight:800}
+.d2-gfh u{background:none;color:var(--mut)}.d2-gfh u.on{background:#3E8E41;color:#fff}
+.d2-gf u.ace{background:var(--gold);color:#3a2a00}.d2-gf u.bad{color:#C2392F}
+.d2-gf b{text-align:center}
+
+/* twenty-one: the dice and a meter up to 21 */
+.d2-21{display:flex;gap:10px;align-items:stretch;max-width:440px;margin:0 auto}
+.d2-21 .d2-tray{flex:1}
+.d2-meter{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:96px;padding:8px;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--e1)}
+.d2-meter b{font-size:34px;font-weight:900;line-height:1}
+.d2-meter span{width:100%;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.d2-meter span u{display:block;height:100%;background:#3FAE5C;transform-origin:right;transition:transform var(--t3) var(--ease)}
+.d2-meter.hot span u{background:#E5534B}
+.d2-meter small{color:var(--mut);font-weight:700}
+
+/* dice football: score, the pitch, the last move, the actions */
+.d2-fbs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;max-width:440px;margin:0 auto 8px;padding:6px 10px;border-radius:var(--r-m);background:#1F2B38;color:#fff;box-shadow:var(--e1)}
+.d2-fbs span{display:flex;align-items:center;gap:6px;min-width:0;font-size:13px}
+.d2-fbs span:last-of-type{justify-content:flex-end}
+.d2-fbs span i{font-style:normal;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:2px 8px;border-radius:8px;background:var(--c)}
+.d2-fbs span i b{color:#fff!important}
+.d2-fbs>b{font-size:26px;font-weight:900;direction:ltr;min-width:72px;text-align:center}
+.d2-fbs>b.gl{animation:d2-glow .45s ease}
+.d2-fbs em{grid-column:1/-1;text-align:center;font-style:normal;font-size:12px;opacity:.8}
+.d2-pitch{display:grid;grid-template-columns:10px repeat(9,minmax(0,1fr)) 10px;max-width:440px;height:78px;margin:0 auto;border-radius:12px;overflow:hidden;background:repeating-linear-gradient(90deg,#3BA04A 0 11.1%,#35923F 11.1% 22.2%);box-shadow:inset 0 0 0 3px rgba(255,255,255,.75),0 4px 0 #26702F}
+.d2-pitch .gl0{background:var(--c0)}.d2-pitch .gl1{background:var(--c1)}
+.d2-z{position:relative;display:grid;place-items:center;border-inline-end:1px solid rgba(255,255,255,.12)}
+.d2-z:nth-child(6){border-inline-end:2px solid rgba(255,255,255,.7)}
+.d2-z.box0,.d2-z.box1{background:rgba(255,255,255,.1)}
+.d2-ball{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px var(--c),0 3px 0 rgba(0,0,0,.3);font-size:20px;animation:d2-pop .3s var(--spring)}
+.d2-fbl{display:flex;align-items:center;justify-content:center;gap:8px;max-width:440px;margin:8px auto 0;padding:5px 10px;border-radius:12px;background:var(--surface);box-shadow:inset 4px 0 0 var(--c),var(--e1);font-weight:800;font-size:14px}
+.d2-fbl.ok span{color:#2C8A47}.d2-fbl.no span{color:#C2392F}
+.d2-fba{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:440px;margin:12px auto 0}
+.d2-fba .btn{flex-direction:column;gap:0;padding:4px 6px;min-height:58px;font-size:16px;line-height:1.2}
+.d2-fba .btn small{font-size:11px;font-weight:600;opacity:.9}
+.d2-pens{display:flex;flex-direction:column;gap:6px;max-width:440px;margin:10px auto 0}
+.d2-pens>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:12px;background:var(--surface);box-shadow:inset 4px 0 0 var(--c),var(--e1)}
+.d2-pens i{font-style:normal;font-weight:800;font-size:13px}
+.d2-pens span{display:flex;gap:4px;flex-wrap:wrap;direction:ltr}
+.d2-pens u{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--surface-2);text-decoration:none;font-size:13px}
+.d2-pens u.o{background:#D8F1DF}.d2-pens u.x{background:#F8D7D4;color:#C2392F}
+
+/* draw the beetle */
+.d2-btm{display:flex;gap:10px;align-items:center;justify-content:center;max-width:440px;margin:0 auto}
+.d2-btb{display:flex;flex-direction:column;align-items:center;flex:1;padding:6px;border-radius:var(--r-l);background:#FFFBEF;box-shadow:inset 0 0 0 3px var(--c),var(--e1);color:#2D4763}
+@media (prefers-color-scheme:dark){.d2-btb{background:#F4EEDC}}
+.d2-btb small{font-weight:800;font-size:13px}
+.d2-bt{width:100%;height:auto;display:block;overflow:visible}
+.d2-bt.big{max-width:170px}
+.d2-bt .off{opacity:.22}
+.d2-bt .off *{fill:none!important;stroke:#7A8899!important;stroke-dasharray:3 3;stroke-width:1.6!important}
+.d2-bt .ln{fill:none;stroke:#26323F;stroke-width:3.4;stroke-linecap:round}
+.d2-bt .bd{fill:var(--c);stroke:#26323F;stroke-width:2.4}
+.d2-bt .wg{fill:#fff;fill-opacity:.35;stroke:#26323F;stroke-width:2.2}
+.d2-bt .hd{fill:var(--c);stroke:#26323F;stroke-width:2.4}
+.d2-bt .ey{fill:#fff;stroke:#26323F;stroke-width:1.6}
+.d2-bt .nw{transform-box:fill-box;transform-origin:center;animation:d2-pop .42s var(--spring)}
+.d2-btr{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:110px}
+.d2-btd{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.d2-btd .dice{width:52px;height:52px;padding:7px}
+.d2-btd small{font-size:12px;font-weight:700;color:var(--mut);max-width:120px}
+.d2-btd.miss .dice{opacity:.6}
+.d2-hint{font-size:12px;color:var(--mut);font-weight:700}
+.d2-key{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;max-width:440px;margin:10px auto 0}
+.d2-key span{display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:10px;background:var(--surface);box-shadow:var(--e1);font-size:12px;font-weight:700;opacity:.55}
+.d2-key span.can{opacity:1;box-shadow:inset 0 0 0 2px var(--gold),var(--e1)}
+.d2-key .dice{display:inline-grid;width:22px;height:22px;padding:2px;border-radius:5px;flex:none}
+.d2-key b{margin-inline-start:auto;font-size:11px;color:var(--mut)}
+.d2-bts{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px;max-width:440px;margin:10px auto 0}
+.d2-bts.many{grid-template-columns:repeat(4,minmax(0,1fr))}
+.d2-bts>div{display:flex;flex-direction:column;align-items:center;padding:4px;border-radius:12px;background:var(--surface);box-shadow:inset 0 3px 0 var(--c),var(--e1);font-size:11px}
+.d2-bts>div.on{box-shadow:inset 0 3px 0 var(--c),0 0 0 2px var(--c)}
+.d2-bts .d2-bt{max-width:52px}
+.d2-bts i{font-style:normal;font-weight:700;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
