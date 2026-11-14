@@ -29,11 +29,19 @@ button.dice:disabled{cursor:default}
 .dice.ghost::before{background:none;box-shadow:inset 0 0 0 2px rgba(45,71,99,.12);border-radius:20%;border:2px dashed rgba(45,71,99,.22);inset:6%}
 .dice.ghost>svg{opacity:.12}
 @media (prefers-color-scheme:dark){.dice.ghost{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12)}.dice.ghost::before{border-color:rgba(255,255,255,.2);box-shadow:none}.dice.ghost>svg .pw{fill:#fff}.dice.ghost>svg{opacity:.14}}
-/* rolling: a short shake while the result is drawn, then the die tumbles in and settles (one keyframe each) */
-@keyframes dc-roll{0%{transform:translate(-12px,-22px) rotate(-200deg) scale(.7);opacity:.3}40%{transform:translate(2px,3px) rotate(16deg) scale(1.05);opacity:1}65%{transform:translate(0,-4px) rotate(-6deg) scale(.99)}82%{transform:translate(0,0) rotate(2deg)}100%{transform:none}}
+/* rolling: the die is thrown in, tumbles over a blurred face or two and settles on its number (0.42 s, transform and opacity only).
+   The face it lands on shows from half way; before that a drawn pattern (::after) turns with the die like the other faces going by */
+@keyframes dc-roll{0%{transform:translate(-14px,-26px) rotate(-220deg) scale(.68);opacity:.35}30%{transform:translate(3px,4px) rotate(-40deg) scale(1.06);opacity:1}52%{transform:translate(-1px,-6px) rotate(14deg) scale(.98)}74%{transform:translate(0,1px) rotate(-4deg) scale(1.02)}100%{transform:none}}
+@keyframes dc-pips{0%{opacity:0}50%{opacity:1}100%{opacity:1}}
+@keyframes dc-blur{0%{transform:none;opacity:1}17%{transform:rotate(90deg)}34%{transform:rotate(180deg) scale(.72)}50%,100%{transform:rotate(270deg);opacity:0}}
 @keyframes dc-shake{0%,100%{transform:none}25%{transform:translate(-3px,-6px) rotate(-16deg)}50%{transform:translate(3px,-2px) rotate(12deg)}75%{transform:translate(-2px,-7px) rotate(-8deg)}}
-.dice.roll,.tapd.roll,.tapd.land,.ldie.land,.mdice .dice.land{animation:dc-roll .46s cubic-bezier(.2,.7,.3,1)}
-.tapd.spin,.ldie.spin,.mdice .dice.spin{animation:dc-shake .26s linear infinite}
+.dice.roll,.tapd.roll,.tapd.land,.ldie.land,.mdice .dice.land{animation:dc-roll .42s cubic-bezier(.2,.7,.3,1)}
+.dice.roll>svg,.tapd.roll>svg,.tapd.land>svg,.mdice .dice.land>svg{animation:dc-pips .42s step-end}
+.dice.roll::after,.tapd.roll::after,.tapd.land::after,.mdice .dice.land::after{content:'';position:absolute;inset:16%;pointer-events:none;opacity:0;
+ background:radial-gradient(circle at 20% 20%,#34557A 0 12%,transparent 13%),radial-gradient(circle at 50% 50%,#34557A 0 12%,transparent 13%),radial-gradient(circle at 80% 80%,#34557A 0 12%,transparent 13%),radial-gradient(circle at 80% 20%,#34557A 0 12%,transparent 13%);
+ animation:dc-blur .42s steps(1,end)}
+/* a short shake (two turns) for a die that waits on another phone's throw */
+.tapd.spin,.ldie.spin,.mdice .dice.spin{animation:dc-shake .26s linear 2}
 
 /* ================= five dice (yatzy) ================= */
 .ytray{display:flex;gap:9px;justify-content:center;align-items:center;width:100%;max-width:440px;margin:0 auto;padding:14px 10px 16px;border-radius:var(--r-l);background:radial-gradient(120% 140% at 50% 0%,var(--felt-1),var(--felt-2));box-shadow:inset 0 3px 10px rgba(0,0,0,.35),inset 0 0 0 3px rgba(0,0,0,.1),0 3px 0 #135335,var(--e1)}
@@ -115,7 +123,7 @@ button.dice:disabled{cursor:default}
 .stile.shut{background:linear-gradient(180deg,#4A2B14,#3A210F);box-shadow:inset 0 2px 4px rgba(0,0,0,.5);transform:none;display:grid;place-items:end center;overflow:hidden}
 .stile.shut span{font-size:12px;font-weight:800;color:rgba(255,220,170,.3);margin-bottom:5px}
 .stile.shut.flip{animation:sh-flip .36s ease-in}
-@keyframes sh-flip{0%{transform:rotateX(0);background:#EBCB93}60%{transform:rotateX(70deg);background:#8a5f35}100%{transform:none}}
+@keyframes sh-flip{0%{transform:rotateX(0)}60%{transform:rotateX(70deg)}100%{transform:none}}
 .stray{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;max-width:440px;margin:12px auto 0;padding:12px 10px;border-radius:var(--r-l);background:radial-gradient(120% 140% at 50% 0%,var(--felt-1),var(--felt-2));box-shadow:inset 0 3px 10px rgba(0,0,0,.35),0 3px 0 #135335,var(--e1)}
 .stray .tapd{width:70px;height:70px;padding:8px;box-shadow:var(--dc-edge),0 5px 0 rgba(0,0,0,.25),0 9px 14px rgba(0,0,0,.25)}
 .stray .tapd.can{box-shadow:var(--dc-edge),0 0 0 3px rgba(255,236,160,.85),0 5px 0 rgba(0,0,0,.25),0 9px 14px rgba(0,0,0,.25)}
@@ -199,7 +207,7 @@ button.dice:disabled{cursor:default}
 .pawn .pb,.marble .pb{transform-box:fill-box;transform-origin:50% 100%}
 .marble .pb{transform-origin:50% 50%}
 .pawn.can,.marble.can{cursor:pointer}
-.pawn.can .pb,.marble.can .pb{animation:lu-bob 1s ease-in-out infinite}
+.pawn.can .pb,.marble.can .pb{animation:lu-bob 1s ease-in-out 3}
 @keyframes lu-bob{50%{transform:translateY(-.14px)}}
 .pawn.hop .pb,.marble.hop .pb{animation:lu-hop .15s ease-out}
 @keyframes lu-hop{50%{transform:translateY(-.3px) scale(1.1)}}
@@ -231,7 +239,7 @@ button.dice:disabled{cursor:default}
 /* glossy tokens in the players' colours */
 .mboard .mc .tks{gap:1px}
 .mboard .mc .tks i{width:10px;height:10px;border:1.5px solid #fff;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85) 0 14%,transparent 42%),var(--c);box-shadow:0 1.5px 2px rgba(0,0,0,.4)}
-.mboard .mc .tks i.cur{width:13px;height:13px;animation:mo-tok 1.4s ease-in-out infinite}
+.mboard .mc .tks i.cur{width:13px;height:13px;animation:mo-tok 1.4s ease-in-out 3}
 @keyframes mo-tok{50%{transform:translateY(-2px)}}
 .mfly{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85) 0 14%,transparent 42%),var(--c)}
 /* the middle of the board: a calm table for the dice and the actions */
@@ -304,7 +312,7 @@ button.dice:disabled{cursor:default}
 
 /* ================= tanks ================= */
 .tanks{border-radius:var(--r-l);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08),0 5px 0 var(--line),0 10px 22px rgba(20,40,70,.14)}
-.tanks .tkon{animation:tk-bob 1s ease-in-out infinite;transform-box:fill-box}
+.tanks .tkon{animation:tk-bob 1s ease-in-out 4;transform-box:fill-box}
 @keyframes tk-bob{50%{transform:translateY(-.7px)}}
 .tank.on{filter:drop-shadow(0 0 .8px #fff) drop-shadow(0 0 1.6px rgba(255,216,77,.9))}
 .aimc{border-radius:var(--r-l);box-shadow:var(--e1);padding:10px 14px}
@@ -361,3 +369,35 @@ button.dice:disabled{cursor:default}
 /* wide screens with a short window: the ludo board leaves room for its die */
 .lboard{max-width:min(500px,max(300px,calc(100vh - 380px)))}
 .lupanel{margin-top:12px}
+
+/* ================= motion added in the dice pass (transform and opacity only, each under 0.45 s) ================= */
+/* liar's dice: after a call every cup is lifted, the dice that counted light up and the loser's row is marked */
+.lrv{width:100%;max-width:440px;margin:0 auto 10px;padding:8px 10px 10px;border-radius:var(--r-l);background:var(--surface);box-shadow:inset 0 -4px 0 var(--gold),var(--e1);animation:dl-pop .3s var(--spring)}
+.lrv-h{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 6px;font-size:14px;font-weight:700;color:var(--mut);margin-bottom:6px}
+.lrv-h>b{color:var(--ink);font-size:15px}.lrv-h b.ok{color:var(--ok);font-size:18px}.lrv-h b.no{color:var(--bad);font-size:18px}
+.lrv-h .dice{width:24px;height:24px;padding:3px;flex:none;border-radius:6px}
+.lrv-rows{display:flex;flex-direction:column;gap:4px}
+.lrv-r{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:10px;box-shadow:inset 3px 0 0 var(--c)}
+.lrv-r.ls{background:rgba(229,83,75,.1)}
+.lrv-r>i{font-style:normal;font-size:13px;font-weight:800;color:var(--c);width:58px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.lrv-r>span{display:flex;gap:3px;flex-wrap:wrap;flex:1}
+.lrv-r .dice{width:26px;height:26px;padding:3px;border-radius:7px;opacity:.45;animation:dl-pop .28s var(--spring) both;animation-delay:calc(var(--j)*40ms)}
+.lrv-r .dice.hit{opacity:1;box-shadow:var(--dc-edge),0 0 0 2px var(--gold),0 2px 0 #B9C7D6}
+.lrv-r>em{direction:ltr;unicode-bidi:isolate;font-style:normal;font-size:12px;font-weight:800;color:var(--bad);flex:none}
+/* monopoly: a place that was just bought stamps its owner's badge */
+.mboard .mc.bought .pr.ow{animation:mo-stamp .4s var(--spring)}
+@keyframes mo-stamp{0%{transform:scale(2.2) rotate(-18deg);opacity:0}60%{transform:scale(.9);opacity:1}100%{transform:none}}
+/* tanks and dice wars: shorter blasts drawn with transform and opacity only */
+.tanks .boom{animation:tk-boom .42s ease-out forwards}
+@keyframes tk-boom{0%{transform:scale(.4);opacity:1}100%{transform:scale(6);opacity:0}}
+.tanks .shock{animation-duration:.42s}.tanks .deb{animation-duration:.42s}.tanks.quake{animation-duration:.36s}
+.hx.flash{animation-duration:.42s}.dwroll.shake>div{animation-duration:.42s}
+/* tapping battle: the five seconds drain as one css animation */
+.tw .twd{width:100%;transform-origin:100% 50%;animation:tw-drain 5s linear forwards}
+@keyframes tw-drain{to{transform:scaleX(0)}}
+html.lite .tw .twd{animation-duration:5s!important;animation-iteration-count:1!important}
+@media (prefers-reduced-motion:reduce){.tw .twd{animation-duration:5s!important;animation-iteration-count:1!important}}
+.duel.fake b{color:#F7DC6F;animation:du-pop .22s var(--spring)}
+/* five dice: five of a kind makes the tray jump once the dice have landed */
+.ytray.yz{animation:yz-jump .4s .3s var(--spring) both}
+@keyframes yz-jump{0%,100%{transform:none}45%{transform:scale(1.06) rotate(-1.5deg)}}

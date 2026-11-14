@@ -127,32 +127,9 @@ GAMES.farkle.bot=(d,s,lv)=>{if(!d.rolled)return botDo(d,s,'roll',0);
   if(!sel.length)return GAMES.farkle.onTimeout(d);S.sel=sel;const sv=fkScore(sel.map(i=>+d.dice[i]));const left=free.length-sel.length;
   const bank=[0,350+rnd(300),350,300][lv];const go=left===0||(d.tot+sv<bank)||(lv===3&&left>=4&&d.tot+sv<600);
   return botDo(d,s,go?'keep':'keepbank',0);};
-GAMES.yatzy.bot=(d,s,lv)=>{const card=d.cards[s];
-  if(d.rolls===0)return botDo(d,s,'roll',0);
-  const dice=[...d.dice].map(Number);const cnt=[0,0,0,0,0,0,0];dice.forEach(x=>cnt[x]++);
-  const best=yOpts(card,d.dice).sort((a,b)=>b[1]-a[1])[0];
-  const good=best&&((best[0]>=8&&best[1]>0)||best[1]>=25);
-  if(d.rolls<3&&!good&&!lvRand(lv)){// keep the most common face (or a straight)
-    let keep='00000';const f=cnt.indexOf(Math.max(...cnt.slice(1)));
-    const st=[1,2,3,4,5,6].filter(x=>cnt[x]);const run=st.length>=4&&card[10]<0;
-    keep=dice.map((x,i)=>run?(dice.indexOf(x)===i?'1':'0'):(x===f?'1':'0')).join('');
-    if(keep!==d.held)return {...d,held:keep};return botDo(d,s,'roll',0);}
-  if(d.rolls<3&&lvRand(lv)&&Math.random()<.5)return botDo(d,s,'roll',0);
-  const o=yOpts(card,d.dice);const w=k=>k<6?(k+1)*3:[25,30,20,30,35,40,45,22][k-6]||20;
-  const pick=o.sort((a,b)=>(b[1]-w(b[0])*.6)-(a[1]-w(a[0])*.6))[0];return botDo(d,s,'score',pick[0]);};
-GAMES.liar.bot=(d,s,lv)=>{const p=S.priv[d.pl[s]];const mine=p&&p.r===d.r?[...p.dice].map(Number):[];
-  const total=d.n.reduce((a,b,i)=>a+(d.out[i]==='1'?0:b),0),others=total-mine.length;
-  const exp=f=>mine.filter(x=>x===f||(f!==1&&x===1)).length+others*(f===1?1/6:1/3);
-  if(d.bid){const e=exp(d.bid.f);const doubt=d.bid.q-e;if(doubt>[0,2.5,1.4,.9][lv])return botDo(d,s,lv===3&&Math.abs(doubt)<.3&&Math.random()<.3?'calza':'call',0);}
-  // bid on the face we hold most of
-  const faces=[2,3,4,5,6].sort((a,b)=>exp(b)-exp(a));let f=faces[0],q=Math.max(1,Math.floor(exp(f)));
-  if(d.bid){if(!liarOk(d.bid,q,f)){q=d.bid.f===1?d.bid.q*2+1:d.bid.q+(f>d.bid.f?0:1);if(!liarOk(d.bid,q,f))q=d.bid.q+1;}}
-  if(!liarOk(d.bid,q,f)){f=d.bid?Math.max(2,d.bid.f):2;q=d.bid?d.bid.q+1:1;}
-  S.lq=q;S.lf=f;return botDo(d,s,'bid',0)||(d.bid?botDo(d,s,'call',0):undefined);};
-GAMES.shut.bot=(d,s,lv)=>{const b=d.boxes[s];if(!d.roll){const small=b.slice(6)==='000';return botDo(d,s,small&&lv>1?'roll1':'roll',0);}
-  const open=[...b].map((c,k)=>c==='1'?k+1:0).filter(Boolean);let best=null;
-  const go=(i,sum,set)=>{if(sum===d.roll){const key=lv===1?Math.random():set.length*-1;if(!best||key<best.k)best={set:[...set],k:key};return;}if(sum>d.roll||i<0)return;go(i-1,sum+open[i],[...set,open[i]]);go(i-1,sum,set);};
-  go(open.length-1,0,[]);if(!best)return GAMES.shut.onTimeout(d);S.sel=best.set;return botDo(d,s,'ok',0);};
+// yatzy: see dice.js
+// liar: see dice.js
+// shut: see dice.js
 GAMES.bj.bot=(d,s,lv)=>{if(d.ph==='done')return bjNewRound(d);const h=d.hs[s][d.hi[s]];if(!h)return bjAct(d,'stand');const v=bjVal(h.c),up=Math.min(10,rv(d.dl)===1?11:rv(d.dl)>10?10:rv(d.dl));
   if(lv===1)return bjAct(d,v<15||Math.random()<.2&&v<19?'hit':'stand');
   const soft=cardsOf(h.c).some(c=>rv(c)===1)&&bjVal(h.c.replace(/A./,'2c'))!==v;
@@ -168,18 +145,7 @@ GAMES.bj.botPick=(d,s,lv)=>{const c=d.chips[s];let b=[0,50+rnd(150),100,Math.rou
     b=c>=top?10:Math.round((left===1?top-c+20:Math.max(b,(top-c+20)/left))/10)*10;}
   return Math.max(10,Math.min(c,b));};
 
-/* ---------- monopoly ---------- */
-GAMES.mono.bot=(d,s,lv)=>{const keep=[0,50,150,250][lv];
-  if(d.offer&&d.offer.to===s){const nd=lv===1&&Math.random()<.4?mTrade(d):null;return nd||{...d,offer:null,last:`${nm(d,s)} رفض الصفقة`};}
-  if(d.ph==='buy'){const i=d.pos[s];return d.cash[s]-mPrice(i)>=keep||(lv===1&&d.cash[s]>=mPrice(i))?mBuy(d):mSkip(d);}
-  if(d.ph==='roll'){if(d.jail[s]&&d.free[s])return botDo(d,s,'free',0);if(d.jail[s]&&d.cash[s]>=50&&lv>1&&d.turns<12*d.pl.length)return botDo(d,s,'bail',0);
-    // build when a colour is complete
-    if(lv>1){for(let i=0;i<40;i++)if(mCanBuild(d,s,i)&&d.cash[s]-MP[i][5]>=keep)return botDo(d,s,'bld',i);for(let i=0;i<40;i++)if(mCanUnm(d,s,i)&&d.cash[s]-mUnmCost(i)>=keep*2)return botDo(d,s,'unm',i);}
-    return mRoll(d);}
-  if(d.ph==='end'){if(lv>1)for(let i=0;i<40;i++)if(mCanBuild(d,s,i)&&d.cash[s]-MP[i][5]>=keep)return botDo(d,s,'bld',i);return mEnd(d);}
-  return mAuto(d);};
-GAMES.mono.botPick=(d,s,lv)=>{const i=d.auc;if(i==null)return 0;const price=mPrice(i);const want=[0,.5+Math.random()*.6,.85,1.05][lv]*price;const own=MP[i][0]==='p'?MGRP[MP[i][3]].filter(j=>d.own[j]===String(s)).length:0;
-  return Math.max(0,Math.min(d.cash[s]-[0,0,100,150][lv],Math.round(want*(1+own*.25)/10)*10));};
+/* monopoly: see mono.js */
 
 /* ---------- small strategy games (matchsticks, 31, guess the number, code breaker and guess the word have their bots in mind.js) ---------- */
 GAMES.hilo.bot=(d,s,lv)=>{const cur=d.dk.slice(d.p*2,d.p*2+2);const r=rv(cur);
@@ -218,7 +184,16 @@ GAMES.dwars.bot=(d,s,lv)=>{const ts=String(s);const o=[];for(let i=0;i<d.own.len
   const n1=botDo(d,s,'cell',a);if(!n1){S.dwSel=a;}const n2=botDo(n1||d,s,'cell',b);return n2||dwEnd(d);};
 GAMES.arena.botPick=(d,s,lv)=>{const foes=foesOf(d,s);const weak=foes.sort((a,b)=>d.hp[a]-d.hp[b])[0];
   if(lvRand(lv))return {a:pickR(['atk','def','heal','spc'].filter(k=>k!=='spc'||d.en[s]>=3)),t:pickR(foes)};
-  if(d.hp[s]<35&&lv>1&&Math.random()<.7)return {a:Math.random()<.6?'heal':'def',t:weak};if(d.en[s]>=3)return {a:'spc',t:weak};return {a:'atk',t:weak};};
+  if(lv===2){if(d.hp[s]<35&&Math.random()<.7)return {a:Math.random()<.6?'heal':'def',t:weak};if(d.en[s]>=3)return {a:'spc',t:weak};return {a:'atk',t:weak};}
+  // hard: finishes whoever it can, saves its special for a kill or a strong foe, and guards against what the foes can do this round
+  const hp=d.hp[s],threat=foes.reduce((a,f)=>a+(d.en[f]>=3?33:18),0),spcFoe=foes.some(f=>d.en[f]>=3),last=d.rd+1>=d.maxRd;
+  const kill=foes.filter(f=>d.hp[f]<=12).sort((a,b)=>d.hp[a]-d.hp[b])[0];
+  if(d.en[s]>=3){const k=foes.find(f=>d.hp[f]<=28);return {a:'spc',t:k??(foes.length>1?foes.sort((a,b)=>d.en[b]-d.en[a]||d.hp[a]-d.hp[b])[0]:weak)};}
+  if(kill!=null&&!(hp<=threat&&foes.length>1))return {a:'atk',t:kill};
+  if(hp<=threat&&!last){if(spcFoe||hp+15>threat)return {a:hp<85?'heal':'def',t:weak};return {a:'def',t:weak};}
+  if(hp<50&&!last&&Math.random()<.55)return {a:spcFoe?'heal':pickR(['heal','def']),t:weak};
+  if(!spcFoe&&Math.random()<.2)return {a:'def',t:weak};
+  return {a:'atk',t:weak};};
 GAMES.tapwar.botPick=(d,s,lv)=>({ok:true,ms:[0,18,27,35][lv]+rnd(8)});
 
 /* ---------- party and word games ---------- */
@@ -241,7 +216,7 @@ GAMES.rps.botPick=()=>rnd(3);
 
 /* ---------- race games ---------- */
 // rolling returns with roll set when there is a real choice; the bot picks its piece on the next tick
-GAMES.ludo.bot=(d,s,lv)=>{if(S.rolling)return d;if(d.roll==null)return luRoll(d);const r=d.roll,mv=luMovable(d,s,r);if(!mv.length)return GAMES.ludo.onTimeout(d);
+GAMES.ludo.bot=(d,s,lv)=>{if(d.roll==null)return luRoll(d);const r=d.roll,mv=luMovable(d,s,r);if(!mv.length)return GAMES.ludo.onTimeout(d);
   if(lvRand(lv))return luApply(d,s,pickR(mv),r);const n=d.pl.length,T=luT(d),F=T+4,K=d.T;
   const cell=(o,q)=>(armOf(n,o)*13+8+q)%T;
   const danger=(tk,q)=>{if(q<0||q>T-2)return 0;const g=cell(s,q);if(g%13===3||g%13===8)return 0;let x=0;// opponents up to six cells behind
@@ -258,8 +233,13 @@ GAMES.jakaro.bot=(d,s,lv)=>{const cs=jkCtl(d,s),cards=cardsOf(d.hd[s]),n=d.pl.le
     const i=cards.map((c,i)=>[i,JKCOST[c[0]]||0]).sort((a,b)=>a[1]-b[1])[0][0];return jkPlay(d,i,null);}
   if(lvRand(lv))return jkPlay(d,...pickR(opts));const team=jkTeamOf(d,s);
   const pos=q=>q<0?-12:q>=L?L+25+(q-L)*3:q;
+  // hard also counts how exposed its marbles end up: a foe marble 1 to 13 holes behind can land on it with one card
+  const exposed=mb=>{let r=0;const occ={};for(let p=0;p<n;p++)for(let k=0;k<4;k++){const q=mb[p*4+k];if(q>=0&&q<L)occ[jkCell({...d,mb},p,q)]=p;}
+    for(const p of team)for(let k=0;k<4;k++){const q=mb[p*4+k];if(q<=0||q>=L)continue;const c=jkCell({...d,mb},p,q);let hit=0;
+      for(let t=1;t<=13;t++){const o=occ[(c-t+L)%L];if(o!=null&&!team.includes(o)&&d.out[o]!=='1'){hit++;}}if(hit)r+=(q+12)*Math.min(1,.35*hit);}return r;};
   const val=([i,o])=>{const nd=jkPlay(d,i,o);if(nd.win!=null&&(nd.win===s||(nd.wins||[]).includes(s)))return 1e9;let v=0;
     for(let p=0;p<n;p++)for(let k=0;k<4;k++){const x=pos(nd.mb[p*4+k])-pos(d.mb[p*4+k]);v+=team.includes(p)?x:-x*(lv===3?.9:.5);}
+    if(lv===3)v-=.22*(exposed(nd.mb)-exposed(d.mb));
     return v-(JKCOST[cards[i][0]]||0)*(lv===3?1.5:.5)+Math.random();};
   const b=opts.sort((x,y)=>val(y)-val(x))[0];return jkPlay(d,b[0],b[1]);};
 
@@ -340,7 +320,11 @@ GAMES.camel.bot=(d,s,lv)=>{const open=[0,1,2,3,4].filter(c=>CTILES[d.tk[c]]);
 
 /* ---------- lucky boxes: stop while the bag is worth more than the risk ---------- */
 GAMES.luck.bot=(d,s,lv)=>{const {safe,bomb}=luckLeft(d);const p=bomb/(safe+bomb);
-  if(d.bag>0){let stop;if(lv===1)stop=d.bag>=4+rnd(10);else if(lv===2)stop=d.bag>=9||p>.3;else{const gain=3.5*(1-p)*(safe-2)/Math.max(1,safe)+d.bag*(1-p)*2/Math.max(1,safe);stop=p*d.bag>gain;}
+  if(d.bag>0){let stop;if(lv===1)stop=d.bag>=4+rnd(10);else if(lv===2)stop=d.bag>=9||p>.3;
+    // hard: open again only while the coins it can win weigh more than the bag it can lose; behind near the end it pushes on
+    else{const nx=Math.min(d.nx||0,safe),px=safe?nx/safe:0,gain=px*(Math.max(2,d.bag*2)-d.bag)+(1-px)*3.5;
+      const lead=Math.max(...d.pts.filter((x,o)=>o!==s&&d.out[o]!=='1'))-(d.pts[s]+d.bag);const late=safe<=4&&lead>0;
+      stop=!late&&p*d.bag>(1-p)*gain;}
     if(stop)return botDo(d,s,'bank',0);}
   const closed=[...d.op].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);return botDo(d,s,'m',pickR(closed));};
 

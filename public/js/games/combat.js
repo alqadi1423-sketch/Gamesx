@@ -58,7 +58,7 @@ GAMES.arena={name:'حلبة القتال',cat:'fight',lbc:'#922B21',
     for(let s=0;s<n;s++){if(d.out[s]==='1'){anim.push(null);continue;}hp[s]=Math.min(100,hp[s]+heal[s])-dmg[s];const p=picks[s];
       en[s]=p&&p.a==='spc'&&d.en[s]>=3?0:Math.min(3,en[s]+1);if(hp[s]<=0){hp[s]=0;out=setAt(out,s,'1');}anim.push({a:p?p.a:'',dmg:dmg[s],heal:heal[s]});}
     const al=aliveSeats(d,out);const rd=d.rd+1;let win=null;
-    if(al.length===1)win=al[0];else if(!al.length)win='d';else if(rd>=d.maxRd)win=mostPts(hp.map((h,s)=>out[s]==='1'?-1:h));
+    if(al.length===1)win=al[0];else if(!al.length)win=mostPts(d.hp.map((h,s)=>d.out[s]==='1'?-1:h));else if(rd>=d.maxRd)win=mostPts(hp.map((h,s)=>out[s]==='1'?-1:h));
     const res=d.pl.map((r,s)=>anim[s]&&anim[s].dmg?`${nm(d,s)} -${anim[s].dmg}`:'').filter(Boolean).join('، ')||'محد انضرب';
     return {...d,hp,en,out,rd,anim,res,win};}
 };
@@ -94,6 +94,8 @@ function tankSVG(d,i,ang,on){const x=d.tx[i],y=60-tkY(d,i),c=col(d,i),a=ang*Math
     <path d="M-1.05 -2.75A1.15 1.15 0 0 1 .35 -3.8" stroke="rgba(255,255,255,.6)" stroke-width=".28" fill="none" stroke-linecap="round"/><path d="M-2.6 -1.45H2.6" stroke="rgba(0,0,0,.2)" stroke-width=".22"/>
     <rect x="-3.1" y="-5.5" width="6.2" height="1.1" rx=".55" fill="rgba(20,30,40,.55)" stroke="#fff" stroke-width=".18"/><rect x="-3" y="-5.4" width="${(6*d.hp[i]/100).toFixed(2)}" height=".9" rx=".45" fill="${d.hp[i]>50?'#2ECC71':d.hp[i]>25?'#F4D03F':'#E74C3C'}"/>${on?'<path class="tkon" d="M-1.05 -8.7H1.05L0 -7.1Z" fill="#FFD84D" stroke="#1F2A36" stroke-width=".18" stroke-linejoin="round"/>':''}</g>`;}
 GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
+  // online each shot is fired on the host's phone, which also draws the next wind
+  net:{host:['fire']},redeal:d=>d,
   icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="tks" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#85C1E9"/><stop offset="1" stop-color="#D6EAF8"/></linearGradient></defs><rect width="100" height="100" fill="url(#tks)"/><path d="M0 76Q25 60 50 72T100 66V100H0Z" fill="#58D68D"/><path d="M0 84Q30 76 60 84T100 80V100H0Z" fill="#45B39D"/><rect x="18" y="60" width="20" height="9" rx="3" fill="#EC6158"/><path d="M28 62L40 52" stroke="#2D4763" stroke-width="3"/><path d="M42 50Q60 20 74 52" stroke="#2D4763" stroke-width="2" stroke-dasharray="3 3" fill="none"/><circle cx="76" cy="58" r="6" fill="#F5B041"/></svg>`,
   init:n=>{const ph=[Math.random()*6,Math.random()*6,Math.random()*6];const h=[];for(let x=0;x<=100;x++)h.push(+Math.max(6,Math.min(36,20+7*Math.sin(x/9+ph[0])+5*Math.sin(x/4.3+ph[1])+3*Math.sin(x/2.1+ph[2]))).toFixed(1));
     const slots=shuffle(Array(n).fill(0).map((_,i)=>n===1?50:8+i*(84/(n-1))));return {h,tx:slots,hp:Array(n).fill(100),ang:slots.map(x=>x<50?50:130),wind:rnd(9)-4,shot:null,sid:0,turns:0};},
@@ -123,16 +125,17 @@ GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
       const el=document.getElementById('aim');if(el){const tp=tkTip(d,t,ang),a=ang*Math.PI/180,L=3+pow/9;el.setAttribute('x1',tp.x.toFixed(2));el.setAttribute('y1',(60-tp.y).toFixed(2));el.setAttribute('x2',(tp.x+Math.cos(a)*L).toFixed(2));el.setAttribute('y2',(60-tp.y-Math.sin(a)*L).toFixed(2));}
       const tk=f.querySelector('.tank.on line');if(tk&&ctx.my){tk.setAttribute('x2',(Math.cos(ang*Math.PI/180)*3.4).toFixed(2));tk.setAttribute('y2',(-3.1-Math.sin(ang*Math.PI/180)*3.4).toFixed(2));}};
     app.querySelectorAll('.aimc input').forEach(inp=>{if(inp._b)return;inp._b=1;inp.addEventListener('input',()=>upd());});
-    if(d.shot&&once('tk'+d.gid+d.sid)){const fx=document.getElementById('fx');if(!fx)return;S.holdRender=true;const P=d.shot.path;const ns='http://www.w3.org/2000/svg';
+    // the shell flies along its path (0.7 s at most), then the blast; light mode shows only where it hit
+    if(d.shot&&once('tk'+d.gid+d.sid)){const fx=document.getElementById('fx');if(!fx)return;if(liteFx()){if(d.shot.hit)sfx('lose');return;}S.holdRender=true;const P=d.shot.path;const ns='http://www.w3.org/2000/svg';
       const mk=(tag,at)=>{const e=document.createElementNS(ns,tag);for(const k in at)e.setAttribute(k,at[k]);fx.appendChild(e);return e;};
       const trail=mk('polyline',{fill:'none',stroke:'rgba(255,255,255,.75)','stroke-width':'.45','stroke-dasharray':'1 .8'});
       const ball=mk('circle',{r:'1',fill:'#1F2A36',stroke:'#fff','stroke-width':'.3'});
       mk('circle',{cx:P[0][0],cy:60-P[0][1],r:'1.6',fill:'#FDF2B3',class:'flash'});sfx('tap');
-      let k=0;const pts=[];const stepT=Math.max(10,1000/P.length);
+      let k=0;const pts=[];const stepT=Math.max(10,700/P.length);
       const go=()=>{if(k>=P.length){ball.remove();const h=d.shot.hit;if(h){const cx=h.x,cy=60-h.y;mk('circle',{cx,cy,r:'1.2',fill:'#F39C12',class:'boom'});mk('circle',{cx,cy,r:'1',fill:'none',stroke:'#fff','stroke-width':'.5',class:'shock'});
           for(let j=0;j<8;j++){const an=j/8*Math.PI*2;mk('circle',{cx,cy,r:'.45',fill:j%2?'#7a5230':'#F5B041',class:'deb',style:`--dx:${(Math.cos(an)*6).toFixed(1)}px;--dy:${(Math.sin(an)*5-3).toFixed(1)}px`});}
           f.classList.add('quake');sfx('lose');}
-        setTimeout(()=>{f.classList.remove('quake');S.holdRender=false;if(S.renderPending)render();},750);return;}
+        setTimeout(()=>{f.classList.remove('quake');S.holdRender=false;if(S.renderPending)render();},h?420:60);return;}
         const [x,y]=P[k++];ball.setAttribute('cx',x);ball.setAttribute('cy',60-y);pts.push(x+','+(60-y));trail.setAttribute('points',pts.join(' '));setTimeout(go,stepT);};
       go();}}
 };
@@ -147,6 +150,8 @@ function dwEnd(d){const t=d.turn,ts=String(t);let dice=[...d.dice].map(Number);l
   const turns=(d.turns||0)+1;let win=null;if(turns>=30*d.pl.length){const c=d.pl.map((r,s)=>d.out[s]==='1'?-1:[...d.own].filter(o=>o===String(s)).length);win=mostPts(c);}
   S.dwSel=null;return {...d,dice:dice.join(''),turns,win,turn:nextSeat(d,t),last:{msg:`${nm(d,t)} خلّص دوره وأخذ ${dwLargest(d.own,t)} زهرات تعزيز`}};}
 GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
+  // online the attack dice and the new dice at the end of a turn are thrown on the host's phone
+  net:{host:['end']},redeal:d=>d,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#21618C"/>${[[24,30,'#EC6158'],[50,30,'#4AB1E8'],[76,30,'#EC6158'],[37,52,'#4AB1E8'],[63,52,'#4CB97F'],[24,74,'#4CB97F'],[50,74,'#EC6158'],[76,74,'#4AB1E8']].map(([x,y,c])=>`<path d="M${x} ${y-13}l11 6.5v13l-11 6.5l-11-6.5v-13z" fill="${c}" stroke="#fff" stroke-width="2"/>`).join('')}<rect x="44" y="44" width="12" height="12" rx="3" fill="#fff"/><circle cx="47.5" cy="47.5" r="1.4" fill="#2D4763"/><circle cx="52.5" cy="52.5" r="1.4" fill="#2D4763"/></svg>`,
   init:n=>{const N=DW_W*DW_H;const own=Array(N).fill('.');const cells=shuffle([...Array(N).keys()].filter(()=>Math.random()>0.1));const per=Math.floor(cells.length/n);
     cells.slice(0,per*n).forEach((c,k)=>own[c]=String(k%n));const dice=Array(N).fill(0);
@@ -165,7 +170,7 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
         ${n>=4?`<rect x="${(cx-1.6).toFixed(2)}" y="${(cy-3.6).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#E3E9F0" stroke="#2D4763" stroke-width=".22"/>`:''}<rect x="${(cx-2.4).toFixed(2)}" y="${(cy-2.05).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#9FB0C2"/><rect x="${(cx-2.4).toFixed(2)}" y="${(cy-2.6).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#fff" stroke="#2D4763" stroke-width=".22"/><text x="${cx.toFixed(2)}" y="${(cy+1.2).toFixed(2)}" text-anchor="middle" font-size="3.6" font-weight="800" fill="#2D4763">${n}</text></g>`;}
     s+='</svg>';
     if(d.last&&d.last.ra){const L=d.last;const sa=L.ra.reduce((a,b)=>a+b,0),sb=L.rb.reduce((a,b)=>a+b,0);const fresh=once('dwr'+d.gid+d.sid);
-      s+=`<div class="dwroll ${fresh?'shake':''}"><div class="${L.win?'w':''}" style="--c:${col(d,L.sa)}"><b>${nm(d,L.sa)}</b><span>${L.ra.map(x=>`<i class="dice">${diceSVG(x)}</i>`).join('')}</span><em>${sa}</em></div><strong>${L.win?'🏆':'🛡️'}</strong><div class="${L.win?'':'w'}" style="--c:${col(d,L.sb)}"><b>${nm(d,L.sb)}</b><span>${L.rb.map(x=>`<i class="dice">${diceSVG(x)}</i>`).join('')}</span><em>${sb}</em></div></div>`;}
+      s+=`<div class="dwroll ${fresh?'shake':''}"><div class="${L.win?'w':''}" style="--c:${col(d,L.sa)}"><b>${nm(d,L.sa)}</b><span>${L.ra.map(x=>`<i class="dice ${fresh?'roll':''}">${diceSVG(x)}</i>`).join('')}</span><em>${sa}</em></div><strong>${L.win?'🏆':'🛡️'}</strong><div class="${L.win?'':'w'}" style="--c:${col(d,L.sb)}"><b>${nm(d,L.sb)}</b><span>${L.rb.map(x=>`<i class="dice ${fresh?'roll':''}">${diceSVG(x)}</i>`).join('')}</span><em>${sb}</em></div></div>`;}
     if(my)s+=`<div class="acts">${sel!=null?'<button class="btn navy" data-ga="unsel">إلغاء</button>':''}<button class="btn blue" data-ga="end">إنهاء الدور ⏭</button></div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn,ts=String(t);
@@ -185,21 +190,23 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
 /* ---------- sword duel (quick draw) ---------- */
 GAMES.duel=spdBase({name:'مبارزة السيوف',lbc:'#17202A',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1B2631"/><circle cx="70" cy="28" r="14" fill="#F9E79F"/><path d="M0 78H100V100H0Z" fill="#273746"/><path d="M22 80l10-30 6 30M70 80l-8-30-8 30" fill="#0B0F14"/><path d="M34 52l20-24M60 52l-18-22" stroke="#D5DBDB" stroke-width="3" stroke-linecap="round"/></svg>`,
   art:'<div class="duel prev"><span class="stars"></span><span class="moon"></span><span class="hills"></span><span class="sam l"></span><span class="sam r"></span></div>',
-  title:'المبارزة تبدأ بصمت. لما تطلع «!» اسحب سيفك بأسرع ما يمكن، واللي يسحب قبلها يخسر الجولة',
-  start(d,st){st.phase='wait';const wait=1800+Math.random()*3000;st.timer=setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},wait);},
-  view(d,ctx,st){if(st.phase==='wait'||st.phase==='go')return `<button class="duel ${st.phase}" data-ga="tap"><span class="stars"></span><span class="moon"></span><span class="hills"></span><span class="sam l"></span><span class="sam r"></span><b>${st.phase==='go'?'!':''}</b></button>`;return waitCard();},
-  click(a,i,d,ctx,st){if(a!=='tap')return;if(st.phase==='wait'){clearTimeout(st.timer);st.t0=performance.now();toast('سحبت بدري! خسرت الجولة');spdSubmit(d,ctx,false);return;}if(st.phase==='go'){sfx('pop');spdSubmit(d,ctx,true);}}});
+  title:'المبارزة تبدأ بصمت. لما تطلع «!» اسحب سيفك بأسرع ما يمكن. انتبه من «؟» الخادعة: اللي يسحب قبل «!» يخسر الجولة',
+  // the wait and the feint come from the round (the same on every phone): in most rounds a «؟» flashes first to catch a hasty hand
+  start(d,st){st.phase='wait';st.fk=false;const R=srng(d,'du'+d.rd),wait=1800+R()*3000,fake=R()<.65?Math.round(wait*(.3+R()*.4)):0;
+    if(fake)st.t1=setTimeout(()=>{if(S.sp!==st||st.phase!=='wait')return;st.fk=true;render();st.t2=setTimeout(()=>{if(S.sp===st&&st.phase==='wait'){st.fk=false;render();}},420);},fake);
+    st.timer=setTimeout(()=>{if(S.sp===st){st.phase='go';st.fk=false;st.t0=performance.now();render();}},wait);},
+  view(d,ctx,st){if(st.phase==='wait'||st.phase==='go')return `<button class="duel ${st.phase} ${st.fk?'fake':''}" data-ga="tap"><span class="stars"></span><span class="moon"></span><span class="hills"></span><span class="sam l"></span><span class="sam r"></span><b>${st.phase==='go'?'!':st.fk?'؟':''}</b></button>`;return waitCard();},
+  click(a,i,d,ctx,st){if(a!=='tap')return;if(st.phase==='wait'){clearTimeout(st.timer);clearTimeout(st.t1);clearTimeout(st.t2);st.t0=performance.now();toast(st.fk?'انخدعت! هذي مو الإشارة':'سحبت بدري! خسرت الجولة');spdSubmit(d,ctx,false);return;}if(st.phase==='go'){sfx('pop');spdSubmit(d,ctx,true);}}});
 GAMES.duel.cat='fight';
 
 /* ---------- tapping battle ---------- */
 GAMES.tapwar={...spdBase({name:'معركة الضغط',lbc:'#1E8449',icon:iconE('#27AE60','👊'),art:'<div class="tapbtn prev">👊</div>',title:'عندك 5 ثواني. اضغط الزر بأسرع وأكثر ما تقدر',
   start(d,st){st.phase='go';st.n=0;st.t0=performance.now();const v=+st.key.split(':').pop();st.timer=setTimeout(()=>{if(S.sp!==st)return;// left the game or round meanwhile: the hold and the pick belong to something else now
     S.holdRender=false;st.phase='sent';const nd=S.st.d;if(nd&&nd.gid===d.gid&&nd.rd===d.rd)simulPick(d,v,{ok:true,ms:st.n});else render();},5000);},
-  view(d,ctx,st){return `<div class="spd tw"><div class="memnum" id="tapn">${st.n||0}</div><button class="tapbtn" data-ga="tap">👊 اضغط!</button><div class="tbar" style="margin-top:12px"><i id="tapt" style="width:100%"></i></div></div>`;},
+  // the bar drains by itself (a css animation on the node made when the round starts), so nothing holds the screen
+  view(d,ctx,st){return `<div class="spd tw"><div class="memnum" id="tapn">${st.n||0}</div><button class="tapbtn" data-ga="tap">👊 اضغط!</button><div class="tbar" style="margin-top:12px"><i id="tapt" class="twd"></i></div></div>`;},
   click(a,i,d,ctx,st){if(a!=='tap'||st.phase!=='go')return;st.n++;const el=document.getElementById('tapn');if(el){el.textContent=st.n;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}}}),
   cat:'fight',
   resolve(d,picks){const pts=[...d.pts];const v=picks.map(p=>p&&p.ok?p.ms:-1);const mx=Math.max(...v);const top=v.map((x,s)=>x===mx&&x>0?s:-1).filter(s=>s>=0);if(top.length===1)pts[top[0]]++;
     const rd=d.rd+1;return {...d,pts,rd,res:d.pl.map((r,s)=>v[s]>=0?`${nm(d,s)} ${v[s]} ضغطة`:'').filter(Boolean).join('، ')+(top.length===1?`. الأقوى: ${nm(d,top[0])}`:''),win:rd>=SPD_ROUNDS?mostPts(pts):null};},
-  after(d,ctx){const el=document.getElementById('tapt');const st=S.sp;if(!el||!st||st.phase!=='go')return;S.holdRender=true;const left=Math.max(0,5000-(performance.now()-st.t0));
-    el.style.transition='none';el.style.width=(left/50)+'%';void el.offsetWidth;el.style.transition=`width ${left}ms linear`;el.style.width='0%';}
 };

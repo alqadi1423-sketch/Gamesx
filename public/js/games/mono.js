@@ -76,14 +76,14 @@ function mRoll(d){const x=mDraft(d),s=d.turn,a=1+rnd(6),b=1+rnd(6),dbl=a===b,pat
   return mFin(x,d,s,path);}
 function mAfterBuy(x){x.ph=x.again?'roll':'end';return x;}
 function mBuy(d){const s=d.turn,i=d.pos[s];if(d.own[i]!=='.'||d.cash[s]<mPrice(i))return d;const x=mDraft(d);x.cash[s]-=mPrice(i);x.own=setAt(x.own,i,String(s));x.log=undefined;
-  return mAfterBuy({...x,last:`${nm(d,s)} اشترى ${MP[i][1]} بـ ${mPrice(i)} 🏷️`,buyfx:(d.buyfx||0)+1});}
+  return mAfterBuy({...x,last:`${nm(d,s)} اشترى ${MP[i][1]} بـ ${mPrice(i)} 🏷️`,buyfx:(d.buyfx||0)+1,bc:i});}
 function mSkip(d){const i=d.pos[d.turn];return {...d,ph:'auc',auc:i,rd:(d.rd||0)+1,last:`${nm(d,d.turn)} ما اشترى ${MP[i][1]}، صار مزاد`};}
 // sealed bids from everyone still playing; the highest pays, ties go to the first after the player whose turn it is
 function mAuction(d,picks){const i=d.auc,n=d.pl.length;let best=-1,bw=0;
   for(let k=0;k<n;k++){const s=(d.turn+k)%n;if(d.out[s]==='1')continue;const b=Math.max(0,Math.min(+picks[s]||0,d.cash[s]));if(b>bw){bw=b;best=s;}}
   const bids=d.pl.map((_,s)=>d.out[s]==='1'?null:Math.max(0,Math.min(+picks[s]||0,d.cash[s])));
   if(best<0)return mAfterBuy({...d,auc:null,bids,last:`ما أحد زايد على ${MP[i][1]}، بقي للبنك`});
-  const cash=[...d.cash];cash[best]-=bw;return mAfterBuy({...d,cash,own:setAt(d.own,i,String(best)),auc:null,bids,buyfx:(d.buyfx||0)+1,last:`${nm(d,best)} كسب المزاد على ${MP[i][1]} بـ ${bw} 🔨`});}
+  const cash=[...d.cash];cash[best]-=bw;return mAfterBuy({...d,cash,own:setAt(d.own,i,String(best)),auc:null,bids,buyfx:(d.buyfx||0)+1,bc:i,last:`${nm(d,best)} كسب المزاد على ${MP[i][1]} بـ ${bw} 🔨`});}
 // trades: properties without buildings and cash, the other player accepts or refuses
 const mTradeable=(d,s,i)=>isProp(i)&&d.own[i]===String(s)&&(MP[i][0]!=='p'||MGRP[MP[i][3]].every(j=>d.hs[j]==='0'));
 function mTrade(d){const o=d.offer;const x={...d,cash:[...d.cash]};let own=d.own,cost=[0,0];
@@ -96,7 +96,8 @@ function mTrade(d){const o=d.offer;const x={...d,cash:[...d.cash]};let own=d.own
 function mBotTrade(d){const o=d.offer,b=o.to,nd=mTrade(d),no={...d,offer:null,last:`${nm(d,b)} رفض الصفقة`};if(!nd)return no;
   const full=(own,i,s)=>MP[i][0]==='p'&&MGRP[MP[i][3]].every(j=>own[j]===String(s)),val=i=>d.mg[i]==='1'?mPrice(i)/2:mPrice(i);
   const gain=nd.cash[b]-d.cash[b]+o.give.reduce((a,i)=>a+val(i)*(full(nd.own,i,b)?2:1),0)-o.get.reduce((a,i)=>a+val(i)*(full(nd.own,i,o.from)||full(d.own,i,b)?2:1),0);
-  return gain>=[0,-60,10,60][botLv(d,b)]?nd:no;}
+  const lv=botLv(d,b);if(lv===3&&o.give.some(i=>full(nd.own,i,o.from))===false&&o.get.some(i=>full(nd.own,i,o.from)))return gain>=mPrice(o.get[0])*.4?nd:no;
+  return gain>=[0,-60,10,60][lv]?nd:no;}
 function mEnd(d){const turns=d.turns+1;let win=null;if(turns>=30*d.pl.length){const w=d.pl.map((r,s)=>d.out[s]==='1'?-1:mWorth(d,s));win=mostPts(w);}
   return {...d,turn:nextSeat(d,d.turn),ph:'roll',dbl:0,again:false,card:null,offer:null,turns,win,last:win!=null?'خلصت الجولات، الفايز الأغنى':''};}
 function mAuto(d){if(d.ph==='buy')return mSkip(d);if(d.ph==='end')return mEnd(d);return mRoll(d);}
@@ -111,7 +112,7 @@ const MPOS=i=>i<=10?[11,11-i]:i<=20?[11-(i-10),1]:i<=30?[1,1+(i-20)]:[1+(i-30),1
 const MSIDE=i=>i%10===0?'k':i<10?'b':i<20?'l':i<30?'t':'r';
 const MICO={go:'⬅️',cc:'📦',ch:'❓',tax:'💸',rr:'🚆',jail:'🚔',fp:'☕',gtj:'👮'};
 const money=v=>`<span class="mny">${v}</span>`;
-function mCellHTML(d,i){const q=MP[i],t=q[0],side=MSIDE(i),[r,c]=MPOS(i),o=d.own[i],oc=o!=='.'?COLS[d.pl[+o]]:'';const h=+d.hs[i];
+function mCellHTML(d,i,bought){const q=MP[i],t=q[0],side=MSIDE(i),[r,c]=MPOS(i),o=d.own[i],oc=o!=='.'?COLS[d.pl[+o]]:'';const h=+d.hs[i];
   const toks=d.pl.map((rr,s)=>d.out[s]!=='1'&&d.pos[s]===i?`<i id="mt${s}" class="${d.jail[s]&&i===10?'jl':''} ${s===d.turn?'cur':''}" style="--c:${col(d,s)}"></i>`:'').join('');
   // a bought place shows its owner (colour and shape) where the price was
   const pr=o!=='.'?`<span class="pr ow" style="--o:${oc}"><svg viewBox="0 0 40 40">${SHP[d.pl[+o]]('#fff')}</svg></span>`:`<span class="pr">${q[2]}</span>`;
@@ -120,7 +121,7 @@ function mCellHTML(d,i){const q=MP[i],t=q[0],side=MSIDE(i),[r,c]=MPOS(i),o=d.own
   else if(t==='rr'||t==='ut')inner=`<span class="ic">${t==='rr'?'🚆':i===12?'⚡':'💧'}</span><span class="nm">${t==='rr'?q[1].replace('محطة ',''):q[1]}</span>${pr}`;
   else if(t==='tax')inner=`<span class="ic">💸</span><span class="nm">ضريبة</span><span class="pr">${q[2]}</span>`;
   else inner=`<span class="ic">${MICO[t]}</span><span class="nm">${q[1]}</span>`;
-  return `<button class="mc ms${side} mt-${t} ${o!=='.'?'own':''} ${d.mg[i]==='1'?'mort':''} ${S.mcell===i?'pick':''}" data-ga="cell" data-i="${i}" data-c="${i}" style="grid-row:${r};grid-column:${c};${oc?`--o:${oc}`:''}">${inner}<span class="tks">${toks}</span></button>`;}
+  return `<button class="mc ms${side} mt-${t} ${o!=='.'?'own':''} ${bought?'bought':''} ${d.mg[i]==='1'?'mort':''} ${S.mcell===i?'pick':''}" data-ga="cell" data-i="${i}" data-c="${i}" style="grid-row:${r};grid-column:${c};${oc?`--o:${oc}`:''}">${inner}<span class="tks">${toks}</span></button>`;}
 function mDetail(d,i){const q=MP[i],t=q[0],o=d.own[i];let s=`<div class="mdet"><button class="x" data-ga="cell" data-i="${i}">✕</button>`;
   if(t==='p'){s+=`<div class="dh" style="background:${MGC[q[3]]}">${q[1]}</div><table>${['الإيجار','مع بيت','بيتين','3 بيوت','4 بيوت','فندق'].map((l,k)=>`<tr ${+d.hs[i]===k&&o!=='.'?'class="on"':''}><td>${l}</td><td>${q[4][k]}</td></tr>`).join('')}</table><small>سعر البيت ${q[5]} • السعر ${q[2]}<br>لو ملكت كل اللون يتضاعف الإيجار</small>`;}
   else if(t==='rr')s+=`<div class="dh" style="background:#2D4763">🚆 ${q[1]}</div><table>${[1,2,3,4].map(k=>`<tr><td>${k} محطة</td><td>${25*2**(k-1)}</td></tr>`).join('')}</table><small>السعر ${q[2]}</small>`;
@@ -146,6 +147,8 @@ function mTradePanel(d,s){const T=S.mtr;const others=aliveSeats(d).filter(x=>x!=
   <p class="note">العقار المرهون ينتقل مرهون، واللي ياخذه يدفع 10٪ فايدة</p>
   <button class="btn red wide" data-ga="tsend">أرسل العرض</button></div>`;}
 GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
+  // online the dice (and the cards they lead to) are drawn on the host's phone, so nobody picks their own throw
+  net:{host:['roll']},redeal:d=>d,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#CDE8D6"/><rect x="18" y="18" width="64" height="64" fill="#E8F4EC" stroke="#2D4763" stroke-width="1.5"/>${[0,1,2,3,4].map(k=>`<rect x="${18+k*12.8}" y="8" width="12.8" height="10" fill="${MGC[[4,4,5,5,6][k]]}" stroke="#2D4763" stroke-width="1"/><rect x="82" y="${18+k*12.8}" width="10" height="12.8" fill="${MGC[[6,6,7,7,7][k]]}" stroke="#2D4763" stroke-width="1"/>`).join('')}<rect x="22" y="40" width="56" height="20" rx="3" fill="#E5483F" transform="rotate(-20 50 50)"/><text x="50" y="55" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" transform="rotate(-20 50 50)">مونوبولي</text><circle cx="30" cy="72" r="5" fill="#4AB1E8"/><circle cx="42" cy="72" r="5" fill="#F0B429"/></svg>`,
   init:n=>({pos:Array(n).fill(0),cash:Array(n).fill(1500),jail:Array(n).fill(0),free:Array(n).fill(0),fr:{ch:-1,cc:-1},dk:mDecks(),auc:null,offer:null,rd:0,own:'.'.repeat(40),hs:'0'.repeat(40),mg:'0'.repeat(40),ph:'roll',dice:[0,0],rid:0,dbl:0,again:false,card:null,turns:0,mv:null,last:''}),
   points:d=>d.cash.map(c=>'💰'+c),
@@ -163,8 +166,8 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     else{const fresh=d.rid&&once('md'+d.gid+'_'+d.rid);
       c=`<div class="mlogo">مونوبولي</div>`;
       if(d.card)c+=`<div class="mcard ${fresh?'in':''}">🃏 ${d.card}</div>`;
-      const canR=d.win==null&&my&&d.ph==='roll'&&!S.rolling;
-      if(d.ph!=='auc')c+=`<${canR?'button data-ga="roll" aria-label="ارمِ"':'div'} class="mdice ${canR?'can':''}">${(d.dice[0]?d.dice:[6,6]).map(x=>`<span class="dice ${S.rolling?'spin':fresh?'land':''}">${diceSVG(x)}</span>`).join('')}</${canR?'button':'div'}>`;
+      const canR=d.win==null&&my&&d.ph==='roll';if(fresh)S.moDieAt=Date.now();
+      if(d.ph!=='auc')c+=`<${canR?'button data-ga="roll" aria-label="ارمِ"':'div'} class="mdice ${canR?'can':''}">${(d.dice[0]?d.dice:[6,6]).map(x=>`<span class="dice ${fresh?'land':''}">${diceSVG(x)}</span>`).join('')}</${canR?'button':'div'}>`;
       if(d.ph!=='auc')c+=`<div class="mwho" style="--c:${col(d,s)}"><i></i>${!ctx.local&&s===ctx.v?'دورك':nm(d,s)} • ${money(d.cash[s])}${d.jail[s]?' • 🚔 في السجن':''}${d.free[s]?' • 🎫':''}</div>`;
       if(d.ph==='auc'){const i=d.auc;c+=`<div class="mbuy">🔨 مزاد: <b>${MP[i][1]}</b> (سعره ${MP[i][2]})</div>`;
         if(ctx.my&&ctx.v!=null&&ctx.v>=0){const b=Math.max(0,Math.min(+(S.draft.bid||0),d.cash[ctx.v]));
@@ -181,7 +184,9 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
         else c+=`<div class="macts"><button class="btn blue" data-ga="end">إنهاء الدور ⏭</button></div>`;}
       else if(d.win==null&&!d.offer)c+=`<p class="mwait">ننتظر ${nm(d,s)}</p>`;}
       c+=`<button class="mtab" data-ga="props">🏠 عقاراتي</button>${d.win==null&&my&&!d.offer&&(d.ph==='roll'||d.ph==='end')?'<button class="mtab" data-ga="trade">🤝 صفقة</button>':''}`;}
-    let b=`<div class="mboard" id="mboard">${MP.map((q,i)=>mCellHTML(d,i)).join('')}<div class="mcenter">${c}</div></div>`;
+    // a place that was just bought stamps its new owner's badge once
+    const bc=d.buyfx&&d.bc!=null&&once('mb'+d.gid+'_'+d.buyfx)?d.bc:-1;
+    let b=`<div class="mboard" id="mboard">${MP.map((q,i)=>mCellHTML(d,i,i===bc)).join('')}<div class="mcenter">${c}</div></div>`;
     if(mTr(d)&&my&&!d.offer&&(d.ph==='roll'||d.ph==='end'))b+=mTradePanel(d,s);
     if(S.mprops&&v>=0)b+=`<div class="mpanel"><div class="mph"><b>عقاراتك</b> ${money(d.cash[v])}<button class="sm" data-ga="props">إغلاق</button></div>${mProps(d,v,my&&d.ph!=='buy'&&v===s)}</div>`;
     return b;},
@@ -194,9 +199,7 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
       if(a==='trej'){act({...d,offer:null,last:ctx.v===d.offer.from?'انلغى العرض':`${nm(d,d.offer.to)} رفض الصفقة`});return;}
       const nd=mTrade(d);if(!nd){toast('الصفقة ما تنفع الحين');act({...d,offer:null});return;}act(nd);return;}
     if(!ctx.my)return;const s=d.turn;
-    if(a==='roll'&&d.ph==='roll'&&!S.rolling){const g=d.gid,t=d.turn,r=d.rid;S.mcell=null;S.rolling=true;render();S.holdRender=true;
-      const iv=setInterval(()=>{document.querySelectorAll('.mdice .dice').forEach(el=>{el.innerHTML=diceSVG(1+rnd(6));});},70);
-      setTimeout(()=>{clearInterval(iv);S.holdRender=false;S.rolling=false;const nd=S.st.d;if(!nd||nd.gid!==g||nd.turn!==t||nd.rid!==r||nd.ph!=='roll'){render();return;}act(mRoll(nd));},440);return;}
+    if(a==='roll'&&d.ph==='roll'){S.mcell=null;act(mRoll(d));return;}
     if(a==='bail'&&d.ph==='roll'&&d.jail[s]&&d.cash[s]>=50){const cash=[...d.cash];cash[s]-=50;const jail=[...d.jail];jail[s]=0;act({...d,cash,jail,last:`${nm(d,s)} دفع 50 وطلع من السجن`});return;}
     if(a==='free'&&d.ph==='roll'&&d.jail[s]&&d.free[s]){const free=[...d.free];free[s]--;const jail=[...d.jail];jail[s]=0;const fr={...(d.fr||{})};if(fr.ch===s)fr.ch=-1;else if(fr.cc===s)fr.cc=-1;act({...d,free,jail,fr,last:`${nm(d,s)} استخدم بطاقة الخروج 🎫`});return;}
     if(a==='buy'&&d.ph==='buy'){act(mBuy(d));return;}
@@ -214,11 +217,79 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     if(a==='sel'&&mCanSell(d,s,i)){const cash=[...d.cash];cash[s]+=MP[i][5]/2;act({...d,cash,hs:setAt(d.hs,i,String(+d.hs[i]-1)),last:`${nm(d,s)} باع بيت في ${MP[i][1]}`});return;}
     if(a==='mrt'&&mCanMort(d,s,i)){const cash=[...d.cash];cash[s]+=mPrice(i)/2;act({...d,cash,mg:setAt(d.mg,i,'1'),last:`${nm(d,s)} رهن ${MP[i][1]}`});return;}
     if(a==='unm'&&mCanUnm(d,s,i)){const cash=[...d.cash];cash[s]-=mUnmCost(i);act({...d,cash,mg:setAt(d.mg,i,'0'),last:`${nm(d,s)} فك رهن ${MP[i][1]}`});}},
-  after(d){const m=d.mv;if(!m||!once('mo'+d.gid+'_'+m.sid))return;const bd=document.getElementById('mboard'),tok=document.getElementById('mt'+m.s);if(!bd||!tok)return;
+  // the token walks square by square once the dice have landed; a card that sends it far (or to jail) makes one long hop
+  after(d){const m=d.mv;if(!m||!once('mo'+d.gid+'_'+m.sid))return;if(liteFx())return;const bd=document.getElementById('mboard'),tok=document.getElementById('mt'+m.s);if(!bd||!tok)return;
     S.holdRender=true;const br=bd.getBoundingClientRect();const cell=i=>bd.querySelector(`[data-c="${i}"]`).getBoundingClientRect();
     tok.style.visibility='hidden';const f=document.createElement('div');f.className='mfly';f.style.setProperty('--c',col(d,m.s));bd.appendChild(f);
     const place=(i,ms)=>{const r=cell(i);f.style.transition=ms?`transform ${ms}ms cubic-bezier(.3,.7,.4,1)`:'none';f.style.transform=`translate(${r.left-br.left+r.width/2-9}px,${r.top-br.top+r.height/2-9}px)`;};
-    const st=Math.max(60,Math.min(150,2400/m.path.length));place(m.path[0],0);void f.offsetWidth;let k=1;
-    const step=()=>{if(k<m.path.length){const prev=m.path[k-1],nx=m.path[k++];place(nx,(nx-prev+40)%40>1?450:st-10);setTimeout(step,(nx-prev+40)%40>1?460:st);}else setTimeout(()=>{f.remove();tok.style.visibility='';sfx('pop');S.holdRender=false;if(S.renderPending)render();},120);};
-    setTimeout(step,60);}
+    const jumps=m.path.slice(1).filter((x,k)=>(x-m.path[k]+40)%40>1).length,walk=m.path.length-1-jumps;
+    const st=Math.max(45,Math.min(110,Math.round((760-jumps*300)/Math.max(1,walk))));place(m.path[0],0);void f.offsetWidth;let k=1;
+    const end=()=>{f.remove();tok.style.visibility='';sfx('pop');S.holdRender=false;if(S.renderPending)render();};
+    const step=()=>{if(k<m.path.length){const prev=m.path[k-1],nx=m.path[k++],far=(nx-prev+40)%40>1;place(nx,far?280:st-8);setTimeout(step,far?290:st);}else setTimeout(end,80);};
+    setTimeout(step,Math.max(40,300-(Date.now()-(S.moDieAt||0))));}
 };
+
+/* ---------- monopoly bots ----------
+   Easy buys what it can and rarely builds. Medium keeps some cash and builds on full colours.
+   Hard plays to own colours: it buys almost everything early, bids up places that complete or block a colour,
+   builds three houses on its best colours first (where rent jumps most), trades for the last place of a colour,
+   pays its way out of jail early and stays inside late, and keeps enough cash for the worst rent around */
+const MRANK=[1,3,3,5,4,4,2,2];// how good each colour is to build on (orange and red land most)
+// how much a place is worth to seat s: its price, more when it completes or nearly completes a colour, or blocks one
+function mVal(d,s,i){const q=MP[i];let v=mPrice(i);
+  if(q[0]==='rr'){const n=MRR.filter(j=>d.own[j]===String(s)).length;return v*(1+.35*n);}
+  if(q[0]==='ut')return v*(MUT.some(j=>d.own[j]===String(s))?1.1:.8);
+  const g=MGRP[q[3]],mine=g.filter(j=>j!==i&&d.own[j]===String(s)).length,free=g.filter(j=>j!==i&&d.own[j]==='.').length,foes=new Set(g.filter(j=>j!==i&&d.own[j]!=='.'&&d.own[j]!==String(s)).map(j=>d.own[j]));
+  if(mine===g.length-1)v*=2.6;else if(mine&&!foes.size)v*=1.45;
+  if(foes.size===1&&!mine&&!free&&g.length>1)v*=1.7;// the last place someone else needs
+  return v*(1+MRANK[q[3]]*.05);}
+// the biggest rent a seat could owe on the next throw or so: what it keeps in hand
+function mDanger(d,s){let m=0;for(let i=0;i<40;i++){const o=d.own[i];if(o==='.'||o===String(s)||d.out[+o]==='1'||!isProp(i))continue;const r=mRent(d,i,7);if(r>m)m=r;}return m;}
+const mReserve=(d,s,lv)=>lv===1?0:lv===2?150:Math.min(400,Math.max(d.turns<6*d.pl.length?40:90,Math.round(mDanger(d,s)*.6)));
+// one build for seat s: the colour with the best rank first, evenly, up to three houses (more when rich)
+function mBuildPick(d,s,lv){const res=mReserve(d,s,lv);let best=null;
+  for(let i=0;i<40;i++){if(!mCanBuild(d,s,i))continue;const q=MP[i],h=+d.hs[i];if(d.cash[s]-q[5]<res)continue;if(lv===3&&h>=3&&d.cash[s]-q[5]<res+300)continue;
+    const gain=(q[4][h+1]-q[4][h])/q[5]+MRANK[q[3]]*.08-(h>=3?.6:0);if(!best||gain>best[1])best=[i,gain];}
+  return best?best[0]:-1;}
+// a hard bot's offer for the last place it needs in a colour (once per turn per player, never one that completes their colour)
+const MOFR={};
+function mOfferFor(d,s){if(d.offer||d.turns>18*d.pl.length)return null;for(let g=0;g<8;g++){const G=MGRP[g];const miss=G.filter(j=>d.own[j]!==String(s));if(miss.length!==1||G.length<2)continue;
+  const i=miss[0],o=d.own[i];if(o==='.'||d.out[+o]==='1'||!mTradeable(d,+o,i)||G.some(j=>+d.hs[j]>0))continue;const to=+o,key=d.gid+':'+d.turns+':'+to;if(MOFR[key])continue;
+  const give=[...Array(40).keys()].filter(j=>mTradeable(d,s,j)&&MP[j][0]==='p'&&MP[j][3]!==g&&!MGRP[MP[j][3]].some(k=>d.own[k]===String(to))&&MGRP[MP[j][3]].filter(k=>d.own[k]===String(s)).length===1).slice(0,1);
+  const want=Math.round(mPrice(i)*(isBot(d,to)?2.05:1.6)/10)*10-give.reduce((a,j)=>a+mPrice(j),0),cash=Math.max(0,Math.min(want,d.cash[s]-mReserve(d,s,3)-MP[i][5]*G.length*2));
+  if(cash<want*.9)continue;MOFR[key]=1;return {from:s,to,give,get:[i],cash};}
+  return null;}
+GAMES.mono.bot=(d,s,lv)=>{const res=mReserve(d,s,lv);
+  if(d.offer&&d.offer.to===s){if(lv===1){const nd=Math.random()<.4?mTrade(d):null;return nd||{...d,offer:null,last:`${nm(d,s)} رفض الصفقة`};}return mBotTrade(d);}
+  // its own offer waits on a person: it takes it back after a while, so the game never stops
+  if(d.offer&&d.offer.from===s){const k=d.gid+':o:'+d.turns;MOFR[k]=(MOFR[k]||0)+1;return MOFR[k]>6?{...d,offer:null,last:`${nm(d,s)} سحب عرضه`}:d;}
+  if(d.ph==='buy'){const i=d.pos[s],pr=mPrice(i),left=d.cash[s]-pr;
+    if(lv===1)return d.cash[s]>=pr&&Math.random()<.85?mBuy(d):mSkip(d);
+    if(lv===2)return left>=res?mBuy(d):mSkip(d);
+    // a place bought at its price keeps what the player is worth and starts earning rent: hard buys unless a big rent is close
+    // ...but when nobody else can pay much, it lets the place go to auction and takes it cheap
+    const v=mVal(d,s,i);if(v<pr*1.4&&mOthersMax(d,s,i)<pr*.5&&left>=0)return mSkip(d);
+    if(left>=Math.min(res,mDanger(d,s)*.25)||(left>=0&&v>=pr*1.4))return mBuy(d);
+    // short of cash for a place that matters: mortgage a lone place first
+    if(v>=pr*1.6){const lone=[...Array(40).keys()].find(j=>mCanMort(d,s,j)&&(MP[j][0]!=='p'||!MGRP[MP[j][3]].every(k=>d.own[k]===String(s))));if(lone!=null&&d.cash[s]+mPrice(lone)/2>=pr){const x={...d,cash:[...d.cash],mg:setAt(d.mg,lone,'1')};x.cash[s]+=mPrice(lone)/2;return mBuy(x);}}
+    return mSkip(d);}
+  if(d.ph==='roll'||d.ph==='end'){
+    if(lv===3&&!d.offer){const o=mOfferFor(d,s);if(o){const nd={...d,offer:o,last:`${nm(d,s)} أرسل عرض صفقة لـ${nm(d,o.to)}`};return isBot(d,o.to)?mBotTrade(nd):nd;}}
+    if(lv>1){const b=mBuildPick(d,s,lv);if(b>=0)return botDo(d,s,'bld',b);
+      for(let i=0;i<40;i++)if(mCanUnm(d,s,i)&&d.cash[s]-mUnmCost(i)>=res*2+100)return botDo(d,s,'unm',i);}
+    else if(Math.random()<.3){for(let i=0;i<40;i++)if(mCanBuild(d,s,i)&&d.cash[s]>=MP[i][5]+50)return botDo(d,s,'bld',i);}
+    if(d.ph==='end')return mEnd(d);
+    if(d.jail[s]){const unowned=[...Array(40).keys()].filter(i=>isProp(i)&&d.own[i]==='.').length;
+      const out=lv===3?d.turns<20*d.pl.length&&mDanger(d,s)<300:lv===2?d.turns<12*d.pl.length:false;
+      if(d.free[s]&&(out||lv<3))return botDo(d,s,'free',0);if(out&&d.cash[s]>=50+res)return botDo(d,s,'bail',0);}
+    return mRoll(d);}
+  return mAuto(d);};
+// sealed auction: up to what the place is worth to the bot, never into its reserve
+// what the others could bid at most (a bid is cut to the bidder's cash)
+const mOthersMax=(d,s,i)=>Math.max(0,...aliveSeats(d).filter(o=>o!==s).map(o=>Math.min(d.cash[o],Math.round(mPrice(i)*1.1))));
+// sealed auction: easy and medium bid near the price; hard bids just over what the others can pay, never more than the place is worth to it
+GAMES.mono.botPick=(d,s,lv)=>{const i=d.auc;if(i==null)return 0;const price=mPrice(i);
+  if(lv===3){const v=mVal(d,s,i),cap=Math.min(v,price*(v>=price*2?1.45:v>=price*1.4?1.15:.98)),o=mOthersMax(d,s,i);
+    const bid=Math.min(cap,o<price*.85?o+10:price*(v>=price*1.4?cap/price:.84));return Math.max(0,Math.min(d.cash[s]-Math.min(mReserve(d,s,3),mDanger(d,s)*.25),Math.round(bid/10)*10));}
+  const want=lv===1?(.5+Math.random()*.6)*price:.85*price*(1+(MP[i][0]==='p'?MGRP[MP[i][3]].filter(j=>d.own[j]===String(s)).length*.25:0));
+  return Math.max(0,Math.min(d.cash[s]-[0,0,100][lv],Math.round(want/10)*10));};
