@@ -289,8 +289,9 @@ function handleIntent(fp,r,m){
    reset, which move s but not the board */
 function dSeq(){if(S.st.d!==S.dRef){S.dRef=S.st.d;S.dS=S.st.s;}return S.dS;}
 const baseOk=b=>Number.isInteger(b)&&b>=dSeq()&&b<=S.st.s;
-// sent at once when nothing went out in the last PUB_MS (a move never waits); quick bursts (typing, drawing) still go out as one message
-function schedulePublish(rx){dSeq();if(rx)S.pubRx=rx;if(S.pubT)return;S.pubT=setTimeout(runPublish,Math.max(0,PUB_MS-(Date.now()-(S.lastPubAt||0))));}
+// after a quiet moment (a move) it goes out at once; during a burst (drawing, typing, a busy room) it waits PUB_MS so the burst
+// goes out as fewer messages: sending each change at once there let the players' phones fall behind the host
+function schedulePublish(rx){dSeq();if(rx)S.pubRx=rx;if(S.pubT)return;S.pubT=setTimeout(runPublish,Date.now()-(S.lastPubAt||0)>250?0:PUB_MS);}
 async function runPublish(){S.pubT=null;if(S.pubBusy){S.pubAgain=true;return;}S.pubBusy=true;
   try{await doPublish();}catch(e){console.warn('publish',e);}finally{S.pubBusy=false;if(S.pubAgain){S.pubAgain=false;schedulePublish();}}}
 const RATE_N=100,RATE_W=10000;
