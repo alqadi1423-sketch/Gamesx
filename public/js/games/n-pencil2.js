@@ -136,7 +136,7 @@ GAMES.g_domin={...PNTEAM,name:'الدومينو المتقاطع',cat:'board',lb
     const c=[];if(ms.includes(i))c.push(i);const up=i-off;if(up>=0&&(s?i%z>0:true)&&ms.includes(up))c.push(up);
     if(!c.length){pnPick(d,null);return;}if(c.length===1){S.pn=null;act(pndDo(d,c[0]));return;}
     pnPick(d,{i,c});},
-  bot(d,s,lv){const ms=pndMoves(d.b,d.z,d.sd);if(lv===1&&Math.random()<.35)return pndDo(d,pnRnd(ms));
+  bot(d,s,lv){const ms=pndMoves(d.b,d.z,d.sd);if(lv===1&&Math.random()<.35||lv===2&&Math.random()<.2)return pndDo(d,pnRnd(ms));
     const m=pnThink({b:d.b,z:d.z,sd:d.sd,w:null},PNDP,lv,{dep:[0,1,2,14],cap:[0,400,3000,25000],ns:[0,10,5,.5]});return pndDo(d,m!=null?m:pnRnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.g_domin='الدومينو المتقاطع: لوحة مربعات فاضية. فريق يحط قطعه بالطول (تغطي مربعين فوق بعض) وفريق يحط بالعرض (مربعين جنب بعض). كل دور تحط قطعة وحدة على مربعين فاضيين. اللي يجي دوره وما يلقى مكان لقطعته يخسر. اضغط على أي مربع ينفع لقطعة: إذا فيه طريقة وحدة تنحط على طول، وإذا فيه طريقتين يبين لك المربعين واختار. قبل أول حركة تختارون حجم اللوحة. الفريق اللي يبدأ يتبدل كل جولة. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
@@ -487,7 +487,7 @@ function pn6Hard(d,s){const z=d.z,b=d.b,T=pn6Tab(z),c=String(s);const opp=pn6Nee
     const v=val(nb)+(S1[i]||0)+(S1[j]||0)+Math.random();if(v>bv){bv=v;best=(S1[i]||0)>=(S1[j]||0)?i:j;}}
   return best;}
 function pn6Bot(d,s,lv){const z=d.z,b=d.b,T=pn6Tab(z);if(!/[01]/.test(b))return (z>>1)*z+(z>>1)+(lv===1?rnd(3)-1:0);
-  if(lv===1&&Math.random()<.18)return pnRnd(pn6Cands(b,z));
+  if(lv===1&&Math.random()<.18||lv===2&&Math.random()<.08)return pnRnd(pn6Cands(b,z));
   const f=pn6Finish(b,T,s,d.left);if(f&&(lv>1||Math.random()<.7))return f[0];
   if(lv===3)return pn6Hard(d,s);
   // the other side could finish a six next turn: block the square that cuts the most of those windows
@@ -735,7 +735,7 @@ function pnxDo(d,i){const s=d.sd,b=setAt(d.b,i,String(s)),k=i/9|0;const L=pnxLin
   const x={b,lm:i,last:`${tmName(d,s)} حط علامة${L?' وقفّل لوحة':''}`};if(L&&[...Array(d.K)].every((_,q)=>pnxDead(b,q)))return pnWon(d,1-s,'lastboard',x);return pnPass(d,s,x);}
 function pnxBot(d,lv){const K=d.K,b=d.b,ms=pnxMoves(b,K);const kills=i=>!!pnxLine(pnxMask(setAt(b,i,'x'),i/9|0));
   const left=[...Array(K)].filter((_,k)=>!pnxDead(b,k)).length;const safe=ms.filter(i=>!(left===1&&kills(i)));
-  if(lv===1){return pnRnd(safe.length&&Math.random()<.85?safe:ms);}
+  if(lv===1||lv===2&&Math.random()<.35){return pnRnd(safe.length&&Math.random()<.85?safe:ms);}
   const bud={n:lv===3?250000:4000};
   try{for(const i of pnShuf(ms)){const nb=setAt(b,i,'x');const live=[...Array(K)].map((_,k)=>k).filter(k=>!pnxDead(nb,k)).map(k=>pnxCan(pnxMask(nb,k))).sort((a,c)=>a-c);
       if(!live.length)continue;if(!pnxWin(live,bud))return i;}}catch(x){if(x!==PNSTOP)throw x;}
