@@ -126,7 +126,7 @@ function teamFix(nd){const G=GAMES[S.st.g];if(!nd||!nd.tm||!G||G.teams==='native
 function act(nd){if(ACT_CAP){ACT_CAP.v=nd;return;}nd=teamFix(nd);if(NET_CAP){NET_CAP.v=nd;return;}if(netDown())return;
   // online, only the acting host changes the game: a player's move goes to it (net.js)
   if(S.mode==='online'&&!amHost()){propose(nd);return;}
-  if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}if(!S.inIntent){S.wild=null;S.dside=null;}const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number'){(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));nd=matchEnd(nd,sc);}S.st={...S.st,s:S.st.s+1,d:nd,sc};if(!S.inIntent)sfx('tap');afterChange();}
+  if(hasBots()){const G=GAMES[S.st.g];if(G&&G.botSee)try{G.botSee(nd);}catch(e){}}if(!S.inIntent){S.wild=null;S.dside=null;}const was=S.st.d&&S.st.d.win!=null;const sc=[...S.st.sc];if(!was&&typeof nd.win==='number'){if(Array.isArray(nd.dsc))nd.dsc.forEach((x,w)=>{const r=nd.pl[w];if(r!=null&&Number.isFinite(x))sc[r]=Math.max(0,sc[r]+x);});else(nd.wins||[nd.win]).forEach(w=>sc[nd.pl[w]]+=(nd.wpts||1));nd=matchEnd(nd,sc);}S.st={...S.st,s:S.st.s+1,d:nd,sc};if(!S.inIntent)sfx('tap');afterChange();}
 function setCfg(patch){if(netDown())return;if(S.mode==='online'&&!amHost())return;S.st={...S.st,cfg:{...cfg(),...patch},s:S.st.s+1};afterChange();}
 function setPriv(role,p){if(NET_CAP){NET_CAP.pv={role,p};return;}if(netDown())return;
   if(S.mode==='online'&&!amHost()){if(role!==S.me||S.me==null)return;S.priv[role]=p;queueIntent({t:'pv',p});render();return;}
@@ -334,6 +334,8 @@ function cleanD(d){
   if(!(d.turn==null||seat(d.turn))||!(d.win==null||d.win==='d'||seat(d.win))||!(d.mw==null||isRole(d.mw))||!(d.wins==null||Array.isArray(d.wins)&&d.wins.every(seat)))throw 0;
   // teams: one team number (0..3) for every seat, and the winning team
   if(!(d.tm==null||Array.isArray(d.tm)&&d.tm.length===n&&d.tm.every(t=>Number.isInteger(t)&&t>=0&&t<4))||!(d.wt==null||Number.isInteger(d.wt)&&d.wt>=0&&d.wt<4))throw 0;
+  // dsc: a game that moves session points itself (one whole number per seat, applied once at the round's end, never below 0)
+  if(!(d.dsc==null||Array.isArray(d.dsc)&&d.dsc.length===n&&d.dsc.every(x=>Number.isInteger(x)&&x>=-1000&&x<=1000)))throw 0;
   if(!(d.wpts==null||typeof d.wpts==='number'&&d.wpts>=0&&d.wpts<=1000)||!(d.st==null||Number.isInteger(d.st)&&d.st>=0)||typeof d.gid!=='string'||!/^\w{0,16}$/.test(d.gid))throw 0;
   return cleanVal(d,0);}
 // a peer's {g,d} made safe, or null when it is not a state this app could have made
