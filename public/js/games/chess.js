@@ -91,7 +91,7 @@ const CHP={
 // shared shading for the pieces: one hidden set of gradients per board
 const CHDEFS='<svg class="bd-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><linearGradient id="chgw" x1="0" y1="0" x2="1" y2=".35"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F2ECE0"/><stop offset="1" stop-color="#D3C6AE"/></linearGradient><linearGradient id="chgb" x1="0" y1="0" x2="1" y2=".35"><stop offset="0" stop-color="#66788F"/><stop offset=".45" stop-color="#2E3B4C"/><stop offset="1" stop-color="#151C26"/></linearGradient></defs></svg>';
 const chPiece=p=>{const s=chSide(p),t=p.toLowerCase();return `<svg viewBox="0 0 40 40" class="chp ${s?'bk':'wh'}">${CHP[t]}</svg>`;};
-GAMES.chess={name:'شطرنج',cat:'board',lbc:'#5B4632',
+GAMES.chess={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:'شطرنج',cat:'board',lbc:'#5B4632',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9A66B"/>${[0,1,2,3].map(r=>[0,1,2,3].map(c=>(r+c)%2?`<rect x="${c*25}" y="${r*25}" width="25" height="25" fill="#8B6B43"/>`:'').join('')).join('')}<g transform="translate(18 14) scale(1.6)" fill="#fff" stroke="#2D4763" stroke-width="1.6" stroke-linejoin="round">${CHP.k}</g></svg>`,
   init:n=>({b:CH0,sd:0,cr:'KQkq',ep:-1,hm:0,hist:[chKey(CH0,0,'KQkq',-1)],tr:[0,0],lm:null,offer:null,last:''}),
   start:d=>({...d,turn:0}),// white (seat 0) always opens, also in later rounds
@@ -160,7 +160,7 @@ function dmApply(d,m){const b=[...d.b];const p=b[m.f];b[m.f]='.';m.caps.forEach(
   const s=dmSide(p),row=to>>3;b[to]=(!dmKing(p)&&row===(s?7:0))?(s?'B':'A'):p;return {b:b.join(''),crown:b[to]!==p};}
 const DMCROWN='<svg viewBox="0 0 24 24" class="crw"><path d="M3.5 8.5l4.3 3.8L12 5.2l4.2 7.1 4.3-3.8-1.9 9.7H5.4z" fill="#F4C542" stroke="#8C5E0C" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.8 15.4h12.4" stroke="#8C5E0C" stroke-width="1.1"/><circle cx="12" cy="4.4" r="1.4" fill="#F4C542" stroke="#8C5E0C" stroke-width=".9"/></svg>';
 const dmCount=(b,s)=>[...b].filter(p=>dmSide(p)===s).length;
-GAMES.dama={name:'داما',cat:'board',lbc:'#7A3B2E',
+GAMES.dama={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:'داما',cat:'board',lbc:'#7A3B2E',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8C994"/>${[1,2,3].map(k=>`<path d="M${k*25} 0V100M0 ${k*25}H100" stroke="#A97D45" stroke-width="2"/>`).join('')}<circle cx="37.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="62.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="37.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="4" fill="#EDB02F"/></svg>`,
   init:()=>({b:DM0,sd:0,tr:[0,0],lm:null,quiet:0,last:''}),
   start:d=>({...d,turn:0}),

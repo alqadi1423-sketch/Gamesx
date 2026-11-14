@@ -221,45 +221,95 @@ button.pv.can:active{transform:scale(.94)}
  .wasla .wk.w0{box-shadow:0 3px 0 #333C47}
 }
 
-/* ===== ارسم وخمّن ===== */
-.tele{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
-.tele>.field,.tele>.btn{width:min(100%,440px);margin:0}
-.tslip{display:flex;align-items:center;gap:10px;width:min(100%,440px);padding:10px 14px;border-radius:var(--r-m);background:#FFFDF4;color:#2D4763;box-shadow:inset 0 0 0 1px #EFE3C8,var(--e1);transform:rotate(-.6deg);animation:pa-in var(--t3) var(--ease) both}
-.tslip span{font-size:28px;line-height:1;flex:none}
-.tslip div{min-width:0}
-.tslip small{display:block;font-size:13px;font-weight:700;color:#7A8BA0}
-.tslip b{display:block;font-size:19px;font-weight:800;line-height:1.35;word-break:break-word}
-.tele .easel{width:clamp(220px,calc(100vh - 500px),100%);max-width:440px;padding:9px;border-radius:20px;background:linear-gradient(135deg,var(--wood-2),var(--wood-3));box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),inset 0 -3px 0 rgba(0,0,0,.18),var(--e2)}
-.tele .easel .drw{width:100%;max-width:none;margin:0;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),0 1px 0 rgba(0,0,0,.25)}
-.tele .easel .drw.pad{box-shadow:0 0 0 2px rgba(255,216,77,.9)}
-.tele .easel.view{width:clamp(220px,calc(100vh - 470px),100%)}
-.tele .tools{width:min(100%,440px);justify-content:center;gap:8px;margin:0}
-.tpal{display:flex;gap:5px;padding:5px;border-radius:99px;background:var(--surface);box-shadow:var(--e1)}
-.tele .tcol{width:28px;height:28px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22);transition:transform var(--t2) var(--spring),box-shadow var(--t2)}
-.tele .tcol.on{transform:translateY(-2px) scale(1.12);box-shadow:inset 0 -3px 0 rgba(0,0,0,.22),0 0 0 3px var(--surface),0 0 0 5.5px var(--sel)}
-.tele .tcol:active{transform:scale(.9)}
-.tact{display:flex;gap:6px}
-.tact .sm{padding:6px 11px;box-shadow:0 2px 0 var(--line)}
-.tact .sm:disabled{opacity:.45;box-shadow:none}
-/* the album: one card per story, drawings as polaroids */
-.album.tele{gap:12px}
-.tele .chainc{width:100%;padding:12px 12px 14px;border-radius:var(--r-xl);background:var(--surface);box-shadow:inset 0 3px 0 var(--c),var(--e1);animation:pa-in var(--t3) var(--ease) both}
-.tele .chainc h3{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:18px}
-.tele .chainc h3 i,.tele .step small i{display:grid;place-items:center;border-radius:50%;background:var(--c);flex:none}
-.tele .chainc h3 i{width:30px;height:30px}.tele .chainc h3 i svg{width:16px;height:16px}
-.tsteps{list-style:none;margin:0 10px 0 0;padding:0 12px 0 0;border-inline-start:2px dashed var(--line)}
-.tele .step{margin:10px 0 0;animation:pa-in var(--t3) var(--ease) both}
-.tele .step small{display:flex;align-items:center;gap:6px;margin:0 -24px 4px 0;font-size:13px;font-weight:800;color:var(--c)}
-.tele .step small i{width:22px;height:22px;box-shadow:0 0 0 3px var(--surface)}
-.tele .step small i svg{width:12px;height:12px}
-.tele .bub{position:relative;display:inline-block;max-width:100%;padding:7px 14px;border-radius:16px;border-start-start-radius:4px;background:var(--surface-2);color:var(--ink);font-size:18px;font-weight:700;word-break:break-word}
-.polar{width:min(210px,72%);padding:7px 7px 9px;border-radius:6px;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.08),0 6px 14px rgba(29,52,84,.14);transform:rotate(-1.2deg)}
-.tele .step:nth-child(4n) .polar{transform:rotate(1.4deg)}
-.polar .drw{width:100%;max-width:none;margin:0;border-radius:2px;box-shadow:inset 0 0 0 1px #eee;background:#FCFCF8}
+/* ===== ارسم وخمّن: one drawer on a wooden easel, the others guess (scoped to .pdraw) ===== */
+.pdraw{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
+.pdraw>*{width:min(100%,440px)}
+/* picking the word: three paper cards */
+.pdraw .ppick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0}
+.pdraw .pwc{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:14px 4px 12px;border-radius:var(--r-l);background:#FFFDF4;color:#2D4763;box-shadow:inset 0 0 0 1px #EFE3C8,0 4px 0 #E2D3B2,var(--e1);transition:transform var(--t1) var(--ease),box-shadow var(--t1);animation:pa-in var(--t3) var(--spring) both}
+.pdraw .pwc:nth-child(2){animation-delay:.05s}.pdraw .pwc:nth-child(3){animation-delay:.1s}
+.pdraw .pwc span{font-size:44px;line-height:1.15}
+.pdraw .pwc b{max-width:100%;font-size:18px;line-height:1.3;overflow-wrap:anywhere}
+.pdraw .pwc small{font-size:12px;font-weight:800;color:#9A7B45}
+.pdraw .pwc:active{transform:translateY(4px);box-shadow:inset 0 0 0 1px #EFE3C8,0 0 0 #E2D3B2}
+.pdraw .pwait{display:flex;flex-direction:column;align-items:center;padding:26px 0 18px}
+.pdraw .pwait p{margin:8px 0 0;font-size:18px;font-weight:800}
+.pdraw .pen{width:74px;height:74px;display:grid;place-items:center;border-radius:50%;background:var(--surface);box-shadow:var(--e2);font-size:40px;animation:pa-pen 1.1s ease-in-out 4}
+@keyframes pa-pen{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg) translateY(-4px)}}
+/* the top bar: clock, the word (drawer) or its letters (guessers), the category */
+.pdraw .ptop{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0}
+.pdraw .ptime{display:inline-flex;align-items:center;gap:3px;min-width:62px;justify-content:center;padding:4px 12px;border-radius:99px;background:var(--surface);color:var(--ink);font-weight:800;box-shadow:var(--e1)}
+.pdraw .ptime b{font-size:19px;font-variant-numeric:tabular-nums}
+.pdraw .ptime.low{background:var(--bad);color:#fff;animation:pa-beat .9s ease-in-out 10}
+@keyframes pa-beat{50%{transform:scale(1.07)}}
+.pdraw .pword,.pdraw .ppeek{padding:5px 14px;border-radius:99px;background:var(--navy);color:#fff;font-weight:800;font-size:18px;box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.pdraw .pword.ok{background:var(--ok)}
+.pdraw .ppeek:active{transform:translateY(2px);box-shadow:none}
+.pdraw .pcat{padding:3px 10px;border-radius:99px;background:var(--surface-2);color:var(--mut);font-weight:800;font-size:13px}
+.pdraw .pslots{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;direction:rtl}
+.pdraw .pslots b{width:26px;height:32px;display:grid;place-items:center;border-radius:8px;background:#FFFDF4;color:#2D4763;font-size:19px;font-weight:800;box-shadow:inset 0 -3px 0 #E2D3B2,inset 0 0 0 1px #EFE3C8}
+.pdraw .pslots b:not(:empty){animation:pa-in var(--t2) var(--spring) both}
+.pdraw .pslots .sp{width:10px}
+/* the easel: wood frame, paper inside; the drawer's pad has a gold edge */
+.pdraw .easel{width:clamp(220px,calc(100vh - 480px),100%);max-width:440px;padding:9px;border-radius:20px;background:linear-gradient(135deg,var(--wood-2),var(--wood-3));box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),inset 0 -3px 0 rgba(0,0,0,.18),var(--e2)}
+.pdraw .easel .drw{width:100%;max-width:none;margin:0;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),0 1px 0 rgba(0,0,0,.25)}
+.pdraw .easel.live .drw{box-shadow:0 0 0 2px rgba(255,216,77,.9)}
+.pdraw .drw polyline,.pdraw .drw circle{animation:none}
+/* a bot draws: the picture shows tile by tile */
+.pdraw .preveal{position:relative;width:clamp(220px,calc(100vh - 480px),100%);max-width:440px;aspect-ratio:1;display:grid;place-items:center;border-radius:20px;overflow:hidden;background:#FFFDF4;box-shadow:0 0 0 9px var(--wood-2),var(--e2);margin:9px auto}
+.pdraw .preveal>span{font-size:min(50vw,200px);line-height:1}
+.pdraw .ptiles{position:absolute;inset:0;display:grid;grid-template-columns:repeat(6,1fr)}
+.pdraw .ptiles i{background:linear-gradient(135deg,#F2A541,#E07A1F);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.pdraw .ptiles i.off{opacity:0;transform:scale(.6)}
+/* tools: colours, brush sizes, undo / clear / skip */
+.pdraw .ptools{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;margin:0}
+.pdraw .pcols{width:auto;max-width:100%;padding:5px 8px;border-radius:99px;background:var(--surface);box-shadow:var(--e1)}
+.pdraw .tcol{width:28px;height:28px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22);transition:transform var(--t2) var(--spring),box-shadow var(--t2)}
+.pdraw .tcol.on{transform:translateY(-2px) scale(1.12);box-shadow:inset 0 -3px 0 rgba(0,0,0,.22),0 0 0 3px var(--surface),0 0 0 5.5px var(--sel)}
+.pdraw .tcol:active{transform:scale(.9)}
+.pdraw .tcol[style*="#FFFFFF"]{box-shadow:inset 0 0 0 1.5px var(--edge),inset 0 -3px 0 rgba(0,0,0,.12)}
+.pdraw .tcol.er{display:grid;place-items:center;background:var(--surface-2);font-size:15px}
+.pdraw .psz{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--surface);box-shadow:0 2px 0 var(--edge);transition:transform var(--t1) var(--ease)}
+.pdraw .psz i{display:block;border-radius:50%;background:var(--ink)}
+.pdraw .psz.on{box-shadow:var(--ring)}
+.pdraw .psz:active{transform:scale(.92)}
+.pdraw .ptools .sm{padding:6px 11px;box-shadow:0 2px 0 var(--edge)}
+/* one phone: tap who got it */
+.pdraw .ptap{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.pdraw .ptap button{padding:8px 14px;border-radius:99px;background:var(--surface);color:var(--ink);font-weight:800;font-size:15px;box-shadow:inset 0 0 0 2px var(--c),0 3px 0 var(--edge);transition:transform var(--t1) var(--ease)}
+.pdraw .ptap button:active:not(:disabled){transform:translateY(3px);box-shadow:inset 0 0 0 2px var(--c)}
+.pdraw .ptap button.on{background:var(--c);color:#fff;opacity:1;animation:pa-in var(--t2) var(--spring) both}
+/* typing a guess, and the guesses so far */
+.pdraw .pguess{display:flex;gap:6px;margin:2px 0 0}
+.pdraw .pguess .field{flex:1;min-width:0;margin:0}
+.pdraw .pguess .btn{flex:none;margin:0;padding:0 20px;border-radius:var(--r-m)}
+.pdraw .pfeed{display:flex;flex-direction:column;gap:4px;max-height:176px;overflow:hidden}
+.pdraw .pfeed p{margin:0;padding:5px 12px;border-radius:14px;border-start-start-radius:4px;background:var(--surface);box-shadow:var(--e1);font-size:15px;animation:pa-in var(--t2) var(--ease) both;overflow-wrap:anywhere}
+.pdraw .pfeed p.ok{background:#E3F6E9;color:#1F6E3A}
+.pdraw .pfeed p.cl{background:#FFF4D6;color:#7A5200}
+/* end of a drawing: the word, who got it, the picture as a polaroid, a bar to the next one */
+.pdraw .pshow{display:flex;flex-direction:column;align-items:center;padding:4px 0}
+.pdraw .pem{font-size:80px;line-height:1.1;animation:pa-pop var(--t3) var(--spring) both}
+@keyframes pa-pop{from{transform:scale(.3);opacity:0}}
+.pdraw .pshow h3{margin:2px 0 10px;font-size:28px}
+.pdraw .pres{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.pdraw .pres span{padding:4px 12px;border-radius:99px;background:var(--surface);font-weight:800;box-shadow:inset 0 0 0 2px var(--c),var(--e1);animation:pa-in var(--t3) var(--ease) both}
+.pdraw .pres span b{color:var(--c)}
+.pdraw .pres .dr{background:var(--c);color:#fff}.pdraw .pres .dr b{color:#fff}
+.pdraw .pres .none{box-shadow:var(--e1);color:var(--mut)}
+.pdraw .polar{width:min(180px,56%);margin:12px auto 0}
+.pdraw .polar .drw.small{max-width:none;margin:0}
+.pdraw .pnext{width:min(260px,80%);height:6px;margin:14px auto 0;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.pdraw .pnext i{display:block;width:100%;height:100%;background:linear-gradient(90deg,#F2A541,#E07A1F);transform-origin:right;animation:pa-bar 6s linear forwards}
+@keyframes pa-bar{to{transform:scaleX(0)}}
 @media (prefers-color-scheme:dark){
- .tslip{box-shadow:inset 0 0 0 1px #EFE3C8,0 2px 8px rgba(0,0,0,.35)}
- .polar{box-shadow:0 6px 14px rgba(0,0,0,.45)}
+ .pdraw .pwc{box-shadow:inset 0 0 0 1px #EFE3C8,0 4px 0 #9C8A66,0 2px 8px rgba(0,0,0,.35)}
+ .pdraw .pword{background:#E7EEF6;color:#111923}
+ .pdraw .pfeed p.ok{background:rgba(63,174,92,.22);color:#8EE0A8}
+ .pdraw .pfeed p.cl{background:rgba(240,180,41,.2);color:#F5D27A}
+ .pdraw .preveal{box-shadow:0 0 0 9px var(--wood-3),0 6px 18px rgba(0,0,0,.4)}
 }
+@media (prefers-reduced-motion:reduce){.pdraw .pnext i{animation-duration:6s!important;animation-iteration-count:1!important}}
 
 /* ===== وين شخصيتك؟ (cups on a felt table) ===== */
 .cupsw{position:relative;padding:22px 14px 16px;border-radius:var(--r-xl);background:radial-gradient(ellipse at 50% 35%,var(--felt-1),var(--felt-2) 85%);box-shadow:inset 0 0 0 7px var(--wood-3),inset 0 0 0 9px rgba(0,0,0,.25),inset 0 0 28px rgba(0,0,0,.35),var(--e2)}
@@ -278,72 +328,63 @@ button.pv.can:active{transform:scale(.94)}
 .cupsw .cupb:not(:disabled):active .cup{transform:translateY(-10px) scale(.97)}
 .cupsw+.note{margin-top:10px;font-weight:700}
 
-/* ===== إنسان حيوان جماد ===== */
+/* ===== إنسان حيوان جماد: the letter on a red tile, the sheet on lined paper, the answers on cards (scoped to .catsb) ===== */
 .catsb{display:flex;flex-direction:column;align-items:center;width:100%}
-.cletter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:92px;height:92px;margin:2px auto 22px;border-radius:24px;color:#fff;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.25),transparent 55%),linear-gradient(180deg,#F0756C,#D9483F);box-shadow:inset 0 -5px 0 rgba(0,0,0,.16),var(--e2);animation:pa-pop var(--t3) var(--spring) both}
-.cletter small{font-size:12px;font-weight:800;opacity:.9;line-height:1}
-.cletter b{font-size:48px;line-height:1;margin-top:2px;text-shadow:0 2px 0 rgba(0,0,0,.15)}
-.cletter em{position:absolute;bottom:-13px;font-style:normal;font-size:12px;font-weight:800;padding:2px 10px;border-radius:99px;background:var(--navy);color:#fff;white-space:nowrap;box-shadow:0 0 0 3px var(--bg)}
-.catsb .catf{gap:0;width:min(100%,440px);padding:4px 14px 6px;border-radius:var(--r-l);background:repeating-linear-gradient(180deg,transparent 0 51px,#EADFC6 51px 52px),#FFFDF4;box-shadow:inset 0 0 0 1px #EFE3C8,var(--e1);color:#2D4763}
-.catsb .catf label{gap:8px;padding:6px 0;border-radius:0;background:none;box-shadow:none;height:52px}
-.catsb .catf label span{display:flex;align-items:center;gap:6px;min-width:74px;color:#8A6A3B;font-size:15px}
-.catsb .catf label span i{font-style:normal;font-size:20px;line-height:1}
-.catsb .catf .field{height:38px;padding:6px 10px;border-radius:10px;background:#fff;color:#2D4763;font-size:18px;box-shadow:inset 0 0 0 1.5px #E6D9BD}
-.catsb .catf .field:focus{outline:none;box-shadow:inset 0 0 0 2px var(--blue)}
-.catsb .catf .field::placeholder{color:#B3A68E}
-.catsb>.btn.wide{width:min(100%,440px)}
-/* last round, one row per player */
-.prevr.cats{width:min(100%,460px);margin-top:14px;overflow:visible}
-.prevr.cats summary{list-style:none;width:max-content;margin:0 auto;padding:6px 16px;border-radius:99px;background:var(--surface);box-shadow:var(--e1);color:var(--ink);font-weight:800}
-.prevr.cats summary::-webkit-details-marker{display:none}
-.cres{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding:8px;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--e1)}
-.crr{display:grid;grid-template-columns:58px repeat(5,minmax(0,1fr)) 30px;gap:3px;align-items:stretch;animation:pa-in var(--t3) var(--ease) both}
-.crh{animation:none}
-.crh span{display:flex;flex-direction:column;align-items:center;font-size:17px;line-height:1.1}
-.crh span small{font-size:10px;font-weight:800;color:var(--mut)}
-.crh b{display:grid;place-items:center;color:var(--mut)}
-.crn{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
-.crn i{width:20px;height:20px;border-radius:50%;background:var(--c);display:grid;place-items:center}
-.crn i svg{width:11px;height:11px}
-.crn b{max-width:100%;font-size:11px;color:var(--c);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crc{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:4px 2px;border-radius:8px;line-height:1.15}
-.crc b{max-width:100%;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crc small{font-size:10px;font-weight:800;opacity:.85}
-.crc.ok{background:#DFF3E5;color:#1F6E3A}
-.crc.dup{background:#FCF0D2;color:#8A5A00}
-.crc.no{background:#FBE1DF;color:#B83A32}.crc.no b{text-decoration:line-through}
-.crc.empty{background:var(--surface-2);color:var(--mut)}
-.crt{display:grid;place-items:center;font-size:15px;color:var(--c)}
-.cleg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px;font-size:12px;font-weight:800;color:var(--mut)}
-.cleg span{padding:1px 8px;border-radius:99px;background:var(--surface-2)}
-.cleg .ok{background:#DFF3E5;color:#1F6E3A}.cleg .dup{background:#FCF0D2;color:#8A5A00}.cleg .no{background:#FBE1DF;color:#B83A32}
-/* voting on words the dictionary does not know */
-.cvhead{display:flex;flex-direction:column;align-items:center;margin:0 0 10px}
-.cvhead b{font-size:19px}.cvhead small{color:var(--mut);font-weight:700}
-.cvl{display:flex;flex-direction:column;gap:8px;width:min(100%,440px);margin-bottom:10px}
-.cvr{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px 8px 8px;border-radius:var(--r-m);background:var(--surface);box-shadow:inset -4px 0 0 var(--c),var(--e1);transition:box-shadow var(--t2);animation:pa-in var(--t3) var(--ease) both}
-.cvr>span:first-child{display:flex;flex-direction:column;min-width:0;padding-inline-start:4px}
-.cvr small{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--mut)}
-.cvr small i{width:18px;height:18px;border-radius:50%;background:var(--c);display:grid;place-items:center;flex:none}
-.cvr small i svg{width:10px;height:10px}
-.cvr b{font-size:21px;line-height:1.3;word-break:break-word}
-.cvr.yes{box-shadow:inset -4px 0 0 var(--c),0 0 0 2px var(--ok),var(--e1)}
-.cvr.nope{box-shadow:inset -4px 0 0 var(--c),0 0 0 2px var(--bad),var(--e1)}
-.cvb{display:flex;gap:6px;flex:none}
-.cvb button{width:46px;height:44px;border-radius:12px;font-size:20px;background:var(--surface-2);box-shadow:0 3px 0 var(--line);transition:transform var(--t1) var(--ease)}
-.cvb button:active{transform:translateY(3px);box-shadow:none}
-.cvb .cvy.on{background:var(--ok);box-shadow:0 3px 0 #2A8445}
-.cvb .cvn.on{background:var(--bad);box-shadow:0 3px 0 #A93A33}
+.catsb>*{width:min(100%,440px)}
+/* the letter spins in like a slot reel */
+.catsb .cspin{display:flex;flex-direction:column;align-items:center;padding:22px 0}
+.catsb .cspin p{margin:12px 0 0;color:var(--mut);font-weight:800}
+.catsb .creel{width:112px;height:112px;border-radius:28px;overflow:hidden;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.25),transparent 55%),linear-gradient(180deg,#F0756C,#D9483F);box-shadow:0 6px 0 #B53A32,var(--e2)}
+.catsb .cstrip{display:flex;flex-direction:column;animation:pa-reel 2.4s cubic-bezier(.15,.8,.25,1) forwards}
+.catsb .cstrip b{flex:none;height:112px;display:grid;place-items:center;color:#fff;font-size:66px;font-weight:900;text-shadow:0 2px 0 rgba(0,0,0,.15)}
+@keyframes pa-reel{to{transform:translateY(-1568px)}}
+.catsb .cletter{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 auto 10px}
+.catsb .cletter>span{color:var(--mut);font-weight:800}
+.catsb .cletter>b{width:64px;height:64px;display:grid;place-items:center;border-radius:20px;color:#fff;font-size:40px;line-height:1;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.25),transparent 55%),linear-gradient(180deg,#F0756C,#D9483F);box-shadow:0 4px 0 #B53A32,var(--e1);text-shadow:0 2px 0 rgba(0,0,0,.15)}
+.catsb .cletter.small>b{width:46px;height:46px;font-size:28px;border-radius:14px}
+.catsb .ctime{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:99px;background:var(--surface);font-style:normal;font-weight:800;box-shadow:var(--e1)}
+.catsb .ctime b{font-size:19px;font-variant-numeric:tabular-nums}
+.catsb .ctime.stop{background:var(--bad);color:#fff;animation:pa-beat .9s ease-in-out 10}
+/* the sheet */
+.catsb .cform{display:flex;flex-direction:column;padding:4px 12px 6px;border-radius:var(--r-l);background:repeating-linear-gradient(180deg,transparent 0 51px,#EADFC6 51px 52px),#FFFDF4;box-shadow:inset 0 0 0 1px #EFE3C8,var(--e1);color:#2D4763}
+.catsb .cform label{display:flex;align-items:center;gap:8px;height:52px;padding:6px 0;border-radius:0;background:none;box-shadow:none}
+.catsb .cform label span{flex:none;width:76px;display:flex;align-items:center;gap:4px;color:#8A6A3B;font-weight:800;font-size:15px}
+.catsb .cform .field{flex:1;min-width:0;height:38px;margin:0;padding:6px 10px;border:0;border-radius:10px;background:#fff;color:#2D4763;font-size:18px;box-shadow:inset 0 0 0 1.5px #E6D9BD;transition:box-shadow var(--t2)}
+.catsb .cform .field:focus{outline:none;box-shadow:inset 0 0 0 2px var(--blue)}
+.catsb .cform .field::placeholder{color:#B3A68E}
+.catsb .cform label.ok .field{box-shadow:inset 0 0 0 2px var(--ok)}
+.catsb .cform label.bad .field{box-shadow:inset 0 0 0 2px var(--bad)}
+.catsb>.btn.wide{margin:10px 0 0}
+.catsb .cstopb:not(:disabled){animation:pa-in var(--t3) var(--spring) both}
+.catsb .cwho{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
+.catsb .cwho:empty{display:none}
+.catsb .cwho span{display:inline-flex;align-items:center;gap:5px;padding:3px 4px 3px 10px;border-radius:99px;background:var(--surface);font-weight:800;font-size:13.5px;box-shadow:inset 0 0 0 2px var(--c),var(--e1)}
+.catsb .cwho span:empty{display:none}
+.catsb .cwho b{min-width:30px;padding:0 6px;border-radius:99px;background:var(--c);color:#fff;font-size:12px;line-height:20px;text-align:center}
+/* review and score: one card per category, one chip per answer */
+.catsb .ccat{margin:6px 0;padding:8px 10px 10px;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--e1);animation:pa-in var(--t3) var(--ease) both}
+.catsb .ccat h4{margin:0 0 6px;font-size:16px}
+.catsb .cans{display:flex;flex-wrap:wrap;gap:6px}
+.catsb .ca{display:flex;flex-direction:column;align-items:flex-start;min-width:84px;max-width:100%;padding:4px 10px;border-radius:12px;background:var(--surface-2);color:var(--ink);text-align:start;box-shadow:inset 3px 0 0 var(--c);transition:transform var(--t1) var(--ease),opacity var(--t2)}
+.catsb .ca small{font-size:12px;font-weight:700;color:var(--c)}
+.catsb .ca b{font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.catsb .ca i{font-style:normal;font-weight:800;font-size:13px}
+.catsb .ca.s2 i{color:var(--ok)}.catsb .ca.s1 i{color:#B8860B}
+.catsb .ca.s0,.catsb .ca.rej{opacity:.55}.catsb .ca.s0 b,.catsb .ca.rej b{text-decoration:line-through}.catsb .ca.rej i{color:var(--bad)}
+.catsb .ca.none{opacity:.45}.catsb .ca.none b{font-weight:600;font-size:14px;text-decoration:none}
+.catsb button.ca{box-shadow:inset 3px 0 0 var(--c),0 0 0 2px rgba(240,180,41,.65)}
+.catsb button.ca:active{transform:scale(.95)}
+.catsb button.ca.mine{background:#FDECEA;box-shadow:inset 3px 0 0 var(--c),0 0 0 2px var(--bad)}
+.catsb .cround{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0 0 8px}
+.catsb .cround span{padding:4px 12px;border-radius:99px;background:var(--surface);font-weight:800;box-shadow:inset 0 0 0 2px var(--c),var(--e1);animation:pa-in var(--t3) var(--spring) both}
+.catsb .cround span b{color:var(--c)}
 @media (prefers-color-scheme:dark){
- .cletter em{box-shadow:0 0 0 3px var(--bg);background:#E7EEF6;color:#111923}
- .catsb .catf{background:repeating-linear-gradient(180deg,transparent 0 51px,#2C3A4A 51px 52px),var(--surface);box-shadow:var(--e1);color:var(--ink)}
- .catsb .catf label span{color:var(--mut)}
- .catsb .catf .field{background:#26323f;color:var(--ink);box-shadow:inset 0 0 0 1.5px #33465A}
- .catsb .catf .field::placeholder{color:#6F8296}
- .crc.ok,.cleg .ok{background:rgba(63,174,92,.22);color:#8EE0A8}
- .crc.dup,.cleg .dup{background:rgba(240,180,41,.2);color:#F5D27A}
- .crc.no,.cleg .no{background:rgba(229,83,75,.22);color:#FF9A92}
- .cvb button{box-shadow:0 3px 0 #0b1118}
+ .catsb .cform{background:repeating-linear-gradient(180deg,transparent 0 51px,#2C3A4A 51px 52px),var(--surface);box-shadow:var(--e1);color:var(--ink)}
+ .catsb .cform label span{color:var(--mut)}
+ .catsb .cform .field{background:#26323f;color:var(--ink);box-shadow:inset 0 0 0 1.5px #33465A}
+ .catsb .cform .field::placeholder{color:#6F8296}
+ .catsb .ca.s1 i{color:#F5D27A}
+ .catsb button.ca.mine{background:rgba(229,83,75,.22)}
 }
 
 /* ===== question games: أقرب تخمين، لو خيروك، صح أو خطأ، رتّب الحروف، مين المختلف ===== */

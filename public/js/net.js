@@ -3,7 +3,8 @@
    Only the acting host publishes the game (h = its epoch, g, s, d, sc, cfg, ids, pp, vw, bk, ack). Every other device
    publishes its name, chat, and a queue q of moves sealed to the host; the host plays them in order and acks each sender.
    Seats belong to device keys (ids[role] = fp), so a seat, its score and a kick follow the person, not the colour. */
-const NETV=1,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=6000,PUB_MS=40,QMAX=6;
+// 2: teams, and the rebuilt draw and guess, categories, sea battle, bomb, lucky boxes, camel race and higher or lower
+const NETV=2,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=6000,PUB_MS=40,QMAX=6;
 // every phone publishes at least every HB_MS (hb = its clock); a peer whose presence has not changed for HB_DEAD is taken as asleep
 const HB_MS=4000,HB_DEAD=12000,TAKE_NEXT=6000;
 const HOSTK=['h','g','s','d','sc','cfg','ids','pp','vw','bk','ack'];
@@ -49,6 +50,8 @@ function propose(nd){
   S.st={...S.st,s:S.st.s+1,d:nd};S.wild=null;S.dside=null;sfx('tap');render();}
 function queueIntent(m){
   if(S.mode!=='online')return false;
+  // a private part is sent whole every time: a newer one replaces one still waiting (typing, drawing)
+  if(m.t==='pv')S.outQ=S.outQ.filter(x=>x.m.t!=='pv');
   if(S.outQ.length>=QMAX){toast('استنى شوي، حركاتك ما وصلت للحين');return false;}
   m.n=nextN();S.outQ.push({m,c:null,k:null,at:Date.now()});if(m.t==='ck')S.pend=true;if(m.t==='pv')S.myPv=m.p;
   reseal();return true;}
@@ -78,7 +81,7 @@ function onPeers(ch){
   if(S.mode!=='online')return;tickGap();if(S.mode!=='online')return;
   const peers=ch&&Array.isArray(ch.peers)?ch.peers:[];lastPeers=peers;const C={},Q={},now=Date.now(),live=new Set();let old=false;
   for(const p of peers){if(p.sameTab){S.myPeer=p.peer;continue;}if(p.kind!=='viewer')continue;const pr=p.presence;if(!pr||typeof pr!=='object')continue;
-    if(pr.v!==NETV){if(pr.v==null&&('s' in pr||'r' in pr||'g' in pr))old=true;else if(Number.isInteger(pr.v)&&pr.v>NETV&&pr.h!=null&&!S.needUpd){S.needUpd=true;}continue;}
+    if(pr.v!==NETV){if(pr.v==null&&('s' in pr||'r' in pr||'g' in pr)||Number.isInteger(pr.v)&&pr.v<NETV)old=true;else if(Number.isInteger(pr.v)&&pr.v>NETV&&pr.h!=null&&!S.needUpd){S.needUpd=true;}continue;}
     const fp=SEAL.fpOf(pr.k);if(!fp||pr.id!==fp||fp===SEAL.fp)continue;
     // a key that is not a real P-256 point can never be sealed to: that peer is not in the room (checked once per key)
     if(SEAL.keyOk(pr.k,recheckPeers)!==true)continue;

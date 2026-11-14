@@ -176,7 +176,7 @@ const bHide=x=>typeof x==='string'?'?'.repeat(x.length):x;
 function bMask(d,v){if(!d||d.win!=null||!Array.isArray(d.hands)||!Array.isArray(d.ctl))return d;const own=k=>v>=0&&d.ctl[k]===v;
   return {...d,hands:d.hands.map((x,k)=>own(k)?x:bHide(x)),rest:bHide(d.rest),bq:Array.isArray(d.bq)?d.bq.map((x,k)=>own(k)?x:false):d.bq,
     pj:Array.isArray(d.pj)?d.pj.map((ps,k)=>own(k)||(d.pjw!=null&&bTeam(k)===d.pjw)||!Array.isArray(ps)?ps:ps.map(p=>({k:p.k,q:0,top:'?',cards:(p.cards||[]).map(bHide)}))):d.pj};}
-GAMES.baloot={name:'بلوت',cat:'cards',lbc:'#1E6B52',noTimer:false,
+GAMES.baloot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:'بلوت',cat:'cards',lbc:'#1E6B52',noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E7A5C"/><ellipse cx="50" cy="56" rx="40" ry="30" fill="#249170"/><g transform="rotate(-14 38 52)"><rect x="22" y="26" width="32" height="46" rx="5" fill="#fff"/><text x="38" y="56" font-size="22" font-weight="800" text-anchor="middle" fill="#2D4763">J♠</text></g><g transform="rotate(12 62 52)"><rect x="46" y="26" width="32" height="46" rx="5" fill="#fff"/><text x="62" y="56" font-size="22" font-weight="800" text-anchor="middle" fill="#D43C33">9♥</text></g></svg>`,
   init:n=>bInit(n),
   start:(d,base)=>({...d,turn:base.turn}),// the first bidder is the dealer's right, as bDeal set

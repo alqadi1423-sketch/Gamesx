@@ -65,19 +65,32 @@ GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout
 const hiloLeft=d=>{const a=deck52(d.pl.length>4?2:1);for(const c of cardsOf(d.dk.slice(0,d.p*2+2)))a.splice(a.indexOf(c),1);return a;};
 GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4F78B5"/><rect x="18" y="20" width="36" height="52" rx="6" fill="#fff" transform="rotate(-8 36 46)"/><rect x="44" y="24" width="36" height="52" rx="6" fill="#fff" transform="rotate(8 62 50)"/><text x="60" y="58" font-size="22" font-weight="800" fill="#D43C33" text-anchor="middle">K</text><path d="M28 34l6-8 6 8M28 58l6 8 6-8" stroke="#2D4763" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`,
-  // dk holds only the cards turned over so far (the current one last): the next card is drawn from the rest when it is turned
-  init:n=>{const a=deck52(n>4?2:1);return {dk:a[rnd(a.length)],p:0,pts:Array(n).fill(0),last:'',goal:5};},
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
+  /* push your luck: keep guessing to build a streak, bank it whenever you like, a wrong guess (or the same card) loses it.
+     dk holds only the cards turned over so far (the current one last): the next card is drawn from the rest when it is turned */
+  init:n=>{const a=deck52(n>4?2:1);return {dk:a[rnd(a.length)],p:0,pts:Array(n).fill(0),stk:0,last:'',goal:12};},
+  points:d=>d.pts,
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>أول واحد يوصل ${d.goal} يفوز</small>`,
   winExtra:d=>d.last,
-  render(d,ctx){const c=d.dk.slice(d.p*2,d.p*2+2);
+  render(d,ctx){const c=d.dk.slice(d.p*2,d.p*2+2);const my=ctx.my&&d.win==null;
     const prev=cardsOf(d.dk.slice(Math.max(0,d.p-3)*2,d.p*2));
-    return `<div class="hilo"><div class="hl-cur">${prev.length?`<div class="hl-prev">${prev.map(x=>cardHTML(x)).join('')}</div>`:''}<span class="hl-top" data-k="h${d.p}">${cardHTML(c,true)}</span></div><div class="hl-next">${cardHTML('??',true)}<small>باقي ${hiloLeft(d).length}</small></div></div><div class="acts"><button class="btn blue" data-ga="hi" ${ctx.my?'':'disabled'}>أعلى ⬆</button><button class="btn red" data-ga="lo" ${ctx.my?'':'disabled'}>أقل ⬇</button></div>`;},
+    return `<div class="hilo"><div class="hl-cur">${prev.length?`<div class="hl-prev">${prev.map(x=>cardHTML(x)).join('')}</div>`:''}<span class="hl-top" data-k="h${d.p}">${cardHTML(c,true)}</span></div><div class="hl-next">${cardHTML('??',true)}<small>باقي ${hiloLeft(d).length}</small></div></div>
+      <div class="hstreak ${d.stk?'on':''}"><small>السلسلة</small><b data-k="s${d.stk}">${d.stk} 🔥</b><span class="hs-goal">${d.win==null?`${escH(d.pts[d.turn])} + ${d.stk} من ${d.goal}`:''}</span></div>
+      <div class="acts"><button class="btn blue" data-ga="hi" ${my?'':'disabled'}>أعلى ⬆</button><button class="btn red" data-ga="lo" ${my?'':'disabled'}>أقل ⬇</button></div>
+      ${my&&d.stk?`<div class="acts"><button class="btn green" data-ga="bank">💰 ثبّت ${d.stk} نقاط</button></div>`:''}`;},
   click(a,i,d,ctx){
-    if(!ctx.my)return;const t=d.turn,c=d.dk.slice(d.p*2,d.p*2+2),left=hiloLeft(d);if(!left.length)return;const n=left[rnd(left.length)];
-    const ok=a==='hi'?rv(n)>rv(c):rv(n)<rv(c);const pts=[...d.pts];if(ok)pts[t]++;
-    const p=d.p+1,end=left.length<=1;let win=null;if(pts[t]>=d.goal)win=t;else if(end)win=mostPts(pts.map((x,s)=>d.out[s]==='1'?-1:x));
-    act({...d,dk:d.dk.slice(0,p*2)+n,p,pts,win,turn:nextSeat(d,t),last:`${nm(d,t)} قال ${a==='hi'?'أعلى':'أقل'} وطلعت ${n[0]==='T'?'10':n[0]}${SUITCH[n[1]]}، ${ok?'صح ✓':'خطأ ✗'}`});
-  }
+    if(!ctx.my||d.win!=null)return;const t=d.turn;
+    if(a==='bank'){if(!d.stk)return;const pts=[...d.pts];pts[t]+=d.stk;act({...d,pts,stk:0,win:pts[t]>=d.goal?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} ثبّت ${d.stk} نقاط 💰`});return;}
+    if(a!=='hi'&&a!=='lo')return;
+    // every card was turned: a fresh deck under the current card
+    let dk=d.dk,p=d.p,left=hiloLeft(d);if(!left.length){dk=dk.slice(p*2,p*2+2);p=0;left=hiloLeft({...d,dk,p});}
+    const c=dk.slice(p*2,p*2+2),nx=left[rnd(left.length)];const ok=a==='hi'?rv(nx)>rv(c):rv(nx)<rv(c);const shown=`${nx[0]==='T'?'10':nx[0]}${SUITCH[nx[1]]}`;
+    dk=dk.slice(0,p*2+2)+nx;
+    if(!ok){act({...d,dk,p:p+1,stk:0,turn:nextSeat(d,t),last:`${nm(d,t)} قال ${a==='hi'?'أعلى':'أقل'} وطلعت ${shown}، خطأ ✗${d.stk?` وضاعت سلسلة ${d.stk}`:''}`});return;}
+    const stk=d.stk+1;const pts=[...d.pts];
+    if(pts[t]+stk>=d.goal){pts[t]+=stk;act({...d,dk,p:p+1,pts,stk:0,win:t,last:`${nm(d,t)} وصل ${pts[t]} 🎉`});return;}
+    act({...d,dk,p:p+1,stk,last:`${nm(d,t)} قال ${a==='hi'?'أعلى':'أقل'} وطلعت ${shown}، صح ✓`});
+  },
+  onTimeout:d=>{const pts=[...d.pts];pts[d.turn]+=d.stk;return {...d,pts,stk:0,win:pts[d.turn]>=d.goal?d.turn:null,turn:nextSeat(d,d.turn)};}
 };
 
 /* ---------- blackjack: chips and bets, five rounds; naturals pay 3 to 2, double, split, dealer peeks and stands on 17 ---------- */

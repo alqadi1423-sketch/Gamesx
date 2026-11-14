@@ -137,45 +137,86 @@ GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',onTimeout:d
   }
 };
 
-/* ---------- camel race ---------- */
-const TRACK=30,BOOST={5:3,12:3,19:3,25:2},TRAP={9:-3,16:-4,22:-3,28:-5};
+/* ---------- camel race: five racing camels, bet on the leg, the coins decide ----------
+   On your turn either shake the pyramid (a random camel that has not moved this leg runs 1 to 3 steps
+   and you earn a coin) or take the best betting card left for a camel. A camel that lands on others climbs
+   on top, and a camel carries every camel riding on it. When all five have moved the leg is scored:
+   a card on the leader pays its value, on the second camel 1, on any other camel it costs 1.
+   The race ends when a camel crosses the finish; the richest player wins. */
+const CML=[['#E5483F','الأحمر'],['#3D8FD8','الأزرق'],['#3FAE5C','الأخضر'],['#F0B429','الأصفر'],['#ECEFF1','الأبيض']];
+const CTRACK=16,CTILES=[5,3,2];
+// camel order on the track: furthest first, and on the same square the one on top first
+const cRank=cam=>[0,1,2,3,4].sort((a,b)=>cam[b][0]-cam[a][0]||cam[b][1]-cam[a][1]);
+function cMove(cam,c,r){const [p,h]=cam[c];const ride=[0,1,2,3,4].filter(x=>cam[x][0]===p&&cam[x][1]>=h).sort((a,b)=>cam[a][1]-cam[b][1]);
+  const to=p+r;const base=[0,1,2,3,4].filter(x=>!ride.includes(x)&&cam[x][0]===to).length;const n=cam.map(x=>[...x]);ride.forEach((x,k)=>{n[x]=[to,base+k];});return n;}
+function cLegScore(d,cam){const rk=cRank(cam);const co=[...d.co];const lines=[];
+  for(const [s,c,v] of d.bt){const g=rk[0]===c?v:rk[1]===c?1:-1;co[s]=Math.max(0,co[s]+g);lines.push(`${nm(d,s)} ${g>0?'+':''}${g}`);}
+  return {co,msg:`انتهى الشوط، المتصدر ${CML[rk[0]][1]}`+(lines.length?`: ${lines.join('، ')}`:'')};}
+function cNewLeg(d){return {dl:'00000',tk:[0,0,0,0,0],bt:[],lg:(d.lg||0)+1};}
 GAMES.camel={name:'سباق الهجن',cat:'cards',lbc:'#B8860B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8C16A"/><path d="M0 74Q25 64 50 74T100 74V100H0Z" fill="#D9A441"/><text x="50" y="66" font-size="44" text-anchor="middle">🐪</text></svg>`,
-  init:n=>({pos:Array(n).fill(0),dice:0,last:''}),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){S.rolled=false;const anim=!!d.dice&&once('cm'+d.gid+'_'+d.pos.join('.'));
-    // the camel that moved since the last drawing hops along (remembered on this screen only)
-    const pk='cm'+d.gid;const prev=S.cmPrev&&S.cmPrev.k===pk?S.cmPrev.p:d.pos;S.cmPrev={k:pk,p:[...d.pos]};
-    const mk=k=>BOOST[k]?'⚡':TRAP[k]?'🌵':'';
-    let s=`<div class="race camel ${d.pl.length>4?'many':''}">${d.pl.map((r,i)=>{const p=Math.min(d.pos[i],TRACK);const pct=p/TRACK*100;const mv=prev[i]!==d.pos[i];
-      return `<div class="lane ${d.turn===i&&d.win==null?'on':''} ${d.win===i?'won':''}" style="--c:${col(d,i)};--l:${lit(d,i)}"><div class="lname"><i>${shapeW(d.pl[i])}</i><span>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}</span><b>${p}/${TRACK}</b></div>
-      <div class="track"><div class="fill" style="width:${pct}%"></div>${Array(TRACK).fill(0).map((_,k)=>mk(k+1)?`<span class="mk ${BOOST[k+1]?'up':'dn'}" style="inset-inline-start:${(k+1)/TRACK*100}%">${mk(k+1)}</span>`:'').join('')}<span class="flag"></span><span class="camelp ${mv?(d.pos[i]>prev[i]?'hop':'slip'):''}" style="inset-inline-start:${pct}%"><span>🐪</span></span></div></div>`;}).join('')}</div>`;
-    s+=`<div class="row">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}</div>`;
+  init:n=>{let cam=[0,1,2,3,4].map(()=>[0,0]);const ord=shuffle([0,1,2,3,4]);for(const c of ord){const p=rnd(3);const h=cam.filter((x,k)=>k!==c&&ord.indexOf(k)<ord.indexOf(c)&&x[0]===p).length;cam[c]=[p,h];}
+    return {cam,co:Array(n).fill(3),...cNewLeg({}),ld:null,last:''};},
+  points:d=>d.co,
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+(d.win==null?`<small>الشوط ${d.lg}</small> • `:'')+turnTxt(d,ctx),
+  winExtra:d=>'الفلوس: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.co[s]} 🪙`).join('، '),
+  render(d,ctx){const my=ctx.my&&d.win==null;const rk=cRank(d.cam);
+    const chip=(c,big)=>`<span class="cm ${big?'big':''}" style="--c:${CML[c][0]}">🐪</span>`;
+    // the track bends: squares 1 to 8 on the top row, 9 to 16 back along the bottom row
+    const cell=p=>{const here=[0,1,2,3,4].filter(c=>d.cam[c][0]===p).sort((a,b)=>d.cam[a][1]-d.cam[b][1]);const moved=d.ld&&here.includes(d.ld[0]);
+      return `<div class="ct ${moved?'mv':''}"><small>${p+1}</small><div class="cst">${here.map(c=>chip(c)).join('')}</div></div>`;};
+    const top=[...Array(8).keys()].map(cell).join(''),bot=[...Array(8).keys()].map(k=>cell(15-k)).join('');
+    const over=[0,1,2,3,4].filter(c=>d.cam[c][0]>=CTRACK);
+    let s=`<div class="ctrack"><div class="crow">${top}</div><div class="crow">${bot}</div><div class="cfin">🏁 ${over.length?over.sort((a,b)=>d.cam[b][1]-d.cam[a][1]).map(c=>chip(c)).join(''):'خط النهاية'}</div></div>`;
+    s+=`<div class="cpyr">${[0,1,2,3,4].map(c=>{const v=d.dl[c];return `<span class="cd ${v!=='0'?'done':''} ${d.ld&&d.ld[0]===c?'last':''}" style="--c:${CML[c][0]}">${v==='0'?'?':v}</span>`;}).join('')}
+      <button class="btn red" data-ga="roll" ${my?'':'disabled'}>🎲 هز الهرم <small>+1 🪙</small></button></div>`;
+    s+=`<p class="lbl" style="text-align:center;margin:8px 0 4px">راهن على مين يتصدر الشوط</p><div class="cbets">${[0,1,2,3,4].map(c=>{const t=d.tk[c];const v=CTILES[t];const pos=rk.indexOf(c)+1;
+      return `<button class="cbet" style="--c:${CML[c][0]}" data-ga="bet" data-i="${c}" ${my&&v?'':'disabled'}>${chip(c,1)}<b>${v?v:'—'}</b><small>${pos===1?'الأول':pos===2?'الثاني':'المركز '+pos}</small></button>`;}).join('')}</div>`;
+    const mine=d.bt.filter(b=>b[0]===(ctx.local?d.turn:ctx.v));
+    if(d.bt.length)s+=`<div class="cmine">${d.bt.map(([x,c,v])=>`<span style="--c:${col(d,x)}">${nm(d,x)} ${chip(c)} ${v}</span>`).join('')}</div>`;
     return s;},
-  click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn,r=1+rnd(6);S.rolled=true;let p=d.pos[t]+r,msg=`طلع ${r}`;
-    if(BOOST[p]){const b=BOOST[p];p+=b;msg+=`، ⚡ تقدّم ${b}`;}else if(TRAP[p]){p=Math.max(0,p+TRAP[p]);msg+='، 🌵 رجع';}
-    const pos=[...d.pos];pos[t]=p;act({...d,pos,dice:r,win:p>=TRACK?t:null,turn:nextSeat(d,t),last:`${nm(d,t)}: ${msg}`});}
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
+    if(a==='bet'){const v=CTILES[d.tk[i]];if(!v)return;const tk=[...d.tk];tk[i]++;act({...d,tk,bt:[...d.bt,[t,i,v]],ld:null,turn:nextSeat(d,t),last:`${nm(d,t)} راهن على ${CML[i][1]} بـ${v}`});return;}
+    if(a!=='roll')return;const left=[0,1,2,3,4].filter(c=>d.dl[c]==='0');const c=left[rnd(left.length)],r=1+rnd(3);
+    const cam=cMove(d.cam,c,r);const co=[...d.co];co[t]++;let x={...d,cam,co,dl:setAt(d.dl,c,String(r)),ld:[c,r],last:`${nm(d,t)} هز الهرم: ${CML[c][1]} مشى ${r}`};
+    const fin=[0,1,2,3,4].some(k=>cam[k][0]>=CTRACK);
+    if(fin||!x.dl.includes('0')){const sc=cLegScore(x,cam);x={...x,co:sc.co,last:x.last+' • '+sc.msg};
+      if(fin){act({...x,win:mostPts(x.co),last:x.last+` • ${CML[cRank(cam)[0]][1]} فاز بالسباق 🏁`});return;}x={...x,...cNewLeg(x)};}
+    act({...x,turn:nextSeat(d,t)});},
+  onTimeout:d=>{const left=[0,1,2,3,4].filter(c=>d.dl[c]==='0');return {...d,turn:nextSeat(d,d.turn),last:`${nm(d,d.turn)} فوّت دوره`};}
 };
 
-/* ---------- lucky boxes ---------- */
+/* ---------- lucky boxes: push your luck ----------
+   Open boxes one by one and collect their coins in your bag; a ×2 box doubles the bag.
+   Stop whenever you like and keep the bag, but a bomb empties it and ends your turn.
+   When only bombs are left the richest player wins. */
+// what is inside a box is decided only when it is opened (nb bombs and nx ×2 boxes are still hidden among the closed ones),
+// so the shared state never holds where the bombs are
+const luckLeft=d=>{let cl=0;for(let i=0;i<d.op.length;i++)if(d.op[i]==='.')cl++;const bomb=Math.min(cl,d.nb||0);return {safe:cl-bomb,bomb};};
+// only bombs are left: the closed boxes show them and the richest player wins
+function luckEnd(d){const {safe}=luckLeft(d);return safe?d:{...d,box:[...d.box].map((v,i)=>d.op[i]==='.'?'b':v).join(''),win:mostPts(d.pts)};}
+function luckBank(d){const t=d.turn,pts=[...d.pts];pts[t]+=d.bag;return luckEnd({...d,pts,bag:0,turn:nextSeat(d,t),last:`${nm(d,t)} أخذ غنيمته ${d.bag} 💰`});}
 GAMES.luck={name:'صناديق الحظ',cat:'cards',lbc:'#A5373F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9464F"/>${[[14,20],[54,20],[14,58],[54,58]].map(([x,y],k)=>`<rect x="${x}" y="${y}" width="32" height="26" rx="4" fill="${k===3?'#2D4763':'#F2C14E'}"/><rect x="${x+13}" y="${y}" width="6" height="26" fill="${k===3?'#1d2f44':'#D9A441'}"/>`).join('')}<text x="70" y="78" font-size="16" text-anchor="middle">💣</text></svg>`,
-  // what is inside a box is decided only when it is opened (nb bombs are still hidden among the closed boxes), so the shared state never holds the bomb positions
-  init:n=>{const k=10+2*n;return {box:'?'.repeat(k),nb:Math.max(1,Math.floor(n/2)),op:'.'.repeat(k),pts:Array(n).fill(0),last:''};},
+  init:n=>{const k=16+2*n;return {box:'?'.repeat(k),nb:3+Math.floor(n/2),nx:2,op:'.'.repeat(k),pts:Array(n).fill(0),bag:0,last:''};},
+  points:d=>d.pts,
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
-  render(d,ctx){const k=d.box.length,c=k<=16?4:k<=20?5:6;
-    // closed boxes are wrapped gifts; an opened one shows its points in the opener's colour, or the bomb
-    return `<div class="lgrid ${ctx.my&&d.win==null?'live':''}" style="grid-template-columns:repeat(${c},minmax(0,1fr))">${[...d.box].map((v,i)=>{const o=d.op[i];
-      if(o==='.')return `<button class="gbox ${d.win!=null&&v==='b'?'bomb':''}" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>${d.win!=null&&v==='b'?'<span>💣</span>':''}</button>`;
-      return `<div class="gbox op ${v==='b'?'boom':''}" style="--c:${col(d,+o)};--l:${lit(d,+o)}">${v==='b'?'<span>💥</span>':'<b class="ltr">+'+v+'</b>'}</div>`;}).join('')}</div>`;},
-  click(a,i,d,ctx){if(!ctx.my||d.op[i]!=='.')return;const t=d.turn,shut=[...d.op].filter(c=>c==='.').length;
-    const v=d.nb==null?d.box[i]:rnd(shut)<d.nb?'b':String(1+rnd(5));let nb=d.nb==null?null:d.nb-(v==='b'?1:0),box=setAt(d.box,i,v);
-    const op=setAt(d.op,i,String(t));let out=d.out,pts=[...d.pts],last;
-    if(v==='b'){out=setAt(out,t,'1');last=`${nm(d,t)} فتح صندوق 💣 وطلع`;}else{pts[t]+=+v;last=`${nm(d,t)} أخذ ${v} نقاط`;}
-    const al=aliveSeats(d,out);const left=nb==null?[...box].some((x,k)=>op[k]==='.'&&x!=='b'):shut-1>nb;let win=null;
-    if(al.length===1)win=al[0];else if(!left)win=mostPts(pts.map((x,s)=>out[s]==='1'?-1:x));
-    // at the end the closed boxes show where the remaining bombs were
-    if(win!=null&&nb!=null){const cl=shuffle([...op].map((c,k)=>c==='.'?k:-1).filter(k=>k>=0));cl.forEach((k,j)=>{box=setAt(box,k,j<nb?'b':String(1+rnd(5)));});nb=0;}
-    act({...d,box,nb,op,out,pts,last,win,turn:nextSeat(d,t,out)});}
+  render(d,ctx){const k=d.box.length,c=k<=20?5:6;const {safe,bomb}=luckLeft(d);const my=ctx.my&&d.win==null;
+    let s=`<div class="lbag ${d.bag?'on':''}"><div class="lb-bag"><small>الكيس</small><b data-k="b${d.bag}">${d.bag} 💰</b></div><div><small>باقي</small><b>${safe+bomb} 🎁</b></div><div class="lb-bm"><small>القنابل</small><b>${bomb} 💣</b></div></div>`;
+    // closed boxes are wrapped gifts; an opened one shows its coins in the opener's colour, ×2, or the bomb
+    s+=`<div class="lgrid ${my?'live':''}" style="grid-template-columns:repeat(${c},minmax(0,1fr))">${[...d.box].map((v,i)=>{const o=d.op[i];
+      if(o==='.')return `<button class="gbox ${d.win!=null&&v==='b'?'bomb':''}" data-ga="m" data-i="${i}" ${my?'':'disabled'} aria-label="صندوق">${d.win!=null&&v==='b'?'<span>💣</span>':''}</button>`;
+      return `<div class="gbox op ${v==='b'?'boom':v==='x'?'dbl':''}" style="--c:${col(d,+o)};--l:${lit(d,+o)}">${v==='b'?'<span>💥</span>':`<b class="ltr">${v==='x'?'×2':'+'+v}</b>`}</div>`;}).join('')}</div>`;
+    if(my)s+=`<div class="acts"><button class="btn green" data-ga="bank" ${d.bag?'':'disabled'}>💰 خذ الغنيمة ${d.bag?`(+${d.bag})`:''}</button></div><p class="note lb-tip">افتح صندوق كمان أو خذ اللي في الكيس. القنبلة تضيّع الكيس كله</p>`;
+    return s;},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
+    if(a==='bank'){if(d.bag)act(luckBank(d));return;}
+    if(a!=='m'||!Number.isInteger(i)||d.op[i]!=='.')return;const shut=[...d.op].filter(c=>c==='.').length;
+    const nb=d.nb||0,nx=d.nx||0,r=rnd(shut);const v=r<nb?'b':r<nb+nx?'x':String(1+rnd(6));
+    const op=setAt(d.op,i,String(t)),box=setAt(d.box,i,v),x={...d,op,box,nb:nb-(v==='b'?1:0),nx:nx-(v==='x'?1:0)};
+    if(v==='b'){act(luckEnd({...x,bag:0,turn:nextSeat(d,t),last:`💥 ${nm(d,t)} فتح قنبلة وضاع كيسه (${d.bag})`}));return;}
+    const bag=v==='x'?Math.max(2,d.bag*2):d.bag+ +v;const nd={...x,bag,last:`${nm(d,t)} ${v==='x'?'ضاعف كيسه ×2':'لقى '+v}`};
+    if(!luckLeft(nd).safe){act(luckBank(nd));return;}act(nd);},
+  onTimeout:d=>d.bag?luckBank(d):{...d,turn:nextSeat(d,d.turn)}
 };

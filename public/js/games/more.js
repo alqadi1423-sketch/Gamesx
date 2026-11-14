@@ -115,22 +115,42 @@ GAMES.stroop={name:'لون الكلمة',cat:'quiz',lbc:'#A33C77',
 /* ---------- bomb wires ---------- */
 const BOMB=`<svg class="bsvg" viewBox="0 0 64 64"><defs><radialGradient id="bmg" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="28" cy="38" r="21" fill="#1E242B"/><circle cx="28" cy="38" r="21" fill="url(#bmg)"/><rect x="33" y="13" width="12" height="9" rx="2" transform="rotate(40 39 17)" fill="#4A535E"/><path d="M42 12q6-9 14-5" stroke="#C9A06A" stroke-width="3" fill="none" stroke-linecap="round"/><g class="bspark"><circle cx="57" cy="7" r="5" fill="#F0B429"/><circle cx="57" cy="7" r="2.4" fill="#fff"/></g></svg>`;
 const WC=['#E5483F','#3D8FD8','#3FAE5C','#F0B429','#9C7BD6','#F2874B','#E57AAE','#2FB3AA','#8B5A2B','#555','#C0C0C0','#1F7A8C'];
+const WCOL=[['#E5483F','الأحمر'],['#3D8FD8','الأزرق'],['#3FAE5C','الأخضر'],['#F0B429','الأصفر'],['#8E44AD','البنفسجي'],['#F2874B','البرتقالي'],['#E57AAE','الوردي'],['#1ABC9C','الفيروزي'],['#ECF0F1','الأبيض'],['#8B5A2B','البني'],['#95A5A6','الرمادي'],['#2D4763','الكحلي']];
+// a new bomb: one deadly wire, and two safe wires whispered to each player still in the game
+function wNewBomb(d,n,alive){const k=Math.min(12,alive.length+5),bomb=rnd(k);const safe=[...Array(k).keys()].filter(i=>i!==bomb);
+  const kn=[...Array(n).keys()].map(s=>alive.includes(s)?shuffle([...safe]).slice(0,2).sort((a,b)=>a-b):[]);
+  return {...d,k,bomb,cut:[],kn,ps:'0'.repeat(n),nb:(d.nb||0)+1};}
+function wCut(d,i){const t=d.turn;
+  if(i===d.bomb){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);const nd={...d,out,turn:nextSeat(d,t,out),last:`💥 ${nm(d,t)} قص السلك ${WCOL[i][1]} وانفجرت القنبلة!`};
+    if(al.length<=1)return {...nd,cut:[...d.cut,i],win:al.length?al[0]:'d'};return wNewBomb(nd,d.pl.length,al);}
+  return {...d,cut:[...d.cut,i],turn:nextSeat(d,t),last:`${nm(d,t)} قص ${WCOL[i][1]} وسلم ✂️`};}
 GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A4A4A"/><circle cx="50" cy="56" r="26" fill="#1d1d1d"/><path d="M60 30q10-12 22-8" stroke="#E8C38E" stroke-width="4" fill="none"/><circle cx="83" cy="22" r="5" fill="#F0B429"/>${['#E5483F','#3D8FD8','#3FAE5C'].map((c,k)=>`<path d="M30 ${50+k*7}H70" stroke="${c}" stroke-width="4"/>`).join('')}</svg>`,
-  init:n=>({k:n+3,cut:'',last:''}),
-  // no bomb is stored: each cut explodes with chance 1/uncut wires (the same odds as a hidden bomb), and when time runs out a random wire is cut
-  onTimeout:d=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(String.fromCharCode(97+i)));return GAMES.wires.cut(d,left[rnd(left.length)]);},
+  /* every bomb has one deadly wire; each player secretly knows two wires that are safe.
+     On your turn cut a wire, or pass once per bomb. Cut the deadly one and you are out, then a new bomb arrives.
+     Online the deadly wire and the other players' safe wires stay on the host (hide); a cut is checked there */
+  init:n=>wNewBomb({last:''},n,[...Array(n).keys()]),
+  hide:{seat:['kn'],all:['bomb']},
+  net:{host:['cut','pass']},
+  viewer:d=>d.win==null?d.turn:null,
+  coverMsg:d=>d.last||'',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   // a bomb device: a counter of wires still in, then the wires between two terminal strips. A cut wire is a new node,
   // so its two halves spring apart once; a new bomb (someone went out) is a new device, so it shakes in
-  render(d,ctx){const left=d.k-d.cut.length,boom=!d.cut&&/^💥/.test(d.last||'');
-    return `<div class="gm gm-wires"><div class="bombx ${boom?'boom':''}" data-k="b${d.out}"><div class="bhd">${BOMB}<div class="blcd"><b class="ltr">${String(left).padStart(2,'0')}</b><small>أسلاك باقية</small></div><i class="bled"></i></div>
-    <div class="wset">${Array(d.k).fill(0).map((_,i)=>d.cut.includes(String.fromCharCode(97+i))?`<div class="wire cut" style="--c:${WC[i]}"><i class="wh a"></i><i class="wh b"></i></div>`:`<button class="wire" style="--c:${WC[i]}" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'} aria-label="قص السلك"><i class="wh"></i></button>`).join('')}</div></div></div>`;},
-  cut(d,i){const ch=String.fromCharCode(97+i);const t=d.turn;
-    if(Math.random()*(d.k-d.cut.length)<1){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);const k=al.length+3;
-      return {...d,out,k,cut:'',win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),last:`💥 ${nm(d,t)} قص السلك الغلط وطلع. قنبلة جديدة!`};}
-    return {...d,cut:d.cut+ch,turn:nextSeat(d,t),last:`${nm(d,t)} قص سلك وسلم`};},
-  click(a,i,d,ctx){if(!ctx.my||!(i>=0&&i<d.k)||d.cut.includes(String.fromCharCode(97+i)))return;act(GAMES.wires.cut(d,i));}
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v;const my=ctx.my&&d.win==null;const kn=v>=0&&Array.isArray(d.kn[v])?d.kn[v].filter(i=>i>=0):[];
+    const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const boom=!d.cut.length&&/^💥/.test(d.last||'');
+    let s=`<div class="gm gm-wires"><div class="bombx ${boom?'boom':''}" data-k="b${d.nb}"><div class="bhd">${BOMB}<div class="blcd"><b class="ltr">${String(left.length).padStart(2,'0')}</b><small>أسلاك باقية</small></div><i class="bled"></i></div>
+    <div class="wset">${[...Array(d.k).keys()].map(i=>{const c=WCOL[i][0];if(d.cut.includes(i))return `<div class="wire cut ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}"><i class="wh a"></i><i class="wh b"></i></div>`;
+      const known=kn.includes(i),tag=my?'button':'div';
+      return `<${tag} class="wire ${known?'known':''} ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}" ${my?`data-ga="cut" data-i="${i}" aria-label="قص السلك ${WCOL[i][1]}"`:''}><i class="wh"></i>${known?'<s class="wsafe">سليم ✓</s>':''}</${tag}>`;}).join('')}</div></div>`;
+    if(v>=0&&d.out[v]!=='1'&&d.win==null){const k2=kn.filter(i=>!d.cut.includes(i));
+      s+=`<p class="wsec">${k2.length?`🤫 سر بينك وبين نفسك: ${k2.map(i=>`<b style="color:${WCOL[i][0]}">${WCOL[i][1]}</b>`).join(' و')} سليم`:'الأسلاك اللي تعرفها انقصت، الحين حظك'}</p>`;}
+    if(my&&d.ps[d.turn]!=='1')s+=`<div class="acts"><button class="btn navy" data-ga="pass">⏭ مرّر الدور (مرة وحدة لكل قنبلة)</button></div>`;
+    return s+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
+    if(a==='pass'){if(d.ps[t]==='1')return;act({...d,ps:setAt(d.ps,t,'1'),turn:nextSeat(d,t),last:`${nm(d,t)} مرّر دوره ⏭`});return;}
+    if(a==='cut'&&Number.isInteger(i)&&i>=0&&i<d.k&&!d.cut.includes(i))act(wCut(d,i));},
+  onTimeout:d=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const safe=left.filter(i=>i!==d.bomb);return wCut(d,safe.length?safe[rnd(safe.length)]:d.bomb);}
 };
 
 /* ---------- go fish ---------- */

@@ -66,7 +66,7 @@ function tvOpen(d,r){const o=[...d.op];o[d.sd]=r;
 function tvAnswer(d,take){const s=d.sd,o=1-s;// side o was asked
   if(!take)return {...d,...tmWin(d,s),wpts:d.cube,end:'drop',ph:'end',last:`${tmName(d,o)} رفض المضاعفة`};
   return {...d,cube:d.cube*2,own:o,ph:'roll',turn:tmNow(d,s),last:`${tmName(d,o)} قبل المضاعفة، صارت ${d.cube*2}`};}
-GAMES.tavla={name:'طاولة الزهر',cat:'board',lbc:'#6B3D1F',
+GAMES.tavla={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:'طاولة الزهر',cat:'board',lbc:'#6B3D1F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7A4A26"/><rect x="6" y="8" width="88" height="84" rx="4" fill="#E9CF9E"/><rect x="47" y="8" width="6" height="84" fill="#7A4A26"/>${[0,1,2].map(k=>`<path d="M${9+k*13} 10l6 34 6-34z" fill="${k%2?'#2D4763':'#C9473E'}"/><path d="M${56+k*13} 90l6-34 6 34z" fill="${k%2?'#C9473E':'#2D4763'}"/>`).join('')}<circle cx="70" cy="30" r="8" fill="#fff" stroke="#2D4763" stroke-width="2"/><circle cx="30" cy="70" r="8" fill="#2D4763"/></svg>`,
   init:()=>({pts:[...TV0],bar:[0,0],off:[0,0],sd:0,tr:[0,0],ph:'open',op:[0,0],dice:[0,0],mv:[],cube:1,own:-1,lm:null,last:''}),
   start:d=>({...d,turn:0}),// white (seat 0) always rolls the first opening die

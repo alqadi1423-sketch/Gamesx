@@ -3,53 +3,144 @@
 
 const normAr=t=>String(t||'').trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ');
 
-/* ---------- categories: dictionary first, then the other players vote on unknown words ---------- */
-const CATF=['إنسان','حيوان','نبات','جماد','بلاد'],CATE=['🧑','🐪','🌿','🪑','🌍'];
+/* ---------- إنسان حيوان جماد: a letter, five words, «ستوب!», then everyone checks the answers ----------
+   Online (and one player against bots) everyone writes at once; the first to fill all five can press «ستوب»
+   and the others get ten seconds. On one phone with friends each player writes in turn behind a cover.
+   Words in the dictionary count at once, unknown words count unless the other players turn them down.
+   A category scores 20 when you are the only one with an answer, 10 for a unique answer and 5 for a shared one. */
+const CATF=['إنسان','حيوان','نبات','جماد','بلاد'];
+const CATI=['🧑','🐾','🌿','🪑','🗺️'];
 const CATL='ابتجحخدرزسشصطعفقكلمنهوي';
-const catOk=(w,L)=>{w=normAr(w);if(!w)return false;if(w.startsWith('ال')&&w.length>2&&w[2]===L)return true;return w[0]===L;};
-// letter ا: «الفيل» starts with ا only through the article, so it goes to the vote instead of the dictionary
-const catAl=(w,L)=>{w=normAr(w);return L==='ا'&&w.startsWith('ال')&&w.length>2&&w[2]!=='ا';};
+const CWORDS={};// display forms of the dictionary, by category and first letter, for the bots
+function catWords(k,L){const key=k+L;if(CWORDS[key])return CWORDS[key];const raw=(typeof DICT_RAW!=='undefined'&&DICT_RAW[CATF[k]])||'';
+  return CWORDS[key]=raw.split(/\s+/).filter(Boolean).map(w=>w.replace(/_/g,' ')).filter(w=>catLetter(w)===L);}
+// the letter a word counts for: the one after «ال» for places, otherwise the first one
+function catLetter(w){w=normAr(w).replace(/[ً-ْـ]/g,'');if(!w)return '';if(w.startsWith('ال')&&w.length>3)return w[2];return w[0];}
+const catOkL=(w,L,k)=>{const n=normAr(w);if(!n)return false;if(catLetter(n)===L)return true;return k===0&&n[0]===L;};
 const inDict=(k,w)=>typeof DICT!=='undefined'&&DICT[CATF[k]]&&DICT[CATF[k]].has(normW(w));
-function catScore(d,picks,acc){const pts=[...d.pts];const got=picks.map(()=>Array(5).fill(0));
-  for(let k=0;k<5;k++){const cnt={};picks.forEach((a,s)=>{if(a&&acc[s][k]){const w=normW(a[k]);cnt[w]=(cnt[w]||0)+1;}});
-    picks.forEach((a,s)=>{if(a&&acc[s][k]){got[s][k]=cnt[normW(a[k])]>1?5:10;}});}
-  got.forEach((g,s)=>pts[s]+=g.reduce((x,y)=>x+y,0));
-  const round=d.round+1;const used=(d.used||'')+d.L;const nL=[...CATL].filter(c=>!used.includes(c)).join('')||CATL.replace(d.L,'');
-  return {...d,pts,rd:d.rd+1,round,phase:'write',pend:null,ans:null,prev:{L:d.L,a:picks,p:got,how:acc},res:`انتهت جولة حرف «${d.L}»`,L:nL[rnd(nL.length)],used,win:round>=d.rounds?mostPts(pts):null};}
-GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',
+const cKey=d=>d.gid+':'+d.r;
+const cHumans=d=>d.pl.map((_,s)=>s).filter(s=>!isBot(d,s));
+function cAns(d,s){if(d.bt&&d.bt[s])return d.bt[s].a;const p=S.priv[d.pl[s]];return p&&p.ca&&p.ca.k===cKey(d)?p.ca.a:['','','','',''];}
+function cRound(d,r){const used=(d.used||[]).slice(-10);const ok=[...CATL].filter(l=>!used.includes(l));const L=ok[rnd(ok.length)];
+  return {...d,r,L,used:[...(d.used||[]),L],ph:'spin',ts:Date.now(),t0:0,stop:null,ans:null,sa:null,rej:{},rs:null,wr:null,done:[],last:''};}
+function cWrite(d){const now=Date.now();const x={...d,ph:'write',t0:now,ts:now};
+  if(d.seq){const hs=cHumans(d);x.wr=hs[0];x.turn=hs[0];}
+  // bots fill their sheet from the dictionary at their own pace; a quick bot may call «ستوب»
+  const bt={};for(let s=0;s<d.pl.length;s++)if(isBot(d,s)){const lv=botLv(d,s);const a=CATF.map((_,k)=>{const ws=catWords(k,d.L);return ws.length&&Math.random()<[0,.5,.75,.93][lv]?pickR(ws):'';});
+    const [lo,hi]=[0,[70,110],[45,75],[28,48]][lv];bt[s]={a,at:now+(lo+rnd(hi-lo))*1000,stop:lv>1&&a.every(Boolean)};}
+  if(Object.keys(bt).length)x.bt=bt;else delete x.bt;return x;}
+// end of writing: freeze the sheets and mark every answer: 2 in the dictionary, 1 unknown, 0 empty or wrong letter
+function cCollect(d){const now=Date.now();const ans=d.pl.map((_,s)=>{let a=cAns(d,s).map(w=>String(w||'').trim().slice(0,18));
+    if(d.bt&&d.bt[s]&&d.bt[s].at>now){const b=d.bt[s],done=Math.max(0,1-(b.at-now)/((b.at-d.t0)||1));a=a.map((w,k)=>k<Math.floor(5*done)?w:'');}return a;});
+  const sa=ans.map(a=>a.map((w,k)=>!w?0:!catOkL(w,d.L,k)?0:inDict(k,w)?2:1));
+  const x={...d,ph:'review',ts:now,ans,sa,rej:{},last:''};delete x.bt;return x;}
+// objections: online every player sends his own list, on one phone the group taps together
+function cRejected(d,s,k){const key=s+'_'+k;if(S.mode==='local')return !!d.rej[key];
+  const voters=cHumans(d).filter(x=>x!==s);if(!voters.length)return false;let no=0;
+  for(const v of voters){const p=S.priv[d.pl[v]];if(p&&p.ob&&p.ob.k===cKey(d)&&p.ob.l.includes(key))no++;}return no*2>voters.length;}
+function cScore(d){const n=d.pl.length,rs=d.pl.map(()=>[0,0,0,0,0]);const solo=S.mode==='local'&&cHumans(d).length===1;const ok=(s,k)=>d.sa[s][k]===2||(d.sa[s][k]===1&&!cRejected(d,s,k));
+  for(let k=0;k<5;k++){const good=d.pl.map((_,s)=>s).filter(s=>ok(s,k));const cnt={};good.forEach(s=>{const w=normW(d.ans[s][k]);cnt[w]=(cnt[w]||0)+1;});
+    good.forEach(s=>{rs[s][k]=good.length===1?20:cnt[normW(d.ans[s][k])]>1?5:10;
+      // alone against bots nobody can turn a word down, so a word the dictionary does not know scores 5
+      if(solo&&d.sa[s][k]===1)rs[s][k]=Math.min(rs[s][k],5);});}
+  const pts=[...d.pts];rs.forEach((r,s)=>pts[s]+=r.reduce((a,b)=>a+b,0));
+  const fin=d.r+1>=d.R;return {...d,ph:'score',ts:Date.now(),rs,pts,rejF:d.pl.map((_,s)=>[0,1,2,3,4].map(k=>d.sa[s][k]===1&&!ok(s,k)?1:0)),win:fin?mostPts(pts):null};}
+const cLeft=d=>{if(d.stop)return Math.max(0,Math.ceil((d.stop.at+10000-Date.now())/1000));return Math.max(0,Math.ceil(d.T-(Date.now()-d.t0)/1000));};
+let cSaveT=null;
+// a player's own part for this game (answers ca, objections ob), always tagged with the game's id
+const cMine=(d,r)=>{const p=S.priv[r];return p&&p.gid===d.gid?p:{gid:d.gid};};
+// online a player who is not the host hands the sheet to the host (pv); the host and one phone just publish
+function cSend(d,r){if(S.mode==='online'&&!amHost()){if(r===S.me)queueIntent({t:'pv',p:S.priv[r]});}else publish();}
+GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B7834F"/><rect x="16" y="14" width="68" height="72" rx="8" fill="#FFF7E8"/>${[0,1,2,3,4].map(k=>`<path d="M26 ${28+k*12}H74" stroke="#C9B08A" stroke-width="2"/>`).join('')}<circle cx="74" cy="22" r="13" fill="#EC6158"/><text x="74" y="28" font-size="16" font-weight="800" fill="#fff" text-anchor="middle">م</text></svg>`,
-  init:n=>({rd:0,round:0,phase:'write',pts:Array(n).fill(0),res:'',prev:null,rounds:5,L:CATL[rnd(CATL.length)]}),
-  viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,(d.phase==='vote'?'<small>صوّتوا على الكلمات اللي مو في القاموس</small><br>':`<small>جولة ${Math.min(d.round+1,d.rounds)} من ${d.rounds}</small><br>`)),
-  winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
-  render(d,ctx){let s='',prevT='';
-    // last round: one row per player, a cell per category (10 = only you, 5 = someone else wrote it too, 0 = wrong or empty)
-    if(d.prev&&(d.phase==='write'||d.win!=null)){const P=d.prev;
-      const rows=P.a.map((row,si)=>row?`<div class="crr" style="--c:${col(d,si)}"><span class="crn"><i>${shapeW(d.pl[si])}</i><b>${nm(d,si)}</b></span>${row.map((w,k)=>{const p=P.p[si][k],h=P.how?P.how[si][k]:1;
-        return `<span class="crc ${!w?'empty':p>=10?'ok':p>0?'dup':'no'}"><b>${esc(w)||'—'}</b><small>${p?'+'+p:'0'}${h===2?' 👍':''}</small></span>`;}).join('')}<b class="crt">${P.p[si].reduce((x,y)=>x+y,0)}</b></div>`:'').join('');
-      prevT=`<details class="prevr cats" ${d.win!=null?'open':''}><summary>📋 نتيجة حرف «${P.L}»</summary><div class="cres"><div class="crr crh"><span></span>${CATF.map((c,k)=>`<span title="${c}">${CATE[k]}<small>${c}</small></span>`).join('')}<b>∑</b></div>${rows}</div><div class="cleg"><span class="ok">+10 لحالك</span><span class="dup">+5 مكررة</span><span class="no">0 غلط</span><span>👍 بالتصويت</span></div></details>`;}
-    if(d.win!=null)return `<div class="catsb">${prevT}</div>`;
-    if(d.phase==='vote'){
-      s+=pickedChips(d)+`<div class="cvhead"><b>هل هذي الكلمات صحيحة؟</b><small>حرف «${d.L}»</small></div>`;
-      const mine=S.draft.votes||{};
-      s+=`<div class="cvl">${d.pend.map((x,i)=>{const own=x.s===ctx.v;const v=mine[i];return `<div class="cvr ${v===1?'yes':v===0?'nope':''}" style="--c:${col(d,x.s)}"><span><small><i>${shapeW(d.pl[x.s])}</i>${nm(d,x.s)} • ${CATE[x.k]} ${CATF[x.k]}</small><b>${esc(x.w)}</b></span>${own||!ctx.my?'<small class="note">'+(own?'جوابك':'')+'</small>':`<span class="cvb"><button class="cvy ${v===1?'on':''}" data-ga="v1" data-i="${i}">👍</button><button class="cvn ${v===0?'on':''}" data-ga="v0" data-i="${i}">👎</button></span>`}</div>`;}).join('')}</div>`;
-      if(ctx.my)s+=`<button class="btn red wide" data-ga="vote">أرسل تصويتي</button>`;
-      return `<div class="catsb">${s}</div>`;}
-    s+=`<div class="cletter"><small>الحرف</small><b>${d.L}</b><em>جولة ${Math.min(d.round+1,d.rounds)}/${d.rounds}</em></div>`;
-    if(ctx.my){s+=`<div class="catf">${CATF.map((c,k)=>`<label><span><i>${CATE[k]}</i>${c}</span><input class="field" data-draft="c${k}" value="${esc((S.draft||{})['c'+k]||'')}" autocomplete="off" placeholder="${c} بحرف ${d.L}"></label>`).join('')}</div><button class="btn red wide" data-ga="go">خلصت ✓</button>`;}
-    return `<div class="catsb">${s+prevT}</div>`;},
-  click(a,i,d,ctx){if(!ctx.my)return;
-    if(a==='v1'||a==='v0'){S.draft.votes={...(S.draft.votes||{}),[i]:a==='v1'?1:0};render();return;}
-    if(a==='vote'){const v=d.pend.map((x,k)=>(S.draft.votes||{})[k]??1);S.draft.votes={};simulPick(d,ctx.v,v);return;}
-    const ans=CATF.map((c,k)=>String((S.draft||{})['c'+k]||'').trim().slice(0,30));for(let k=0;k<5;k++)delete S.draft['c'+k];simulPick(d,ctx.v,ans);},
-  resolve(d,picks){
-    if(d.phase==='write'){const acc=picks.map(a=>a?a.map((w,k)=>catOk(w,d.L)?(inDict(k,w)&&!catAl(w,d.L)?1:0):-1):[-1,-1,-1,-1,-1]);
-      const pend=[];picks.forEach((a,s)=>{if(a)a.forEach((w,k)=>{if(acc[s][k]===0)pend.push({s,k,w});});});
-      if(!pend.length)return catScore(d,picks,acc.map(r=>r.map(x=>x===1?1:0)));
-      return {...d,phase:'vote',ans:picks,pend,acc,rd:d.rd+1,res:''};}
-    const acc=d.acc.map(r=>r.map(x=>x===1?1:0));
-    d.pend.forEach((x,i)=>{let yes=0,no=0;picks.forEach((v,s)=>{if(s===x.s||!v)return;if(v[i])yes++;else no++;});if(yes>=no&&yes+no>0)acc[x.s][x.k]=2;});
-    return catScore({...d,rd:d.rd},d.ans,acc);}
+  init:n=>{const humans=S.mode==='local'?[...Array(n).keys()].filter(r=>!(S.bots||{})[r]).length:n;const seq=S.mode==='local'&&humans>=2;
+    return cRound({R:5,pts:Array(n).fill(0),seq,T:seq?90:120,used:[]},0);},
+  points:d=>d.pts,
+  /* online, while the sheets are being written the others see only how many words each one has, and whether he called «ستوب»;
+     the words go to the host and come out together at the review. Objections are public */
+  privShow:(d,seat,role,p,own)=>{if(own||!p||d.win!=null)return p;const o={gid:p.gid};
+    if(p.ca&&typeof p.ca==='object'){const live=d.ph==='write'&&p.ca.k===cKey(d);o.ca={k:p.ca.k,a:Array.isArray(p.ca.a)?p.ca.a.map(w=>live&&w?'·':''):[],stop:!!p.ca.stop};}
+    if(p.ob&&typeof p.ob==='object')o.ob=p.ob;return o;},
+  // five short words; a sheet handed in with «ستوب» or «خلصت» does not change any more
+  privOk:(d,r,o,p)=>(p.ca==null||typeof p.ca==='object'&&Array.isArray(p.ca.a)&&p.ca.a.length===5&&p.ca.a.every(w=>typeof w==='string'&&w.length<=18))&&
+    (p.ob==null||typeof p.ob==='object'&&Array.isArray(p.ob.l)&&p.ob.l.length<=40&&p.ob.l.every(x=>typeof x==='string'&&x.length<=4))&&
+    !(o&&o.gid===p.gid&&o.ca&&p.ca&&o.ca.k===p.ca.k&&o.ca.stop&&JSON.stringify(o.ca.a)!==JSON.stringify(p.ca.a)),
+  net:{local:['stop','done','ob','ok']},
+  noTurn:d=>!(d.seq&&d.ph==='write'),
+  viewer:d=>d.seq&&d.ph==='write'&&d.wr!=null?d.wr:null,
+  coverMsg:d=>`حرف «${d.L}» • عندك ${d.T} ثانية`,
+  winExtra:d=>'النقاط: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.pts[s]}`).join('، '),
+  status(d,ctx){const rd=`<small>الجولة ${d.r+1} من ${d.R}</small><br>`;
+    if(d.ph==='spin')return rd+'الحرف يتحدد…';
+    if(d.ph==='write'){if(d.stop)return rd+`<b style="color:#E5483F">✋ ${nm(d,d.stop.by)} قال ستوب!</b> باقي <b data-until="${d.stop.at+10000}">${cLeft(d)}</b> ثواني`;
+      return rd+(d.seq?`${nameTag(d,d.wr)} يكتب أجوبته`:'اكتبوا كلمة لكل خانة تبدأ بالحرف');}
+    if(d.ph==='review')return rd+'راجعوا الأجوبة: الكلمة اللي فيها ؟ تقدرون ترفضونها';
+    return rd+`نتيجة حرف «${d.L}»`;},
+  render(d,ctx){return `<div class="catsb">${GAMES.cats.view(d,ctx)}</div>`;},
+  view(d,ctx){const v=ctx.v;
+    if(d.ph==='spin'){const pool=[...CATL].filter(l=>l!==d.L);const strip=[...Array(14)].map(()=>pool[rnd(pool.length)]).concat(d.L);
+      return `<div class="cspin"><div class="creel"><div class="cstrip">${strip.map(l=>`<b>${l}</b>`).join('')}</div></div><p>الحرف الجاي</p></div>`;}
+    if(d.ph==='write'){const me=d.seq?d.wr:v;const can=me!=null&&me>=0&&!isBot(d,me);
+      const sent=can&&(d.seq?d.done.includes(me):(()=>{const p=S.priv[d.pl[me]];return !!(p&&p.ca&&p.ca.k===cKey(d)&&p.ca.stop);})());
+      let s=`<div class="cletter"><span>الحرف</span><b>${d.L}</b><i class="ctime ${d.stop?'stop':''}">⏱ <b data-until="${d.stop?d.stop.at+10000:d.t0+d.T*1000}">${cLeft(d)}</b></i></div>`;
+      if(can&&!sent){const a=CATF.map((_,k)=>String(S.draft[`c${d.r}_${me}_${k}`]??cAns(d,me)[k]??''));const full=a.every(w=>catOkL(w,d.L,0)||catOkL(w,d.L,1));
+        s+=`<div class="cform">${CATF.map((c,k)=>{const w=a[k];const bad=w.trim()&&!catOkL(w,d.L,k);return `<label class="${bad?'bad':w.trim()?'ok':''}"><span>${CATI[k]} ${c}</span><input class="field" data-draft="c${d.r}_${me}_${k}" value="${escH(w)}" maxlength="18" autocomplete="off" placeholder="${c} بحرف ${d.L}"></label>`;}).join('')}</div>`;
+        s+=d.seq?`<button class="btn red wide" data-ga="done">خلصت ✓</button>`:`<button class="btn red wide cstopb" data-ga="stop" ${full&&!d.stop?'':'disabled'}>${d.stop?'خلصوا الباقي…':'ستوب ✋'}</button>${!full&&!d.stop?'<p class="note" style="text-align:center;margin:4px 0">عبّ الخمس خانات عشان تقدر تقول ستوب</p>':''}`;}
+      else if(can)s+='<p class="note" style="text-align:center">✓ سلّمت ورقتك، ننتظر الباقين</p>';
+      // who is still writing
+      s+=`<div class="cwho">${d.pl.map((_,x)=>{if(x===me)return '';let f;if(d.bt&&d.bt[x])f=Date.now()>=d.bt[x].at?'✓':'✍️';else if(d.seq)f=d.done.includes(x)?'✓':x===d.wr?'✍️':'⏳';else{const a=cAns(d,x);f=a.filter(Boolean).length+'/5';}
+        return `<span style="--c:${col(d,x)}">${nm(d,x)} <b>${f}</b></span>`;}).join('')}</div>`;
+      return s;}
+    // review and score: one card per category
+    const sc=d.ph==='score',canVote=!sc&&(d.seq||S.mode==='local'||v>=0);
+    const myOb=(()=>{if(d.seq||S.mode==='local')return null;const p=v>=0?S.priv[d.pl[v]]:null;return p&&p.ob&&p.ob.k===cKey(d)?p.ob.l:[];})();
+    let s=`<div class="cletter small"><span>الحرف</span><b>${d.L}</b></div>`;
+    s+=CATF.map((c,k)=>`<div class="ccat"><h4>${CATI[k]} ${c}</h4><div class="cans">${d.pl.map((_,x)=>{const w=d.ans[x][k];const st=d.sa[x][k];const key=x+'_'+k;
+        const rej=sc?d.rejF[x][k]:cRejected(d,x,k);const mine=myOb&&myOb.includes(key);const pts=sc?d.rs[x][k]:null;
+        const icon=!w?'—':st===0?'✗':rej?'👎':st===2?'✓':'؟';const tap=canVote&&st===1&&x!==v;
+        return `<${tap?'button':'span'} class="ca s${st} ${w?'':'none'} ${rej?'rej':''} ${mine?'mine':''}" style="--c:${col(d,x)}" ${tap?`data-ga="ob" data-i="${x*5+k}"`:''}><small>${nm(d,x)}</small><b>${w?escH(w):'ما كتب'}</b><i>${icon}${pts!=null?` ${pts?'+'+pts:'0'}`:''}</i></${tap?'button':'span'}>`;}).join('')}</div></div>`).join('');
+    if(!sc){const done=d.seq||S.mode==='local'?false:(()=>{const p=v>=0?S.priv[d.pl[v]]:null;return !!(p&&p.ob&&p.ob.k===cKey(d)&&p.ob.ok);})();
+      s+=d.seq||S.mode==='local'?`<button class="btn red wide" data-ga="calc">احسب النقاط ✓</button>`:v>=0?`<button class="btn red wide" data-ga="ok" ${done?'disabled':''}>${done?'✓ ننتظر الباقين':'تمام، احسبوا ✓'}</button>`:'';}
+    else if(d.win==null){const tot=d.pl.map((_,x)=>[x,d.rs[x].reduce((a,b)=>a+b,0)]).sort((a,b)=>b[1]-a[1]);
+      s=`<div class="cround">${tot.map(([x,p])=>`<span style="--c:${col(d,x)}">${nm(d,x)} <b>+${p}</b></span>`).join('')}</div>`+s+((d.seq||S.mode==='local'||S.me===actingHost())?`<button class="btn red wide" data-ga="next">الجولة الجاية ←</button>`:'<p class="note" style="text-align:center">الجولة الجاية تبدأ بعد شوي</p>');}
+    return s;},
+  onDraft(k,val){const m=/^c(\d+)_(\d+)_(\d)$/.exec(k);const d=S.st.d;if(!m||!d||d.ph!=='write'||+m[1]!==d.r)return;const s=+m[2];if(s!==mkCtx().v&&!(d.seq&&s===d.wr))return;
+    // the sheet goes to the private part while typing, so the host has it when time is up
+    const r=d.pl[s];const p=cMine(d,r);if(p.ca&&p.ca.k===cKey(d)&&p.ca.stop)return;const a=CATF.map((_,j)=>String(S.draft[`c${d.r}_${s}_${j}`]??(p.ca&&p.ca.k===cKey(d)?p.ca.a[j]:'')??'').slice(0,18));
+    S.priv[r]={...p,ca:{k:cKey(d),a,stop:false}};clearTimeout(cSaveT);cSaveT=setTimeout(()=>{const d2=S.st.d;if(d2&&d2.gid===d.gid&&d2.ph==='write')cSend(d2,r);},400);
+    const b=app.querySelector('.cstopb');if(b&&!d.stop){const full=a.every(w=>catOkL(w,d.L,0)||catOkL(w,d.L,1));b.disabled=!full;}
+    const lab=app.querySelector(`[data-draft="${k}"]`);if(lab){const w=val.trim();lab.parentNode.className=w&&!catOkL(w,d.L,+m[3])?'bad':w?'ok':'';}},
+  click(a,i,d,ctx){const v=ctx.v;
+    if(a==='stop'||a==='done'){const me=d.seq?d.wr:v;if(me==null||me<0||d.ph!=='write')return;const r=d.pl[me];const p=cMine(d,r);
+      const ans=CATF.map((_,k)=>String(S.draft[`c${d.r}_${me}_${k}`]??cAns(d,me)[k]??'').trim().slice(0,18));
+      if(a==='stop'&&!ans.every(w=>catOkL(w,d.L,0)||catOkL(w,d.L,1))){toast('عبّ الخمس خانات أول');return;}
+      S.priv[r]={...p,ca:{k:cKey(d),a:ans,stop:true}};
+      if(d.seq){const done=[...d.done,me];const hs=cHumans(d).filter(x=>!done.includes(x));if(hs.length){act({...d,done,wr:hs[0],turn:hs[0],t0:Date.now()});return;}act(cCollect({...d,done}));return;}
+      setPriv(r,S.priv[r]);return;}
+    if(d.ph==='review'&&a==='ob'){const s=Math.floor(i/5),k=i%5,key=s+'_'+k;
+      if(d.seq||S.mode==='local'){act({...d,rej:{...d.rej,[key]:!d.rej[key]}});return;}
+      if(v<0)return;const r=d.pl[v],p=cMine(d,r);const l=p.ob&&p.ob.k===cKey(d)?p.ob.l:[];setPriv(r,{...p,ob:{k:cKey(d),l:l.includes(key)?l.filter(x=>x!==key):[...l,key],ok:false}});return;}
+    if(d.ph==='review'&&a==='calc'){act(cScore(d));return;}
+    if(d.ph==='review'&&a==='ok'&&v>=0){const r=d.pl[v],p=cMine(d,r);const l=p.ob&&p.ob.k===cKey(d)?p.ob.l:[];setPriv(r,{...p,ob:{k:cKey(d),l,ok:true}});return;}
+    if(d.ph==='score'&&a==='next'&&d.win==null){act(cRound(d,d.r+1));return;}},
+  host(d){const now=Date.now();
+    if(d.ph==='spin')return now-d.ts>2700?cWrite(d):null;
+    if(d.ph==='write'){let x=d;
+      if(!d.seq&&!d.stop){// a player who pressed «ستوب», or a quick bot
+        for(let s=0;s<d.pl.length;s++){if(isBot(d,s)){const b=d.bt&&d.bt[s];if(b&&b.stop&&now>=b.at){x={...x,stop:{by:s,at:now}};break;}continue;}
+          const p=S.priv[d.pl[s]];if(p&&p.ca&&p.ca.k===cKey(d)&&p.ca.stop){x={...x,stop:{by:s,at:now}};break;}}}
+      const end=x.stop?x.stop.at+11200:x.t0+x.T*1000+1200;
+      if(d.seq){if(now>=x.t0+x.T*1000+800){const done=[...x.done,x.wr];const hs=cHumans(x).filter(s=>!done.includes(s));return hs.length?{...x,done,wr:hs[0],turn:hs[0],t0:now}:cCollect({...x,done});}return x===d?null:x;}
+      if(now>=end)return cCollect(x);
+      // everyone finished early: no need to wait for the clock
+      const allIn=d.pl.every((_,s)=>isBot(d,s)?(d.bt[s]&&now>=d.bt[s].at):(()=>{const p=S.priv[d.pl[s]];return S.mode==='online'&&!S.roles.has(d.pl[s])||!!(p&&p.ca&&p.ca.k===cKey(d)&&p.ca.stop);})());
+      if(allIn&&!x.stop)return cCollect(x);
+      return x===d?null:x;}
+    if(d.ph==='review'&&!d.seq&&S.mode==='online'){const hs=cHumans(d).filter(s=>S.roles.has(d.pl[s]));const ok=hs.every(s=>{const p=S.priv[d.pl[s]];return p&&p.ob&&p.ob.k===cKey(d)&&p.ob.ok;});
+      if(ok||now-d.ts>60000)return cScore(d);return null;}
+    if(d.ph==='score'&&d.win==null&&S.mode==='online'&&now-d.ts>15000)return cRound(d,d.r+1);
+    return null;},
+  bot:d=>d
 };
 // a bot writes real words for the letter from the dictionary (more of them at higher levels) and votes yes on the others' words
 GAMES.cats.botPick=(d,s,lv)=>{if(d.phase==='vote')return d.pend.map(()=>lv===1?rnd(2):1);const p=[0,.45,.7,.9][lv]||.7;

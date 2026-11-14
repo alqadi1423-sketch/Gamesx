@@ -965,6 +965,33 @@ input.code::placeholder{color:var(--mut);opacity:.6}
 @keyframes pspin{to{transform:rotate(360deg)}}
 .updb{margin:0 0 10px;padding:10px 14px;border-radius:14px;background:#FDECC8;color:#7A4B00;text-align:center;font-weight:800}
 
+/* ---------- teams: the split in the player setup and settings, the team badge on every player, a total per team ---------- */
+.tmset{margin-top:12px;padding-top:10px;border-top:1px solid var(--edge)}
+.tmset .lab{margin-top:0}
+.tmleg{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tmleg span{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 10px;border-radius:99px;background:var(--surface-2);color:var(--ink);font-weight:800;font-size:13.5px;box-shadow:inset 0 0 0 1.5px var(--c)}
+.tmleg b{min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:var(--c);color:#fff;font-size:12px;line-height:20px;text-align:center}
+.tmset .note{margin:8px 2px 0;text-align:start;font-size:13px}
+.tmc{flex:none;width:40px;height:40px;display:grid;place-items:center;border-radius:var(--r-m);background:var(--surface);font-size:20px;line-height:1;box-shadow:inset 0 0 0 2.5px var(--c),0 2px 0 var(--edge);transition:transform var(--t1) var(--ease)}
+.tmc:active:not(:disabled){transform:scale(.9)}
+.tmc:disabled{opacity:1;box-shadow:inset 0 0 0 2px var(--c)}
+.tlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tlist .mem{padding:3px 3px 3px 10px}
+.tlist .tmc{width:30px;height:30px;font-size:15px;border-radius:10px}
+.pt i .tmb{position:absolute;bottom:-5px;right:-7px;width:18px;height:18px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-size:11px;line-height:1;text-decoration:none;box-shadow:0 0 0 2px var(--tc,var(--edge))}
+.players.teams .pt{border-bottom:3px solid var(--tc)}
+/* the compact tiles place the avatar's badges on the tile itself: the team badge goes to the top corner, the picked mark next to it */
+.players.four .pt i .tmb,.players.many .pt i .tmb{top:4px;left:4px;bottom:auto;right:auto;width:17px;height:17px;font-size:10px}
+.players.teams.four .pt .pk,.players.teams.many .pt .pk{left:24px}
+.tstrip{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:0 0 8px}
+.tstrip span{display:inline-flex;align-items:center;gap:6px;padding:3px 12px 3px 4px;border-radius:99px;background:var(--surface);color:var(--ink);font-weight:800;font-size:13.5px;box-shadow:inset 0 0 0 2px var(--c),var(--e1)}
+.tstrip span i{width:22px;height:22px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-style:normal;font-size:13px}
+.tstrip span b{min-width:22px;padding:0 6px;border-radius:99px;background:var(--c);color:#fff;font-size:12.5px;line-height:20px;text-align:center}
+.tstrip span.won{background:var(--c);color:#fff;box-shadow:0 0 0 2px var(--gold),var(--e2)}.tstrip span.won b{background:rgba(255,255,255,.25)}
+.cover .cv-tm{margin:0 0 4px;padding:3px 12px;border-radius:99px;background:rgba(255,255,255,.2);box-shadow:inset 0 0 0 2px var(--tc);font-weight:800}
+.rules.tmrules{margin-top:10px}.rules.tmrules p{padding-inline-start:12px}.rules.tmrules p::before{content:none}
+.newb.upg{background:linear-gradient(#9A6BD8,#7445B8);font-size:9.5px}
+
 /* ---------- dark theme for the shell ---------- */
 @media (prefers-color-scheme:dark){
  .cchip.on{background:#E7EEF6;color:#111923}.cchip.on small{background:rgba(17,25,35,.12);color:#111923}

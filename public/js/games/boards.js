@@ -9,7 +9,12 @@ function lineWinRC(b,R,C,k){
   return null;
 }
 const disc=(c,hl)=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="${c}" stroke="${hl?'#ffd84d':'rgba(0,0,0,.18)'}" stroke-width="${hl?5:2}"/></svg>`;
-const mostPts=pts=>{const mx=Math.max(...pts);const top=pts.map((x,s)=>x===mx?s:-1).filter(s=>s>=0);return top.length===1?top[0]:'d';};
+// the winner by points; with teams the team totals decide (a negative entry means that seat cannot win)
+const mostPts=pts=>{const d=S.st.d,G=GAMES[S.st.g];
+  if(d&&d.tm&&d.tm.length===pts.length&&G&&G.teams!=='native'){const tot={};pts.forEach((x,s)=>{if(x<0)return;const t=d.tm[s];tot[t]=(tot[t]||0)+x;});
+    const ts=Object.keys(tot).map(Number);if(!ts.length)return 'd';const mx=Math.max(...ts.map(t=>tot[t]));const top=ts.filter(t=>tot[t]===mx);
+    return top.length===1?d.tm.indexOf(top[0]):'d';}
+  const mx=Math.max(...pts);const top=pts.map((x,s)=>x===mx?s:-1).filter(s=>s>=0);return top.length===1?top[0]:'d';};
 const ptsBadges=()=>'';
 
 /* ---------- connect four ---------- */

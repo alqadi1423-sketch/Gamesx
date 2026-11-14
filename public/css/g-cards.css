@@ -313,6 +313,16 @@ button.ustack:active{transform:translate(2px,2px)}
 .hl-next{opacity:1}
 .hl-next .card.card.card.big{--cwb:70px;box-shadow:2px 2px 0 #E9EEF4,3px 3px 0 rgba(0,0,0,.2),4px 4px 0 #E2E8F0,5px 5px 0 rgba(0,0,0,.2),6px 8px 10px rgba(0,0,0,.3)}
 .hl-next small{color:#fff;background:rgba(0,0,0,.22);border-radius:99px;padding:0 9px;margin-top:4px}
+/* the streak: a chip that heats up while it grows, with the score it would bank */
+.hstreak{display:flex;align-items:center;justify-content:center;gap:8px;width:min(100%,360px);margin:0 auto 8px;padding:6px 14px;border-radius:99px;background:var(--surface);color:var(--mut);box-shadow:var(--e1)}
+.hstreak small{font-weight:800;font-size:13px}
+.hstreak b{font-size:22px;line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums}
+.hstreak .hs-goal{font-size:12.5px;font-weight:700;color:var(--mut);margin-inline-start:auto}
+.hstreak.on{background:linear-gradient(90deg,#FFF1D6,#FFE0A6);color:#8A5200;box-shadow:0 0 0 2px var(--gold),var(--e1)}
+.hstreak.on b{color:#D35400;animation:hl-pop var(--t3) var(--spring)}
+.hstreak.on .hs-goal{color:#8A5200}
+@keyframes hl-pop{from{transform:scale(.6)}}
+@media (prefers-color-scheme:dark){.hstreak.on{background:linear-gradient(90deg,#3B2A10,#4A3412);color:#FFD68A}.hstreak.on b{color:#FFB35C}.hstreak.on .hs-goal{color:#FFD68A}}
 
 /* =====================================================================
    11. memory: face-down tiles show the card back, turned ones flip in

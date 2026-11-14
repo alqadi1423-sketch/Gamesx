@@ -82,7 +82,7 @@ function canPropose(old,nd,seat){if(seat<0)return false;
 // a move a player proposes in a public game: same round, same players, nobody comes back in, the round is still on,
 // and the player could make a move now (a phone that is not on turn cannot hand the host a board, or a win, of its own)
 function validateProposal(old,nd,role){
-  if(!old||!nd||old.win!=null||nd.gid!==old.gid||!jsEq(nd.pl,old.pl)||(nd.st??null)!==(old.st??null))return false;
+  if(!old||!nd||old.win!=null||nd.gid!==old.gid||!jsEq(nd.pl,old.pl)||(nd.st??null)!==(old.st??null)||!jsEq(nd.tm??null,old.tm??null))return false;
   if(typeof nd.out!=='string'||nd.out.length!==old.out.length)return false;
   for(let s=0;s<old.out.length;s++)if(old.out[s]==='1'&&nd.out[s]!=='1')return false;
   return old.pl.includes(role)&&canPropose(old,nd,old.pl.indexOf(role));}

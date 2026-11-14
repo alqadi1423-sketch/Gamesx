@@ -35,7 +35,7 @@ GAMES.arena={name:'حلبة القتال',cat:'fight',lbc:'#922B21',
   render(d,ctx){const v=ctx.v;const fresh=d.anim&&once('ar'+d.gid+d.rd);const choosing=ctx.my&&S.arA&&(S.arA==='atk'||S.arA==='spc');
     const n=d.pl.length,cols=n<=3?n:n===4?2:n<=6?3:4;
     let s=`<div class="arena" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${d.pl.map((r,i)=>{const a=d.anim&&d.anim[i];const dead=d.out[i]==='1';const pose=dead?'dead':a?a.a:'';
-      const tg=choosing&&!dead&&i!==v;
+      const tg=choosing&&!dead&&i!==v&&!sameTeam(d,i,v);
       return `<${tg?'button':'div'} class="fcard ${dead?'dead':''} ${tg?'tgt':''} ${fresh&&a&&a.dmg?'hit':''}" ${tg?`data-ga="tgt" data-i="${i}"`:''} style="--c:${col(d,i)}">
         ${fighterSVG(col(d,i),pose)}${fresh&&a&&(a.dmg||a.heal)?`<span class="dmg ${a.heal&&!a.dmg?'heal':''}">${a.dmg?'-'+a.dmg:'+'+a.heal}</span>`:''}
         <b>${!ctx.local&&i===v?'أنت':nm(d,i)}</b><div class="hpb ${d.hp[i]<=25?'low':''}"><i style="width:${Math.max(0,d.hp[i])}%;background:${d.hp[i]>50?'#3FAE5C':d.hp[i]>25?'#F0B429':'#E5483F'}"></i><em>${Math.max(0,d.hp[i])}</em></div>
@@ -47,7 +47,7 @@ GAMES.arena={name:'حلبة القتال',cat:'fight',lbc:'#922B21',
     return s;},
   click(a,i,d,ctx){if(!ctx.my)return;
     if(a==='cancel'){S.arA=null;render();return;}
-    if(a==='act'){const k=['atk','def','heal','spc'][i];if(k==='atk'||k==='spc'){const ts=aliveSeats(d).filter(s=>s!==ctx.v);if(ts.length===1){S.arA=null;simulPick(d,ctx.v,{a:k,t:ts[0]});return;}S.arA=k;render();return;}S.arA=null;simulPick(d,ctx.v,{a:k});return;}
+    if(a==='act'){const k=['atk','def','heal','spc'][i];if(k==='atk'||k==='spc'){const ts=targets(d,ctx.v);if(ts.length===1){S.arA=null;simulPick(d,ctx.v,{a:k,t:ts[0]});return;}S.arA=k;render();return;}S.arA=null;simulPick(d,ctx.v,{a:k});return;}
     if(a==='tgt'&&S.arA){const k=S.arA;S.arA=null;simulPick(d,ctx.v,{a:k,t:i});}},
   resolve(d,picks){const n=d.pl.length,R=srng(d,'ar'+d.rd);const hp=[...d.hp],en=[...d.en];const dmg=Array(n).fill(0),heal=Array(n).fill(0);
     const def=picks.map(p=>p&&p.a==='def');
@@ -155,7 +155,7 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
   points:d=>d.pl.map((r,s)=>[...d.own].filter(o=>o===String(s)).length+'⬢'),
   onTimeout:d=>dwEnd(d),
   status:(d,ctx)=>(d.last&&d.last.msg?`<small>${d.last.msg}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){const my=ctx.my,t=d.turn,ts=String(t);let sel=my?S.dwSel:null;if(sel!=null&&(d.own[sel]!==ts||+d.dice[sel]<2))sel=null;const targets=sel!=null?new Set(dwNb(sel).filter(b=>d.own[b]!=='.'&&d.own[b]!==ts)):new Set();
+  render(d,ctx){const my=ctx.my,t=d.turn,ts=String(t);let sel=my?S.dwSel:null;if(sel!=null&&(d.own[sel]!==ts||+d.dice[sel]<2))sel=null;const targets=sel!=null?new Set(dwNb(sel).filter(b=>d.own[b]!=='.'&&d.own[b]!==ts&&!sameTeam(d,+d.own[b],t))):new Set();
     const w=100/(DW_W+0.5),r=w/Math.sqrt(3),vh=(DW_H-1)*1.5*r+2*r;
     const hex=(cx,cy)=>[0,1,2,3,4,5].map(k=>{const a=Math.PI/180*(60*k-90);return (cx+r*0.97*Math.cos(a)).toFixed(2)+','+(cy+r*0.97*Math.sin(a)).toFixed(2);}).join(' ');
     let s=`<svg viewBox="0 0 100 ${vh.toFixed(1)}" class="dwmap">`;
@@ -173,7 +173,7 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
     if(a==='end'){S.dwSel=null;act(dwEnd(d));return;}
     if(a!=='cell')return;
     if(d.own[i]===ts){S.dwSel=+d.dice[i]>1?(S.dwSel===i?null:i):null;render();return;}
-    const from=S.dwSel;if(from==null||!dwNb(from).includes(i)||d.own[i]==='.'||d.own[i]===ts)return;
+    const from=S.dwSel;if(from==null||!dwNb(from).includes(i)||d.own[i]==='.'||d.own[i]===ts||sameTeam(d,+d.own[i],t))return;
     const na=+d.dice[from],nb=+d.dice[i];const ra=Array(na).fill(0).map(()=>1+rnd(6)),rb=Array(nb).fill(0).map(()=>1+rnd(6));const win=ra.reduce((x,y)=>x+y,0)>rb.reduce((x,y)=>x+y,0);
     const def=+d.own[i];let own=d.own,dice=d.dice;
     if(win){own=setAt(own,i,ts);dice=setAt(setAt(dice,i,String(na-1)),from,'1');}else dice=setAt(dice,from,'1');

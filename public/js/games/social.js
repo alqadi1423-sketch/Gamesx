@@ -32,7 +32,7 @@ function baraTiles(d,v,can,cnt){return `<div class="pvg n${d.pl.length}">${d.pl.
 function baraReveal(d,end){const g=d.guess!=null&&d.guess>=0?BARA[d.cat][1][d.guess]:null;
   return `<div class="breveal ${end?'end':''}"><div class="brv" style="--c:${col(d,d.bo)}"><i>${shapeW(d.pl[d.bo])}</i><div><small>${end?'اللي كان برة السالفة':'انكشف!'}</small><b>${nm(d,d.bo)}</b></div></div>`+
     (end?`<div class="brw"><small>${BARA_E[d.cat]||''} السالفة</small><b>${baraWord(d)}</b>${g?`<em class="${d.guess===d.w?'ok':'no'}">خمّن: ${g} ${d.guess===d.w?'✓':'✗'}</em>`:''}</div>`:'')+`</div>`;}
-GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer:false,
+GAMES.bara={teams:'none',name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D9573A"/><circle cx="30" cy="40" r="11" fill="#fff"/><circle cx="50" cy="40" r="11" fill="#fff"/><circle cx="70" cy="40" r="11" fill="#2D4763"/><path d="M14 80c0-12 7-18 16-18s16 6 16 18zM34 80c0-12 7-18 16-18s16 6 16 18z" fill="#fff"/><path d="M54 80c0-12 7-18 16-18s16 6 16 18z" fill="#2D4763"/><text x="70" y="45" font-size="13" font-weight="800" text-anchor="middle" fill="#fff">؟</text></svg>`,
   init:n=>({ph:'cat',cat:-1,w:-1,bo:-1,pr:[],qi:0,q2:false,rd:0,votes:null,opts:null,res:'',last:''}),
   simulNow:d=>d.ph==='see'||d.ph==='vote',
@@ -121,7 +121,7 @@ function mfRoster(d,v,can){const meM=v>=0&&d.roles[v]==='m';
     const cls=`pv ${out?'out':ok?'can':'no'} ${s===v?'me':''} ${mate?'mate':''}`;
     const inner=`<i>${shapeW(r)}${out?'<u class="pvx">💀</u>':''}${mate?'<u class="pvm">🎩</u>':''}</i><span>${nm(d,s)}</span>${out&&d.roles[s]!=='?'?`<em>${MFR[d.roles[s]]||''}</em>`:s===v?'<em>أنت</em>':''}`;
     return ok?`<button class="${cls}" style="--c:${COLS[r]}" data-ga="p" data-i="${s}">${inner}</button>`:`<div class="${cls}" style="--c:${COLS[r]}">${inner}</div>`;}).join('')}</div>`;}
-GAMES.mafia={name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
+GAMES.mafia={teams:'none',name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2B2F45"/><circle cx="78" cy="22" r="10" fill="#F2E3A0"/><circle cx="82" cy="19" r="9" fill="#2B2F45"/><path d="M26 44h48l-6-16H32z" fill="#111"/><rect x="18" y="42" width="64" height="7" rx="3" fill="#111"/><path d="M30 52c0 14 9 24 20 24s20-10 20-24z" fill="#E9C9A6"/><rect x="34" y="56" width="32" height="7" rx="3" fill="#111"/></svg>`,
   init:n=>({roles:mfRoles(n),ph:'role',rd:0,night:1,last:'',res:'',ls:-1,inv:null,log:[]}),
   simulNow:()=>true,
