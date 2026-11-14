@@ -263,3 +263,7 @@ svg.bd-tv{border-radius:12px;box-shadow:0 6px 0 #3E220F,0 12px 24px rgba(0,0,0,.
 /* colour wars: a ring bursts from every cell that blew up in the last move (invisible when still) */
 .bd-cw .cc{position:relative}
 .bd-cw .cwx{position:absolute;inset:6%;border-radius:50%;border:3px solid #fff;opacity:0;pointer-events:none;animation:bd-ring .42s ease-out}
+/* treasure: radar mode and the squares it answered (inside: a green rim, outside: dimmed sand) */
+.bd-tr.radar .sand:not(:disabled){box-shadow:inset 0 0 0 2px #2F80ED}
+.bd-tr .sand.sy{box-shadow:inset 0 0 0 2px rgba(46,160,90,.85)}
+.bd-tr .sand.sn{opacity:.55}

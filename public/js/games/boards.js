@@ -58,21 +58,36 @@ const heat=k=>['#E8473E','#F07A3C','#F2A93B','#E9CD52','#B7D36A','#7FC8A9','#6BB
 GAMES.treasure={name:'الكنز المدفون',cat:'mind',lbc:'#B07B2A',
   icon:iconE('#E6B65C','💰','rgba(255,255,255,.35)'),
   // the treasure is not placed in advance: each dig draws its spot from the cells that still fit every clue, so it is never in the shared state
-  init:n=>{const z=TRS[n]||8;return {z,o:'.'.repeat(z*z),by:'.'.repeat(z*z),last:''};},
+  // every player also has one radar (rdr): before digging it tells whether the treasure is in a 3×3 square (sc keeps the answers)
+  init:n=>{const z=TRS[n]||8;return {z,o:'.'.repeat(z*z),by:'.'.repeat(z*z),last:'',rdr:'1'.repeat(n),sc:[]};},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){const z=d.z,lm=bdLast('treasure',d,d.o);
-    return `<div class="cellgrid bd-tr ${ctx.my?'my':''}" style="grid-template-columns:repeat(${z},minmax(0,1fr))">${[...d.o].map((v,i)=>{
-      if(v==='.')return `<button class="cg sand" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}></button>`;
+  render(d,ctx){const z=d.z,lm=bdLast('treasure',d,d.o),t=d.turn,rm=ctx.my&&S.trR===d.gid+d.o+t&&(d.rdr||'')[t]==='1';
+    const yes=new Set(),no=new Set();for(const [c,y] of d.sc||[])for(let j=0;j<z*z;j++)if(trNear(z,j,c))(y?yes:no).add(j);
+    let h=`<div class="cellgrid bd-tr ${ctx.my?'my':''} ${rm?'radar':''}" style="grid-template-columns:repeat(${z},minmax(0,1fr))">${[...d.o].map((v,i)=>{
+      const sc=no.has(i)?'sn':yes.has(i)?'sy':'';
+      if(v==='.')return `<button class="cg sand ${sc}" data-ga="${rm?'r':'m'}" data-i="${i}" ${ctx.my?'':'disabled'}></button>`;
       if(v==='*')return `<div class="cg gold"><span>💰</span></div>`;
-      const k=v.charCodeAt(0)-97;return `<div class="cg dug ${i===lm?'lm':''}" style="--h:${heat(k)};--c:${col(d,+d.by[i])}"><b>${k}</b><i></i></div>`;}).join('')}</div>`;},
+      const k=v.charCodeAt(0)-97;return `<div class="cg dug ${i===lm?'lm':''}" style="--h:${heat(k)};--c:${col(d,+d.by[i])}"><b>${k}</b><i></i></div>`;}).join('')}</div>`;
+    if(ctx.my&&d.win==null&&(d.rdr||'')[t]==='1')h+=`<div class="row mnbar"><button class="btn ${rm?'red':'navy'}" data-ga="rad">${rm?'📡 اختر وسط المربع':'📡 الرادار (مرة وحدة)'}</button><small>يقول لك هل الكنز في مربع 3×3، وبعدها تحفر</small></div>`;
+    return h;},
   click(a,i,d,ctx){
+    if(a==='rad'){if(!ctx.my||(d.rdr||'')[d.turn]!=='1')return;const k=d.gid+d.o+d.turn;S.trR=S.trR===k?null:k;render();return;}
     if(!ctx.my||d.o[i]!=='.')return;const z=d.z,t=d.turn,far=(a,b)=>Math.abs(Math.floor(a/z)-Math.floor(b/z))+Math.abs(a%z-b%z);
-    let tc=d.t;if(tc==null){const ok=[];for(let j=0;j<z*z;j++)if(d.o[j]==='.'&&[...d.o].every((v,c)=>v<'a'||far(j,c)===v.charCodeAt(0)-97))ok.push(j);tc=ok.length?ok[rnd(ok.length)]:i;}
+    const ok=trFits(d);let tc=d.t;if(tc==null)tc=ok.length?ok[rnd(ok.length)]:i;
+    // the radar: the answer comes from a spot that still fits, and the same player digs right after
+    if(a==='r'){if((d.rdr||'')[t]!=='1')return;S.trR=null;const y=trNear(z,tc,i)?1:0;
+      act({...d,rdr:setAt(d.rdr,t,'0'),sc:[...(d.sc||[]),[i,y]],last:`${nm(d,t)} شغّل الرادار: الكنز ${y?'داخل المربع 📡✓':'مو في المربع 📡✗'}، الحين يحفر`});return;}
+    if(a!=='m')return;
     if(i===tc){act({...d,o:setAt(d.o,i,'*'),by:setAt(d.by,i,String(t)),win:t,last:`${nm(d,t)} لقى الكنز!`});return;}
     const k=far(i,tc);
     act({...d,o:setAt(d.o,i,String.fromCharCode(97+k)),by:setAt(d.by,i,String(t)),turn:nextSeat(d,t),last:`${nm(d,t)} حفر وطلع الكنز يبعد ${k} خطوات`});
   }
 };
+// cell j is in the 3×3 square around c
+const trNear=(z,j,c)=>Math.abs(Math.floor(j/z)-Math.floor(c/z))<=1&&Math.abs(j%z-c%z)<=1;
+// the cells the treasure can still be in: every dug number and every radar answer fits
+function trFits(d){const z=d.z,far=(a,b)=>Math.abs(Math.floor(a/z)-Math.floor(b/z))+Math.abs(a%z-b%z),ok=[];
+  for(let j=0;j<z*z;j++)if(d.o[j]==='.'&&[...d.o].every((v,c)=>v<'a'||far(j,c)===v.charCodeAt(0)-97)&&(d.sc||[]).every(([c,y])=>trNear(z,j,c)===!!y))ok.push(j);return ok;}
 
 /* ---------- minesweeper party ---------- */
 const MINE='<svg viewBox="0 0 40 40" class="mi"><path d="M20 7v6M20 31v6M7 22h6M27 22h6M11 13l4 4M25 27l4 4M11 31l4-4M25 17l4-4" stroke="#2B333D" stroke-width="3.2" stroke-linecap="round"/><circle cx="20" cy="22" r="10" fill="#2B333D"/><circle cx="16.4" cy="18.4" r="3.2" fill="#fff" opacity=".6"/></svg>';

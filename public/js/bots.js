@@ -291,9 +291,11 @@ GAMES.war.botPick=(d,s,lv)=>{const used=(S.priv[d.pl[s]]||{}).used||[];const fre
   const pr=d.prize!=null?d.prize:4;const pick=lv===1?pickR(free):free.sort((a,b)=>Math.abs(a-pr-(lv===3?rnd(2):0))-Math.abs(b-pr-(lv===3?rnd(2):0)))[0];
   const p=S.priv[d.pl[s]]||{};S.priv[d.pl[s]]={...p,gid:d.gid,used:[...used,pick]};return pick;};
 GAMES.word.bot=(d,s,lv)=>{const F='اليمنوتبرعهدسقكحفجشصطخثزغضذظ';const left=[...F].filter(c=>!d.g.includes(c)&&ALPHA.includes(c));const c=lvRand(lv)?pickR(left):left[0];return botDo(d,s,'k',ALPHA.indexOf(c));};
-GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);
-  const clues=[...d.o].map((c,i)=>c>='a'&&c<='z'?[i,c.charCodeAt(0)-97]:null).filter(Boolean);
-  const ok=free.filter(i=>clues.every(([j,k])=>Math.abs(Math.floor(i/z)-Math.floor(j/z))+Math.abs(i%z-j%z)===k));
+GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);const ok=trFits(d);
+  // the radar first while many cells still fit: hard puts it where it cuts them closest to half, medium now and then anywhere useful
+  if(lv>1&&(d.rdr||'')[s]==='1'&&ok.length>=(lv===3?5:9)&&(lv===3||Math.random()<.5)){
+    const v=c=>{const y=ok.filter(j=>trNear(z,j,c)).length;return Math.abs(ok.length/2-y)+(lv===3?Math.random()*.5:Math.random()*4);};
+    const c=free.map(c=>[c,v(c)]).sort((a,b)=>a[1]-b[1])[0];if(c)return botDo(d,s,'r',c[0]);}
   if(lv===3&&ok.length>1){// every fitting cell wins as often; hard digs the one whose clue tells the next player the least
     const left=c=>{const g={};for(const j of ok)if(j!==c){const k=Math.abs(Math.floor(j/z)-Math.floor(c/z))+Math.abs(j%z-c%z);g[k]=(g[k]||0)+1;}return Object.values(g).reduce((a,x)=>a+x*x,0);};
     return botDo(d,s,'m',ok.map(c=>[c,left(c)+Math.random()]).sort((a,b)=>b[1]-a[1])[0][0]);}
