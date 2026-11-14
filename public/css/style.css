@@ -724,7 +724,7 @@ h2.cat small{color:var(--mut);font-size:12px;font-weight:800;background:var(--su
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media (min-width:500px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .newb{position:absolute;top:9px;left:-25px;width:86px;transform:rotate(-45deg);background:linear-gradient(#F26A61,#D9473F);color:#fff;font-style:normal;font-weight:900;font-size:10.5px;line-height:17px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.25);z-index:2}
-.minb{position:absolute;top:6px;right:6px;z-index:2;display:flex;align-items:center;gap:2px;padding:3px 6px;border-radius:99px;background:rgba(15,25,40,.62);color:#fff;font-style:normal;font-weight:800;font-size:11px;line-height:1;direction:ltr}
+.minb{position:absolute;top:6px;right:6px;z-index:2;display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:99px;background:rgba(15,25,40,.62);color:#fff;font-style:normal;font-weight:800;font-size:11px;line-height:1;direction:ltr}
 .panel.live{display:flex;align-items:center;gap:12px;padding:10px 12px;box-shadow:0 0 0 2px var(--gold),var(--e1)}
 .live .gi{width:48px;height:48px;flex:none;border-radius:12px;overflow:hidden}
 .lv-tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
@@ -1033,10 +1033,10 @@ input,textarea{-webkit-user-select:text;user-select:text}
 .gcard .gi{position:relative;aspect-ratio:1;border-radius:13px;overflow:hidden}
 .gcard .lb{display:flex;align-items:center;justify-content:center;min-height:2.5em;margin:4px 2px 1px;font-weight:800;font-size:13.5px;line-height:1.2;color:var(--ink);text-align:center;overflow-wrap:anywhere}
 .gcard.dim .gi{opacity:.42}.gcard.dim .lb{color:var(--mut)}.gcard.dim .minb{background:var(--red);opacity:1}
-.fv{position:absolute;bottom:42px;left:2px;z-index:3;width:44px;height:44px;display:grid;place-items:center;padding:0;background:none;color:#fff}
-.fv svg{width:26px;height:26px;fill:rgba(15,25,40,.35);stroke:#fff;stroke-width:1.8;stroke-linejoin:round;transition:transform var(--t1) var(--spring)}
-.fv.on svg{fill:var(--gold);stroke:#fff}
-.fv:active svg{transform:scale(.8)}
+.fv{position:absolute;bottom:42px;left:2px;z-index:3;width:44px;height:44px;display:grid;place-items:center;padding:0;background:none}
+.fv::before{content:'';width:26px;height:26px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.4l-5.8 3 1.1-6.4-4.7-4.6 6.5-.9z' fill='rgba(15,25,40,.38)' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;transition:transform var(--t1) var(--spring)}
+.fv.on::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.4l-5.8 3 1.1-6.4-4.7-4.6 6.5-.9z' fill='%23F0B429' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.fv:active::before{transform:scale(.8)}
 .fvb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}.fvb.on svg{fill:var(--gold);stroke:var(--gold)}
 .gempty{text-align:center;color:var(--mut);font-weight:700;margin:36px 0}.gempty p{margin:0 0 12px}
 /* ---------- home and stats ---------- */
@@ -1146,7 +1146,6 @@ html.lite .gload i{animation-duration:.8s!important;animation-iteration-count:in
 @media (prefers-color-scheme:dark){
  .chg.me .msg{background:#1f4d33}
  .grnd{color:#E7EEF6}
- .fv svg{fill:rgba(0,0,0,.4)}
  .avp button:first-child{background:#3B526C}
 }
 @media (prefers-color-scheme:light){.cnm,.chatpop b{color:var(--ct,var(--c))}}
@@ -1159,3 +1158,8 @@ html.lite .floatrx{will-change:auto}
 .status .sm{min-height:34px}
 @media (min-width:760px){.hx-modes>:last-child:nth-child(odd){grid-column:1/-1}}
 @media (min-width:1100px){#app[data-s=home] .hx-modes{grid-template-columns:repeat(3,minmax(0,1fr))}#app[data-s=home] .hx-modes>:last-child:nth-child(odd){grid-column:auto}}
+.minb::after{content:'';width:10px;height:10px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='7' r='5' fill='%23fff'/%3E%3Cpath d='M2 23c0-6 4.5-9 10-9s10 3 10 9z' fill='%23fff'/%3E%3C/svg%3E") center/contain no-repeat}
+#app[data-gv="1"] .gsec:nth-of-type(-n+1),#app[data-gv="2"] .gsec:nth-of-type(-n+2),#app[data-gv="3"] .gsec:nth-of-type(-n+3),#app[data-gv="4"] .gsec:nth-of-type(-n+4),#app[data-gv="5"] .gsec:nth-of-type(-n+5),#app[data-gv="6"] .gsec:nth-of-type(-n+6),#app[data-gv="7"] .gsec:nth-of-type(-n+7),#app[data-gv="8"] .gsec:nth-of-type(-n+8),#app[data-gv="9"] .gsec:nth-of-type(-n+9),#app[data-gv="10"] .gsec:nth-of-type(-n+10),#app[data-gv="11"] .gsec:nth-of-type(-n+11),#app[data-gv="12"] .gsec:nth-of-type(-n+12),#app[data-gv="13"] .gsec:nth-of-type(-n+13),#app[data-gv="14"] .gsec:nth-of-type(-n+14){content-visibility:visible}
+
+/* a tap on a game button answers at once, also while the move waits for the room host */
+.tap-ok{opacity:.72;transition:opacity 0s}

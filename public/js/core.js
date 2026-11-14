@@ -443,7 +443,7 @@ function render(){
   // the screen is patched in place: only what changed is touched, so the page does not jump and typing is not lost
   const screen=S.mode+'|'+(S.mode==='online'||S.mode==='local'?(S.st.g&&!S.browse&&S.st.d?'g:'+S.st.g:'grid'):'');
   // a new screen slides in once (style.css #app.scr-in); later patches of the same screen do not animate
-  if(screen!==S.lastScreen){S.lastScreen=screen;app.innerHTML='';S.lastHtml=null;window.scrollTo(0,0);app.dataset.s=S.mode==null?'home':/\|g:/.test(screen)?'game':S.mode==='online'||S.mode==='local'?'grid':S.mode;app.classList.add('scr-in');clearTimeout(S.scrT);S.scrT=setTimeout(()=>app.classList.remove('scr-in'),300);}
+  if(screen!==S.lastScreen){S.lastScreen=screen;app.innerHTML='';S.lastHtml=null;window.scrollTo(0,0);app.dataset.s=S.mode==null?'home':/\|g:/.test(screen)?'game':S.mode==='online'||S.mode==='local'?'grid':S.mode;app.classList.add('scr-in');clearTimeout(S.scrT);S.scrT=setTimeout(()=>app.classList.remove('scr-in'),300);if(app.dataset.s==='grid')gridWarm();}
   // the chat stays at the newest line unless its reader scrolled up (then a "new messages" button shows)
   const mb0=app.querySelector('.msgs'),atBot=!mb0||mb0.scrollHeight-mb0.scrollTop-mb0.clientHeight<60;
   // nothing changed on screen (a heartbeat, another player's message that does not show here): the page is left alone
@@ -591,9 +591,15 @@ const fitN=(k,n)=>{const G=GAMES[k];return !(G.minP&&n<G.minP)&&!(G.maxP&&n>G.ma
 const ICO_STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.4l-5.8 3 1.1-6.4-4.7-4.6 6.5-.9z"/></svg>';
 const ICO_DICE='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="currentColor"/><g fill="var(--surface)"><circle cx="8" cy="8" r="1.9"/><circle cx="16" cy="8" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="8" cy="16" r="1.9"/><circle cx="16" cy="16" r="1.9"/></g></svg>';
 const ICO_PPL='<svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><circle cx="12" cy="7" r="5" fill="currentColor"/><path d="M2 23c0-6 4.5-9 10-9s10 3 10 9z" fill="currentColor"/></svg>';
+// the sections of the game list are laid out only near the screen (style.css .gsec); once the list is up, the idle moments
+// lay them out one by one (app data-gv), so a later fast scroll does not have to
+function gridWarm(){app.dataset.gv='0';const ric=window.requestIdleCallback||(f=>setTimeout(f,150));
+  const step=()=>{if(app.dataset.s!=='grid')return;const n=app.querySelectorAll('.gsec').length,v=+app.dataset.gv||0;if(v>=Math.min(n,14))return;app.dataset.gv=String(v+1);ric(step,{timeout:2000});};
+  ric(step,{timeout:2000});}
+// a tile is few nodes (its star and the players badge are drawn by CSS): 200 of them stay light
 function tileHTML(k,fav,n){const G=GAMES[k],dim=!fitN(k,n);
   const b=NEWG.includes(k)?'<i class="newb">جديد</i>':UPG.includes(k)?'<i class="newb upg">مطوّرة</i>':'';
-  return `<div class="gcard${dim?' dim':''}" data-k="t-${k}"><button class="gp" data-a="pick" data-g="${k}"><span class="gi">${G.icon}${b}${G.minP?`<i class="minb">${G.minP}+ ${ICO_PPL}</i>`:''}</span><span class="lb">${G.name}</span></button><button class="fv${fav?' on':''}" data-a="fav" data-g="${k}" aria-label="${fav?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fav}">${ICO_STAR}</button></div>`;}
+  return `<div class="gcard${dim?' dim':''}" data-k="t-${k}"><button class="gp" data-a="pick" data-g="${k}"><span class="gi">${G.icon}${b}${G.minP?`<i class="minb">${G.minP}+</i>`:''}</span><span class="lb">${G.name}</span></button><button class="fv${fav?' on':''}" data-a="fav" data-g="${k}" aria-label="${fav?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fav}"></button></div>`;}
 // the sections of tiles; kept between renders (a heartbeat online, a typed letter elsewhere) while nothing in them changed.
 // Each section is skipped by the browser while it is off screen (style.css .gsec content-visibility)
 function gridBody(q,cat,n){
@@ -806,6 +812,8 @@ app.addEventListener('click',e=>{
   const i=t.dataset.i!=null?+t.dataset.i:null;
   if(t.dataset.ga){if(netDown())return;if(S.needUpd){toast('حدّث التطبيق عشان تلعب في هالغرفة');return;}const G=GAMES[S.st.g],a=t.dataset.ga;if(!G||!S.st.d)return;
     // a secret game online: the host plays on the whole state, the others ask the host (net.js)
+    // online a guest's move goes to the host first: the button answers at once so the tap never feels lost
+    if(S.mode==='online'&&!amHost()){t.classList.add('tap-ok');setTimeout(()=>t.classList.remove('tap-ok'),220);}
     if(S.mode==='online'&&isSecretG(G)){if(amHost())G.click(a,i,S.st.d,mkCtx(S.st.d,S.priv));else netClick(G,a,i);return;}
     G.click(a,i,S.st.d,mkCtx());return;}
   if(!GREADY&&!PRE_LOAD_OK.has(t.dataset.a)){const snap={dataset:{...t.dataset}};whenGames(()=>shellAct(snap));return;}
@@ -896,6 +904,8 @@ app.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.s
 app.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}else if(e.target.dataset&&e.target.dataset.draft==='chat'){e.preventDefault();shellAct({dataset:{a:'send'}});}
   else if(e.target.dataset&&e.target.dataset.draft==='q'){e.preventDefault();e.target.blur();}
   else if(e.target.dataset&&e.target.dataset.enter){e.preventDefault();const b=app.querySelector(`[data-ga="${e.target.dataset.enter}"]`);if(b&&!b.disabled)b.click();}});
+// the on-screen keyboard must not hide the field being typed in (room code, names): bring it into view once the keyboard is up
+app.addEventListener('focusin',e=>{const el=e.target;if(!el||!/^(INPUT|TEXTAREA)$/.test(el.tagName)||el.closest('.sheet.chat'))return;setTimeout(()=>{try{if(document.activeElement===el)el.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(x){}},320);});
 // scrolled back down to the newest line: the "new messages" button goes
 app.addEventListener('scroll',e=>{const m=e.target;if(!S.chatJump||!m.classList||!m.classList.contains('msgs'))return;if(m.scrollHeight-m.scrollTop-m.clientHeight<40){S.chatJump=false;const j=app.querySelector('.jump');if(j)j.classList.remove('on');}},true);
 /* target picker used by sea battle and guess the person */
@@ -943,7 +953,7 @@ function infoScreen(){
 /* ================= loading the games after the first screen ==========   index.html keeps the game styles and scripts inert in <template id="later-css"> and <template id="later-js">. Right after the
    home screen is drawn they are added to the page: the styles before perf.css (the order they always had), the scripts in their
    order (async=false). Anything that needs a game (the game list, a room, a saved game) waits for them, with a loading note */
-function loadGames(){
+function loadGames(){if(S.gstart)return;S.gstart=true;
   const ts=['later-css','later-js'].map(id=>document.getElementById(id)).filter(Boolean);if(!ts.length){GREADY=true;return;}
   let left=1;const perf=document.querySelector('link[href*="css/perf.css"]');
   const done=()=>{if(--left>0)return;GREADY=true;S.gload=false;saveMeta();const q=GWAIT.splice(0);S.lastHtml=null;render();for(const f of q)try{f();}catch(e){console.error(e);}};
@@ -973,4 +983,8 @@ function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)
 function hereSaved(){try{const h=JSON.parse(sessionStorage.getItem(HEREK)||'null');return !!h&&['local','online','lobby','stats'].includes(h.m);}catch(e){return false;}}
 function boot(){if(/[?&]info\b/.test(location.search)){infoScreen();return;}
   if(document.getElementById('later-js'))GREADY=false;
-  navInit();render();loadGames();if(hereSaved())whenGames(()=>{if(!restoreHere())render();});if(isApp())appSetup();}
+  navInit();render();
+  // the games load once the home screen is painted (a frame, then a task; a second later at most, for a page opened in the
+  // background). Under automation (navigator.webdriver) they load at once, so the page's load event still means every game is there
+  if(navigator.webdriver)loadGames();else{requestAnimationFrame(()=>setTimeout(loadGames,0));setTimeout(loadGames,1500);}
+  if(hereSaved())whenGames(()=>{if(!restoreHere())render();});if(isApp())appSetup();}

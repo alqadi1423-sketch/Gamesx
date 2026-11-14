@@ -33,3 +33,5 @@ html.lite .camelp,html.lite .tank.on,html.lite .trophy svg,html.lite .gm-uxo .ub
 html.lite .mboard .mc .hs,html.lite .mboard .mc.msk .ic,html.lite .bd-sea .sc .fire,html.lite .bd-ch .chp,html.lite .chpro button .chp,html.lite .bd-ch .dmp .crw{filter:none!important}
 html.lite body::before{display:none}
 html.lite .confetti{display:none}
+/* a new screen comes in quickly (taps feel answered at once) */
+#app.scr-in>:not(.sheet-bg):not(.board):not(.rx){animation-duration:.18s}
