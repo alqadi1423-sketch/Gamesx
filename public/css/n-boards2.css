@@ -107,3 +107,28 @@ button.b2pt{cursor:pointer}
 .b2s.go.dead{opacity:.4;transform:scale(.8)}
 .b2tr{position:absolute;width:32%;height:32%;border-radius:2px;z-index:2}
 .b2tr.t0{background:#1C2026;box-shadow:0 0 0 1px rgba(255,255,255,.4)}.b2tr.t1{background:#FBFAF5;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+
+/* xiangqi: lines, palaces and the river; round wooden pieces with the red or black character */
+.b2bd.b2xq{background:linear-gradient(135deg,#F0D29C,#E2B978 60%,#D9AE6A)}
+.b2xq .b2ln{stroke:#6A3F1A;stroke-width:.5}
+.b2rv{font-size:4.6px;fill:rgba(106,63,26,.75);text-anchor:middle;font-weight:800}
+.b2s.xq{width:94%;height:94%;display:grid;place-items:center;background:radial-gradient(circle at 40% 32%,#FFF8EA,#F3E3C2 60%,#DCC394);box-shadow:var(--rg),inset 0 0 0 1.5px currentColor,inset 0 0 0 3px #F6EAD0,inset 0 0 0 4px currentColor,0 2px 0 #A88A5A,0 3px 4px rgba(60,30,0,.25)}
+.b2s.xq::after{display:none}
+.b2s.xq.s0{color:#B0342B}.b2s.xq.s1{color:#22303F}
+.b2s.xq b{font-size:clamp(13px,4.6vw,21px);line-height:1;font-weight:700;font-family:'Noto Serif SC','Songti SC','SimSun',serif}
+.b2xq .b2pt.kc .b2s{--rg:0 0 0 3px #E5534B}
+.b2xq .b2pt.cap .b2s{--rg:0 0 0 3px #E5534B}
+.b2xql{font-size:12.5px;line-height:1.6;margin:6px 4px 0}
+/* star halma: a wooden star, tinted points, glass marbles in the players' colours */
+.b2bd.b2hm{width:min(100%,380px);background:none;box-shadow:none}
+.b2hst{fill:#E2BE84;stroke:#8E5E30;stroke-width:1.2;stroke-linejoin:round}
+.b2hh circle{fill:rgba(80,48,18,.5)}
+.b2s.hm{width:100%;height:100%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.9) 0,rgba(255,255,255,.25) 22%,rgba(255,255,255,0) 45%),var(--c);box-shadow:var(--rg),inset 0 -3px 4px rgba(0,0,0,.28),0 1.5px 1.5px rgba(0,0,0,.35)}
+.b2s.hm::after{display:none}
+.b2hm .b2pt.to::after{width:50%;height:50%}
+.b2hm .b2pt.lmf::before{inset:30%}
+.b2hmc{display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--c);vertical-align:-3px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+/* mahbusa: the backgammon board in walnut, a lock on pinned checkers */
+.bd-tv.b2mb .tvk.pnd circle:nth-child(2){stroke:#E0A42A;stroke-width:1.6}
+.bd-tv.b2mb .tvk.fresh{transform-box:fill-box;transform-origin:center;animation:b2pop .3s ease-out}
+.chside.mbr{background:#7A2B26;color:#fff;box-shadow:none}
