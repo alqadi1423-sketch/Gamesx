@@ -18,7 +18,6 @@
 .u2bar{display:flex;align-items:center;gap:8px;width:100%;justify-content:space-between;min-height:30px}
 .u2clk{font-weight:800;font-size:16px;padding:2px 12px;border-radius:999px;background:var(--surface);box-shadow:var(--e1)}
 .u2clk b{display:inline-block;min-width:2.2em;direction:ltr}
-.u2pen{color:var(--bad);font-weight:800;font-size:14px}
 .u2acts{display:flex;gap:8px;width:100%;margin-top:2px}
 .u2acts .btn{flex:1 1 0;min-height:44px;font-size:15px;padding:0 6px;min-width:0}
 .u2acts .u2quit.sure{background:var(--bad);color:#fff;box-shadow:0 3px 0 #a63a33}
@@ -114,3 +113,44 @@
 .u2-sb .u2grid>i.s2{color:#7a6a55;font-size:16px}
 .u2-sb .u2grid>i.s1{animation:u2pop var(--t2) var(--spring) both}
 .u2-sb .u2grid>i.bad{color:var(--badc)}
+
+/* kakuro: dark clue cells split on the diagonal, white cells to fill */
+.u2-kk .u2grid{width:min(100%,370px);background:#7FA6CF;border-color:#1F3550}
+.u2-kk .u2grid>i{background:#fff;position:relative}
+.u2-kk .u2grid>i.bk{background:#1F3550}
+.u2-kk .u2grid>i.cl{background:linear-gradient(to top right,#1F3550 calc(50% - 1px),#7FA6CF 50%,#1F3550 calc(50% + 1px))}
+.u2-kk .u2grid>i>sup,.u2-kk .u2grid>i>sub{position:absolute;font-size:clamp(9px,2.9vw,13px);font-weight:900;color:#FFE08A;line-height:1}
+.u2-kk .u2grid>i>sup{top:3px;right:4px}.u2-kk .u2grid>i>sub{bottom:3px;left:4px}
+.u2-kk .u2grid>i>b{font-size:clamp(17px,5.6vw,26px);color:#2F80C2}
+.u2-kk .u2grid>i.cur{background:#FFF1D6}
+.u2-kk .u2grid>i.bad{background:#FDE3E0}.u2-kk .u2grid>i.bad>b{color:var(--badc)}
+
+/* numberlink: coloured paths over a light board */
+.u2nlw,.u2skw{width:min(100%,370px)}
+.u2nl,.u2sk{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:10px;box-shadow:var(--e2)}
+.u2nl{background:#F7FBFB;border:3px solid #22706C}
+.u2nl .gl{stroke:#D3E5E3;stroke-width:.4;fill:none}
+.u2nl .pl{fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.u2nl circle{stroke:#fff;stroke-width:.7}
+.u2nl circle.dn{stroke:#1d2b3a;stroke-width:.9}
+.u2nl text{font-size:4.6px;font-weight:900;fill:#fff;text-anchor:middle;pointer-events:none}
+
+/* slitherlink: dots, clue numbers, the loop in ink */
+.u2sk{background:#F8F7FF;border:3px solid #3B3B7A}
+.u2sk .dt circle{fill:#2D2D6B}
+.u2sk text{font-size:6px;font-weight:900;fill:#2D2D6B;text-anchor:middle;pointer-events:none}
+.u2sk text.ok{fill:var(--okc);opacity:.6}.u2sk text.bad{fill:var(--badc)}
+.u2sk .on{stroke:#2D2D6B;stroke-width:1.6;stroke-linecap:round;fill:none}
+.u2sk .x{stroke:#C0603A;stroke-width:.6;fill:none}
+.u2sk .bv{fill:none;stroke:var(--badc);stroke-width:.8}
+
+/* word search: letters on paper, found words under soft coloured bands */
+.u2-ws .u2grid{width:min(100%,380px);gap:0;background:var(--paper)}
+.u2-ws .u2grid>i{font-size:clamp(14px,4.6vw,22px);font-weight:800;color:#5B3416;background:transparent;position:relative;z-index:1}
+.u2wso{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.u2wso line{stroke-width:7.4;stroke-linecap:round;opacity:.42}
+.u2wso line.cur{opacity:.28}
+.u2wso .an{fill:#2D4763;opacity:.18}
+.u2wl{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;width:100%}
+.u2wl span{padding:3px 10px;border-radius:999px;background:var(--surface);box-shadow:var(--e1);font-weight:800;font-size:15px}
+.u2wl span.ok{background:var(--c);color:#fff;text-decoration:line-through;opacity:.85}

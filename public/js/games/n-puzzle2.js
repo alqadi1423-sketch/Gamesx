@@ -51,7 +51,8 @@ const u2LvTag=(o,d)=>`<span class="u2tag">${U2LV[d.lv]||''} • ${o.size(d.pz)}<
 // a solution a bot hands in: right, or (by its level) wrong now and then; the time is decided when the round starts
 const U2BOT={},U2SOL={};
 function u2BotPlan(o,d,s,lv){const k=d.gid+':'+d.rd+':'+s;if(U2BOT[k])return U2BOT[k];const ks=Object.keys(U2BOT);if(ks.length>40)delete U2BOT[ks[0]];
-  const base=o.botT(d.pz)*1000,f=[0,1.7,1.05,.62][lv]*(.8+Math.random()*.45);
+  // a bot never takes much over two minutes, so the levels keep their gap on big boards too
+  const base=Math.min(o.botT(d.pz),62)*1000,f=[0,1.7,1.05,.62][lv]*(.8+Math.random()*.45);
   return U2BOT[k]={ms:Math.round(Math.min(118000,Math.max(6000,base*f))),ok:Math.random()>[0,.22,.1,.03][lv]};}
 function u2Sol(o,d){const k=d.gid+':'+d.rd;if(k in U2SOL)return U2SOL[k];const ks=Object.keys(U2SOL);if(ks.length>12)delete U2SOL[ks[0]];let s=null;try{s=o.solve(d.pz);}catch(e){console.error(e);}return U2SOL[k]=s;}
 
@@ -98,12 +99,12 @@ function u2Game(o){
       if(st.ph==='ready')return `<div class="u2"><div class="spd-card u2ready"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div><div class="u2tags"><span class="spd-rd">جولة ${d.rd+1} من ${d.nr}</span>${u2LvTag(o,d)}</div><p class="note">عندك ${u2Min(u2Cap(o,d))}. ${o.goal||''}</p><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>${u2Board(d)}</div>`;
       if(st.ph==='sent')return `<div class="u2"><div class="spd spd-sent"><div class="spd-ck ${st.pick&&st.pick.s?'':'no'}">${st.pick&&st.pick.s?'✓':'✗'}</div><div class="spdt">${st.pick&&st.pick.s?'حليتها!':'ما انحلّت'}</div>${st.pick&&st.pick.s?`<div class="spd-me">وقتك <b>${u2Fmt(st.pick.ms)}</b></div>`:''}<p class="note">ننتظر الباقين</p>${qzWho(d,ctx)}</div></div>`;
       const left=st.t0+st.cap;
-      return `<div class="u2 u2go u2-${o.cls}"><div class="u2bar"><span class="u2clk">⏱ <b data-u2end="${left}">${u2Left(left)}</b></span>${st.pen?`<span class="u2pen">+${st.pen} ث</span>`:''}${u2LvTag(o,d)}</div>${o.view(d.pz,st.w,st,ctx)}
+      return `<div class="u2 u2go u2-${o.cls}"><div class="u2bar"><span class="u2clk">⏱ <b data-u2end="${left}">${u2Left(left)}</b></span>${u2LvTag(o,d)}</div>${o.view(d.pz,st.w,st,ctx)}
         <div class="u2acts">${o.noUndo?'':`<button class="btn soft" data-ga="undo" ${st.h&&st.h.length?'':'disabled'}>↶ تراجع</button>`}<button class="btn soft" data-ga="clr">مسح</button><button class="btn soft u2quit ${st.q?'sure':''}" data-ga="quit">${st.q?'متأكد؟ استسلم':'استسلم'}</button></div></div>`;},
     click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
       if(d.ph==='lv'){if(a==='nr'&&U2NR.includes(i)){S.u2nr=i;render();return;}if(a==='lv'&&i>=1&&i<=3)act({...d,ph:'gen',lv:i,nr:U2NR.includes(S.u2nr)?S.u2nr:3});return;}
       if(d.ph!=='go'||!d.pz)return;const st=u2St(d,ctx.v);
-      if(a==='start'){if(st.ph!=='ready')return;st.ph='go';st.t0=Date.now();st.cap=u2Cap(o,d);st.w=o.init(d.pz);st.h=[];st.pen=0;u2Save();render();return;}
+      if(a==='start'){if(st.ph!=='ready')return;st.ph='go';st.t0=Date.now();st.cap=u2Cap(o,d);st.w=o.init(d.pz);st.h=[];u2Save();render();return;}
       if(st.ph!=='go')return;
       if(a==='quit'){if(!st.q){st.q=1;render();setTimeout(()=>{if(S.u2===st&&st.q){st.q=0;render();}},3000);return;}u2Send(d,ctx.v,{s:'',ms:Date.now()-st.t0});render();return;}
       st.q=0;
@@ -116,7 +117,7 @@ function u2Game(o){
 // keep the board before a change, for «تراجع»
 function u2Push(st){st.h=st.h||[];st.h.push(JSON.parse(JSON.stringify(st.w)));if(st.h.length>40)st.h.shift();}
 // after every change: a solved board is handed in at once (the same check the host makes)
-function u2Done(o,d,ctx,st){let ok=false;try{const sub=o.sub(d.pz,st.w);ok=!!sub&&o.check(d.pz,sub);if(ok){u2Send(d,ctx.v,{s:sub,ms:Date.now()-st.t0+(st.pen||0)*1000});render();return;}}catch(e){console.error(e);}
+function u2Done(o,d,ctx,st){let ok=false;try{const sub=o.sub(d.pz,st.w);ok=!!sub&&o.check(d.pz,sub);if(ok){u2Send(d,ctx.v,{s:sub,ms:Date.now()-st.t0});render();return;}}catch(e){console.error(e);}
   u2Save();render();}
 
 /* ---------- drag surfaces: a board with data-ud maps the finger to a cell (the board is drawn left to right) ---------- */
