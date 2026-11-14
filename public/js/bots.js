@@ -119,14 +119,7 @@ GAMES.oldmaid.bot=(d,s,lv)=>{const tg=nextSeat(d,s);const n=cardsOf(d.hands[tg])
 GAMES.pig.bot=(d,s,lv)=>{const goal=d.goal-d.sc[s],opp=Math.max(0,...d.sc.filter((_,o)=>o!==s&&d.out[o]!=='1'));
   let hold=[0,10+rnd(15),18,20][lv];if(lv===3){hold=Math.max(14,Math.min(34,21+Math.round((opp-d.sc[s])/8)));if(d.goal-opp<=15)hold=goal;}
   return botDo(d,s,(d.tot>=hold||d.tot>=goal)&&d.tot>0?'bank':'roll',0);};
-GAMES.farkle.bot=(d,s,lv)=>{if(!d.rolled)return botDo(d,s,'roll',0);
-  const free=[...d.dice].map((x,i)=>d.used[i]==='0'?i:-1).filter(i=>i>=0);
-  // take every scoring die: triples first, then ones and fives
-  const by={};free.forEach(i=>{(by[d.dice[i]]=by[d.dice[i]]||[]).push(i);});let sel=[];
-  if(free.length===6&&fkScore(free.map(i=>+d.dice[i]))>=750)sel=free;else{for(const f in by)if(by[f].length>=3)sel.push(...by[f]);for(const f of ['1','5'])if(by[f]&&by[f].length<3)sel.push(...by[f]);}
-  if(!sel.length)return GAMES.farkle.onTimeout(d);S.sel=sel;const sv=fkScore(sel.map(i=>+d.dice[i]));const left=free.length-sel.length;
-  const bank=[0,350+rnd(300),350,300][lv];const go=left===0||(d.tot+sv<bank)||(lv===3&&left>=4&&d.tot+sv<600);
-  return botDo(d,s,go?'keep':'keepbank',0);};
+// ten thousand (farkle): its bots are in speed.js
 // yatzy: see dice.js
 // liar: see dice.js
 // shut: see dice.js
@@ -213,7 +206,6 @@ GAMES.bara.bot=(d,s,lv)=>{if(d.ph==='cat')return baraStart(d,rnd(BARA.length));i
     const i=lv===3&&fit.length?pickR(fit):lv===2&&fit.length&&Math.random()<.7?pickR(fit):pickR(d.opts);return baraGuess(d,i);}
   return GAMES.bara.onTimeout(d);};
 GAMES.close.botPick=(d,s,lv)=>{const Q=GAMES.close.q(d,d.rd);const a=Q[1];const err=[0,.45,.22,.08][lv];return Math.max(0,Math.round(a*(1+(Math.random()*2-1)*err)));};
-GAMES.rps.botPick=()=>rnd(3);
 
 /* ---------- race games ---------- */
 // rolling returns with roll set when there is a real choice; the bot picks its piece on the next tick

@@ -5,21 +5,24 @@
 const SPD_ROUNDS=5;
 function spdKey(d,v){return d.gid+':'+d.rd+':'+v;}
 function spdState(d,v){const k=spdKey(d,v);if(!S.sp||S.sp.key!==k)S.sp={key:k,phase:'ready'};return S.sp;}
-function spdResolve(d,picks){
-  const pts=[...d.pts];const ok=picks.map((p,s)=>p&&p.ok?{s,ms:p.ms}:null).filter(Boolean).sort((a,b)=>a.ms-b.ms);
-  let w=-1;if(ok.length&&(ok.length===1||ok[0].ms<ok[1].ms)){w=ok[0].s;pts[w]++;}
+// rank: the fastest right answer earns 2 and every other right answer 1 (without it only the fastest scores)
+function spdResolve(d,picks,rank){
+  picks=picks.map(p=>p&&typeof p==='object'&&typeof p.ms==='number'&&isFinite(p.ms)?{ok:!!p.ok,ms:Math.max(0,Math.round(p.ms))}:null);
+  const pts=[...d.pts];const ok=picks.map((p,s)=>p&&p.ok?{s,ms:p.ms}:null).filter(Boolean).sort((a,b)=>a.ms-b.ms);const sg=Array(d.pl.length).fill(0);
+  let w=-1;if(ok.length&&(ok.length===1||ok[0].ms<ok[1].ms)){w=ok[0].s;sg[w]=rank?2:1;}
+  if(rank)ok.forEach(x=>{if(x.s!==w)sg[x.s]=1;});sg.forEach((g,s)=>pts[s]+=g);
   const fmt=p=>!p?'—':p.ok?(p.ms/1000).toFixed(2)+' ث':'✗';
   const res=d.pl.map((r,s)=>picks[s]===null&&d.out[s]==='1'?'':`${nm(d,s)} ${fmt(picks[s])}`).filter(Boolean).join('، ')+(w>=0?`. الأسرع: ${nm(d,w)}`:'. محد فاز بالجولة');
-  const rd=d.rd+1;return {...d,pts,rd,res,win:rd>=SPD_ROUNDS?mostPts(pts):null};
+  const rd=d.rd+1;return {...d,pts,rd,res,...(rank?{sg}:{}),win:rd>=SPD_ROUNDS?mostPts(pts):null};
 }
-const spdSubmit=(d,ctx,ok)=>{const st=spdState(d,ctx.v);const ms=Math.round(performance.now()-st.t0);S.sp={...st,phase:'sent'};simulPick(d,ctx.v,{ok:!!ok,ms});};
+const spdSubmit=(d,ctx,ok)=>{const st=spdState(d,ctx.v);const ms=Math.round(performance.now()-st.t0);S.sp={...st,phase:'sent'};try{sfx(ok?'pop':'lose');}catch(e){}simulPick(d,ctx.v,{ok:!!ok,ms});};
 // last round read back from d.res ("name 1.23 ث، name ✗. الأسرع: name"): a row per seat, fastest first
 function spdRows(d){if(!d||!d.res)return null;const body=d.res.replace(/\. (الأسرع: .*|محد فاز بالجولة)$/,'');const es=body.split('، ');const rows=[];
   for(const s of seatsOf(d)){const n=nm(d,s)+' ';const e=es.find(x=>x.startsWith(n));if(!e)continue;const m=/^(?:(\d+(?:\.\d+)?) ث|(✗)|(—))$/.exec(e.slice(n.length));if(!m)continue;rows.push({s,t:m[1]?+m[1]:null,bad:!!m[2]});}
   if(!rows.length)return null;const w=/الأسرع: (.+)$/.exec(d.res);const ws=w?seatsOf(d).find(s=>nm(d,s)===w[1]):null;
   rows.sort((a,b)=>(a.t==null)-(b.t==null)||(a.t??0)-(b.t??0)||a.bad-b.bad);return {rows,w:ws??null};}
 function spdBoard(d){const R=spdRows(d);if(!R)return '';const mx=Math.max(...R.rows.map(r=>r.t||0))||1;
-  return `<div class="spr" id="spr${d.rd}"><div class="spr-h">نتيجة الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${R.rows.map((r,j)=>`<div class="spr-r ${r.s===R.w?'w':''} ${r.t==null?'nt':''}" style="--c:${col(d,r.s)};--j:${j}"><i class="spr-m">${r.s===R.w?'⚡':r.t==null?'':j+1}</i><b>${escH(nm(d,r.s))}</b><span class="spr-bar">${r.t!=null?`<i style="width:${Math.max(8,Math.round(r.t/mx*100))}%"></i>`:''}</span><em>${r.t!=null?r.t.toFixed(2)+' ث':r.bad?'✗ غلط':'—'}</em></div>`).join('')}</div>`;}
+  return `<div class="spr" id="spr${d.rd}"><div class="spr-h">نتيجة الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${R.rows.map((r,j)=>`<div class="spr-r ${r.s===R.w?'w':''} ${r.t==null?'nt':''}" style="--c:${col(d,r.s)};--j:${j}"><i class="spr-m">${r.s===R.w?'⚡':r.t==null?'':j+1}</i><b>${escH(nm(d,r.s))}</b><span class="spr-bar">${r.t!=null?`<i style="width:${Math.max(8,Math.round(r.t/mx*100))}%"></i>`:''}</span><em>${r.t!=null?r.t.toFixed(2)+' ث':r.bad?'✗ غلط':'—'}</em>${d.sg&&d.sg[r.s]?`<u class="spr-g">+${d.sg[r.s]}</u>`:''}</div>`).join('')}</div>`;}
 // the start button comes first, so it stays on screen with eight players; last round's times sit under it
 const readyCard=(title,art,d)=>`<div class="spd spd-ready"><div class="spd-card">${art||`<div class="rdyi">${(GAMES[S.st.g]||{}).icon||''}</div>`}<div class="spdt">${title}</div>${d?`<span class="spd-rd">جولة ${Math.min(d.rd+1,SPD_ROUNDS)} من ${SPD_ROUNDS}</span>`:''}<button class="btn red wide spd-go" data-ga="start">جاهز، ابدأ</button></div>${d?spdBoard(d):''}</div>`;
 // sent: this phone's own result for the round, and who we still wait for
@@ -28,13 +31,13 @@ const waitCard=(d,ctx)=>{let me='',bad=false;if(d&&ctx&&ctx.v!=null&&ctx.v>=0){c
 // a bar that empties while something is on screen for ms
 const drainBar=ms=>`<div class="spbar"><i style="animation-duration:${ms}ms"></i></div>`;
 function spdBase(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
-  // a bot answers right more often and faster on harder levels
-  botPick(d,s,lv){const fast=o.name==='أسرع ضغطة'||o.name==='مبارزة السيوف';const R=fast?[0,[520,880],[360,560],[250,380]][lv]:[0,[5200,9000],[3200,5600],[2000,3600]][lv];
+  // a bot answers right more often and faster on harder levels (a game can size it to its own round with o.bot)
+  botPick(d,s,lv){if(o.bot)return o.bot(d,s,lv);const fast=o.name==='أسرع ضغطة'||o.name==='مبارزة السيوف';const R=fast?[0,[520,880],[360,560],[250,380]][lv]:[0,[5200,9000],[3200,5600],[2000,3600]][lv];
     return {ok:Math.random()<[0,.6,.8,.95][lv],ms:R[0]+rnd(R[1]-R[0])};},
   init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
   status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,SPD_ROUNDS)} من ${SPD_ROUNDS}</small><br>`,true),
-  winExtra:d=>d.res,resolve:spdResolve,noTimer:false,
+  winExtra:d=>d.res,resolve:(d,p)=>spdResolve(d,p,!!o.rank),noTimer:false,
   render(d,ctx){if(d.win!=null)return `<div class="spd">${spdBoard(d)}</div>`;if(!ctx.my)return ctx.v>=0&&hasPicked(d,ctx.v)?waitCard(d,ctx):'';const st=spdState(d,ctx.v);
     if(st.phase==='ready')return readyCard(o.title,o.art,d);return o.view(d,ctx,st);},
   click(a,i,d,ctx){if(!ctx.my)return;const st=spdState(d,ctx.v);
@@ -43,14 +46,18 @@ function spdBase(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
   after:o.after,q:o.q,num:o.num,s:o.s};}
 
 /* ---------- reaction ---------- */
-GAMES.react=spdBase({name:'أسرع ضغطة',lbc:'#C0392B',icon:iconE('#E74C3C','⚡'),title:'لما يصير المربع أخضر اضغط بأسرع ما يمكن',
+GAMES.react=spdBase({name:'أسرع ضغطة',lbc:'#C0392B',icon:iconE('#E74C3C','⚡'),title:'لما يصير المربع أخضر اضغط بأسرع ما يمكن',rank:true,
+  // people press in about 0.25 to 0.4 s; an easy bot is slower and jumps the gun now and then
+  bot:(d,s,lv)=>{const R=[0,[360,620],[280,430],[215,310]][lv];return {ok:Math.random()>[0,.1,.05,.015][lv],ms:R[0]+rnd(R[1]-R[0])};},
   start(d,st){st.phase='wait';const wait=1500+Math.random()*2500;st.timer=setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},wait);},
   view(d,ctx,st){if(st.phase==='wait')return '<button class="rpad wait" id="rpw" data-ga="tap"><span class="rp-i">✋</span>انتظر…<small>لا تضغط قبل الأخضر</small></button>';if(st.phase==='go')return '<button class="rpad go" id="rpg" data-ga="tap"><span class="rp-i">⚡</span>اضغط!</button>';return waitCard(d,ctx);},
   click(a,i,d,ctx,st){if(a!=='tap')return;if(st.phase==='wait'){clearTimeout(st.timer);st.t0=performance.now();toast('بدري! ضغطت قبل الأخضر');spdSubmit(d,ctx,false);return;}if(st.phase==='go')spdSubmit(d,ctx,true);}});
 
 /* ---------- remember the number ---------- */
 const nmShow=d=>2200+d.rd*350;
-GAMES.nmem=spdBase({name:'تذكّر الرقم',lbc:'#2C6E8F',icon:iconE('#3A8DB8','🧠'),title:'يطلع لك رقم لثواني، احفظه واكتبه',
+GAMES.nmem=spdBase({name:'تذكّر الرقم',lbc:'#2C6E8F',icon:iconE('#3A8DB8','🧠'),title:'يطلع لك رقم لثواني، احفظه واكتبه',rank:true,
+  // longer numbers are harder to keep and slower to type
+  bot:(d,s,lv)=>{const n=4+d.rd;return {ok:Math.random()<[0,.9-.12*d.rd,.96-.07*d.rd,.99-.03*d.rd][lv],ms:n*[0,620,460,330][lv]+600+rnd(900)};},
   num(d){const R=srng(d,'nm'+d.rd);let s='';for(let k=0;k<4+d.rd;k++)s+=Math.floor(R()*10);return s;},
   start(d,st){st.phase='show';setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},nmShow(d));},
   view(d,ctx,st){if(st.phase==='show')return `<div class="spd"><div class="spdt">احفظ الرقم</div><div class="nmnum">${[...GAMES.nmem.num(d)].map((c,k)=>`<i style="--k:${k}">${c}</i>`).join('')}</div>${drainBar(nmShow(d))}</div>`;
@@ -60,7 +67,8 @@ GAMES.nmem=spdBase({name:'تذكّر الرقم',lbc:'#2C6E8F',icon:iconE('#3A8D
 
 /* ---------- count the shapes ---------- */
 const CNTE=['🍎','🍋','⭐','🐟','🎈','🌙'];
-GAMES.cnt=spdBase({name:'عدّ الأشكال',lbc:'#7D5BA6',icon:iconE('#9B7BC7','🔍'),title:'تطلع أشكال لثواني، وبعدها نسألك كم واحد منها',
+GAMES.cnt=spdBase({name:'عدّ الأشكال',lbc:'#7D5BA6',icon:iconE('#9B7BC7','🔍'),title:'تطلع أشكال لثواني، وبعدها نسألك كم واحد منها',rank:true,
+  bot:(d,s,lv)=>({ok:Math.random()<[0,.55,.72,.9][lv]-d.rd*.03,ms:[0,2300,1600,1050][lv]+rnd([0,2200,1500,900][lv])}),
   q(d){const R=srng(d,'ct'+d.rd);const n=16+d.rd*4;const a=[];for(let k=0;k<n;k++)a.push(Math.floor(R()*4));const t=Math.floor(R()*4);const c=a.filter(x=>x===t).length;
     const off=[0,1,-1,2].map(x=>c+x).filter(x=>x>=0);while(off.length<4)off.push(c+off.length);const o=withOptions(R,String(c),off.slice(1,4).map(String));return {arr:a,t,c,...o,em:CNTE.slice(0,4).map((e,k)=>CNTE[(k+d.rd)%6])};},
   start(d,st){st.phase='show';setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},2600);},
@@ -69,329 +77,83 @@ GAMES.cnt=spdBase({name:'عدّ الأشكال',lbc:'#7D5BA6',icon:iconE('#9B7BC
   click(a,k,d,ctx,st){if(a==='m'&&st.phase==='go')spdSubmit(d,ctx,k===GAMES.cnt.q(d).a);}});
 
 /* ---------- odd colour ---------- */
-GAMES.oddc=spdBase({name:'اللون المختلف',lbc:'#16816D',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E9E86"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${12+c*27}" y="${12+r*27}" width="23" height="23" rx="5" fill="${r===1&&c===2?'#5fd0bb':'#47c4ad'}"/>`).join('')).join('')}</svg>`,title:'لوح ألوان، فيه مربع لونه يختلف شوي. لقه بأسرع وقت',
+GAMES.oddc=spdBase({name:'اللون المختلف',lbc:'#16816D',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E9E86"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${12+c*27}" y="${12+r*27}" width="23" height="23" rx="5" fill="${r===1&&c===2?'#5fd0bb':'#47c4ad'}"/>`).join('')).join('')}</svg>`,title:'لوح ألوان، فيه مربع لونه يختلف شوي. لقه بأسرع وقت',rank:true,
+  // the board grows and the colours get closer every round
+  bot:(d,s,lv)=>({ok:Math.random()<[0,.86,.93,.98][lv]-d.rd*.02,ms:[0,2100,1500,950][lv]+d.rd*[0,350,250,150][lv]+rnd([0,2000,1300,700][lv])}),
   q(d){const R=srng(d,'oc'+d.rd);const z=4+Math.min(d.rd,2);const h=Math.floor(R()*360),l=50;const dl=Math.max(5,16-d.rd*3);return {z,odd:Math.floor(R()*z*z),c:`hsl(${h} 65% ${l}%)`,o:`hsl(${h} 65% ${l+dl}%)`};},
   start(d,st){st.phase='go';st.t0=performance.now();},
   view(d,ctx,st){const Q=GAMES.oddc.q(d);return `<div class="spd"><div class="spdt oc-t">وين المربع المختلف؟</div><div class="cellgrid ocg" style="grid-template-columns:repeat(${Q.z},minmax(0,1fr))">${Array(Q.z*Q.z).fill(0).map((_,i)=>`<button class="cg" style="background:${i===Q.odd?Q.o:Q.c};--k:${(i%Q.z)+Math.floor(i/Q.z)}" data-ga="m" data-i="${i}"></button>`).join('')}</div></div>`;},
   click(a,i,d,ctx,st){if(a==='m'&&st.phase==='go')spdSubmit(d,ctx,i===GAMES.oddc.q(d).odd);}});
 
-/* ---------- quick sudoku ---------- */
-function sudo4(d){const R=srng(d,'su'+d.rd);let g=[[1,2,3,4],[3,4,1,2],[2,1,4,3],[4,3,2,1]];
-  const p=[1,2,3,4];for(let i=3;i>0;i--){const j=Math.floor(R()*(i+1));[p[i],p[j]]=[p[j],p[i]];}g=g.map(r=>r.map(x=>p[x-1]));
-  if(R()<.5)g=[g[1],g[0],g[2],g[3]];if(R()<.5)g=g.map(r=>[r[1],r[0],r[2],r[3]]);if(R()<.5)g=[g[2],g[3],g[0],g[1]];
-  const sol=g.flat();const holes=new Set();while(holes.size<7+Math.min(d.rd,3))holes.add(Math.floor(R()*16));return {sol,holes:[...holes]};}
-// every row, column and 2x2 box holds 1 to 4 once (a puzzle can have more than one right answer)
-const sudoOk=b=>[0,1,2,3].every(k=>[[0,1,2,3].map(j=>b[k*4+j]),[0,4,8,12].map(j=>b[k+j]),[0,1,4,5].map(j=>b[(k>>1)*8+(k&1)*2+j])].every(g=>g.every(x=>x>=1&&x<=4)&&new Set(g).size===4));
-// view helpers: the row, column and box of a cell, and the cells whose number repeats in one of them
-const suPeers=(i,j)=>i!==j&&((i>>2)===(j>>2)||(i&3)===(j&3)||(((i>>3)<<1)|((i&3)>>1))===(((j>>3)<<1)|((j&3)>>1)));
-function suBad(b){const bad=new Set();for(let i=0;i<16;i++)if(b[i])for(let j=0;j<16;j++)if(b[j]===b[i]&&suPeers(i,j))bad.add(i);return bad;}
-GAMES.sudo=spdBase({name:'سودوكو سريع',lbc:'#34495E',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A6582"/><rect x="14" y="14" width="72" height="72" rx="6" fill="#fff"/><path d="M50 14V86M14 50H86" stroke="#2D4763" stroke-width="3"/><path d="M32 14V86M68 14V86M14 32H86M14 68H86" stroke="#c9d6e4" stroke-width="1.5"/><text x="23" y="29" font-size="13" font-weight="800" fill="#2D4763" text-anchor="middle">1</text><text x="59" y="47" font-size="13" font-weight="800" fill="#EC6158" text-anchor="middle">4</text><text x="41" y="83" font-size="13" font-weight="800" fill="#2D4763" text-anchor="middle">3</text></svg>`,title:'كمّل لوحة 4×4: كل صف وعمود ومربع فيه 1 إلى 4 بدون تكرار',
+/* ---------- quick sudoku: five puzzles that grow from an easy 4×4 to a hard 6×6, each with one solution ---------- */
+// size, box (rows × columns) and empty cells of each round
+const SUL=[{n:4,br:2,bc:2,h:6,lv:'سهل'},{n:4,br:2,bc:2,h:10,lv:'متوسط'},{n:6,br:2,bc:3,h:14,lv:'متوسط'},{n:6,br:2,bc:3,h:18,lv:'صعب'},{n:6,br:2,bc:3,h:22,lv:'صعب جدًا'}];
+const suL=rd=>SUL[Math.max(0,Math.min(rd,SUL.length-1))];
+// the cells that share a row, column or box with each cell (per size)
+const SUP={};
+function suPeerList(L){const k=L.n+'x'+L.br;if(SUP[k])return SUP[k];const n=L.n,N=n*n,box=i=>Math.floor(Math.floor(i/n)/L.br)*(n/L.bc)+Math.floor(i%n/L.bc);
+  return SUP[k]=[...Array(N).keys()].map(i=>[...Array(N).keys()].filter(j=>j!==i&&(Math.floor(j/n)===Math.floor(i/n)||j%n===i%n||box(j)===box(i))));}
+// how many ways a board can be finished (stops at 2)
+function suCount(L,b,P){let i=-1,best=99;for(let k=0;k<b.length;k++)if(!b[k]){let c=0;for(let v=1;v<=L.n;v++)if(!P[k].some(j=>b[j]===v))c++;if(c<best){best=c;i=k;if(c<2)break;}}
+  if(i<0)return 1;let c=0;for(let v=1;v<=L.n&&c<2;v++){if(P[i].some(j=>b[j]===v))continue;b[i]=v;c+=suCount(L,b,P);b[i]=0;}return c;}
+// a puzzle drawn from the game's seed: a shuffled full board, then cells emptied one by one while the solution stays the only one
+const SUC={};
+function sudoP(d,rd){rd=rd==null?d.rd:rd;const key=d.gid+':'+rd;if(SUC[key])return SUC[key];const L=suL(rd),n=L.n,R=srng(d,'su'+rd),P=suPeerList(L);
+  const sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+  const dig=sh([...Array(n).keys()].map(x=>x+1));
+  const rows=sh([...Array(n/L.br).keys()]).flatMap(b=>sh([...Array(L.br).keys()]).map(r=>b*L.br+r)),cols=sh([...Array(n/L.bc).keys()]).flatMap(b=>sh([...Array(L.bc).keys()]).map(c=>b*L.bc+c));
+  const base=(r,c)=>((r%L.br)*L.bc+Math.floor(r/L.br)+c)%n;
+  const sol=[];for(let r=0;r<n;r++)for(let c=0;c<n;c++)sol.push(dig[base(rows[r],cols[c])]);
+  const b=sol.slice(),holes=[];for(const i of sh([...Array(n*n).keys()])){if(holes.length>=L.h)break;const v=b[i];b[i]=0;if(suCount(L,b.slice(),P)===1)holes.push(i);else b[i]=v;}
+  const keys=Object.keys(SUC);if(keys.length>12)delete SUC[keys[0]];
+  return SUC[key]={L,sol,holes};}
+// every row, column and box holds 1 to n once
+const sudoOk=(L,b)=>{const P=suPeerList(L);return b.every((x,i)=>x>=1&&x<=L.n&&!P[i].some(j=>b[j]===x));};
+const suPeers=(L,i,j)=>suPeerList(L)[i].includes(j);
+function suBad(L,b){const P=suPeerList(L),bad=new Set();b.forEach((x,i)=>{if(x&&P[i].some(j=>b[j]===x))bad.add(i);});return bad;}
+GAMES.sudo=spdBase({name:'سودوكو سريع',lbc:'#34495E',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A6582"/><rect x="14" y="14" width="72" height="72" rx="6" fill="#fff"/><path d="M50 14V86M14 50H86" stroke="#2D4763" stroke-width="3"/><path d="M32 14V86M68 14V86M14 32H86M14 68H86" stroke="#c9d6e4" stroke-width="1.5"/><text x="23" y="29" font-size="13" font-weight="800" fill="#2D4763" text-anchor="middle">1</text><text x="59" y="47" font-size="13" font-weight="800" fill="#EC6158" text-anchor="middle">4</text><text x="41" y="83" font-size="13" font-weight="800" fill="#2D4763" text-anchor="middle">3</text></svg>`,title:'كمّل اللوحة: كل صف وعمود ومربع فيه كل رقم مرة وحدة. تبدأ 4×4 سهلة وتكبر لين 6×6 صعبة',
+  rank:true,
+  // a bot needs a few seconds for each empty cell, more on bigger boards
+  bot:(d,s,lv)=>{const P=sudoP(d);return {ok:Math.random()<[0,.78,.9,.97][lv],ms:P.holes.length*[0,2900,2000,1350][lv]*(P.L.n===6?1.25:1)+rnd(2500)};},
   start(d,st){st.phase='go';st.t0=performance.now();st.v={};st.cur=null;},
-  view(d,ctx,st){const P=sudo4(d);const b=P.sol.map((x,i)=>P.holes.includes(i)?+(st.v[i]||0):x);const bad=suBad(b);const cv=st.cur!=null?b[st.cur]:0;const left=P.holes.filter(i=>!st.v[i]).length;
-    const cls=i=>[st.cur===i?'cur':'',st.cur!=null&&suPeers(i,st.cur)?'peer':'',cv&&b[i]===cv&&i!==st.cur?'same':'',bad.has(i)?'bad':''].join(' ');
-    return `<div class="sudo">${P.sol.map((x,i)=>P.holes.includes(i)?`<button class="su ${cls(i)}" data-ga="c" data-i="${i}">${st.v[i]||''}</button>`:`<div class="su fixed ${cls(i)}">${x}</div>`).join('')}</div>
-    <p class="note su-n">${left?`باقي ${left} ${left>2?'خانات':'خانة'}`:bad.size?'فيه رقم مكرر، صلّحه':'تمام! اضغط خلصت'}</p>
-    <div class="acts supad">${[1,2,3,4].map(n=>`<button class="btn navy" data-ga="n" data-i="${n}">${n}</button>`).join('')}</div><button class="btn red wide" data-ga="go" ${P.holes.every(i=>st.v[i])?'':'disabled'}>خلصت</button>`;},
-  click(a,i,d,ctx,st){if(st.phase!=='go')return;const P=sudo4(d);
-    if(a==='c'){st.cur=i;render();return;}if(a==='n'&&st.cur!=null){st.v[st.cur]=i;const nx=P.holes.find(h=>!st.v[h]);st.cur=nx??st.cur;render();return;}
-    if(a==='go'&&P.holes.every(h=>st.v[h]))spdSubmit(d,ctx,sudoOk(P.sol.map((x,k)=>P.holes.includes(k)?+st.v[k]:x)));}});
+  view(d,ctx,st){const P=sudoP(d),L=P.L,n=L.n;const b=P.sol.map((x,i)=>P.holes.includes(i)?+(st.v[i]||0):x);const bad=suBad(L,b);const cv=st.cur!=null?b[st.cur]:0;const left=P.holes.filter(i=>!st.v[i]).length;
+    const edge=i=>{const r=Math.floor(i/n),c=i%n;return (c%L.bc===L.bc-1&&c<n-1?' er':'')+(r%L.br===L.br-1&&r<n-1?' eb':'');};
+    const cls=i=>[st.cur===i?'cur':'',st.cur!=null&&suPeers(L,i,st.cur)?'peer':'',cv&&b[i]===cv&&i!==st.cur?'same':'',bad.has(i)?'bad':''].join(' ')+(n===6?edge(i):'');
+    return `<div class="su-lv"><span>${n}×${n}</span><b>${L.lv}</b></div><div class="sudo ${n===6?'s6':''}" id="su${d.rd}">${P.sol.map((x,i)=>P.holes.includes(i)?`<button class="su ${cls(i)}" data-ga="c" data-i="${i}">${st.v[i]||''}</button>`:`<div class="su fixed ${cls(i)}">${x}</div>`).join('')}</div>
+    <p class="note su-n">${left?`باقي ${left} ${left>2&&left<11?'خانات':'خانة'}`:bad.size?'فيه رقم مكرر، صلّحه':'تمام! اضغط خلصت'}</p>
+    <div class="acts supad ${n===6?'s6':''}">${[...Array(n).keys()].map(k=>`<button class="btn navy" data-ga="n" data-i="${k+1}">${k+1}</button>`).join('')}</div><button class="btn red wide" data-ga="go" ${P.holes.every(i=>st.v[i])?'':'disabled'}>خلصت</button>`;},
+  click(a,i,d,ctx,st){if(st.phase!=='go')return;const P=sudoP(d);
+    if(a==='c'){if(!P.holes.includes(i))return;st.cur=i;render();return;}if(a==='n'&&st.cur!=null&&i>=1&&i<=P.L.n){st.v[st.cur]=i;const nx=P.holes.find(h=>!st.v[h]);st.cur=nx??st.cur;render();return;}
+    if(a==='go'&&P.holes.every(h=>st.v[h]))spdSubmit(d,ctx,sudoOk(P.L,P.sol.map((x,k)=>P.holes.includes(k)?+st.v[k]:x)));}});
 
 /* ---------- typing race ---------- */
-const SENT=['الصبر مفتاح الفرج','من جد وجد ومن زرع حصد','العلم نور','خير الكلام ما قل ودل','الوقت من ذهب','القناعة كنز لا يفنى','الجار قبل الدار','الصديق وقت الضيق','في التأني السلامة','اطلبوا العلم من المهد إلى اللحد'];
+// sentences by length: the first rounds are short, the last ones long (proverbs and sayings, written as they are known)
+const SENT=[
+['العلم نور','الوقت من ذهب','الصبر مفتاح الفرج','الجار قبل الدار','الصديق وقت الضيق','في التأني السلامة','العقل زينة','لكل مجتهد نصيب','الجزاء من جنس العمل','خير الأمور أوسطها','الكلمة الطيبة صدقة','رب أخ لم تلده أمك','القناعة كنز لا يفنى','العلم في الصغر كالنقش على الحجر','من سار على الدرب وصل','الحاجة أم الاختراع','اتق شر الحليم إذا غضب','لكل مقام مقال','الوحدة خير من جليس السوء','درهم وقاية خير من قنطار علاج'],
+['من جد وجد ومن زرع حصد','خير الكلام ما قل ودل','عامل الناس كما تحب أن يعاملوك','إذا كان الكلام من فضة فالسكوت من ذهب','لا تؤجل عمل اليوم إلى الغد','من حفر حفرة لأخيه وقع فيها','على قدر أهل العزم تأتي العزائم','اليد الواحدة لا تصفق','ما كل ما يتمنى المرء يدركه','خير جليس في الزمان كتاب','تجري الرياح بما لا تشتهي السفن','من طلب العلا سهر الليالي','أول الغيث قطرة','لا تؤخر الشكر إلى الغد','العقل السليم في الجسم السليم','لا تحقرن من المعروف شيئا','الطيور على أشكالها تقع','إن غدا لناظره قريب','من عاشر القوم أربعين يوما صار منهم','كل إناء بما فيه ينضح'],
+['اطلبوا العلم من المهد إلى اللحد','إذا هبت رياحك فاغتنمها فإن لكل خافقة سكون','ليس الفتى من يقول كان أبي إن الفتى من يقول ها أنا ذا','أعز مكان في الدنى سرج سابح وخير جليس في الزمان كتاب','الوقت كالسيف إن لم تقطعه قطعك','إذا أنت أكرمت الكريم ملكته وإن أنت أكرمت اللئيم تمردا','من لم يذق مر التعلم ساعة تجرع ذل الجهل طول حياته','كن جميلا ترى الوجود جميلا','وما نيل المطالب بالتمني ولكن تؤخذ الدنيا غلابا','ومن يتهيب صعود الجبال يعش أبد الدهر بين الحفر','لا يلدغ المؤمن من جحر واحد مرتين','قيمة كل امرئ ما يحسنه','العاقل من اتعظ بغيره']];
+const tyLv=rd=>rd<2?0:rd<4?1:2;
 // the sentence split into what is typed right, the first wrong letter and what is left (letters compared like normAr does)
 const tyN=c=>({'أ':'ا','إ':'ا','آ':'ا','ى':'ي','ة':'ه'}[c]||c);
 function tyHTML(s,v){const a=[...s],b=[...String(v||'')];let k=0;while(k<a.length&&k<b.length&&tyN(a[k])===tyN(b[k]))k++;const err=k<b.length&&k<a.length;
   return `<span class="ty-ok">${escH(a.slice(0,k).join(''))}</span><span class="ty-bad">${escH(err?a[k]:'')}</span><span class="ty-rest">${escH(a.slice(k+(err?1:0)).join(''))}</span>`;}
 const tyPct=(s,v)=>{const a=[...s],b=[...String(v||'')];let k=0;while(k<a.length&&k<b.length&&tyN(a[k])===tyN(b[k]))k++;return Math.round(k/a.length*100);};
 GAMES.typing=spdBase({name:'أسرع كتابة',lbc:'#8E44AD',icon:iconE('#A55CC4','⌨️'),title:'تطلع جملة، اكتبها بالضبط بأسرع وقت',
-  s(d){return SENT[Math.floor(srng(d,'ty')()*1000+d.rd)%SENT.length];},
+  rank:true,
+  // a sentence a round, from the list of its length; none repeats in one game
+  s(d,rd){rd=rd==null?d.rd:rd;const L=SENT[tyLv(rd)],R=srng(d,'ty'+tyLv(rd));const o=[...L.keys()];for(let i=o.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[o[i],o[j]]=[o[j],o[i]];}return L[o[rd-[0,2,4][tyLv(rd)]]%L.length];},
+  // a bot types two to four letters a second, faster on harder levels
+  bot:(d,s,lv)=>{const n=[...GAMES.typing.s(d)].length;return {ok:Math.random()<[0,.8,.9,.97][lv],ms:Math.round(n/[0,1.9,2.7,3.8][lv]*1000)+700+rnd(1500)};},
   start(d,st){st.phase='go';st.t0=performance.now();},
   view(d,ctx,st){const s=GAMES.typing.s(d),v=S.draft.ty||'';return `<div class="qbox tybox"><div class="ty-s">${tyHTML(s,v)}</div><div class="ty-pr"><i style="width:${tyPct(s,v)}%"></i></div></div><input class="field" data-draft="ty" value="${escH(v)}" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="اكتب هنا…"><button class="btn red wide" data-ga="go">أرسل</button>`;},
   click(a,i,d,ctx,st){if(a!=='go'||st.phase!=='go')return;const v=normAr(S.draft.ty||'');delete S.draft.ty;spdSubmit(d,ctx,v===normAr(GAMES.typing.s(d)));}});
 // live colouring while typing (typing does not redraw the screen)
 document.addEventListener('input',e=>{const t=e.target;if(!t||!t.dataset||t.dataset.draft!=='ty'||S.st.g!=='typing'||!S.st.d)return;const b=document.querySelector('.tybox');if(!b)return;
   const s=GAMES.typing.s(S.st.d);const x=b.querySelector('.ty-s'),p=b.querySelector('.ty-pr i');if(x)x.innerHTML=tyHTML(s,t.value);if(p)p.style.width=tyPct(s,t.value)+'%';});
-/* ---------- more quiz packs ---------- */
-const QPACK=(name,lbc,icon,list)=>makeQuiz({name,lbc,icon,gen(d,rd){const R=srng(d,name);const ord=[...list.keys()];for(let i=ord.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}const [q,right,wr]=list[ord[rd%ord.length]];return {q,...withOptions(srng(d,name+rd),right,wr)};}});
-GAMES.islam=QPACK('معلومات إسلامية','#1F7A55',iconE('#2E9C6E','🕌'),[
-['كم عدد أركان الإسلام؟','5',['4','6','7']],['كم عدد أركان الإيمان؟','6',['5','7','4']],['كم صلاة مفروضة في اليوم والليلة؟','5',['3','4','6']],
-['ما أقصر سورة في القرآن الكريم؟','الكوثر',['الإخلاص','العصر','الناس']],['كم عدد أجزاء القرآن الكريم؟','30',['20','40','60']],['ما أول سورة في المصحف؟','الفاتحة',['البقرة','العلق','الناس']],
-['ما آخر سورة في المصحف؟','الناس',['الفلق','الإخلاص','الكوثر']],['ما السورة التي لا تبدأ بالبسملة؟','التوبة',['الأنفال','يس','الملك']],['في أي مدينة وُلد النبي صلى الله عليه وسلم؟','مكة المكرمة',['المدينة المنورة','الطائف','القدس']],
-['ما اسم والد النبي صلى الله عليه وسلم؟','عبدالله',['عبدالمطلب','أبو طالب','هاشم']],['ما أول مسجد بُني في الإسلام؟','مسجد قباء',['المسجد النبوي','المسجد الحرام','المسجد الأقصى']],['كم ركعة في صلاة المغرب؟','3',['2','4','5']],
-['كم ركعة في صلاة الظهر؟','4',['2','3','5']],['في أي غار نزل الوحي أول مرة؟','غار حراء',['غار ثور','غار الكهف','غار أحد']],['أي نبي ابتلعه الحوت؟','يونس',['موسى','نوح','يوسف']],
-['أي نبي رفع قواعد الكعبة مع ابنه إسماعيل؟','إبراهيم',['نوح','موسى','عيسى']],['أي نبي يُلقب بكليم الله؟','موسى',['عيسى','إبراهيم','محمد صلى الله عليه وسلم']],['في أي سنة هجرية كانت غزوة بدر؟','2',['1','3','5']],
-['في أي شهر يصوم المسلمون؟','رمضان',['شعبان','رجب','شوال']],['أي سورة تسمى أم الكتاب؟','الفاتحة',['البقرة','يس','الإخلاص']],['ما أطول سورة في القرآن الكريم؟','البقرة',['آل عمران','النساء','الأعراف']],
-['كم عدد سور القرآن الكريم؟','114',['110','112','120']],['إلى أي مدينة هاجر النبي صلى الله عليه وسلم؟','المدينة المنورة',['الطائف','الحبشة','مكة المكرمة']],['أي نبي صنع السفينة؟','نوح',['هود','صالح','لوط']],
-['كم عدد آيات سورة الفاتحة؟','7',['5','6','8']],
-['ما السورة التي تعدل ثلث القرآن الكريم؟','الإخلاص',['الفاتحة','الكوثر','الناس']],
-['ما أعظم آية في القرآن الكريم؟','آية الكرسي',['آية الدين','آخر آية في سورة البقرة','أول آية في سورة الفاتحة']],
-['ما أطول آية في القرآن الكريم؟','آية الدين',['آية الكرسي','آية النور','آية المواريث']],
-['في أي سورة توجد آية الكرسي؟','البقرة',['آل عمران','النساء','المائدة']],
-['ما السورة التي تكررت فيها البسملة مرتين؟','النمل',['التوبة','الفاتحة','يس']],
-['ما اسم أم النبي صلى الله عليه وسلم؟','آمنة بنت وهب',['حليمة السعدية','خديجة بنت خويلد','فاطمة بنت أسد']],
-['ما اسم مرضعة النبي صلى الله عليه وسلم في بني سعد؟','حليمة السعدية',['أم أيمن','آمنة بنت وهب','سمية بنت خياط']],
-['من أول من آمن من الرجال الأحرار؟','أبو بكر الصديق',['عمر بن الخطاب','عثمان بن عفان','الزبير بن العوام']],
-['من أول من آمن من النساء؟','خديجة بنت خويلد',['عائشة بنت أبي بكر','فاطمة الزهراء','سمية بنت خياط']],
-['من أول شهيد في الإسلام؟','سمية بنت خياط',['حمزة بن عبدالمطلب','مصعب بن عمير','سعد بن معاذ']],
-['من مؤذن الرسول صلى الله عليه وسلم المشهور؟','بلال بن رباح',['عمار بن ياسر','زيد بن حارثة','أنس بن مالك']],
-['من الملقب بالفاروق؟','عمر بن الخطاب',['أبو بكر الصديق','عثمان بن عفان','علي بن أبي طالب']],
-['من الملقب بذي النورين؟','عثمان بن عفان',['علي بن أبي طالب','عمر بن الخطاب','الزبير بن العوام']],
-['من الملقب بسيف الله المسلول؟','خالد بن الوليد',['حمزة بن عبدالمطلب','سعد بن أبي وقاص','عمرو بن العاص']],
-['من الملقب بأسد الله؟','حمزة بن عبدالمطلب',['خالد بن الوليد','الزبير بن العوام','سعد بن معاذ']],
-['من الصحابي الملقب بأمين هذه الأمة؟','أبو عبيدة بن الجراح',['أبو بكر الصديق','سعد بن معاذ','معاذ بن جبل']],
-['من أول خليفة للمسلمين؟','أبو بكر الصديق',['عمر بن الخطاب','عثمان بن عفان','علي بن أبي طالب']],
-['كم عدد الخلفاء الراشدين؟','4',['3','5','6']],
-['في أي غزوة استشهد حمزة بن عبدالمطلب؟','أحد',['بدر','حنين','تبوك']],
-['في أي غزوة حفر المسلمون الخندق؟','الأحزاب',['بدر','أحد','تبوك']],
-['في أي سنة هجرية كان فتح مكة؟','8',['6','7','10']],
-['في أي شهر كانت غزوة بدر؟','رمضان',['شوال','محرم','رجب']],
-['كم كان عمر النبي صلى الله عليه وسلم حين نزل عليه الوحي؟','40',['25','35','50']],
-['كم كان عمر النبي صلى الله عليه وسلم حين توفي؟','63',['60','65','70']],
-['ما الغار الذي اختبأ فيه النبي وأبو بكر في الهجرة؟','غار ثور',['غار حراء','غار أحد','غار الكهف']],
-['ما اسم الدابة التي ركبها النبي في رحلة الإسراء؟','البراق',['القصواء','العضباء','الدلدل']],
-['من أي مسجد بدأت رحلة الإسراء؟','المسجد الحرام',['المسجد النبوي','مسجد قباء','المسجد الأقصى']],
-['ما أول قبلة للمسلمين؟','المسجد الأقصى',['الكعبة المشرفة','مسجد قباء','المسجد النبوي']],
-['كم ركعة في صلاة الفجر؟','2',['3','4','1']],
-['كم ركعة في صلاة العشاء؟','4',['2','3','5']],
-['كم تكبيرة في صلاة الجنازة؟','4',['3','5','6']],
-['ما الركن الخامس من أركان الإسلام؟','الحج',['الصوم','الزكاة','الصلاة']],
-['ما الركن الثاني من أركان الإسلام؟','الصلاة',['الزكاة','الصوم','الحج']],
-['كم مقدار زكاة المال؟','ربع العشر',['العشر','نصف العشر','الخمس']],
-['كم نصاب زكاة الذهب بالجرام تقريبًا؟','85',['50','100','200']],
-['في أي شهر هجري يكون الحج؟','ذو الحجة',['رمضان','شوال','محرم']],
-['ما اسم اليوم التاسع من ذي الحجة؟','يوم عرفة',['يوم التروية','يوم النحر','يوم القر']],
-['ما اسم اليوم الثامن من ذي الحجة؟','يوم التروية',['يوم عرفة','يوم النحر','يوم القر']],
-['كم عدد أشواط الطواف حول الكعبة؟','7',['5','3','9']],
-['بين أي جبلين يكون السعي؟','الصفا والمروة',['عرفات ومزدلفة','أحد وثور','حراء وثور']],
-['ما اسم البئر المباركة في المسجد الحرام؟','زمزم',['بضاعة','رومة','أريس']],
-['ما أول شهر في السنة الهجرية؟','محرم',['رمضان','صفر','ربيع الأول']],
-['ما آخر شهر في السنة الهجرية؟','ذو الحجة',['ذو القعدة','شعبان','رمضان']],
-['من جعل بداية التاريخ الإسلامي من الهجرة؟','عمر بن الخطاب',['أبو بكر الصديق','عثمان بن عفان','علي بن أبي طالب']],
-['في أي ليلة نزل القرآن الكريم؟','ليلة القدر',['ليلة الإسراء','ليلة النصف من شعبان','ليلة العيد']],
-['ما اسم الملك الموكل بالوحي؟','جبريل',['ميكائيل','إسرافيل','مالك']],
-['ما اسم خازن النار؟','مالك',['رضوان','جبريل','ميكائيل']],
-['كم عدد الأنبياء المذكورين بأسمائهم في القرآن الكريم؟','25',['20','30','40']],
-['أي نبي ألقي في النار فكانت بردًا وسلامًا؟','إبراهيم',['موسى','يونس','لوط']],
-['على أي نبي نزل الزبور؟','داود',['سليمان','موسى','عيسى']],
-['أي نبي كان يفهم لغة الطير والنمل؟','سليمان',['داود','يوسف','موسى']],
-['أي نبي ألقاه إخوته في البئر؟','يوسف',['يونس','إسماعيل','موسى']],
-['أي نبي تكلم في المهد؟','عيسى',['يحيى','موسى','إسحاق']],
-['ما السورة الوحيدة التي سميت باسم امرأة؟','مريم',['النساء','الطلاق','المجادلة']],
-['أي نبي اشتهر بالصبر على المرض؟','أيوب',['يعقوب','يونس','زكريا']],
-['أي نبي أرسل إلى قوم عاد؟','هود',['صالح','شعيب','لوط']],
-['أي نبي أرسل إلى قوم ثمود؟','صالح',['هود','شعيب','نوح']],
-['أي نبي أرسل إلى أهل مدين؟','شعيب',['هود','صالح','لوط']],
-['ما معجزة نبي الله صالح عليه السلام؟','الناقة',['العصا','السفينة','الحوت']],
-['ما اسم امرأة فرعون المؤمنة؟','آسيا',['مريم','سارة','هاجر']],
-['كم سنة لبث نوح في قومه يدعوهم؟','950',['500','1000','700']],
-['على أي جبل استقرت سفينة نوح؟','الجودي',['أحد','الطور','حراء']],
-['كم عدد أبواب الجنة؟','8',['7','6','10']],
-['ما اسم الباب الذي يدخل منه الصائمون الجنة؟','الريان',['الفردوس','السلام','الرحمة']],
-['ما السورة التي تسمى سورة الحمد؟','الفاتحة',['الإخلاص','الكوثر','العصر']],
-['ما السورة التي يستحب قراءتها يوم الجمعة؟','الكهف',['يس','الملك','الواقعة']],
-['ما الصلاة التي ليس فيها ركوع ولا سجود؟','صلاة الجنازة',['صلاة العيد','صلاة الاستسقاء','صلاة الكسوف']],
-['ما الصلاة التي تصلى لطلب نزول المطر؟','صلاة الاستسقاء',['صلاة الاستخارة','صلاة الكسوف','صلاة الضحى']],
-['ما الصلاة التي تصلى عند التردد في أمر مباح؟','صلاة الاستخارة',['صلاة الاستسقاء','صلاة الكسوف','صلاة الضحى']],
-['كم عدد الصلوات التي يجهر فيها بالقراءة في اليوم والليلة؟','3',['2','4','5']],
-['في أي مدينة دفن النبي صلى الله عليه وسلم؟','المدينة المنورة',['مكة المكرمة','الطائف','القدس']],
-['في أي معركة انتصر المسلمون على الروم بقيادة خالد بن الوليد؟','اليرموك',['القادسية','نهاوند','حطين']],
-['في أي معركة انتصر المسلمون على الفرس بقيادة سعد بن أبي وقاص؟','القادسية',['اليرموك','حطين','ملاذكرد']],
-['من القائد الذي حرر بيت المقدس بعد معركة حطين؟','صلاح الدين الأيوبي',['خالد بن الوليد','طارق بن زياد','محمد الفاتح']],
-['من القائد الذي عبر المضيق وفتح الأندلس؟','طارق بن زياد',['عمرو بن العاص','عقبة بن نافع','صلاح الدين الأيوبي']],
-['من فتح القسطنطينية؟','محمد الفاتح',['صلاح الدين الأيوبي','طارق بن زياد','قطز']],
-['من الصحابي الذي اهتز لموته عرش الرحمن؟','سعد بن معاذ',['سعد بن أبي وقاص','معاذ بن جبل','حمزة بن عبدالمطلب']],
-['من الصحابي الذي جمع القرآن في عهد أبي بكر؟','زيد بن ثابت',['أبي بن كعب','عبدالله بن مسعود','معاذ بن جبل']],
-['في عهد أي خليفة جمع المسلمون على مصحف واحد؟','عثمان بن عفان',['أبو بكر الصديق','عمر بن الخطاب','علي بن أبي طالب']],
-['في أي سورة ذكر اسم الصحابي زيد صراحة؟','الأحزاب',['النور','التوبة','الحجرات']],
-['كم عدد السور التي تبدأ بـ«الحمد لله»؟','5',['3','4','6']],
-['كم مرة وردت البسملة كاملة في القرآن الكريم؟','114',['113','112','115']],
-['ما الركن الأعظم في الحج؟','الوقوف بعرفة',['طواف الوداع','السعي','رمي الجمرات']],
-['أي جمرة ترمى وحدها يوم النحر؟','جمرة العقبة',['الجمرة الصغرى','الجمرة الوسطى','الجمرات الثلاث']]
-]);
-GAMES.sci=QPACK('علوم وطبيعة','#2C7DA0',iconE('#3D97C0','🔬'),[
-['ما الصيغة الكيميائية للماء؟','H₂O',['CO₂','O₂','H₂O₂']],['أي غاز نحتاجه للتنفس؟','الأكسجين',['النيتروجين','الهيليوم','ثاني أكسيد الكربون']],['كم عظمة في جسم الإنسان البالغ؟','206',['186','216','306']],
-['بأي وحدة تقاس القوة؟','النيوتن',['الجول','الواط','الباسكال']],['بأي وحدة يقاس الجهد الكهربائي؟','الفولت',['الأمبير','الأوم','الواط']],['أيهما أسرع؟','الضوء',['الصوت','الرياح','الطائرة']],
-['ما أقرب نجم إلى الأرض؟','الشمس',['سيريوس','القمر','المريخ']],['ما رمز عنصر الحديد؟','Fe',['Ir','Fi','Pb']],['ما رمز عنصر الذهب؟','Au',['Ag','Go','Gd']],
-['ما أصغر وحدة بنائية في الكائن الحي؟','الخلية',['الذرة','النسيج','العضو']],['كم كروموسوم في خلية الإنسان عادة؟','46',['23','44','48']],['عند كم درجة مئوية يتجمد الماء؟','0',['10','-10','4']],
-['ما اسم القوة التي تشدنا نحو الأرض؟','الجاذبية',['الاحتكاك','المغناطيسية','الطفو']],['أي عضو ينقي الدم من الفضلات؟','الكلية',['القلب','الرئة','المعدة']],['بماذا تتنفس الأسماك؟','الخياشيم',['الرئتين','الجلد','الزعانف']],
-['أين يُمتص أغلب الغذاء في الجسم؟','الأمعاء الدقيقة',['المعدة','المريء','الكبد']],['ما اسم العملية التي تصنع بها النباتات غذاءها؟','البناء الضوئي',['التنفس','التبخر','الهضم']],['ما الذي يقيسه الترمومتر؟','الحرارة',['الضغط','الرطوبة','السرعة']],
-['أي كوكب نعيش عليه؟','الأرض',['المريخ','الزهرة','عطارد']],['كم رجل للحشرة؟','6',['4','8','10']],
-['ما أكبر كوكب في المجموعة الشمسية؟','المشتري',['زحل','الأرض','نبتون']],
-['ما أقرب كوكب إلى الشمس؟','عطارد',['الزهرة','المريخ','الأرض']],
-['ما الكوكب الملقب بالكوكب الأحمر؟','المريخ',['الزهرة','المشتري','عطارد']],
-['ما أشد كواكب المجموعة الشمسية حرارة؟','الزهرة',['عطارد','المريخ','المشتري']],
-['ما الكوكب المشهور بحلقاته الواضحة؟','زحل',['المشتري','أورانوس','المريخ']],
-['كم عدد كواكب المجموعة الشمسية؟','8',['7','9','10']],
-['كم تحتاج الأرض لتدور حول الشمس دورة كاملة تقريبًا؟','365 يومًا',['30 يومًا','24 ساعة','100 يوم']],
-['كم تحتاج الأرض لتدور حول نفسها دورة كاملة تقريبًا؟','24 ساعة',['12 ساعة','7 أيام','365 يومًا']],
-['كم سرعة الضوء في الفراغ تقريبًا؟','300 ألف كم في الثانية',['30 ألف كم في الثانية','3 آلاف كم في الثانية','3 ملايين كم في الثانية']],
-['ما الغاز الأكثر وجودًا في الغلاف الجوي للأرض؟','النيتروجين',['الأكسجين','ثاني أكسيد الكربون','الأرجون']],
-['ما الغاز الذي تأخذه النباتات من الهواء لتصنع غذاءها؟','ثاني أكسيد الكربون',['الأكسجين','النيتروجين','الهيليوم']],
-['ما الغاز الذي يجعل البالونات ترتفع في الهواء؟','الهيليوم',['الأكسجين','النيتروجين','ثاني أكسيد الكربون']],
-['ما أخف عنصر في الجدول الدوري؟','الهيدروجين',['الهيليوم','الليثيوم','الأكسجين']],
-['ما رمز عنصر الصوديوم؟','Na',['So','Sd','S']],
-['ما رمز عنصر الأكسجين؟','O',['Ox','Og','Os']],
-['ما رمز عنصر الفضة؟','Ag',['Si','Fe','Au']],
-['ما رمز عنصر البوتاسيوم؟','K',['P','Po','Pt']],
-['ما الفلز الذي يكون سائلًا في درجة حرارة الغرفة؟','الزئبق',['الحديد','النحاس','الألمنيوم']],
-['ما الصيغة الكيميائية لملح الطعام؟','NaCl',['KCl','NaOH','CaCO3']],
-['ما الصيغة الكيميائية لثاني أكسيد الكربون؟','CO2',['CO','O2','C2O']],
-['عند كم درجة مئوية يغلي الماء عند سطح البحر؟','100',['90','80','120']],
-['ما أصلب مادة طبيعية معروفة؟','الألماس',['الحديد','الزجاج','الذهب']],
-['ما أكبر عضو في جسم الإنسان؟','الجلد',['الكبد','الرئة','القلب']],
-['ما أكبر عضو داخلي في جسم الإنسان؟','الكبد',['القلب','المعدة','الدماغ']],
-['كم عدد حجرات قلب الإنسان؟','4',['2','3','6']],
-['ما أطول عظمة في جسم الإنسان؟','عظمة الفخذ',['عظمة الساق','عظمة العضد','عظمة الترقوة']],
-['ما أصغر عظمة في جسم الإنسان؟','عظمة الركاب في الأذن',['عظمة الإصبع','عظمة الأنف','عظمة الترقوة']],
-['كم عدد أسنان الإنسان البالغ عادة؟','32',['28','30','36']],
-['ما فصيلة الدم التي تسمى المعطي العام؟','O سالب',['AB موجب','A موجب','B سالب']],
-['أي فيتامين يصنعه الجسم عند التعرض لأشعة الشمس؟','فيتامين د',['فيتامين أ','فيتامين ج','فيتامين ب']],
-['نقص أي عنصر يسبب فقر الدم غالبًا؟','الحديد',['الكالسيوم','الصوديوم','البوتاسيوم']],
-['أي عنصر مهم لقوة العظام والأسنان؟','الكالسيوم',['الحديد','الصوديوم','اليود']],
-['ما الخلايا التي تنقل الأكسجين في الدم؟','كريات الدم الحمراء',['كريات الدم البيضاء','الصفائح الدموية','البلازما']],
-['ما وظيفة كريات الدم البيضاء؟','الدفاع عن الجسم',['نقل الأكسجين','تجلط الدم','هضم الطعام']],
-['أين يبدأ هضم النشويات في الجسم؟','الفم',['المعدة','الأمعاء الغليظة','الكبد']],
-['ما العضو الذي يفرز هرمون الإنسولين؟','البنكرياس',['الكبد','الكلية','المعدة']],
-['ما الحمض الموجود في المعدة ويساعد على الهضم؟','حمض الهيدروكلوريك',['حمض الكبريتيك','حمض الليمون','حمض الخل']],
-['ما أسرع حيوان بري؟','الفهد',['الأسد','الحصان','الغزال']],
-['ما أكبر حيوان على وجه الأرض؟','الحوت الأزرق',['الفيل الأفريقي','القرش الحوتي','الزرافة']],
-['ما أطول حيوان في العالم؟','الزرافة',['الفيل','الجمل','النعامة']],
-['أي حيوان يلقب بسفينة الصحراء؟','الجمل',['الحصان','الفيل','الحمار']],
-['إلى أي مجموعة ينتمي الحوت؟','الثدييات',['الأسماك','الزواحف','البرمائيات']],
-['كم رجلًا للعنكبوت؟','8',['6','10','4']],
-['ما الحيوان الذي يغير لونه ليتخفى؟','الحرباء',['الضب','السلحفاة','الأرنب']],
-['أي حيوان ينام معلقًا ورأسه إلى الأسفل؟','الخفاش',['البومة','القرد','السنجاب']],
-['ما أكبر الطيور حجمًا وهو لا يطير؟','النعامة',['البطريق','الإوز','الطاووس']],
-['كم قلبًا للأخطبوط؟','3',['1','2','4']],
-['ما الجزء الذي يمتص به النبات الماء من التربة؟','الجذر',['الورقة','الزهرة','الساق']],
-['ما اسم الصبغة الخضراء في أوراق النبات؟','الكلوروفيل',['الهيموجلوبين','الميلانين','الكيراتين']],
-['ما الغاز الذي تطلقه النباتات أثناء البناء الضوئي؟','الأكسجين',['ثاني أكسيد الكربون','النيتروجين','الهيدروجين']],
-['ما الحشرة التي تمر بمرحلة الشرنقة ثم تطير بأجنحة ملونة؟','الفراشة',['النملة','الذبابة','الجرادة']],
-['ماذا تسمى صغار الضفادع؟','أبو ذنيبة',['اليرقة','الحوصلة','الشرنقة']],
-['ما وحدة قياس الطاقة؟','الجول',['النيوتن','الواط','الفولت']],
-['ما وحدة قياس القدرة الكهربائية؟','الواط',['الجول','الأمبير','الأوم']],
-['ما وحدة قياس شدة التيار الكهربائي؟','الأمبير',['الفولت','الأوم','الواط']],
-['ما وحدة قياس المقاومة الكهربائية؟','الأوم',['الأمبير','الفولت','الهيرتز']],
-['ما وحدة قياس التردد؟','الهيرتز',['الديسيبل','الواط','الجول']],
-['بأي وحدة تقاس شدة الصوت؟','الديسيبل',['الهيرتز','الكلفن','اللومن']],
-['من العالم الذي وضع قوانين الحركة والجاذبية؟','نيوتن',['أينشتاين','غاليليو','داروين']],
-['من صاحب النظرية النسبية؟','أينشتاين',['نيوتن','تسلا','أديسون']],
-['من اشتهر باختراع المصباح الكهربائي؟','توماس أديسون',['غراهام بيل','نيكولا تسلا','الأخوان رايت']],
-['من اشتهر باختراع الهاتف؟','غراهام بيل',['توماس أديسون','ماركوني','نيكولا تسلا']],
-['من العالم المسلم الذي يعد رائد علم البصريات؟','ابن الهيثم',['ابن سينا','الخوارزمي','جابر بن حيان']],
-['من العالم المسلم الذي ينسب إليه علم الجبر؟','الخوارزمي',['ابن الهيثم','البيروني','الرازي']],
-['من مؤلف كتاب «القانون في الطب»؟','ابن سينا',['الرازي','ابن النفيس','الزهراوي']],
-['من اكتشف الدورة الدموية الصغرى؟','ابن النفيس',['ابن سينا','الرازي','ابن الهيثم']],
-['من اكتشف البنسلين؟','ألكسندر فليمنج',['لويس باستور','إسحاق نيوتن','ماري كوري']],
-['ما الجهاز الذي نرى به الأجسام الدقيقة جدًا؟','المجهر',['التلسكوب','الباروميتر','الأميتر']],
-['ما الجهاز الذي يقيس الضغط الجوي؟','الباروميتر',['الترمومتر','الهيجرومتر','الأميتر']],
-['ما الجهاز الذي يرصد الزلازل؟','السيزموغراف',['الباروميتر','الأنيمومتر','الجلفانومتر']],
-['ما الجهاز الذي يقيس سرعة الرياح؟','الأنيمومتر',['الباروميتر','الترمومتر','السيزموغراف']],
-['على أي مقياس تقاس قوة الزلازل عادة؟','ريختر',['بوفورت','سلسيوس','كلفن']],
-['ماذا يسمى تحول الماء من سائل إلى بخار؟','التبخر',['التكثف','التجمد','الانصهار']],
-['ماذا يسمى تحول بخار الماء إلى قطرات سائلة؟','التكثف',['التبخر','التسامي','الانصهار']],
-['ما اسم المجرة التي تقع فيها الأرض؟','درب التبانة',['أندروميدا','الدب الأكبر','الثريا']],
-['ما مصدر الطاقة الرئيسي على الأرض؟','الشمس',['القمر','البراكين','الرياح']],
-['ما الطبقة التي تحمي الأرض من الأشعة فوق البنفسجية؟','طبقة الأوزون',['القشرة الأرضية','الوشاح','اللب']],
-['ما الرقم الهيدروجيني للماء النقي؟','7',['0','5','14']],
-['كم عدد ألوان قوس قزح؟','7',['5','6','8']],
-['ما السبب الرئيسي لحدوث المد والجزر؟','جاذبية القمر',['الرياح','الزلازل','حرارة الشمس']],
-['أي هذه المعادن يجذبه المغناطيس؟','الحديد',['الألمنيوم','النحاس','الذهب']],
-['أي هذه المواد أفضل موصل للكهرباء؟','النحاس',['الخشب','البلاستيك','الزجاج']],
-['ما العضو الذي يتحكم في كل أجهزة الجسم؟','الدماغ',['القلب','الكبد','المعدة']]
-]);
-GAMES.geo=QPACK('جغرافيا','#B9770E',iconE('#D68910','🗺️'),[
-['أكبر قارة في العالم مساحة؟','آسيا',['أفريقيا','أوروبا','أمريكا الشمالية']],['أكبر دولة في العالم مساحة؟','روسيا',['كندا','الصين','أمريكا']],['أعمق محيط في العالم؟','المحيط الهادي',['المحيط الأطلسي','المحيط الهندي','المحيط المتجمد الشمالي']],
-['أكبر جزيرة في العالم؟','غرينلاند',['مدغشقر','بورنيو','آيسلندا']],['في أي قارة تقع مصر؟','أفريقيا',['آسيا','أوروبا','أستراليا']],['ما البحر الذي يفصل السعودية عن مصر؟','البحر الأحمر',['البحر المتوسط','بحر العرب','البحر الأسود']],
-['أصغر دولة في العالم؟','الفاتيكان',['موناكو','مالطا','البحرين']],['في أي دولة تقع مدينة البتراء؟','الأردن',['مصر','سوريا','لبنان']],['في أي دولة يقع تاج محل؟','الهند',['باكستان','إيران','بنغلاديش']],
-['أكبر بحيرة في العالم؟','بحر قزوين',['البحر الميت','بحيرة فكتوريا','بحيرة سوبيريور']],['أي دولة شكلها يشبه الحذاء؟','إيطاليا',['اليونان','إسبانيا','تشيلي']],['أي مضيق يفصل أوروبا عن أفريقيا؟','مضيق جبل طارق',['مضيق هرمز','مضيق باب المندب','مضيق البوسفور']],
-['أعلى جبل في أفريقيا؟','كليمنجارو',['إيفرست','الأطلس','كينيا']],['أي دولة تسمى بلاد الشمس المشرقة؟','اليابان',['الصين','كوريا','تايلاند']],['أي نهر يمر في بغداد؟','دجلة',['الفرات','النيل','العاصي']],
-['في أي دولة تقع جزيرة بالي؟','إندونيسيا',['ماليزيا','الفلبين','تايلاند']],['كم عدد دول مجلس التعاون الخليجي؟','6',['5','7','8']],['في أي قارة تقع الأرجنتين؟','أمريكا الجنوبية',['أفريقيا','أوروبا','أمريكا الشمالية']],
-['أطول سلسلة جبال على اليابسة؟','الأنديز',['الهيمالايا','الألب','روكي']],['أكبر صحراء رملية متصلة في العالم؟','الربع الخالي',['صحراء النفود','صحراء سيناء','صحراء ثار']],
-['ما أطول نهر في العالم؟','النيل',['الأمازون','المسيسيبي','اليانغتسي']],
-['ما أكبر نهر في العالم من حيث كمية المياه؟','الأمازون',['النيل','الكونغو','الفرات']],
-['ما أعلى قمة جبلية في العالم؟','إيفرست',['كي 2','كليمنجارو','مونت بلانك']],
-['في أي سلسلة جبلية تقع قمة إيفرست؟','الهيمالايا',['الألب','الأنديز','الروكي']],
-['ما أكبر محيط في العالم؟','المحيط الهادئ',['المحيط الأطلسي','المحيط الهندي','المحيط المتجمد الشمالي']],
-['ما أصغر محيط في العالم؟','المحيط المتجمد الشمالي',['المحيط الهندي','المحيط الأطلسي','المحيط الهادئ']],
-['ما أكبر صحراء حارة في العالم؟','الصحراء الكبرى',['صحراء غوبي','صحراء كالاهاري','صحراء أتاكاما']],
-['في أي دولة يقع معظم الربع الخالي؟','السعودية',['عمان','اليمن','الإمارات']],
-['ما أطول نهر في قارة أوروبا؟','الفولغا',['الدانوب','الراين','السين']],
-['أي نهر يمر في مدينة القاهرة؟','النيل',['الفرات','دجلة','الأردن']],
-['أي نهر يمر في مدينة لندن؟','التايمز',['السين','الراين','الدانوب']],
-['أي نهر يمر في مدينة باريس؟','السين',['التايمز','الراين','اللوار']],
-['بين أي دولتين تقع شلالات فيكتوريا؟','زامبيا وزيمبابوي',['كينيا وتنزانيا','مصر والسودان','البرازيل والأرجنتين']],
-['بين أي دولتين تقع شلالات نياغرا؟','كندا وأمريكا',['البرازيل والأرجنتين','زامبيا وزيمبابوي','فرنسا وسويسرا']],
-['ما أكبر دولة عربية مساحة؟','الجزائر',['السعودية','السودان','ليبيا']],
-['ما أكثر دولة في العالم سكانًا؟','الهند',['الصين','أمريكا','إندونيسيا']],
-['ما أكثر دولة عربية سكانًا؟','مصر',['السعودية','الجزائر','العراق']],
-['ما أكبر دولة في أمريكا الجنوبية؟','البرازيل',['الأرجنتين','بيرو','كولومبيا']],
-['كم عدد قارات العالم؟','7',['5','6','8']],
-['ما القارة المتجمدة في القطب الجنوبي؟','أنتاركتيكا',['أوقيانوسيا','غرينلاند','سيبيريا']],
-['ما أكثر دولة إسلامية سكانًا؟','إندونيسيا',['باكستان','مصر','تركيا']],
-['أي دولة تقع في آسيا وأوروبا ومن مدنها إسطنبول؟','تركيا',['اليونان','روسيا','إيران']],
-['ما المضيق الذي يربط البحر الأحمر بخليج عدن؟','باب المندب',['هرمز','جبل طارق','البوسفور']],
-['ما المضيق الذي يربط الخليج العربي بخليج عمان؟','هرمز',['باب المندب','جبل طارق','ملقا']],
-['أي قناة تربط البحر الأحمر بالبحر المتوسط؟','قناة السويس',['قناة بنما','قناة كييل','قناة كورنث']],
-['أي قناة تربط المحيط الأطلسي بالمحيط الهادئ؟','قناة بنما',['قناة السويس','قناة كييل','قناة كورنث']],
-['ما أخفض نقطة على سطح اليابسة؟','البحر الميت',['بحر قزوين','وادي الموت','بحيرة فكتوريا']],
-['أي هذه البحار هو الأشد ملوحة؟','البحر الميت',['البحر الأحمر','البحر المتوسط','بحر العرب']],
-['ما أكبر جزيرة في البحر الأبيض المتوسط؟','صقلية',['قبرص','كريت','سردينيا']],
-['في أي دولة يقع برج إيفل؟','فرنسا',['إيطاليا','بريطانيا','إسبانيا']],
-['في أي دولة تقع أهرامات الجيزة؟','مصر',['السودان','العراق','المكسيك']],
-['في أي دولة يقع برج خليفة؟','الإمارات',['قطر','السعودية','الكويت']],
-['في أي دولة تقع مدينة ماتشو بيتشو الأثرية؟','بيرو',['المكسيك','تشيلي','البرازيل']],
-['في أي دولة يقع تمثال المسيح الفادي الشهير؟','البرازيل',['الأرجنتين','المكسيك','البرتغال']],
-['في أي دولة يقع تمثال الحرية؟','أمريكا',['فرنسا','كندا','بريطانيا']],
-['في أي دولة يقع مدرج الكولوسيوم؟','إيطاليا',['اليونان','إسبانيا','تركيا']],
-['ما المدينة السعودية الملقبة بعروس البحر الأحمر؟','جدة',['ينبع','جازان','الوجه']],
-['في أي منطقة سعودية تقع محافظة العلا؟','المدينة المنورة',['تبوك','حائل','الجوف']],
-['في أي محافظة سعودية يقع موقع الحجر (مدائن صالح)؟','العلا',['تبوك','نجران','الأحساء']],
-['ما أكبر واحة نخيل في العالم وتقع في السعودية؟','الأحساء',['القطيف','العلا','الخرج']],
-['ما المدينة السعودية الملقبة بمدينة الورد؟','الطائف',['أبها','الباحة','تبوك']],
-['في أي منطقة سعودية يقع مشروع نيوم؟','تبوك',['جازان','الرياض','الشرقية']],
-['كم عدد المناطق الإدارية في السعودية؟','13',['10','12','15']],
-['ما أطول وادٍ في الجزيرة العربية؟','وادي الرمة',['وادي حنيفة','وادي فاطمة','وادي نجران']],
-['ما اسم الجسر الذي يربط السعودية بالبحرين؟','جسر الملك فهد',['جسر الملك سلمان','جسر الملك عبدالله','جسر الخليج']],
-['كم دولة تطل على الخليج العربي؟','8',['6','7','9']],
-['ما أكبر دول الخليج العربي مساحة؟','السعودية',['عمان','الإمارات','الكويت']],
-['ما المدينة السعودية التي تقع في جبال السروات وتشتهر بالضباب؟','أبها',['الدمام','حائل','بريدة']],
-['على أي بحر تطل مدينة ينبع؟','البحر الأحمر',['الخليج العربي','بحر العرب','البحر المتوسط']],
-['على أي خليج تطل مدينة الدمام؟','الخليج العربي',['خليج عدن','خليج عمان','خليج العقبة']],
-['ما أطول نهر في قارة آسيا؟','اليانغتسي',['الغانج','الميكونغ','الفرات']],
-['أي دولة تلقب ببلاد الألف بحيرة؟','فنلندا',['السويد','النرويج','كندا']],
-['أي دولة تلقب ببلاد الأرز؟','لبنان',['سوريا','الأردن','تركيا']],
-['أي دولة تلقب بأرض الكنانة؟','مصر',['العراق','اليمن','سوريا']],
-['أي دولة تلقب ببلاد الرافدين؟','العراق',['سوريا','مصر','الأردن']],
-['أي دولة تلقب بتونس الخضراء؟','تونس',['المغرب','لبنان','الجزائر']],
-['أي دولة تلقب ببلد المليون شهيد؟','الجزائر',['ليبيا','المغرب','تونس']],
-['أي دولة كانت تلقب قديمًا بالعربية السعيدة؟','اليمن',['عمان','الحبشة','مصر']],
-['ما عاصمة أستراليا؟','كانبرا',['سيدني','ملبورن','بيرث']],
-['ما عاصمة كندا؟','أوتاوا',['تورنتو','مونتريال','فانكوفر']],
-['ما عاصمة تركيا؟','أنقرة',['إسطنبول','إزمير','بورصة']],
-['ما عاصمة البرازيل؟','برازيليا',['ريو دي جانيرو','ساو باولو','سلفادور']],
-['أي دولة لها أطول خط ساحلي في العالم؟','كندا',['روسيا','أستراليا','إندونيسيا']],
-['ما الخط الوهمي الذي يقسم الأرض إلى نصف شمالي ونصف جنوبي؟','خط الاستواء',['خط غرينتش','مدار السرطان','الدائرة القطبية']],
-['ما خط الطول الرئيسي الذي يمر بلندن؟','غرينتش',['الاستواء','مدار الجدي','خط التاريخ الدولي']],
-['أي مدار يمر عبر أراضي السعودية؟','مدار السرطان',['مدار الجدي','خط الاستواء','الدائرة القطبية الشمالية']],
-['ما أكبر بحيرة في قارة أفريقيا؟','بحيرة فكتوريا',['بحيرة تنجانيقا','بحيرة ملاوي','بحيرة تشاد']],
-['أي بركان دمر مدينة بومبي الرومانية؟','فيزوف',['إتنا','فوجي','كراكاتوا']],
-['ما أعلى جبل في اليابان؟','فوجي',['إيفرست','كليمنجارو','مونت بلانك']],
-['ما أكبر غابة مطيرة في العالم؟','الأمازون',['غابات الكونغو','غابات بورنيو','الغابة السوداء']],
-['أي محيط يقع بين أفريقيا وأستراليا؟','المحيط الهندي',['المحيط الأطلسي','المحيط الهادئ','المحيط المتجمد الشمالي']],
-['في أي قارة تقع جبال الأنديز؟','أمريكا الجنوبية',['آسيا','أوروبا','أمريكا الشمالية']],
-['في أي قارة تقع جبال الألب؟','أوروبا',['آسيا','أفريقيا','أمريكا الجنوبية']],
-['أي دولة تحيط بها جنوب أفريقيا من كل الجهات؟','ليسوتو',['بوتسوانا','ناميبيا','زيمبابوي']],
-['أي دولة صغيرة تقع داخل مدينة روما؟','الفاتيكان',['موناكو','مالطا','أندورا']],
-['أي دولة عربية يمر بها خط الاستواء؟','الصومال',['السودان','اليمن','موريتانيا']],
-['بين أي دولتين يقع مضيق باب المندب؟','اليمن وجيبوتي',['مصر والسعودية','السودان والسعودية','عمان واليمن']],
-['في أي قارة تقع كينيا؟','أفريقيا',['آسيا','أمريكا الجنوبية','أوقيانوسيا']],
-['ما أكبر جزيرة في قارة أفريقيا؟','مدغشقر',['زنجبار','موريشيوس','سقطرى']],
-['إلى أي دولة تتبع جزيرة سقطرى؟','اليمن',['عمان','الصومال','الإمارات']],
-['ما أعلى قمة في قارة أمريكا الجنوبية؟','أكونكاجوا',['إيفرست','كليمنجارو','ماكينلي']],
-['أي نهرين يكونان شط العرب عند التقائهما؟','دجلة والفرات',['النيل والأمازون','الأردن والليطاني','العاصي والفرات']],
-['أي دولة يقع فيها جبل كليمنجارو؟','تنزانيا',['كينيا','إثيوبيا','أوغندا']]
-]);
+/* ---------- more quiz packs (their questions are in quiz.js) ---------- */
+GAMES.islam=bankQuiz({name:'معلومات إسلامية',lbc:'#1F7A55',icon:iconE('#2E9C6E','🕌')},['islam']);
+GAMES.sci=bankQuiz({name:'علوم وطبيعة',lbc:'#2C7DA0',icon:iconE('#3D97C0','🔬')},['sci']);
+GAMES.geo=bankQuiz({name:'جغرافيا',lbc:'#B9770E',icon:iconE('#D68910','🗺️')},['geo']);
 
 /* ---------- ten thousand (dice push your luck) ---------- */
 function fkScore(a){if(!a.length)return 0;const c=[0,0,0,0,0,0,0];a.forEach(x=>c[x]++);
@@ -406,8 +168,8 @@ function fkPass(d,x,t){const n=d.pl.length,nx=nextSeat(x,t);let endAt=d.endAt;if
 GAMES.farkle={name:'عشرة آلاف',cat:'cards',lbc:'#7B241C',icon:iconE('#A93226','🎲'),
   init:n=>({dice:'',used:'000000',tot:0,sc:Array(n).fill(0),goal:10000,endAt:null,rolled:false,last:''}),
   points:d=>d.sc,
-  onTimeout:d=>fkPass(d,{...d,dice:'',used:'000000',tot:0,rolled:false},d.turn),
-  onSkip(nd,d){if(nd.out[d.turn]!=='1')return nd;const x={...nd,dice:'',used:'000000',tot:0,rolled:false,last:nm(d,d.turn)+' طلع'+(d.tot>0?' وراح جمع دوره':'')};return x.win!=null?x:fkPass(x,x,d.turn);},
+  onTimeout:d=>fkPass(d,{...d,dice:'',used:'000000',tot:0,rolled:false,lb:null},d.turn),
+  onSkip(nd,d){if(nd.out[d.turn]!=='1')return nd;const x={...nd,dice:'',used:'000000',tot:0,rolled:false,lb:null,last:nm(d,d.turn)+' طلع'+(d.tot>0?' وراح جمع دوره':'')};return x.win!=null?x:fkPass(x,x,d.turn);},
   // the turn total and the goal are on the board
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const my=ctx.my;S.sel=S.sel||[];S.rolled=false;const sel=S.sel.map(i=>+d.dice[i]);const sv=fkScore(sel);
@@ -417,7 +179,8 @@ GAMES.farkle={name:'عشرة آلاف',cat:'cards',lbc:'#7B241C',icon:iconE('#A9
     const rk=d.gid+':'+S.st.s,fresh=!!d.dice&&(d.rolled||bust)&&S.fkRoll!==rk;if(fresh)S.fkRoll=rk;
     const held=d.dice?[...d.used].map((u,i)=>u==='1'?i:-1).filter(i=>i>=0):[];
     const row=d.dice?[...d.dice].map((x,i)=>d.used[i]==='1'?'':`<button class="dice ${d.rolled&&S.sel.includes(i)?'held':''} ${d.rolled||bust?'':'fk-stale'} ${fresh?'roll':''}" id="fkd${i}" data-ga="sel" data-i="${i}" ${my&&d.rolled?'':'disabled'}>${diceSVG(+x)}</button>`).join(''):Array(6).fill('<i class="fk-gh"></i>').join('');
-    let s=`<div class="fk" style="--c:${col(d,t)}"><div class="fk-sc"><div class="fk-tot"><small>جمع الدور</small><b>${d.tot}</b>${sv?`<em>+${sv}</em>`:''}</div>
+    const lb=!d.dice&&Array.isArray(d.lb)&&d.lb[0]>=0&&d.lb[0]<d.pl.length?d.lb:null;
+    let s=`<div class="fk" style="--c:${col(d,t)}">${lb?`<div class="fk-bk" id="fkb${d.bk||0}" style="--c:${col(d,lb[0])}"><span>💰 ${escH(nm(d,lb[0]))} حفظ</span><b dir="ltr">+${+lb[1]||0}</b><small dir="ltr">${d.sc[lb[0]]} / ${d.goal}</small></div>`:''}<div class="fk-sc"><div class="fk-tot"><small>جمع الدور</small><b>${d.tot}</b>${sv?`<em>+${sv}</em>`:''}</div>
       <div class="fk-goal"><div class="fk-gl"><span>${escH(nm(d,t))}</span><span dir="ltr"><b>${sc}</b> / ${g}</span></div><div class="fk-bar"><i style="width:${pc(sc)}%"></i><u style="width:${pc(Math.min(d.tot+sv,g-sc))}%"></u></div></div></div>
       <div class="fk-felt ${bust?'bust':''}">${bust?'<div class="fk-bust">💥 ما سجّل شي</div>':''}<div class="fk-row">${row}</div>
       ${held.length?`<div class="fk-held"><small>محجوزة</small>${held.map(i=>`<div class="dice used">${diceSVG(+d.dice[i])}</div>`).join('')}</div>`:''}</div>`;
@@ -430,9 +193,52 @@ GAMES.farkle={name:'عشرة آلاف',cat:'cards',lbc:'#7B241C',icon:iconE('#A9
     if(a==='roll'){let used=d.used;if(!used.includes('0'))used='000000';const dice=[...used].map((u,k)=>u==='1'?d.dice[k]:String(1+rnd(6))).join('');const free=[...dice].filter((x,k)=>used[k]==='0').map(Number);S.rolled=true;S.sel=[];
       if(!fkAny(free)){act(fkPass(d,{...d,dice,used:'000000',tot:0,rolled:false,last:`${nm(d,t)} طلع له زهر ما يسجل وراح جمع الدور 💥`},t));return;}
       act({...d,dice,used,rolled:true,last:''});return;}
-    if(a==='bank'){if(d.tot<=0)return;const sc=[...d.sc];sc[t]+=d.tot;act(fkPass(d,{...d,sc,tot:0,dice:'',used:'000000',rolled:false,last:`${nm(d,t)} حفظ ${d.tot}`},t));return;}
+    if(a==='bank'){if(d.tot<=0)return;const sc=[...d.sc];sc[t]+=d.tot;act(fkPass(d,{...d,sc,tot:0,dice:'',used:'000000',rolled:false,bk:(d.bk||0)+1,lb:[t,d.tot],last:`${nm(d,t)} حفظ ${d.tot}`},t));return;}
     if(a==='keep'||a==='keepbank'){const sv=fkScore(S.sel.map(k=>+d.dice[k]));if(!sv)return;let used=d.used;S.sel.forEach(k=>used=setAt(used,k,'1'));S.sel=[];const tot=d.tot+sv;
-      if(a==='keepbank'){const sc=[...d.sc];sc[t]+=tot;act(fkPass(d,{...d,sc,tot:0,dice:'',used:'000000',rolled:false,last:`${nm(d,t)} حفظ ${tot}`},t));return;}
+      if(a==='keepbank'){const sc=[...d.sc];sc[t]+=tot;act(fkPass(d,{...d,sc,tot:0,dice:'',used:'000000',rolled:false,bk:(d.bk||0)+1,lb:[t,tot],last:`${nm(d,t)} حفظ ${tot}`},t));return;}
       act({...d,used:used.includes('0')?used:'000000',tot,rolled:false,last:used.includes('0')?'':`${nm(d,t)} سجّل الستة كلها 🔥 يرمي الستة من جديد`});}
   }
 };
+
+/* ---------- ten thousand bots ----------
+   hard plays the odds: a table, worked out once, of what a turn is worth on average from every turn total and number of dice
+   (rolling on against banking, the best set of dice to keep from every roll); medium banks around 350; easy is timid or greedy at random */
+const FKS=50,FKM=6000;let FKT=null;
+function fkTable(){if(FKT)return FKT;const NT=FKM/FKS+1,fact=[1,1,2,6,24,120,720];
+  // every roll of n dice as counts per face, its chance, and the ways to score from it: [points, dice used]
+  const rolls=[null];for(let n=1;n<=6;n++){const L=[];
+    const rec=(f,left,c)=>{if(f===6){c[6]=left;let p=fact[n];for(let k=1;k<=6;k++)p/=fact[c[k]];p/=Math.pow(6,n);
+        const opts=new Map();const sub=(g,k)=>{if(g===7){const a=[];for(let x=1;x<=6;x++)for(let j=0;j<k[x];j++)a.push(x);if(!a.length)return;const sc=fkScore(a);if(sc>0){const u=a.length;if(!(opts.get(u)>=sc))opts.set(u,sc);}return;}
+          for(let j=0;j<=c[g];j++){k[g]=j;sub(g+1,k);}};sub(1,[0,0,0,0,0,0,0]);
+        L.push({p,o:[...opts].map(([u,sc])=>[sc,u])});return;}
+      for(let j=0;j<=left;j++){c[f]=j;rec(f+1,left-j,c);}};
+    rec(1,n,[0,0,0,0,0,0,0]);rolls.push(L);}
+  // R[n][i]: the average a turn ends with from total i*50 when n dice are rolled now; B = the better of that and banking
+  const R=[...Array(7)].map(()=>new Float64Array(NT)),B=[...Array(7)].map(()=>new Float64Array(NT));
+  const bv=(t,n)=>{const i=t/FKS;return i>=NT?t:B[n][i];};
+  for(let i=NT-1;i>=0;i--)for(let n=1;n<=6;n++){const t=i*FKS;let r=0;for(const x of rolls[n]){let best=0;for(const [sc,u] of x.o){const v=bv(t+sc,n-u||6);if(v>best)best=v;}r+=x.p*best;}R[n][i]=r;B[n][i]=Math.max(t,r);}
+  return FKT={R,B,roll:(t,n)=>{const i=t/FKS;return i>=NT?t:R[n][i];}};}
+// the sets of free dice that score, best first for the same number of dice used
+function fkOpts(d){const free=[...d.dice].map((x,i)=>d.used[i]==='0'?i:-1).filter(i=>i>=0);const out=[];
+  for(let m=1;m<(1<<free.length);m++){const sel=free.filter((_,j)=>m>>j&1);const sc=fkScore(sel.map(i=>+d.dice[i]));if(sc>0)out.push({sel,sc,left:free.length-sel.length});}
+  return {free,out};}
+GAMES.farkle.bot=(d,s,lv)=>{const me=d.sc[s]||0,foes=aliveSeats(d).filter(o=>!sameTeam(d,o,s)),top=Math.max(0,...foes.map(o=>d.sc[o]||0));
+  // the last round: only a total above the leader is worth banking
+  const need=d.endAt!=null?top-me+1:0;
+  if(!d.rolled){if(d.tot<=0)return botDo(d,s,'roll',0);const n=6-[...d.used].filter(x=>x==='1').length||6;
+    if(need>0&&d.tot<need)return botDo(d,s,'roll',0);if(me+d.tot>=d.goal)return botDo(d,s,'bank',0);
+    if(lv===3)return botDo(d,s,fkTable().roll(d.tot,n)>d.tot+1?'roll':'bank',0);
+    const hold=lv===2?(n<=2?300:n<=3?400:550):250+rnd(700);return botDo(d,s,d.tot>=hold?'bank':'roll',0);}
+  const {out}=fkOpts(d);if(!out.length)return GAMES.farkle.onTimeout(d);
+  const most=out.reduce((a,b)=>b.sc>a.sc||b.sc===a.sc&&b.left>a.left?b:a);let pick=most,bank=false;
+  if(lv===3){const T=fkTable();let bestV=-1;
+    for(const o of out){const t2=d.tot+o.sc,n2=o.left||6;let v=T.roll(t2,n2);
+      if(need>0)v=t2>=need?Math.max(v,t2+1):v;else if(me+t2>=d.goal)v=Math.max(v,t2);
+      if(v>bestV){bestV=v;pick=o;}}
+    const t2=d.tot+most.sc,bankV=need>0?(t2>=need?t2+1:0):t2;
+    if(bankV>=bestV){pick=most;bank=true;}}
+  else{// medium takes every scoring die; easy sometimes keeps a single one to roll more dice
+    if(lv===1&&Math.random()<.3){const one=out.filter(o=>o.sel.length===1).sort((a,b)=>b.sc-a.sc)[0];if(one)pick=one;}
+    const t2=d.tot+pick.sc,n2=pick.left||6,hold=lv===2?(n2<=2?300:n2<=3?400:550):250+rnd(700);
+    bank=pick.left>0&&(t2>=hold||need===0&&me+t2>=d.goal)&&!(need>0&&t2<need);}
+  S.sel=pick.sel;return botDo(d,s,bank?'keepbank':'keep',0);};

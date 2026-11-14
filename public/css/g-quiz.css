@@ -215,7 +215,7 @@ button.opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 va
 .ty-bad{color:#fff;background:var(--bad);border-radius:4px}
 .ty-rest{color:var(--ink)}
 .ty-pr{height:6px;margin-top:8px;border-radius:3px;background:var(--surface-2);overflow:hidden;direction:rtl}
-.ty-pr i{display:block;height:100%;background:var(--ok);border-radius:3px;transition:width var(--t1) var(--ease)}
+.ty-pr i{display:block;height:100%;background:var(--ok);border-radius:3px}
 .board .tybox+input.field{font-size:20px}
 
 /* ===== ten thousand (farkle): the score area, the felt with the dice and the tray of dice set aside ===== */
@@ -230,8 +230,8 @@ button.opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 va
 .fk-gl span:first-child{color:var(--c);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fk-gl b{color:var(--ink);font-size:15px}
 .fk-bar{display:flex;height:10px;border-radius:5px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden;direction:rtl}
-.fk-bar i{background:var(--c);transition:width var(--t3) var(--ease)}
-.fk-bar u{background:repeating-linear-gradient(45deg,var(--gold) 0 6px,#F7CF6A 6px 12px);transition:width var(--t3) var(--ease)}
+.fk-bar i{background:var(--c)}
+.fk-bar u{background:repeating-linear-gradient(45deg,var(--gold) 0 6px,#F7CF6A 6px 12px)}
 .fk-felt{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px 12px;border-radius:var(--r-xl);background:radial-gradient(130% 100% at 50% 0%,var(--felt-1),var(--felt-2));box-shadow:inset 0 2px 10px rgba(0,0,0,.25),0 0 0 4px var(--wood-2),0 4px 0 4px var(--wood-3)}
 .fk-row{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;min-height:56px}
 .fk-row .dice{width:50px;height:50px;padding:0;transition:transform var(--t2) var(--spring),box-shadow var(--t2) var(--ease),opacity var(--t2)}
@@ -251,6 +251,85 @@ button.opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 va
 .fk .acts .btn{font-size:16px;padding:0 12px;min-width:0}
 .fk-wait{margin:0}
 @media (max-width:380px){.fk-row{gap:6px}.fk-row .dice,.fk-gh{width:44px;height:44px}.fk-row .dice svg{width:36px;height:36px}.fk-felt{padding:14px 8px 10px}}
+
+/* ===== deeper quiz: levels, streaks, ×2 chips, the answer moment and the climbing total ===== */
+.qz{position:relative}
+.qz-lv{flex:none;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:900;line-height:1.5;white-space:nowrap;background:#E3F4E8;color:#23733a}
+.qz-lv.l2{background:#FFF1C9;color:#7a5a00}
+.qz-lv.l3{background:#FDE0DD;color:#a8332c}
+.qz-hd .qz-cat{flex:0 1 auto}
+.qz-prog i.l3.cur,.qz-prog i.l3.done{background:#E5534B}
+.qz-prog i.l2.cur,.qz-prog i.l2.done{background:#E8A33D}
+.qz-card.t3::before{background:linear-gradient(90deg,var(--qc,#2E7D9A),#E5534B)}
+.qz-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
+.qz-x2{display:inline-flex;align-items:center;gap:6px;padding:6px 14px 6px 8px;border-radius:999px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:800;box-shadow:0 3px 0 var(--line),var(--e1);transition:transform var(--t1) var(--ease),background-color var(--t2)}
+.qz-x2 b{display:grid;place-items:center;min-width:34px;height:28px;padding:0 6px;border-radius:999px;background:var(--gold);color:#4a3500;font-size:16px;font-weight:900;direction:ltr}
+.qz-x2 small{font-size:12px;font-weight:700;color:var(--mut)}
+.qz-x2:active{transform:translateY(2px)}
+.qz-x2.on{background:#4a3500;color:#FFE27A;box-shadow:0 3px 0 #2c1f00,0 0 0 3px var(--gold);animation:qz-ok var(--t3) var(--spring) both}
+.qz-x2.on small{color:#f3dc99}
+.qz-x2.done{animation:none}
+.qz-stk{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:#FFE9D6;color:#9a4a00;font-weight:900;font-size:15px}
+.qz-stk small{font-size:12px;font-weight:700}
+.qz-stk.hot{background:linear-gradient(90deg,#F2874B,#E5534B);color:#fff;animation:qz-pop var(--t3) var(--spring) both}
+.opt .qz-xm{position:absolute;top:-8px;inset-inline-start:10px;padding:0 7px;border-radius:999px;background:var(--gold);color:#4a3500;font-style:normal;font-size:12px;font-weight:900;direction:ltr;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+.qz-gns{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;margin-inline-start:auto}
+.qz-gns small{color:var(--mut);font-weight:700}
+.qz-g{display:inline-flex;align-items:center;gap:3px;padding:1px 7px 1px 3px;border-radius:999px;background:var(--surface-2);font-size:13px;font-weight:900;animation:qz-pop var(--t3) var(--spring) .2s both}
+.qz-g b{color:#2a8344}
+.qz-g.dn b{color:var(--bad)}
+.qz-g i{font-style:normal;font-size:11px;padding:0 4px;border-radius:999px;background:var(--gold);color:#4a3500}
+.qz-g .pdot{width:12px;height:12px;border-width:2px}
+.qz-me{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:-4px;font-size:14px;font-weight:700;color:var(--mut)}
+.qz-me b{min-width:2ch;font-size:22px;font-weight:900;color:var(--ink);direction:ltr;font-variant-numeric:tabular-nums}
+.qz-cap{color:var(--qc,#7A3E9D)}
+.qz-eq{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.qz-eq b{color:var(--qc,#3B6E2F)}
+/* the answer moment: a stamp over the card that lands, holds and fades (it never takes a tap) */
+.qz-fx{position:absolute;z-index:3;top:64px;left:50%;display:flex;align-items:center;gap:8px;padding:8px 20px 8px 14px;border-radius:999px;color:#fff;font-size:26px;font-weight:900;pointer-events:none;
+  transform:translateX(-50%);box-shadow:0 5px 0 rgba(0,0,0,.18),0 12px 26px rgba(0,0,0,.18);animation:qz-fx-in .32s var(--spring) both,qz-fx-out .3s var(--ease) 1.1s forwards}
+.qz-fx b{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.25);font-size:24px}
+.qz-fx.ok{background:var(--ok)}
+.qz-fx.no{background:var(--bad);animation:qz-fx-in .32s var(--spring) both,qz-fx-sh .3s var(--ease) .32s,qz-fx-out .3s var(--ease) 1.1s forwards}
+.qz.fin .qz-fx{animation:qz-fx-in .32s var(--spring) both}
+@keyframes qz-fx-in{from{opacity:0;transform:translateX(-50%) scale(.4) rotate(-10deg)}}
+@keyframes qz-fx-out{to{opacity:0;transform:translateX(-50%) translateY(-14px) scale(.9)}}
+@keyframes qz-fx-sh{25%{transform:translateX(calc(-50% - 7px))}50%{transform:translateX(calc(-50% + 6px))}75%{transform:translateX(calc(-50% - 3px))}}
+
+/* ===== rock paper scissors: the gold hand and the others' last hands ===== */
+.rps-gold{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:6px 12px;border-radius:var(--r-l);background:linear-gradient(90deg,#FFF3C4,#FFE08A);color:#5a4300;font-size:14px;font-weight:800;box-shadow:var(--e1);animation:qz-in var(--t2) var(--ease) both}
+.rps-gold .rps-h{width:34px;height:34px;font-size:20px}
+.rps-h.gold{box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),0 0 0 3px var(--gold)}
+.rpsb{position:relative}
+.rpsb.gold{box-shadow:0 5px 0 #d49b14,0 0 0 3px var(--gold),0 8px 18px rgba(29,52,84,.08)}
+.rpsb.gold.sel,.rpsb.gold.sel:disabled{box-shadow:var(--ring),0 7px 0 #d49b14,0 12px 22px rgba(29,52,84,.16)}
+.rps-x2{position:absolute;top:6px;inset-inline-end:6px;padding:0 6px;border-radius:999px;background:var(--gold);color:#4a3500;font-style:normal;font-size:12px;font-weight:900;direction:ltr}
+.rps-p .rps-h.gold{box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),0 0 0 3px var(--c),0 0 0 6px var(--gold)}
+.rps-hist{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 10px;margin-top:2px}
+.rps-hr{display:inline-flex;align-items:center;gap:2px;padding:2px 8px 2px 4px;border-radius:999px;background:var(--surface);box-shadow:var(--e1);font-size:15px;line-height:1.2}
+.rps-hr .pdot{margin-inline-end:3px}
+.rps-hr i{font-style:normal;opacity:.55}
+.rps-hr i.nw{opacity:1}
+
+/* ===== speed rounds: points of the round, sudoku levels ===== */
+.spr-g{position:absolute;inset-inline-end:-4px;top:-6px;padding:0 6px;border-radius:999px;background:var(--gold);color:#4a3500;text-decoration:none;font-size:11px;font-weight:900;direction:ltr;animation:qz-pop var(--t3) var(--spring) .3s both}
+.spr-r{position:relative}
+.su-lv{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 8px;font-weight:800;color:var(--mut)}
+.su-lv span{padding:1px 10px;border-radius:999px;background:var(--surface);box-shadow:var(--e1);color:var(--ink);direction:ltr}
+.su-lv b{color:var(--ink)}
+.sudo.s6{grid-template-columns:repeat(6,minmax(0,1fr));width:min(100%,348px)}
+.sudo.s6 .su{font-size:23px}
+.sudo.s6 .su{border:1px solid #d3dfeb}
+.sudo.s6 .su.er{border-right:3px solid var(--navy)}
+.sudo.s6 .su.eb{border-bottom:3px solid var(--navy)}
+.supad.s6{max-width:380px;gap:6px}
+.supad.s6 .btn{min-height:52px;font-size:22px;padding:0}
+
+/* ===== ten thousand: who banked ===== */
+.fk-bk{display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 12px;margin-bottom:8px;border-radius:var(--r-l);background:var(--surface);box-shadow:inset 4px 0 0 var(--c),var(--e1);font-weight:800;animation:qz-in var(--t2) var(--ease) both}
+.fk-bk span{color:var(--c);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fk-bk b{padding:0 8px;border-radius:999px;background:var(--gold);color:#4a3500;font-size:17px;animation:qz-pop var(--t3) var(--spring) .1s both}
+.fk-bk small{color:var(--mut);font-weight:700}
 
 /* ===== dark theme ===== */
 @media (prefers-color-scheme:dark){
@@ -274,4 +353,10 @@ button.opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 va
  .spr-r.w{background:rgba(240,180,41,.14)}
  .cgrid span{background:#243241}
  .sudo{border-color:#0b1118}
+ .qz-lv{background:#1f3d2a;color:#8fe0a6}.qz-lv.l2{background:#3d3214;color:#ffd977}.qz-lv.l3{background:#4a1f1c;color:#ff9d95}
+ .qz-stk{background:#3d2a17;color:#ffc48a}
+ .qz-x2.on{background:#FFE27A;color:#3a2900}.qz-x2.on small{color:#5a4300}
+ .rps-gold{background:linear-gradient(90deg,#4a3b10,#5c4812);color:#ffe9a8}
+ .su-lv span,.rps-hr,.fk-bk{background:var(--surface)}
+ .qz-g{background:#2a3a4b}.qz-g b{color:#6fd08b}.qz-g.dn b{color:#f08a83}
 }
