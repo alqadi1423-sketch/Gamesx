@@ -335,14 +335,14 @@ HELP.r_jump='قفز حواجز على مسار فيه 8 حواجز (عمودي،
 
 /* =================================================================
    الحجلة: squares 1 to 10. Throw the stone onto the next square (stop the throw meter in its band; a line is a miss),
-   then hop there and back (stop the balance meter in the window). Each success moves you on; up to 3 a turn. Bold: throw
+   then hop there and back (stop the balance meter in the window). Each success moves you on; up to 2 a turn. Bold: throw
    two squares on and hop both at once. Once a game you may make a square you just finished your house: the others must
    hop over it, which is harder for them, and easier for you. First past square 10 wins.
    ================================================================= */
 const HS_XY=[[80,268],[80,232],[80,196],[54,160],[106,160],[80,124],[54,88],[106,88],[80,52],[80,2]];
 const hsC=d=>200+Math.floor(mulberry(seedOf(d.gid+':hs'+(d.sid||0)))()*600);
 // the hop window: narrower the further you go and for every other player's house on the way; your own house is a rest
-function hsW(d,t,tg){let w=300-14*tg;d.hs.forEach((h,s)=>{if(h&&h<=tg)w+=s===t?50:sameTeam(d,s,t)?0:-45;});return r2Clamp(w,80,330);}
+function hsW(d,t,tg,bold){let w=270-16*tg-(bold?50:0);d.hs.forEach((h,s)=>{if(h&&h<=tg)w+=s===t?50:sameTeam(d,s,t)?0:-45;});return r2Clamp(w,80,330);}
 const hsTg=(d,t,bold)=>Math.min(10,d.pr[t]+(bold?2:1));
 function hsEnd(x,t,why){const nx=nextSeat(x,t),tn=(x.tn||0)+1;const y={...x,ph:'throw',ok:0,jc:-1,tg:0,turn:nx,tn,last:why};
   if(tn>=40*x.pl.length)return {...y,win:r2Best(y,y.pr.map((p,s)=>y.out[s]==='1'?null:p))};return y;}
@@ -350,21 +350,21 @@ function hsThrow(d,t,bold,v){const tg=hsTg(d,t,bold),vv=r2Clamp(v+r2N()*10,0,999
   const lx={s:t,sq:inb?sq:0,tg,k:'t',id:sid,v:Math.round(vv)};
   if(inb&&sq===tg)return {...d,sid,lx,ph:'hop',tg,last:`${nm(d,t)}: الحجر نزل في ${tg} ✓ الحين انقز`};
   return hsEnd({...d,sid,lx},t,`${nm(d,t)}: الحجر ${inb?`نزل في ${sq} بدل ${tg}`:'طاح على الخط'} ✗`);}
-function hsHop(d,t,v){const w=hsW(d,t,d.tg)/2,e=Math.abs(v-hsC(d)),sid=(d.sid||0)+1,ok=e<=w;const lx={s:t,sq:d.tg,k:'h',r:ok?1:0,id:sid};
+function hsHop(d,t,v){const w=hsW(d,t,d.tg,d.tg-d.pr[t]>1)/2,e=Math.abs(v-hsC(d)),sid=(d.sid||0)+1,ok=e<=w;const lx={s:t,sq:d.tg,k:'h',r:ok?1:0,id:sid};
   if(!ok)return hsEnd({...d,sid,lx},t,`${nm(d,t)} فقد توازنه وهو ينقز ✗`);
   const pr=[...d.pr];pr[t]=d.tg;const x={...d,pr,sid,lx,ok:d.ok+1,jc:d.tg,ph:'throw',last:`${nm(d,t)} خلّص المربع ${d.tg} 👣`};
   if(pr[t]>=10)return {...x,win:t,last:`${nm(d,t)} خلّص الحجلة كلها! 🏆`};
-  if(x.ok>=3)return hsEnd(x,t,x.last+' • خلص دوره');return x;}
+  if(x.ok>=2)return hsEnd(x,t,x.last+' • خلص دوره');return x;}
 const hsCanHouse=(d,t)=>d.ph==='throw'&&d.jc>0&&!d.hs[t]&&!d.hs.includes(d.jc);
 function hsBot(d,s,lv){if(lv===1)return [Math.random()<.3,Math.random()<.4];const sig=R2SIG[lv],thr=r2Pin(38,Math.hypot(sig,10));
-  const val=b=>{const tg=hsTg(d,s,b);return thr*r2Pin(hsW(d,s,tg)/2,sig)*(tg-d.pr[s])*(b?1.05:1);};const bold=d.pr[s]<=8&&val(true)>val(false)+(lv===2?Math.random()*.1-.05:0);
+  const val=b=>{const tg=hsTg(d,s,b);return thr*r2Pin(hsW(d,s,tg,b)/2,sig)*(tg-d.pr[s])*(b?1.05:1);};const bold=d.pr[s]<=8&&val(true)>val(false)+(lv===2?Math.random()*.1-.05:0);
   const house=hsCanHouse(d,s)&&d.jc>=3&&d.pr.some((p,o)=>o!==s&&d.out[o]!=='1'&&p<d.jc&&!sameTeam(d,s,o));return [bold,house];}
 GAMES.r_hop={name:'الحجلة',cat:'sport',lbc:'#C2577A',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B9C3CC"/><rect width="100" height="100" fill="#A9B4BE" opacity=".5"/>${[[38,78,24,18,'1'],[38,60,24,18,'2'],[26,42,24,18,'3'],[50,42,24,18,'4'],[38,24,24,18,'5']].map(([x,y,w,h,t])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#fff" stroke-width="2.4"/><text x="${x+w/2}" y="${y+13}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">${t}</text>`).join('')}<path d="M38 24a12 10 0 0 1 24 0" fill="none" stroke="#fff" stroke-width="2.4"/><ellipse cx="62" cy="51" rx="5" ry="3.4" fill="#C2577A"/><path d="M70 92q2-12 8-14q4 6-2 14z" fill="#EC6158"/></svg>`,
   init:n=>({pr:Array(n).fill(0),hs:Array(n).fill(0),ph:'throw',tg:0,ok:0,jc:-1,tn:0,sid:0,lx:null,last:''}),
   net:{host:['throw','hop','house'],local:['hb']},redeal:d=>d,
   points:d=>d.pr.map(p=>p+'/10'),
-  status:(d,ctx)=>r2Stat(d,ctx,d.win==null?`<small>${d.ph==='hop'?`انقز للمربع ${d.tg} وارجع`:`ارمِ الحجر`} • نجاحات هالدور ${d.ok} من 3</small><br>`:''),
+  status:(d,ctx)=>r2Stat(d,ctx,d.win==null?`<small>${d.ph==='hop'?`انقز للمربع ${d.tg} وارجع`:`ارمِ الحجر`} • نجاحات هالدور ${d.ok} من 2</small><br>`:''),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.pr[s]}/10`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx,bold=r2Dr('hb',0,1,0)===1&&d.pr[t]<=8,tg=d.ph==='hop'?d.tg:hsTg(d,t,bold);
     const own=k=>d.hs.findIndex(h=>h===k);
@@ -377,7 +377,7 @@ GAMES.r_hop={name:'الحجلة',cat:'sport',lbc:'#C2577A',
       if(d.ph==='throw'){s+=`${d.pr[t]<=8?r2Seg('hb',[`عادي: المربع ${hsTg(d,t,false)}`,`جريء: المربع ${hsTg(d,t,true)} مرة وحدة`],bold?1:0,true):''}
         ${hsCanHouse(d,t)?`<button class="btn navy wide" data-ga="house">🏠 خلّ المربع ${d.jc} بيتك (مرة باللعبة)</button>`:''}
         ${r2Meter(key,m,[[0,1000,'zl'],...[...Array(10).keys()].map(k=>[k*100+8,k*100+92,k+1===tg?'z2':'zx'])],sv==null,sv,`رمية الحجر: وقّف المؤشر على المربع ${tg} (1 يسار … 10 يمين)`)}${r2Stop(key,'throw','🪨 ارمِ الحجر',sv==null)}`;}
-      else{const w=hsW(d,t,d.tg)/2,c=hsC(d);s+=`${r2Meter(key,m,[[0,1000,'z0'],[r2Clamp(c-w,0,1000),r2Clamp(c+w,0,1000),'z2']],sv==null,sv,'التوازن: وقّف المؤشر في الأخضر')}${r2Stop(key,'hop','👣 انقز',sv==null)}`;}}
+      else{const w=hsW(d,t,d.tg,d.tg-d.pr[t]>1)/2,c=hsC(d);s+=`${r2Meter(key,m,[[0,1000,'z0'],[r2Clamp(c-w,0,1000),r2Clamp(c+w,0,1000),'z2']],sv==null,sv,'التوازن: وقّف المؤشر في الأخضر')}${r2Stop(key,'hop','👣 انقز',sv==null)}`;}}
     return s+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
     if(a==='hb'){if(i===0||i===1){S.draft.hb=String(i);render();}return;}
@@ -391,4 +391,4 @@ GAMES.r_hop={name:'الحجلة',cat:'sport',lbc:'#C2577A',
   after(d){r2Spin();const el=app.querySelector('.hs-svg');if(!el||!el.dataset.key||!once('hs'+el.dataset.key))return;const st=el.querySelector('.hs-st'),L=d.lx;
     if(st&&L&&L.k==='t')r2Anim(st,[{transform:'translate(80px,296px) scale(1.4)'},{transform:st.style.transform}],420,0,'cubic-bezier(.3,.7,.4,1)');}
 };
-HELP.r_hop='الحجلة: مربعات من 1 إلى 10. بدورك ارمِ الحجر على المربع اللي بعدك: المؤشر يمر على المربعات من 1 (يسار) إلى 10 (يمين)، وقّفه داخل مربعك الأخضر (لو وقف على الخط أو مربع ثاني تخسر الدور). لو نزل الحجر صح، وقّف مؤشر التوازن في الأخضر عشان تنقز وترجع، وتتقدم مربع. تقدر تنجح 3 مرات بالدور. «الجريء» ترمي على المربع اللي بعد اللي بعدك وتنقزهم مرة وحدة (تتقدم مربعين، بس أصعب). ومرة باللعبة تقدر تخلي مربع خلّصته «بيتك» 🏠: الباقين لازم ينقزون فوقه فيصير توازنهم أصعب، وأنت ترتاح فيه. كل ما بعدت صار التوازن أصعب. أول واحد يخلّص المربع 10 يفوز. ولو لعبتوا فرق، يفوز فريق اللي يخلّص أول.';
+HELP.r_hop='الحجلة: مربعات من 1 إلى 10. بدورك ارمِ الحجر على المربع اللي بعدك: المؤشر يمر على المربعات من 1 (يسار) إلى 10 (يمين)، وقّفه داخل مربعك الأخضر (لو وقف على الخط أو مربع ثاني تخسر الدور). لو نزل الحجر صح، وقّف مؤشر التوازن في الأخضر عشان تنقز وترجع، وتتقدم مربع. تقدر تنجح مرتين بالدور. «الجريء» ترمي على المربع اللي بعد اللي بعدك وتنقزهم مرة وحدة (تتقدم مربعين، بس الرمية والنقزة أصعب). ومرة باللعبة تقدر تخلي مربع خلّصته «بيتك» 🏠: الباقين لازم ينقزون فوقه فيصير توازنهم أصعب، وأنت ترتاح فيه. كل ما بعدت صار التوازن أصعب. أول واحد يخلّص المربع 10 يفوز. ولو لعبتوا فرق، يفوز فريق اللي يخلّص أول.';

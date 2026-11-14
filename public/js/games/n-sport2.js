@@ -374,7 +374,7 @@ function glPlay(d,t,a,v){const c=glHole(d.gid,d.hl),aa=a+r2N()*.7,pp=r2Clamp(v*(
   if(hin[t]==='1')x={...x,sc:x.sc.map((q,s)=>s===t?[...q,sk[t]]:q)};
   return glNext(x,t);}
 function glNext(x,t){const o=r2Ord(x).filter(s=>x.hin[s]==='.');
-  if(!o.length){if(x.hl+1>=x.H)return {...x,win:r2Best(x,x.sc.map((q,s)=>x.out[s]==='1'?null:q.reduce((p,r)=>p+r,0)),true)};
+  if(!o.length){if(x.hl+1>=x.H)return {...x,win:r2Best(x,x.sc.map((q,s)=>x.out[s]==='1'?null:q.reduce((p,r)=>p+r,0)*1000+q.slice(Math.floor(q.length/2)).reduce((p,r)=>p+r,0)*20+(q[q.length-1]||0)),true)};
     const y=glStart(x,x.hl+1),st=r2Ord(y);return {...y,lx:null,turn:st[(x.hl+1)%st.length],last:x.last+` • الحفرة ${x.hl+2}`};}
   const n=x.pl.length,rel=s=>(s-t+n)%n;return {...x,turn:o.slice().sort((a,b)=>(rel(a)||n)-(rel(b)||n))[0]};}
 // a bot tries many strokes (it counts the steps, so it never thinks for long) and keeps the one that ends nearest the cup
@@ -426,7 +426,7 @@ GAMES.r_golf={name:'الغولف الصغير',cat:'sport',lbc:'#3E9D4A',
     const k=Math.max(1,Math.ceil(P.length/28)),fr=P.filter((_,j)=>j%k===0||j===P.length-1).map(([x,y])=>({transform:`translate(${x}px,${y}px)`}));
     r2Play(Math.min(1200,180+P.length*14),ms=>{b.animate(fr,{duration:ms,easing:'cubic-bezier(.2,.6,.4,1)'});});}
 };
-HELP.r_golf='غولف صغير على حفر جديدة كل مرة، فيها جدران تقدر ترتد عليها، ورمل يبطّي الكرة، ومويه لو طاحت فيها الكرة تنحسب عليك ضربة زيادة وترجع مكانك. بدورك صوّب: اضغط على الملعب بالاتجاه اللي تبيه أو عدّل بالأسهم، وبعدين وقّف مؤشر القوة على القوة اللي تبيها (الكرة السريعة تمر فوق الحفرة وما تدخل). اللاعبين يضربون بالتناوب، واللي دخّل كرته يستنى الباقين. أكثر شي 6 ضربات بالحفرة، ولو ما دخلت تنحسب 7. بعد آخر حفرة الأقل ضربات يفوز. ولو لعبتوا فرق، الفريق اللي معدّل ضرباته أقل يفوز.';
+HELP.r_golf='غولف صغير على حفر جديدة كل مرة، فيها جدران تقدر ترتد عليها، ورمل يبطّي الكرة، ومويه لو طاحت فيها الكرة تنحسب عليك ضربة زيادة وترجع مكانك. بدورك صوّب: اضغط على الملعب بالاتجاه اللي تبيه أو عدّل بالأسهم، وبعدين وقّف مؤشر القوة على القوة اللي تبيها (الكرة السريعة تمر فوق الحفرة وما تدخل). اللاعبين يضربون بالتناوب، واللي دخّل كرته يستنى الباقين. أكثر شي 6 ضربات بالحفرة، ولو ما دخلت تنحسب 7. بعد آخر حفرة الأقل ضربات يفوز، ولو تعادلوا يفوز الأحسن في الحفر الأخيرة. ولو لعبتوا فرق، الفريق اللي معدّل ضرباته أقل يفوز.';
 
 /* =================================================================
    السلة (عصفور): the leader picks a spot and shoots; if it goes in, every other player must make the same shot or take a
