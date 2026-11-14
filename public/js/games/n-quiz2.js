@@ -34,11 +34,11 @@ const zPoly=(pts,f)=>`<polygon fill="${f}" points="${pts}"/>`;
 const zUS=(()=>{let d='';for(let r=0;r<9;r++){const n=r%2?5:6;for(let j=0;j<n;j++){const cx=(r%2?494:247)+494*j,cy=210+210*r;const p=[];
   for(let i=0;i<10;i++){const rr=i%2?120*.381966:120,an=(-90+i*36)*Math.PI/180;p.push(Math.round(cx+rr*Math.cos(an))+','+Math.round(cy+rr*Math.sin(an)));}d+='M'+p.join('L')+'z';}}return d;})();
 // a simple cedar for Lebanon: a trunk and five tiers of branches, green on the white band
-const zCedar=(()=>{const tiers=[[480,560,150],[560,700,250],[680,860,350],[820,1040,440],[980,1230,520]];
-  return `<rect x="1405" y="1180" width="70" height="200" fill="#00A651"/>`+tiers.map(([y0,y1,w])=>`<path fill="#00A651" d="M1440 ${y0}L${1440+w} ${y1}Q1440 ${y1-60} ${1440-w} ${y1}Z"/>`).join('');})();
+const zCedar=(()=>{const tiers=[[480,610,190],[560,770,320],[690,940,430],[850,1120,530],[1030,1300,610]];
+  return `<rect x="1400" y="1240" width="80" height="190" fill="#00A651"/>`+tiers.map(([y0,y1,w])=>`<path fill="#00A651" d="M1440 ${y0}L${1440+w} ${y1}Q1440 ${y1-60} ${1440-w} ${y1}Z"/>`).join('');})();
 const ZFL=[
   // [name, level, kind, colours, viewBox w, h, body]
-  ['السعودية',1,'e','gw',900,600,`${zR(0,0,900,600,'#006C35')}<g fill="#fff" font-family="'Amiri','Noto Naskh Arabic','Traditional Arabic',serif" font-weight="700" text-anchor="middle" direction="rtl"><text x="450" y="240" font-size="140">لا إله إلا الله</text><text x="450" y="378" font-size="130">محمد رسول الله</text></g><path fill="#fff" d="M652 430H330Q292 430 266 404Q282 446 330 446H652Z"/><rect x="640" y="416" width="13" height="44" rx="4" fill="#fff"/><rect x="652" y="432" width="58" height="12" rx="5" fill="#fff"/><circle cx="716" cy="438" r="10" fill="#fff"/>`],
+  ['السعودية',1,'e','gw',900,600,`${zR(0,0,900,600,'#006C35')}<g fill="#fff" font-family="'Amiri','Noto Naskh Arabic','Traditional Arabic',serif" font-weight="700" text-anchor="middle" direction="rtl"><text x="450" y="235" font-size="116">لا إله إلا الله</text><text x="450" y="355" font-size="110">محمد رسول الله</text></g><path fill="#fff" d="M650 424H330Q288 424 258 394Q276 450 330 450H650Z"/><rect x="638" y="406" width="16" height="62" rx="6" fill="#fff"/><rect x="652" y="429" width="64" height="16" rx="7" fill="#fff"/><circle cx="724" cy="437" r="13" fill="#fff"/>`],
   ['الإمارات',1,'t','rgwk',40,20,`${zStr('h',40,20,['#00732F','#fff','#000'])}${zR(0,0,10,20,'#FF0000')}`],
   ['الكويت',1,'t','gwrk',12,6,`${zStr('h',12,6,['#007A3D','#fff','#CE1126'])}${zPoly('0,0 3,2 3,4 0,6','#000')}`],
   ['قطر',1,'z','mw',75,18,`${zR(0,0,75,18,'#8A1538')}<path fill="#fff" d="M22,18H0V0H22l6,1-6,1 6,1-6,1 6,1-6,1 6,1-6,1 6,1-6,1 6,1-6,1 6,1-6,1 6,1-6,1 6,1z"/>`,28,11],
