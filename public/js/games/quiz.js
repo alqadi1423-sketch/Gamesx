@@ -55,7 +55,7 @@ function rpsGuess(d,o){const h=String((d.hs||[])[o]||'').replace(/[^012]/g,'');c
 GAMES.rps={name:'حجرة ورقة مقص',cat:'quiz',lbc:'#C76A2A',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#EE8A3C"/><text x="28" y="48" font-size="30" text-anchor="middle">✊</text><text x="72" y="48" font-size="30" text-anchor="middle">✋</text><text x="50" y="84" font-size="30" text-anchor="middle">✌️</text></svg>`,
   // gd: this round's gold hand (a win with it counts two), hs: the hands each seat played, oldest first
-  init:n=>({rd:0,pts:Array(n).fill(0),res:'',goal:6,gd:rnd(3),hs:Array(n).fill('')}),
+  init:n=>({rd:0,pts:Array(n).fill(0),res:'',goal:n<=2?6:3*n,gd:rnd(3),hs:Array(n).fill('')}),
   viewer:simulViewer,coverMsg:d=>d.res||'',
   status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts),true),
   winExtra:d=>d.res,
@@ -195,7 +195,7 @@ GAMES.math=makeQuiz({name:'سباق الحساب',lbc:'#3B6E2F',icon:iconE('#5C9
       else if(op===1){const p=[10,20,25,50,75][ri(0,4)];const base=p%20===0||p===50?ri(3,20)*10:ri(2,12)*20;ans=base*p/100;q=`<span dir="rtl">${p}٪ من ${base}</span>`;near=[5,-5,10,-10,ans,-Math.floor(ans/2)];}
       else if(op===2){a=ri(11,25);ans=a*a;q=`${a}²`;near=[a,-a,10,-10,2*a,1];}else{a=ri(13,49);b=ri(3,9);ans=a*b;q=`${a} × ${b}`;near=[b,-b,10,-10,a,-a];}}
     const w=new Set();for(let k=0;w.size<3&&k<40;k++){const x=ans+near[Math.floor(R()*near.length)];if(x!==ans&&x>=0)w.add(x);}for(let k=1;w.size<3;k++)if(ans+k*3!==ans)w.add(ans+k*3);
-    return {q:`<span dir="ltr">${q} = ؟</span>`,...withOptions(R,String(ans),[...w].map(String)),t};}});
+    return {q:`<span class="qz-eq" dir="ltr">${q} = <b>?</b></span>`,...withOptions(R,String(ans),[...w].map(String)),t};}});
 
 /* ---------- capitals: country → capital, and on harder rounds capital → country; wrong options come from the same part of the world ---------- */
 const CAPS=(t=>t.trim().split('\n').map(l=>{const p=l.trim().split('|');return {c:p[0],k:p[1],r:p[2],t:+p[3]||2,x:p[4]||''};}))(`
