@@ -60,41 +60,98 @@ GAMES.rev.bot=(d,s,lv)=>{const z=d.z,n=d.pl.length,ms=revMoves(d.b,z,s);if(!ms.l
 
 /* ---------- old maid ---------- */
 function omPairs(cards){const by={};cards.forEach(c=>{(by[c[0]]=by[c[0]]||[]).push(c);});const keep=[];for(const r in by){const a=by[r];if(a.length%2)keep.push(a[a.length-1]);}return keep;}
+// the pairs leave the hand and every other card keeps its place
+function omKeep(cards){const n={};for(const c of cards)n[c[0]]=(n[c[0]]||0)+1;const seen={};return cards.filter(c=>{seen[c[0]]=(seen[c[0]]||0)+1;return n[c[0]]%2===1&&seen[c[0]]===n[c[0]];});}
+const OMK='Ks';// the old maid: the only king left in the deck
+// whoever draws from seat t (the alive seat just before it)
+const omFrom=(d,t,out)=>{out=out||d.out;const al=aliveSeats(d,out);return al.find(p=>p!==t&&nextSeat(d,p,out)===t)??null;};
+/* After drawing, a player arranges the hand that the next taker will draw from: swap cards around, shuffle, and may stick one
+   card up (up[s], public, as at a real table). The taker sees only the backs and which one sticks up: a lure or a bluff */
 GAMES.oldmaid={outDone:true,name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,hide:{seat:['hands']},points:d=>d.hands.map((h,s)=>d.out[s]==='1'?'خلّص ✓':h.length/2+' ورق'),
+  // the selected card belongs to the phone; a swap carries both places in its number
+  net:{local:['sel']},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9C527C"/><rect x="18" y="22" width="34" height="50" rx="6" fill="#4AB1E8" stroke="#fff" stroke-width="3" transform="rotate(-12 35 47)"/><rect x="46" y="22" width="36" height="54" rx="6" fill="#fff" transform="rotate(8 64 49)"/><text x="64" y="60" font-size="26" font-weight="800" fill="#2D4763" text-anchor="middle" transform="rotate(8 64 49)">K♠</text></svg>`,
   init:n=>{let hands;do{const dk=shuffle(deck52().filter(c=>!['Kh','Kd','Kc'].includes(c)));const hs=Array(n).fill(0).map(()=>[]);dk.forEach((c,k)=>hs[k%n].push(c));
       hands=hs.map(h=>shuffle(omPairs(h)).join(''));}while(hands.filter(h=>h).length<2);
-    return {hands,fin:[],last:''};},
+    return {hands,fin:[],last:'',up:Array(n).fill(-1),ph:'take',lt:null,ln:0};},
   // whoever is dealt only pairs has finished before the first draw
   start:d=>{let out=d.out;const fin=[];d.hands.forEach((h,s)=>{if(!h){out=setAt(out,s,'1');fin.push(s);}});if(!fin.length)return d;
     return {...d,out,fin,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,last:`${fin.map(s=>nm(d,s)).join(' و')} طلع ورقه كله أزواج وخلّص`};},
+  // a player who leaves while arranging: the next one draws
+  onSkip:(nd,d)=>nd.turn!==d.turn?{...nd,ph:'take'}:nd,
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   winText:d=>d.win!=null&&d.loser!=null?`${nm(d,d.win)} خلّص أول، و${nm(d,d.loser)} علق معه الشايب`:null,
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+(d.ph==='arr'&&d.win==null&&!ctx.my?`${nameTag(d,d.turn)} يرتّب ورقه`:turnTxt(d,ctx)),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
     let s='';
     if(d.win!=null||v<0)return s;
-    const tg=nextSeat(d,d.turn);const my=ctx.my&&d.turn===v;
-    // the felt: the next player's cards face down to draw from (or a fan of how many they hold while waiting)
-    const th=cardsOf(d.hands[tg]);
-    s+=`<div class="omt" style="--c:${col(d,tg)}"><div class="ompr">${d.pr?`<span data-k="p${d.pr}">${cardsOf(d.pr).map(miniCard).join('')}</span><small>زوج ${nm(d,d.pw)} طلع</small>`:''}</div><p class="lbl">${my&&tg!==d.turn?`اسحب ورقة من ${nameTag(d,tg)}`:`ورق ${nameTag(d,tg)}`}</p><div class="hand omfrom">${my&&tg!==d.turn?th.map((c,i)=>`<button class="card back pick" data-ga="take" data-i="${i}" aria-label="ورقة ${i+1}"></button>`).join(''):th.map(()=>'<div class="card back"></div>').join('')}</div></div>`;
+    const t=d.turn,tg=nextSeat(d,t),my=ctx.my&&t===v,up=d.up||[],mine=cardsOf(d.hands[v]);
+    const pr=`<div class="ompr">${d.pr?`<span data-k="p${d.pr}">${cardsOf(d.pr).map(miniCard).join('')}</span><small>زوج ${nm(d,d.pw)} طلع</small>`:''}</div>`;
+    // arranging: tap a card, then another to swap them; the selected one can be stuck up
+    if(d.ph==='arr'&&my){const fr=omFrom(d,t);let sel=S.omSel;if(!(sel>=0&&sel<mine.length)||S.omKey!==d.gid+d.ln)sel=null;
+      s+=`<div class="omt omarr" style="--c:${col(d,t)}">${pr}<p class="lbl">رتّب ورقك قبل ما يسحب منك ${fr!=null?nameTag(d,fr):''}</p><small class="omtip">اضغط ورقة ثم ورقة ثانية تبدّلهم، أو ارفع وحدة تغري بها أو تخدع</small></div>`;
+      s+=`<div class="hand omhand omed">${mine.map((c,k)=>`<button id="om${v}${c}" class="omc ${k===up[v]?'up':''} ${k===sel?'sel':''}" data-ga="${sel!=null&&sel!==k?'sw':'sel'}" data-i="${sel!=null&&sel!==k?sel*100+k:k}">${cardHTML(c)}</button>`).join('')}</div>`;
+      s+=`<div class="acts">${sel!=null?`<button class="btn navy" data-ga="up" data-i="${sel}">${sel===up[v]?'⬇ نزّلها':'⬆ ارفعها'}</button>`:''}<button class="btn navy" data-ga="mix">🔀 اخلط</button><button class="btn green" data-ga="ok">✓ خلصت</button></div>`;
+      return s;}
+    // the felt: the next player's cards face down to draw from (or a fan of how many they hold while waiting); a raised card sticks up
+    const th=cardsOf(d.hands[tg]),take=my&&tg!==t&&d.ph!=='arr',lt=d.lt&&d.lt[2]===d.ln?d.lt:null;
+    s+=`<div class="omt" style="--c:${col(d,tg)}">${pr}<p class="lbl">${take?`اسحب ورقة من ${nameTag(d,tg)}`:`ورق ${nameTag(d,tg)}`}</p><div class="hand omfrom">${th.map((c,i)=>{const u=i===up[tg]?' up':'';
+      return take?`<button class="card back pick${u}" data-ga="take" data-i="${i}" aria-label="ورقة ${i+1}${u?' مرفوعة':''}"></button>`:`<div class="card back${u}"></div>`;}).join('')}</div>${up[tg]>=0&&take?'<small class="omtip">ورقة مرفوعة: إغراء ولا فخ؟</small>':''}</div>`;
     // each card keeps its node (id), so the card just drawn flies in
-    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand omhand">${cardsOf(d.hands[v]).map(c=>`<span id="om${v}${c}">${cardHTML(c)}</span>`).join('')||'<span class="note">خلّصت</span>'}</div>`;
+    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand omhand">${mine.map((c,k)=>`<span id="om${v}${c}" class="${k===up[v]?'up':''}">${cardHTML(c)}</span>`).join('')||'<span class="note">خلّصت</span>'}</div>`;
     return s;},
   click(a,i,d,ctx){
-    if(!ctx.my)return;const t=d.turn,tg=nextSeat(d,t);if(tg===t)return;const th=cardsOf(d.hands[tg]);const c=th.splice(i,1)[0];if(!c)return;
-    const mine=omPairs([...cardsOf(d.hands[t]),c]);const paired=mine.length<cardsOf(d.hands[t]).length+1;
-    const hands=[...d.hands];hands[tg]=th.join('');hands[t]=shuffle(mine).join('');let out=d.out,fin=[...d.fin];
+    if(!ctx.my||d.win!=null)return;const t=d.turn,up=[...(d.up||d.pl.map(()=>-1))];
+    if(d.ph==='arr'){const h=cardsOf(d.hands[t]);
+      if(a==='sel'){if(!(i>=0&&i<h.length))return;S.omKey=d.gid+d.ln;S.omSel=S.omSel===i?null:i;render();return;}
+      const hands=[...d.hands],k=h[up[t]];S.omSel=null;
+      if(a==='sw'){const x=Math.floor(i/100),y=i%100;if(!(x>=0&&x<h.length&&y>=0&&y<h.length)||x===y)return;[h[x],h[y]]=[h[y],h[x]];hands[t]=h.join('');up[t]=k?h.indexOf(k):-1;act({...d,hands,up});return;}
+      if(a==='up'){if(!(i>=0&&i<h.length))return;up[t]=up[t]===i?-1:i;act({...d,up});return;}
+      if(a==='mix'){hands[t]=shuffle(h).join('');up[t]=-1;act({...d,hands,up});return;}
+      if(a==='ok'){act({...d,ph:'take',turn:nextSeat(d,t),last:`${nm(d,t)} رتّب ورقه${up[t]>=0?' ورفع ورقة 👀':''}`});}
+      return;}
+    if(a!=='take')return;const tg=nextSeat(d,t);if(tg===t)return;const th=cardsOf(d.hands[tg]);if(!(i>=0&&i<th.length))return;const c=th.splice(i,1)[0];
+    up[tg]=up[tg]===i?-1:up[tg]>i?up[tg]-1:up[tg];
+    // the card drawn goes in at a random place; a pair it makes leaves the hand, every other card keeps its place
+    const old=cardsOf(d.hands[t]),k=old[up[t]],at=rnd(old.length+1),mine=omKeep([...old.slice(0,at),c,...old.slice(at)]);const paired=mine.length<old.length+1;
+    up[t]=k&&mine.includes(k)?mine.indexOf(k):-1;
+    const hands=[...d.hands];hands[tg]=th.join('');hands[t]=mine.join('');let out=d.out,fin=[...d.fin];
     // the pair laid down is public, as at a real table
-    const pr=paired?c+cardsOf(d.hands[t]).find(x=>x[0]===c[0]):'';
+    const pr=paired?c+old.find(x=>x[0]===c[0]):'';
     for(const s of [t,tg])if(out[s]!=='1'&&!hands[s].length){out=setAt(out,s,'1');fin.push(s);}
-    const al=aliveSeats(d,out);
-    const last=`${nm(d,t)} سحب من ${nm(d,tg)}${paired?' وطلّع زوج':''}`;
-    if(al.length<=1){act({...d,hands,out,fin,pr,pw:t,win:fin[0]??'d',loser:al[0]??null,last});return;}
-    act({...d,hands,out,fin,pr,pw:t,turn:nextSeat(d,t,out),last});
+    const al=aliveSeats(d,out),ln=(d.ln||0)+1,lt=[tg,i,ln];
+    const last=`${nm(d,t)} سحب من ${nm(d,tg)}${(d.up||[])[tg]===i?' الورقة المرفوعة':''}${paired?' وطلّع زوج':''}`;
+    if(al.length<=1){act({...d,hands,out,fin,pr,pw:t,up,lt,ln,win:fin[0]??'d',loser:al[0]??null,last});return;}
+    // nobody draws from a player who is out: then the turn just moves on
+    if(out[t]==='1'||omFrom(d,t,out)==null){act({...d,hands,out,fin,pr,pw:t,up,lt,ln,ph:'take',turn:nextSeat(d,t,out),last});return;}
+    act({...d,hands,out,fin,pr,pw:t,up,lt,ln,ph:'arr',last});
   }
 };
+/* bots. A taker: easy is drawn to a raised card, medium does not care, hard learns from its own draws how often each player's
+   raised card was the old maid. A holder: easy often gives itself away by raising the old maid, hard learns how often each
+   taker goes for a raised card and puts the old maid where that taker is most likely to draw */
+const omSt=()=>S.omSt||(S.omSt={hold:{},take:{}});
+GAMES.oldmaid.botSee=nd=>{const od=S.st.d;if(!od||od.gid!==nd.gid||!nd.lt||nd.ln===od.ln||od.ph==='arr')return;const t=od.turn,[tg,i]=nd.lt,r=(od.up||[])[tg];if(!(r>=0))return;
+  const T=omSt().take,k=od.pl[t];const x=T[k]||(T[k]={n:0,r:0});x.n++;if(i===r)x.r++;
+  // a bot that drew learns about the holder's raised card: was it the old maid, or was the old maid elsewhere
+  if(isBot(od,t)){const c=cardsOf(od.hands[tg])[i],H=omSt().hold,hk=od.pl[tg],y=H[hk]||(H[hk]={n:0,m:0});if(i===r){y.n++;if(c===OMK)y.m++;}else if(c===OMK)y.n++;}};
+GAMES.oldmaid.bot=(d,s,lv)=>{if(d.ph==='arr'){let h=cardsOf(d.hands[s]);const L=h.length,has=h.includes(OMK);let mode;// m: raise the old maid, o: raise another card, n: none
+    if(lv===1)mode=has&&Math.random()<.45?'m':Math.random()<.15?'o':'n';
+    else if(lv===2)mode=Math.random()<.5?(has&&Math.random()<.6?'m':'o'):'n';
+    else if(has&&L>1){const fr=omFrom(d,s),x=(fr!=null&&omSt().take[d.pl[fr]])||{n:0,r:0},f=(x.r+1)/(x.n+2);
+      const o=[['m',f],['o',(1-f)/(L-1)],['n',1/L]].sort((a,b)=>b[1]-a[1]);mode=Math.random()<.8?o[0][0]:o[1][0];}
+    else mode=Math.random()<.5?'o':'n';
+    if(lv>1||Math.random()<.3)h=shuffle(h);
+    const m=h.indexOf(OMK),oth=[...Array(L).keys()].filter(k=>k!==m),r=mode==='m'&&m>=0?m:mode!=='n'&&oth.length?pickR(oth):-1;
+    const up=[...d.up];up[s]=r;const hands=[...d.hands];hands[s]=h.join('');return botDo({...d,hands,up},s,'ok',0);}
+  const tg=nextSeat(d,s),n=cardsOf(d.hands[tg]).length;if(!n)return GAMES.oldmaid.onTimeout&&GAMES.oldmaid.onTimeout(d);const r=(d.up||[])[tg];let i;
+  if(!(r>=0)||n<2)i=rnd(n);
+  else if(lv===1)i=Math.random()<.6?r:rnd(n);
+  else if(lv===2)i=rnd(n);
+  else{const y=omSt().hold[d.pl[tg]]||{n:0,m:0},q=(y.m+1)/(y.n+3),other=(1-q)/(n-1);
+    if(q<other)i=r;else{const o=[...Array(n).keys()].filter(k=>k!==r);i=pickR(o);}}
+  return botDo(d,s,'take',i);};
 
 /* ---------- colour memory ---------- */
 const SIM=['#E5483F','#3D8FD8','#3FAE5C','#F0B429'];

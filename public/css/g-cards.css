@@ -461,3 +461,28 @@ button.ustack:active{transform:translate(2px,2px)}
   background:radial-gradient(circle at 35% 30%,#fff 0 30%,#FFE7A3 70%,#F0B429 100%);box-shadow:0 2px 0 rgba(0,0,0,.25);animation:bb-in .38s var(--spring)}
 .bball small{font-size:8px;font-weight:800;color:#8A5A00;margin-bottom:-6px}
 @keyframes bb-in{from{transform:translateY(-40px) rotate(-200deg) scale(.6);opacity:0}}
+/* blackjack: the surrender button (a quiet white flag next to the main moves) */
+.btn.bjsur{background:#7D8A99;color:#fff;box-shadow:0 3px 0 #5B6573}
+.btn.bjsur small{font-weight:700;opacity:.85}
+/* old maid: a raised card sticks up out of the fan (the taker sees which), and the hand being arranged */
+.omfrom .card.card.back.up{transform:translateY(-14px);box-shadow:0 0 0 2px #FFD84D,0 6px 10px rgba(0,0,0,.35)}
+.omfrom .card.card.card.back.pick.up{transform:translateY(-14px)}
+.omhand>.up{transform:translateY(-12px)}
+.omhand>.up .card{box-shadow:0 0 0 2px #FFD84D,0 4px 8px rgba(0,0,0,.25)}
+.omt .omtip{display:block;color:rgba(255,255,255,.85);font-weight:700;font-size:12.5px;margin-top:4px}
+.omed{gap:2px}
+.omed .omc{background:none;padding:0;border:0;transition:transform var(--t2) var(--ease)}
+.omed .omc.up{transform:translateY(-12px)}
+.omed .omc.sel .card{box-shadow:0 0 0 3px var(--sel,#4AB1E8),0 4px 8px rgba(0,0,0,.25)}
+.omed .omc.sel{transform:translateY(-4px) scale(1.04)}
+.omed .omc.up.sel{transform:translateY(-14px) scale(1.04)}
+/* bingo: the swap. The card waits for two places; the first one picked lifts */
+.bgrid button.cg.bc:disabled{opacity:1}
+.bingo.bswap .bgrid .cg{box-shadow:0 0 0 2px rgba(255,255,255,.75),0 2px 0 rgba(0,0,0,.18)}
+.bgrid .cg.bsel{transform:translateY(-4px) scale(1.06);box-shadow:0 0 0 3px #FFD84D,0 4px 8px rgba(0,0,0,.25)}
+/* risky dice with two dice: side by side, the second lands a beat later; 1 and 1 shakes the whole panel */
+.pig2{display:flex;gap:10px}
+.pig2 .tapd.roll.r2{animation-delay:.06s}
+.pigp.wipe{animation:pig-shake .42s ease-in-out}
+.pigp.wipe .pigbar span{color:var(--bad)}
+@keyframes pig-shake{0%,100%{transform:none}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}

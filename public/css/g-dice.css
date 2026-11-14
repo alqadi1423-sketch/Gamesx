@@ -401,3 +401,27 @@ html.lite .tw .twd{animation-duration:5s!important;animation-iteration-count:1!i
 /* five dice: five of a kind makes the tray jump once the dice have landed */
 .ytray.yz{animation:yz-jump .4s .3s var(--spring) both}
 @keyframes yz-jump{0%,100%{transform:none}45%{transform:scale(1.06) rotate(-1.5deg)}}
+/* camel race: the camel stick. The camels that have not run this leg become buttons to drive one on */
+.cwhip{margin-top:6px}
+.cwhip .btn{font-size:14px;padding:8px 12px}
+button.cd.can{cursor:pointer;font-size:16px;transform:translateY(-2px);box-shadow:0 0 0 2px var(--surface),0 0 0 4px #FFD84D,inset 0 -2px 0 rgba(0,0,0,.18);transition:transform var(--t1)}
+button.cd.can:active{transform:translateY(1px) scale(.95)}
+.cpyr.whip .cd.done{opacity:.25}
+/* tanks: the shell choice, and the fire button between the two drive buttons */
+.segs.tkw{width:min(100%,520px);margin:8px auto 0}
+.tkrow{display:flex;direction:ltr;align-items:stretch;gap:8px;width:min(100%,520px);margin:10px auto 0}
+.tkrow .btn{direction:rtl}
+.tkrow .btn{margin:0;padding:10px 10px;white-space:nowrap}
+.tkrow .btn.wide{flex:1;max-width:none}
+.tkfu{display:block;text-align:center;margin-top:4px}
+/* dice wars: the new dice of a turn rise as «+n» over the lands that got them */
+.dwmap .dwplus{fill:#FFD84D;stroke:#2D4763;stroke-width:.55px;paint-order:stroke;pointer-events:none;transform-box:fill-box;transform-origin:center;opacity:0;animation:dw-rise .45s ease-out both}
+@keyframes dw-rise{0%{transform:translateY(2px) scale(.6);opacity:0}35%{opacity:1}100%{transform:translateY(-3px);opacity:0}}
+/* tapping battle: the kind of round, the exact goal, and the two pads that must take turns */
+.twk{font-size:19px}
+.tw .twgoal{font-weight:800;color:var(--mut);margin:0 0 6px}
+.tw .twgoal b{font-size:26px;color:var(--ink);margin-inline-start:4px}
+.twpads{display:flex;justify-content:center;gap:14px;margin-top:14px}
+.twpads .tapbtn{width:min(42vw,160px);height:min(42vw,160px);margin:0;font-size:40px;display:grid;place-items:center;line-height:1.05}
+.twpads .tapbtn small{display:block;font-size:16px;font-weight:900}
+.twpads .tapbtn.last{opacity:.55;transform:translateY(4px)}
