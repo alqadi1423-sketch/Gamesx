@@ -996,6 +996,8 @@ function saveMeta(){try{const ids=[...recentGames(),...favGames(),...NEWG];const
 // where this tab is (home, lobby, the game list, a game, a room), kept for this tab only, so reloading the page comes back to it
 const HEREK='alaabna.here';
 function noteHere(){if(S.hereWait)return;try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);}}catch(e){}}
+// a local game is written again as the page goes (a reload, the app closed): a copy wiped meanwhile is not lost
+try{window.addEventListener('pagehide',()=>{if(S.mode==='local')save();});}catch(e){}
 function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)||'null');}catch(e){}if(!h||typeof h!=='object')return false;
   if(h.m==='local'){const l=h.g&&loadLocal(true);if(l){localResume(l);if(h.b){S.browse=true;render();}return true;}
     // a game that had ended (or is no longer kept): this phone's game list, with its players as they were

@@ -34,7 +34,7 @@ function w2Race(o){const R=o.rounds;
     botPick:o.botPick,net:W2RNET,redeal:d=>d};
   return G;}
 // what every seat earned this round, one row each, best first
-function w2RaceRows(d,rows){return `<div class="w2rows">${rows.sort((a,b)=>b.g-a.g).map(r=>`<div class="w2row" style="--c:${col(d,r.s)}"><i></i><b>${escH(nm(d,r.s))}</b><span>${r.t}</span><em>${r.g>0?'+'+r.g:'0'}</em></div>`).join('')}</div>`;}
+function w2RaceRows(d,rows){return `<div class="w2rows">${rows.sort((a,b)=>b.g-a.g).map(r=>`<div class="w2row" style="--c:${col(d,r.s)}"><i></i><b>${nm(d,r.s)}</b><span>${r.t}</span><em>${r.g>0?'+'+r.g:'0'}</em></div>`).join('')}</div>`;}
 const w2Len=w=>[...w].length;
 // points for a word by its length: 3 letters 1, 4 letters 2, 5 letters 3, 6 letters 5, longer 8
 const w2WPts=w=>{const n=w2Len(w);return n<3?0:n===3?1:n===4?2:n===5?3:n===6?5:8;};
