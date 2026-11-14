@@ -256,11 +256,11 @@ let lastPeers=[];
 async function enterRoom(code,host,restore,given){
   S.joining=true;S.roomErr=null;render();
   await SEAL.ready;
-  if(!SEAL.ok){S.joining=false;S.roomErr='هذا المتصفح ما يدعم الاتصال الآمن، حدّثه أو جرّب متصفح ثاني عشان تلعب أونلاين.';render();return;}
+  if(!SEAL.ok){S.joining=false;S.roomErr='حدّث المتصفح عشان تلعب أونلاين';render();return;}
   // the same browser holds one key: a room already open in another tab of it stays there
   if(otherTab(code)){S.joining=false;S.roomErr=TAB_MSG+'، كمّل فيه أو سكّره وارجع';render();return;}
   const room=given||await getRoom();
-  if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
+  if(!room){S.joining=false;S.roomErr='اللعب أونلاين مو متوفر هنا، جرّبه من تطبيق ألعابنا';render();return;}
   let nr;
   // a new room must get a free code, and joining someone's room needs a room that is open: both are checked before entering
   try{nr=await room.join('g-'+code.toLowerCase(),{create:!!(host&&!restore),need:!host&&!restore&&!given});}
@@ -476,29 +476,33 @@ const modeBtn=(a,cls,t,sub)=>`<button class="mode ${cls}" data-a="${a}"><i class
 // small game tiles in a row that scrolls sideways (home: start right away on this phone; game list: pick)
 const recRow=(ks,a)=>`<div class="recs">${ks.map(g=>{const G=gInfo(g);return `<button class="rec" data-a="${a}" data-v="${g}"><span class="gi">${G.icon}</span><span class="rn">${G.name}</span></button>`;}).join('')}</div>`;
 const ICO_PLAY='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 5.5v13L17.5 12z" fill="currentColor"/></svg>';
+// home: one screen that never scrolls on a phone. Logo, the four ways to play as equal tiles, one "continue" card when there is
+// something to continue, and a one-line strip of the last games
+const modeTile=(a,cls,t,sub,off)=>`<button class="tile ${cls}${off?' off':''}" data-a="${off?'nearoff':a}"${off?' aria-disabled="true"':''}><i class="mode-ic">${MODEI[a]}</i><b>${t}</b><small>${sub}</small></button>`;
 function renderHome(){
-  const l=loadLocal(),rec=recentGames(),fav=favGames().filter(g=>!rec.includes(g)),quick=rec.length?rec:NEWG.filter(hasG),n=GREADY?Object.keys(GAMES).length:GMETA.n;
-  const st=statsAll();
-  OUT=`<div class="hx-hero">${LOGO}<h1>ألعابنا</h1><p>${n?`${n} لعبة، `:''}من لاعبين اثنين إلى ${MAXP}</p></div>
-  ${S.update?`<a class="upd" href="${S.update.apk}" target="_blank" rel="noopener"><i>⬇️</i><span>فيه نسخة أحدث من التطبيق<small>اضغط وحمّلها</small></span></a>`:''}
-  ${l?`<button class="hx-cont" data-a="lresume"><span class="gi">${gInfo(l.st.g).icon}</span><span class="mode-tx"><small>كمّل اللعبة</small><b>${gInfo(l.st.g).name}</b><em>${l.st.d.pl.length} لاعبين • على نفس الجهاز</em></span><i class="hx-play">${ICO_PLAY}</i></button>`:''}
-  <div class="hx-modes">${modeBtn('local','red','على نفس الجهاز','كلكم على جوال واحد')}${modeBtn('lobby','blue','أونلاين','كل واحد من جهازه بغرفة خاصة')}${modeBtn('vsbot','navy','ضد البوت','العب لحالك، وتختار صعوبة البوت')}${window.NEARROOM&&NEARROOM.available()?modeBtn('near','green','قريب بدون إنترنت','بلوتوث، وكلكم في نفس المكان'):''}</div>
-  ${quick.length?`<div class="hx-sec"><b>${rec.length?'لعبت مؤخرًا':'جديد عندنا'}</b><small>اضغط وابدأ على نفس الجهاز</small></div>${recRow(quick,'quick')}`:''}
-  ${fav.length?`<div class="hx-sec"><b>⭐ المفضلة</b></div>${recRow(fav,'quick')}`:''}
-  ${st.n?`<button class="hx-stats" data-a="stats"><span><b>${st.n}</b><small>لعبة خلصت</small></span><span><b>${st.w}</b><small>فوز</small></span><span><b>${st.k}</b><small>لعبة مختلفة</small></span><i>إحصائياتي ${CHEV}</i></button>`:''}`;
+  const l=loadLocal(),rec=recentGames().filter(g=>!l||g!==l.st.g).slice(0,5),n=GREADY?Object.keys(GAMES).length:GMETA.n,st=statsAll();
+  const near=!!(window.NEARROOM&&NEARROOM.available());
+  OUT=`<div class="hx-hero">${LOGO}<div class="hx-tt"><h1>ألعابنا</h1><p>${n?`${n} لعبة • `:''}من 2 إلى ${MAXP} لاعبين</p></div></div>
+  ${S.update?`<a class="upd" href="${S.update.apk}" target="_blank" rel="noopener"><i>⬇️</i><span>فيه تحديث للتطبيق<small>اضغط وحمّله</small></span></a>`:''}
+  ${l?`<button class="hx-cont" data-a="lresume"><span class="gi">${gInfo(l.st.g).icon}</span><span class="mode-tx"><small>كمّل اللعبة</small><b>${gInfo(l.st.g).name}</b></span><i class="hx-play">${ICO_PLAY}</i></button>`:''}
+  <div class="hx-tiles">${modeTile('local','red','على نفس الجهاز','جوال واحد للكل')}${modeTile('lobby','blue','أونلاين','كل واحد بجواله')}${modeTile('vsbot','navy','ضد البوت','العب لحالك')}${modeTile('near','green','قريب بدون نت',near?'بلوتوث':'متوفر في التطبيق',!near)}</div>
+  ${rec.length||st.n?`<div class="hx-foot">${rec.length?`<div class="hx-rec" role="group" aria-label="لعبت مؤخرًا">${rec.map(g=>{const G=gInfo(g);return `<button class="hr" data-a="quick" data-v="${g}" aria-label="${G.name}"><span class="gi">${G.icon}</span></button>`;}).join('')}</div>`:''}${st.n?`<button class="hx-st" data-a="stats" aria-label="إحصائياتي"><b>${st.w}</b><small>فوز</small></button>`:''}</div>`:''}`;
 }
 function renderNear(){
   const L=S.nearList||[],D=S.nearDiag||[];
-  OUT=`${topBar('قريب بدون إنترنت','home')}
-  ${D.length?`<div class="panel ndiag"><h3>قبل ما تبدأ</h3>${D.map(x=>`<div class="nd"><p>${x.t}</p>${x.a?`<button class="btn" data-a="nset" data-w="${x.a}">${x.b}</button>`:''}</div>`).join('')}<button class="big green" data-a="near">حاول مرة ثانية</button></div>`:''}
+  // what the phone must change (Bluetooth, location, permission) shows with its button; anything else is one short line, and the
+  // technical details only for support (a long press on the title, S.nearLog)
+  const act=D.filter(x=>x.a),other=D.length>act.length;
+  OUT=`${topBar('قريب بدون نت','home')}
+  ${D.length?`<div class="panel ndiag">${act.map(x=>`<div class="nd"><p>${x.t}</p><button class="btn" data-a="nset" data-w="${x.a}">${x.b}</button></div>`).join('')}${other&&!act.length?'<div class="nd"><p>ما قدرنا نشغّل اللعب القريب على هالجوال</p></div>':''}<button class="big green" data-a="near">حاول مرة ثانية</button></div>`:''}
   <div class="panel">${pTitle('me','navy','اسمك')}<input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off"></div>
-  <div class="panel">${pTitle('add','red','أنشئ غرفة قريبة')}<p>أصحابك اللي جنبك يشوفون غرفتك عندهم ويدخلون بضغطة، بدون إنترنت</p><button class="big red" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
-  <div class="panel">${pTitle('near','green','الغرف القريبة')}${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><span>${f.code}</span><i>ادخل</i></button>`).join('')}</div>`:S.nearScan?`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`:'<p class="note">البحث متوقف</p>'}</div>
+  <div class="panel"><button class="big red" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
+  <div class="panel">${pTitle('near','green','الغرف القريبة')}${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><i>ادخل</i></button>`).join('')}</div>`:S.nearScan?`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`:''}</div>
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}
-  ${NEARROOM.log.length?`<details class="nlog"><summary>تفاصيل الاتصال</summary><pre>${escH(NEARROOM.log.join('\n'))}</pre></details>`:''}`;
+  ${S.nearLog?`${D.length?`<pre class="nlog">${escH(D.map(x=>x.raw||x.t).join('\n'))}</pre>`:''}${NEARROOM.log.length?`<pre class="nlog">${escH(NEARROOM.log.join('\n'))}</pre>`:''}`:''}`;
 }
 // turns a native error into a short Arabic hint, with the raw code kept for us
-function nearErr(m){m=String(m||'');const raw=m&&m!=='perm'&&m!=='timeout'?`<small class="ltr nraw">${escH(m.slice(0,90))}</small>`:'';
+function nearErr(m){m=String(m||'');const raw=S.nearLog&&m&&m!=='perm'&&m!=='timeout'?`<small class="ltr nraw">${escH(m.slice(0,90))}</small>`:'';
   let t='ما قدرت أشغّل الغرف القريبة.';
   if(m==='perm'||/PERMISSION/i.test(m))t='الجوال ما أعطى التطبيق صلاحية الأجهزة القريبة أو الموقع.';
   else if(m==='timeout')t='ما رد صاحب الغرفة. قرّبوا من بعض وجرّب مرة ثانية.';
@@ -532,8 +536,8 @@ function renderLobby(){
   const sv=loadSaved();
   OUT=`${topBar('أونلاين','home')}
   <div class="panel">${pTitle('me','navy','اسمك وصورتك')}<input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off">${avPicker()}</div>
-  <div class="panel">${pTitle('add','red','أنشئ غرفة')}<p>تاخذ رمز خاص وترسله لأصحابك، وما يدخلها إلا اللي معه الرمز. وتقدر تحدد قواعدها</p><button class="big red" data-a="create" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
-  <div class="panel">${pTitle('key','blue','ادخل غرفة')}<p>اكتب الرمز اللي وصلك</p><input class="code" id="code" maxlength="6" autocomplete="off" placeholder="······"><button class="big blue" data-a="join" ${S.joining?'disabled':''}>ادخل</button></div>
+  <div class="panel"><button class="big red" data-a="create" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
+  <div class="panel">${pTitle('key','blue','عندك رمز؟')}<input class="code" id="code" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="······" aria-label="رمز الغرفة"><button class="big blue" data-a="join" ${S.joining?'disabled':''}>ادخل</button></div>
   ${sv&&sv.code&&sv.via!=='near'?`<button class="hx-cont room" data-a="resume"><i class="pic blue">${PIC.key}</i><span class="mode-tx"><small>ارجع لغرفتك</small><b class="ltr">${sv.code}</b></span><i class="hx-play"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M7 5.5v13L17.5 12z" fill="currentColor"/></svg></i></button>`:''}
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
 }
@@ -581,9 +585,9 @@ function keepHuman(){if(humanSeats({pl:[...Array(S.localN).keys()]}).length)retu
 function teamK(){const k=cfg().teams||0;return k&&players().length>=k*2?k:0;}
 function teamChip(r){const k=teamK();if(!k)return '';const t=roleTeam(r,k);return `<button class="tmc" style="--c:${TEAMS[t].c}" data-a="tmc" data-i="${r}" ${isHost()?'':'disabled'} aria-label="فريق ${TEAMS[t].n}، اضغط لتغييره">${TEAMS[t].e}</button>`;}
 function teamSegs(){const n=players().length;if(n<4)return '';const k=teamK(),h=isHost();
-  return `<div class="tmset"><label class="lab">طريقة اللعب</label><div class="segs">${[0,2,3,4].filter(x=>!x||n>=x*2).map(x=>`<button class="seg ${k===x?'on':''}" data-a="teams" data-i="${x}" ${h?'':'disabled'}>${x?(x===2?'فريقين':x+' فرق'):'كل واحد لحاله'}</button>`).join('')}</div>${k?`<div class="tmleg">${TEAMS.slice(0,k).map((t,i)=>`<span style="--c:${t.c}">${t.e} ${t.n} <b>${players().filter(r=>roleTeam(r,k)===i).length}</b></span>`).join('')}</div><p class="note">اضغط على شعار الفريق جنب أي لاعب عشان تنقله لفريق ثاني</p>`:''}</div>`;}
+  return `<div class="tmset"><label class="lab">طريقة اللعب</label><div class="segs">${[0,2,3,4].filter(x=>!x||n>=x*2).map(x=>`<button class="seg ${k===x?'on':''}" data-a="teams" data-i="${x}" ${h?'':'disabled'}>${x?(x===2?'فريقين':x+' فرق'):'كل واحد لحاله'}</button>`).join('')}</div>${k?`<div class="tmleg">${TEAMS.slice(0,k).map((t,i)=>`<span style="--c:${t.c}">${t.e} ${t.n} <b>${players().filter(r=>roleTeam(r,k)===i).length}</b></span>`).join('')}</div><p class="note">اضغط الشعار لتغيير الفريق</p>`:''}</div>`;}
 function localSetup(){const n=S.localN,nb=[...Array(n).keys()].filter(r=>S.bots[r]).length;
-  return `<div class="panel lsetup"><div class="ls-head"><span class="ph"><b>اللاعبين</b><small>${nb?`${n-nb} ${n-nb>1?'أشخاص':'شخص'} و${nb} ${nb>1?'بوتات':'بوت'}`:'كلكم على هذا الجوال'}</small></span><div class="stepper"><button data-a="dec" aria-label="أقل" class="${n<=2?'dim':''}">−</button><b>${n}</b><button data-a="inc" aria-label="أكثر" class="${n>=MAXP?'dim':''}">+</button></div></div>
+  return `<div class="panel lsetup"><div class="ls-head"><span class="ph"><b>اللاعبين</b>${nb?`<small>${n-nb} ${n-nb>1?'أشخاص':'شخص'} و${nb} ${nb>1?'بوتات':'بوت'}</small>`:''}</span><div class="stepper"><button data-a="dec" aria-label="أقل" class="${n<=2?'dim':''}">−</button><b>${n}</b><button data-a="inc" aria-label="أكثر" class="${n>=MAXP?'dim':''}">+</button></div></div>
     <div class="names">${[...Array(n).keys()].map(r=>{const b=S.bots[r];return `<div class="lrow ${b?'bot':''}" style="--c:${COLS[r]}"><i class="lav">${shapeW(r)}</i>${b?`<div class="lvl">${[1,2,3].map(l=>`<button class="${b===l?'on':''}" data-a="botL" data-i="${r}" data-v="${l}">${BOTL[l]}</button>`).join('')}</div>`:`<input class="field nm" data-draft="ln${r}" value="${escH(S.localNames[r]||'')}" placeholder="${b?BOTN[r]:NAMES[r]}" maxlength="14">`}${teamChip(r)}<button class="lbt ${b?'on':''}" data-a="botT" data-i="${r}" aria-label="لاعب أو بوت"><span>👤</span><span>🤖</span></button></div>`;}).join('')}</div>${teamSegs()}</div>`;}
 // how many play now: a game that needs more players (or fewer, G.maxP) is dimmed in the list
 const hereN=()=>S.mode==='local'?S.localN:players().length;
@@ -617,19 +621,19 @@ function renderGrid(){
   else{
     const live=S.st.g&&S.st.d&&GAMES[S.st.g];
     if(live)mid+=liveCard(S.st.g,'resumegame','اللعبة الحالية','ارجع لها');
-    mid+=players().length<2?(S.roomEmpty?'':'<p class="note">أرسل رمز الغرفة لأصحابك عشان يدخلون</p>'):canPick()?'':'<p class="note">صاحب الغرفة 👑 يختار اللعبة</p>';
+    mid+=players().length<2?(S.roomEmpty?'':'<p class="note">أرسل الرمز لأصحابك</p>'):canPick()?'':'<p class="note">صاحب الغرفة 👑 يختار اللعبة</p>';
   }
   const q=normQ(S.draft.q||''),cat=!q&&CATN[S.gcat]?S.gcat:'',n=hereN(),all=Object.keys(GAMES);
   const mine=S.mode==='local'||canPick(),rec=!q&&!cat&&mine?recentGames():[],fav=!q&&!cat&&mine?favGames():[];
   const cnt={};for(const k of all){const c=catOf(k);cnt[c]=(cnt[c]||0)+1;}
-  const dim=n>=2&&all.some(k=>!fitN(k,n));
+
   OUT=`${topBar('اختر لعبة',S.mode==='online'?'leave':'home',S.mode==='local'?'<button class="ib" data-a="m-settings" aria-label="الإعدادات">⚙️</button>':'')}${roomBar(true)}${mid}${standings()}
   <div class="gsent"></div><div class="gtools"><div class="gsrow"><input class="field search" type="search" data-draft="q" value="${escH(S.draft.q||'')}" placeholder="🔍 دوّر على لعبة" autocomplete="off" enterkeyhint="search" aria-label="دوّر على لعبة"><button class="grnd" data-a="rand" aria-label="لعبة عشوائية">${ICO_DICE}<span>عشوائية</span></button></div>
   <div class="cats">${[['','الكل',all.length],...CATS.filter(([c])=>cnt[c]).map(([c,t])=>[c,t,cnt[c]])].map(([c,t,k])=>`<button class="cchip ${cat===c?'on':''}" data-a="gcat" data-v="${c}" aria-pressed="${cat===c}">${t}<small>${k}</small></button>`).join('')}</div></div>
   ${S.mode==='online'?fabs():''}
   ${fav.length?`<h2 class="cat">⭐ المفضلة</h2>${recRow(fav,'rpick')}`:''}
   ${rec.length?`<h2 class="cat">لعبت مؤخرًا</h2>${recRow(rec,'rpick')}`:''}
-  ${dim&&!q?`<p class="gfit">${ICO_PPL} أنتم ${n}: الألعاب الباهتة تحتاج عدد ثاني من اللاعبين</p>`:''}
+
   ${gridBody(q,cat,n)}`;
 }
 // search: no diacritics or tatweel, one alef, ه for ة, ي for ى and ئ, و for ؤ; every word must match, with or without «ال»
@@ -723,7 +727,7 @@ function modalHTML(){
   else if(m==='chat'){S.chatSeen=Date.now();
     const ppl=S.chatPpl?`<div class="cppl">${h?`<div class="segs">${['true','false'].map(v=>`<button class="seg ${String(chatOn())===v?'on':''}" data-a="cfg" data-k="chat" data-v="${v}">${v==='true'?'💬 المحادثة مفتوحة':'🔇 مقفلة للكل'}</button>`).join('')}</div>`:''}
       ${players().filter(r=>r!==S.me&&S.ids[r]).map(r=>{const hid=hideSet().has(S.ids[r]);return `<div class="cpr" style="--c:${COLS[r]}"><i class="cav">${chatFace(r)}</i><b>${pname(r)}</b><button class="sm ${hid?'go':''}" data-a="chathide" data-i="${r}">${hid?'أظهر رسائله':'اخفِ رسائله'}</button></div>`;}).join('')||'<p class="note">ما فيه أحد غيرك في الغرفة</p>'}
-      <p class="note">إخفاء الرسائل على جوالك أنت بس</p></div>`:'';
+      </div>`:'';
     return `<div class="sheet-bg" data-a="closemodal"><div class="sheet chat"><div class="sh-head"><h2>المحادثة</h2><div class="sh-acts"><button class="x ${S.chatPpl?'on':''}" data-a="chatppl" aria-label="الأشخاص والإخفاء" aria-pressed="${!!S.chatPpl}">👥</button><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div></div>${ppl}${chatHTML()}</div></div>`;}
   else if(m==='react'){title='رد سريع';inner=`<div class="rxs">${RX.map(i=>`<button class="rxe" data-a="rx" data-i="${i}" aria-label="${EMJ[i].n}">${EMJ[i].svg}</button>`).join('')}</div>`;}
   else if(m==='settings'){
@@ -756,7 +760,7 @@ function chatHTML(){const L=chatList(),gs=[];let g=null;
   const items=gs.map(g=>{const mine=!!g.m.me,r=g.m.r,c=COLS[r]||'#8A99AA';
     return `<div class="chg ${mine?'me':''}" style="--c:${c}">${mine?'':`<i class="cav">${chatFace(r)}</i>`}<div class="chgb">${mine?'':`<b class="cnm">${chatName(g.m)}</b>`}${g.list.map(m=>m.k!=null?`<p class="msg stk" data-k="m${escH(m.i)}"><i class="emj">${emoSVG(m.k)}</i><time>${hhmm(m.t)}</time></p>`:`<p class="msg" data-k="m${escH(m.i)}"><span>${escH(m.x)}</span><time>${hhmm(m.t)}</time></p>`).join('')}</div></div>`;}).join('');
   const on=chatOn(),x=String(S.draft.chat||''),tray=!!S.chatTray;
-  const comp=!on?'<p class="chat-off">🔇 صاحب الغرفة قفل المحادثة، والردود السريعة شغالة</p>':
+  const comp=!on?'<p class="chat-off">🔇 المحادثة مقفلة</p>':
     `<div class="chatq ${tray?'tray':''}">${tray?RX.map(i=>`<button class="stkb" data-a="stk" data-i="${i}" aria-label="${EMJ[i].n}">${EMJ[i].svg}</button>`).join(''):CHAT_QP.map((t,i)=>`<button class="qp" data-a="chatq" data-i="${i}">${t}</button>`).join('')}</div>
     <div class="chatin"><button class="ctog ${tray?'on':''}" data-a="chattray" aria-label="${tray?'عبارات سريعة':'ستيكرات'}" aria-pressed="${tray}">${tray?'<b>أب</b>':EMJ[9].svg}</button><div class="cfield"><input class="field" data-draft="chat" value="${escH(x)}" maxlength="${CHAT_MAX}" placeholder="اكتب رسالة…" autocomplete="off" enterkeyhint="send" aria-label="رسالة"><small class="ccount ${x.length>CHAT_MAX-20?'near':''}" aria-hidden="true">${x.length}/${CHAT_MAX}</small></div><button class="send" data-a="send" aria-label="إرسال" ${x.trim()?'':'disabled'}>${ICO_SEND}</button></div>`;
   return `<div class="msgs" aria-live="polite">${items||'<div class="chat-empty"><i class="emj">'+EMJ[27].svg+'</i><br>ما فيه رسائل للحين، قل هلا!</div>'}</div><button class="jump ${S.chatJump?'on':''}" data-a="chatjump">رسائل جديدة ↓</button>${comp}`;}
@@ -785,7 +789,7 @@ function statsAll(){const o=statsGet();let n=0,w=0,k=0;for(const g in o.g){const
 function renderStats(){const o=statsGet(),fav=new Set(favGames()),t=statsAll();
   const ks=Object.keys(o.g).filter(g=>GAMES[g]&&Array.isArray(o.g[g])).sort((a,b)=>o.g[b][0]-o.g[a][0]);
   OUT=`${topBar('إحصائياتي','home')}<div class="stt"><span><b>${t.n}</b><small>لعبة خلصت</small></span><span><b>${t.w}</b><small>فوز</small></span><span><b>${t.n?Math.round(t.w/t.n*100):0}٪</b><small>نسبة الفوز</small></span></div>
-  <p class="note">محفوظة على هذا الجوال بس. الفوز ينحسب ضد البوت وأونلاين</p>
+
   ${ks.length?`<div class="stl">${ks.map(g=>{const p=+o.g[g][0]||0,w=+o.g[g][1]||0;return `<button class="str" data-a="quick" data-v="${g}"><span class="gi">${GAMES[g].icon}</span><span class="lv-tx"><b>${fav.has(g)?'⭐ ':''}${GAMES[g].name}</b><small>${p} مرة • ${w} فوز</small></span><i class="stb" aria-hidden="true"><i style="width:${p?Math.round(w/p*100):0}%"></i></i></button>`;}).join('')}</div><button class="link" data-a="statsreset">تصفير الإحصائيات</button>`:'<p class="gempty">ما خلصت ولا لعبة للحين</p>'}`;}
 /* ================= back: the phone's back button and the browser's ================= */
 // close a sheet, else go back one screen; leaving a room or the app takes two presses
@@ -805,7 +809,7 @@ function suggestNext(){const d=S.st.d,g=S.st.g;if(S.nextG&&S.nextG.gid===(d&&d.g
   const x=pool.length?(pool.length>3?pool[0]:pool[rnd(pool.length)]):null;S.nextG={gid:d&&d.gid,g:x};return x;}
 
 // what can be done before the game files have loaded; any other tap waits for them (whenGames shows a loading note)
-const PRE_LOAD_OK=new Set(['home','mute','lite','closemodal','lobby','near','nset','m-settings','statsreset']);
+const PRE_LOAD_OK=new Set(['nearoff','home','mute','lite','closemodal','lobby','near','nset','m-settings','statsreset']);
 app.addEventListener('click',e=>{
   const t=e.target.closest('[data-a],[data-ga]');if(!t||t.disabled)return;
   if(t.classList.contains('sheet-bg')&&e.target!==t)return;
@@ -822,6 +826,7 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
   switch(t.dataset.a){
     case 'home':if(S.mode==='near'&&window.NEARROOM)NEARROOM.stopAll();S.mode=null;render();break;
     case 'near':startNear();break;
+    case 'nearoff':toast('متوفر في تطبيق ألعابنا');break;
     case 'nset':NEARROOM.settings(t.dataset.w);break;
     case 'ncreate':{const c=genCode();enterRoom(c,true,null,NEARROOM.room('host',{code:c,name:S.myName}));break;}
     case 'njoin':{const f=(S.nearList||[])[i];if(f)enterRoom(f.code,false,null,NEARROOM.room('join',{id:f.id,code:f.code,name:S.myName}));break;}
@@ -901,6 +906,9 @@ app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.draf
   else if(k==='chat'){const v=e.target.value,b=app.querySelector('.chatin .send'),c=app.querySelector('.ccount');if(b)b.disabled=!v.trim();if(c){c.textContent=v.length+'/'+CHAT_MAX;c.classList.toggle('near',v.length>CHAT_MAX-20);}}
   else{const G=S.st.g&&GAMES[S.st.g];if(G&&G.onDraft)G.onDraft(k,e.target.value);}});
 app.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.send'))e.preventDefault();});
+// support only: a long press on the nearby screen's title shows the connection details
+app.addEventListener('pointerdown',e=>{if(S.mode!=='near'||!e.target.closest||!e.target.closest('.top h1'))return;clearTimeout(S.lpT);S.lpT=setTimeout(()=>{S.nearLog=!S.nearLog;render();},1200);});
+['pointerup','pointercancel','pointerleave'].forEach(k=>app.addEventListener(k,()=>clearTimeout(S.lpT)));
 app.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}else if(e.target.dataset&&e.target.dataset.draft==='chat'){e.preventDefault();shellAct({dataset:{a:'send'}});}
   else if(e.target.dataset&&e.target.dataset.draft==='q'){e.preventDefault();e.target.blur();}
   else if(e.target.dataset&&e.target.dataset.enter){e.preventDefault();const b=app.querySelector(`[data-ga="${e.target.dataset.enter}"]`);if(b&&!b.disabled)b.click();}});
