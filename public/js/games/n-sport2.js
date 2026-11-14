@@ -47,6 +47,10 @@ function r2Sides(d,vals){const g={};vals.forEach((x,s)=>{if(x==null||!isFinite(x
 function r2Best(d,vals,low){const o=r2Sides(d,vals),ks=Object.keys(o).map(Number);if(!ks.length)return 'd';
   const b=low?Math.min(...ks.map(k=>o[k])):Math.max(...ks.map(k=>o[k]));const top=ks.filter(k=>Math.abs(o[k]-b)<1e-9);if(top.length>1)return 'd';
   const s=d.pl.map((_,i)=>i).find(i=>r2Side(d,i)===top[0]&&vals[i]!=null);return s==null?'d':s;}
+// the status of a simultaneous round: who picks now (one phone), or whether this phone has picked
+function r2SimStat(d,ctx,extra,ask){if(d.win!=null)return '';let s=(d.last?`<small>${d.last}</small><br>`:'')+(extra||'');
+  if(ctx.local)return s+(ctx.v!=null&&ctx.v>=0?`دور ${nameTag(d,ctx.v)} ${ask}`:'');
+  return s+(ctx.v>=0&&d.out[ctx.v]!=='1'?(hasPicked(d,ctx.v)?'<b>اخترت، ننتظر الباقين…</b>':`<b class="yt">دورك ${ask}</b>`):'');}
 const r2Stat=(d,ctx,extra)=>(d.last?`<small>${d.last}</small><br>`:'')+(extra||'')+turnTxt(d,ctx);
 const R2TM=' ولو لعبتوا فرق، كل فريق يجمع نقاط لاعبينه (ولو الفرق مو متساوية ينحسب المعدّل)، والفريق الأعلى يفوز.';
 // a small one-off move (transform/opacity only, 450 ms at most); light mode skips it
@@ -69,7 +73,10 @@ function penOdds(z,p,v){const c=z%3,top=z<3,miss=[[.14,.08,.14],[.06,.02,.06]][t
   return {miss,save:r2Clamp(save,0,.97)};}
 const penGoal=(z,p,v)=>{const o=penOdds(z,p,v);return (1-o.miss)*(1-o.save);};
 // kicker → keeper pairs of round rd: the keeper is the seat a few places on, so the pairs change every round
-function penPairs(d){const o=aliveSeats(d),m=o.length;if(m<2)return [];const sh=1+(d.rd%(m-1));return o.map((s,i)=>[s,o[(i+sh)%m]]);}
+// with teams the keeper is always from another team (one keeper may then face two kicks)
+function penPairs(d){const o=aliveSeats(d),m=o.length;if(m<2)return [];
+  if(d.tm&&new Set(o.map(s=>d.tm[s])).size>1)return o.map((s,i)=>{const c=[...o.slice(i+1),...o.slice(0,i)].filter(q=>d.tm[q]!==d.tm[s]);return [s,c[d.rd%c.length]];});
+  const sh=1+(d.rd%(m-1));return o.map((s,i)=>[s,o[(i+sh)%m]]);}
 const penOk=p=>Number.isInteger(p)&&p>=0&&p<54;
 GAMES.r_pen={name:'ركلات الترجيح',cat:'sport',lbc:'#2E8B57',outDone:true,
   icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="r2pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5CC27E"/><stop offset="1" stop-color="#2E8B57"/></linearGradient></defs><rect width="100" height="100" fill="url(#r2pg)"/><path d="M0 70h100v30H0z" fill="#3FA466"/><rect x="14" y="20" width="72" height="40" fill="none" stroke="#fff" stroke-width="5"/><path d="M19 25h62M19 33h62M19 41h62M19 49h62M27 22v36M37 22v36M47 22v36M57 22v36M67 22v36M77 22v36" stroke="#fff" stroke-width="1" opacity=".45"/><g transform="rotate(-28 40 46)"><rect x="34" y="38" width="13" height="18" rx="4" fill="#F0B429"/><circle cx="40.5" cy="33" r="5" fill="#F2C9A0"/></g><circle cx="70" cy="80" r="11" fill="#fff"/><path d="M70 72l5 4-2 6h-6l-2-6zM59 78l4-2M81 78l-4-2M64 89l3-4M76 89l-3-4" fill="#2D4763" stroke="#2D4763" stroke-width="1.5"/></svg>`,
@@ -77,9 +84,9 @@ GAMES.r_pen={name:'ركلات الترجيح',cat:'sport',lbc:'#2E8B57',outDone:
   privOk:(d,r,o,p)=>p.pick==null||p.pick===NOPICK||penOk(p.pick),
   viewer:d=>simulViewer(d),coverMsg:d=>d.last||'',
   points:d=>d.g,
-  status:(d,ctx)=>simulStatus(d,ctx,d.sd?`<small>ركلات الموت المفاجئ: ${d.sd}</small><br>`:`<small>الجولة ${Math.min(d.rd+1,d.R)} من ${d.R}</small><br>`),
+  status:(d,ctx)=>r2SimStat({...d,last:''},ctx,d.sd?`<small>ركلات الموت المفاجئ: ${d.sd}</small><br>`:`<small>الجولة ${Math.min(d.rd+1,d.R)} من ${d.R}</small><br>`,'تسدد وتصد'),
   winExtra:d=>d.last,
-  render(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&d.out[v]!=='1',P=penPairs(d),pr=me?P.find(x=>x[0]===v):null,kp=me?P.find(x=>x[1]===v):null;
+  render(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&d.out[v]!=='1',P=penPairs(d),pr=me?P.find(x=>x[0]===v):null,kp=me?P.filter(x=>x[1]===v).map(x=>x[0]):[];
     const k=d.gid+':'+d.rd+':'+v;if(!S.r2pen||S.r2pen.k!==k)S.r2pen={k,z:null,p:1,v:null};const U=S.r2pen,pick=ctx.my&&d.win==null;
     // the replay: this phone's kick of last round (else the first one)
     const L=d.lr||[],fe=L.find(x=>x[0]===v)||L[0];
@@ -89,30 +96,31 @@ GAMES.r_pen={name:'ركلات الترجيح',cat:'sport',lbc:'#2E8B57',outDone:
     s+=`<div class="pn-sheet">${d.pl.map((r,i)=>`<div class="pn-row ${d.out[i]==='1'?'off':''}"><b style="--c:${col(d,i)}">${nm(d,i)}</b><span>${Array(cols).fill(0).map((_,j)=>{const c=d.kr[i][j];return `<i class="${c==='o'?'ok':c==='x'?'no':''}"></i>`;}).join('')}</span><em>${d.g[i]}</em></div>`).join('')}</div>`;
     s+=penScene(d,fe,pick?U.z:null,pick);
     if(L.length)s+=`<div class="pn-res" data-k="pr${d.rd}">${L.map(([a,b,z,p,dv,r])=>`<span class="${r===0?'ok':'no'} ${a===v?'me':''}"><b style="color:${col(d,a)}">${nm(d,a)}</b> ${r===0?'⚽ هدف':r===1?`🧤 صدّها ${nm(d,b)}`:z<0?'⌛ ما سدد':'❌ برّا'}</span>`).join('')}</div>`;
-    if(pick&&pr&&kp){const t=(a,arr)=>arr.map((x,j)=>`${a[j]} ${x}`).join(' • ');
+    if(pick&&pr){const t=(a,arr)=>arr.map((x,j)=>`${a[j]} ${x}`).join(' • '),hk=[0,1,2].map(j=>kp.reduce((q,k)=>q+d.kc[k][j],0));
       s+=`<div class="pn-pick"><p class="r2lbl">⚽ ركلتك على الحارس ${nm(d,pr[1])}: اختر الزاوية من المرمى فوق</p>
         <small class="r2tip">${nm(d,pr[1])} يرمي نفسه: ${t(PEN_D,d.dv[pr[1]])}</small>
         ${r2Seg('pp',PEN_P,U.p,true)}
-        <p class="r2lbl">🧤 وأنت حارس قدام ركلة ${nm(d,kp[0])}: وين ترمي نفسك؟</p>
-        <small class="r2tip">${nm(d,kp[0])} يسدد: ${t(PEN_D,d.kc[kp[0]])}</small>
-        ${r2Seg('pd',PEN_D.map((x,j)=>(j===0?'⬅ ':j===2?'':'⬆ ')+x+(j===2?' ➡':'')),U.v,true)}
-        <button class="btn red wide" data-ga="go" ${U.z!=null&&U.v!=null?'':'disabled'}>ثبّت اختياري</button></div>`;}
+        ${kp.length?`<p class="r2lbl">🧤 وأنت حارس قدام ركلة ${kp.map(k=>nm(d,k)).join(' و')}: وين ترمي نفسك؟</p>
+        <small class="r2tip">${kp.length>1?'يسددون':kp.map(k=>nm(d,k))+' يسدد'}: ${t(PEN_D,hk)}</small>
+        ${r2Seg('pd',PEN_D.map((x,j)=>(j===0?'⬅ ':j===2?'':'⬆ ')+x+(j===2?' ➡':'')),U.v,true)}`:'<small class="r2tip">ما أحد يسدد عليك هالجولة</small>'}
+        <button class="btn red wide" data-ga="go" ${U.z!=null&&(U.v!=null||!kp.length)?'':'disabled'}>ثبّت اختياري</button></div>`;}
     else if(me&&d.win==null)s+=`<p class="note">${hasPicked(d,v)?'اخترت، ننتظر الباقين…':''}</p>`;
     return s+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const U=S.r2pen;if(!U||U.k!==d.gid+':'+d.rd+':'+ctx.v)return;
     if(a==='pz'&&i>=0&&i<6){U.z=i;render();return;}if(a==='pp'&&i>=0&&i<3){U.p=i;render();return;}if(a==='pd'&&i>=0&&i<3){U.v=i;render();return;}
-    if(a==='go'&&U.z!=null&&U.v!=null)simulPick(d,ctx.v,U.z*9+U.p*3+U.v);},
-  net:{local:['pz','pp','pd']},
+    if(a==='go'&&U.z!=null){const kp=penPairs(d).filter(x=>x[1]===ctx.v);if(U.v==null&&kp.length)return;simulPick(d,ctx.v,U.z*9+U.p*3+(U.v==null?1:U.v));}},
+  // online the picks reach the host sealed and the kicks are drawn there; a new host keeps the round going
+  net:{local:['pz','pp','pd']},redeal:d=>d,
   resolve(d,picks){const P=penPairs(d),g=[...d.g],kr=[...d.kr],kc=d.kc.map(x=>[...x]),dv=d.dv.map(x=>[...x]),lr=[];
     for(const [s,k] of P){const a=picks[s],b=picks[k];let z=-1,p=1,v=1,r=2;if(penOk(a)){z=Math.floor(a/9);p=Math.floor(a/3)%3;}if(penOk(b)){v=b%3;dv[k][v]++;}
       if(z>=0){kc[s][z%3]++;const o=penOdds(z,p,v);r=Math.random()<o.miss?2:Math.random()<o.save?1:0;}
       if(r===0)g[s]++;kr[s]+=r===0?'o':'x';lr.push([s,k,z,p,v,r]);}
     let x={...d,g,kr,kc,dv,lr,rd:d.rd+1,sid:(d.sid||0)+1};const goals=lr.filter(q=>q[5]===0).length;
     x.last=`الجولة ${d.rd+1}: ${goals} ${goals===1?'هدف':'أهداف'} من ${lr.length}`;return penEnd(x);},
-  botPick(d,s,lv){const P=penPairs(d),pr=P.find(x=>x[0]===s),kp=P.find(x=>x[1]===s);if(!pr||!kp)return null;
+  botPick(d,s,lv){const P=penPairs(d),pr=P.find(x=>x[0]===s),kp=P.filter(x=>x[1]===s).map(x=>x[0]);if(!pr)return null;
     if(lv===1)return rnd(6)*9+rnd(3)*3+rnd(3);
     // the keeper's habits and the kicker's habits (+1 each so nothing is ruled out)
-    const hd=d.dv[pr[1]].map(x=>x+1),hk=d.kc[kp[0]].map(x=>x+1),sd=hd.reduce((a,b)=>a+b),sk=hk.reduce((a,b)=>a+b);
+    const hd=d.dv[pr[1]].map(x=>x+1),hk=[0,1,2].map(j=>1+kp.reduce((q,k)=>q+d.kc[k][j],0)),sd=hd.reduce((a,b)=>a+b),sk=hk.reduce((a,b)=>a+b);
     const best=[];for(let z=0;z<6;z++)for(let p=0;p<3;p++){let e=0;for(let v=0;v<3;v++)e+=hd[v]/sd*penGoal(z,p,v);best.push([e+(lv===2?Math.random()*.08:Math.random()*.03),z,p]);}
     best.sort((a,b)=>b[0]-a[0]);const [,z,p]=best[lv===3?0:rnd(3)];
     // dive where the kicker scores least, mixed a little so the bot cannot be read
@@ -143,10 +151,10 @@ function penScene(d,fe,zsel,pick){const dive=fe?fe[4]:1,r=fe?fe[5]:-1,z=fe?fe[2]
     <rect width="320" height="190" fill="url(#pnsky)"/><path d="M0 30h320v20H0z" fill="#2A4766"/>${[...Array(16)].map((_,k)=>`<circle cx="${10+k*20}" cy="40" r="3.4" fill="${['#EC6158','#F0B429','#fff','#4AB1E8'][k%4]}" opacity=".55"/>`).join('')}
     ${[0,1,2,3].map(k=>`<rect x="0" y="${150+k*10}" width="320" height="10" fill="${k%2?'#3FA466':'#46B070'}"/>`).join('')}<rect x="0" y="150" width="320" height="2" fill="#fff" opacity=".7"/>
     <rect x="60" y="40" width="200" height="110" fill="url(#pnnet)"/><rect x="60" y="40" width="200" height="110" fill="#fff" opacity=".06"/>
-    ${zones}
     <path d="M60 152V40h200v112" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>
     <g class="pn-kp" style="transform:${kt};transform-origin:160px 150px"><rect x="150" y="104" width="20" height="30" rx="6" fill="#F0B429"/><rect x="151" y="132" width="8" height="18" rx="3" fill="#2D4763"/><rect x="161" y="132" width="8" height="18" rx="3" fill="#2D4763"/><path d="M151 110l-14-16M169 110l14-16" stroke="#F0B429" stroke-width="6" stroke-linecap="round"/><circle cx="136" cy="92" r="4.5" fill="#4CB97F"/><circle cx="184" cy="92" r="4.5" fill="#4CB97F"/><circle cx="160" cy="96" r="8" fill="#E8B88E"/><path d="M152 93q8-9 16 0" fill="#3A2A1E"/></g>
     <g class="pn-ball" style="transform:translate(${bx}px,${by}px) scale(${bs})"><circle r="8" fill="#fff" stroke="#2D4763" stroke-width="1"/><path d="M0-4l4 3-1.5 4.5h-5L-4-1z" fill="#2D4763"/></g>
+    ${zones}
     ${fe&&r>=0?`<text class="pn-tag ${r===0?'ok':'no'}" x="160" y="24" text-anchor="middle">${r===0?'هدف!':r===1?'صدّها!':'برّا!'}</text>`:''}</svg>`;}
 GAMES.r_pen.after=function(d){r2Spin();const el=app.querySelector('.pn-svg');if(!el||!d.lr)return;const key=el.dataset.key;if(!once('pn'+key))return;
   const b=el.querySelector('.pn-ball'),kp=el.querySelector('.pn-kp'),t=el.querySelector('.pn-tag');
@@ -546,7 +554,7 @@ HELP.r_arch='رماية بالقوس: 4 جولات، في كل جولة كل ل�
    puts the potted balls back on the spot and passes the turn. When the table is empty the most points win.
    The shot is worked out on the host: equal balls, cushions, six pockets, a capped number of steps; then played back.
    ================================================================= */
-const PL_R=3.3,PL_P=[[0,0,7.2],[100,-2,6.6],[200,0,7.2],[0,100,7.2],[100,102,6.6],[200,100,7.2]];
+const PL_R=4.2,PL_P=[[0,0,8.8],[100,-2.4,8],[200,0,8.8],[0,100,8.8],[100,102.4,8],[200,100,8.8]];
 const PL_C=['#F7F3E8','#F2C230','#2F6FD6','#E5483F','#7A4FC9','#F28C28','#2E9A62','#8E2B2B','#1E2328','#F2C230'];
 const plFree=(bl,x,y,skip)=>bl.every((b,k)=>k===skip||!b||Math.hypot(b[0]-x,b[1]-y)>2*PL_R+.2);
 // a ball back on the table: the spot, else further along the line
@@ -565,9 +573,9 @@ function plSim(bl,a,p,rec,n){const B=bl.map(b=>b?{x:b[0],y:b[1],vx:0,vy:0,on:1}:
     for(let k=0;k<sub;k++){for(const b of B)if(b&&b.on){b.x+=b.vx/sub;b.y+=b.vy/sub;}
       for(let i=0;i<10;i++){const b=B[i];if(!b||!b.on)continue;
         for(const [px,py,pr] of PL_P)if(Math.hypot(b.x-px,b.y-py)<pr){b.on=0;b.vx=b.vy=0;b.x=px;b.y=py;pot.push(i);break;}if(!b.on)continue;
-        if(b.x<PL_R&&!(b.y<11||b.y>89)){b.x=2*PL_R-b.x;b.vx=-b.vx*E;}if(b.x>200-PL_R&&!(b.y<11||b.y>89)){b.x=2*(200-PL_R)-b.x;b.vx=-b.vx*E;}
-        if(b.y<PL_R&&!(b.x<11||b.x>189||Math.abs(b.x-100)<7.5)){b.y=2*PL_R-b.y;b.vy=-b.vy*E;}if(b.y>100-PL_R&&!(b.x<11||b.x>189||Math.abs(b.x-100)<7.5)){b.y=2*(100-PL_R)-b.y;b.vy=-b.vy*E;}
-        if(b.x<-6||b.x>206||b.y<-6||b.y>106){b.on=0;b.vx=b.vy=0;const q=PL_P.reduce((m,P)=>Math.hypot(P[0]-b.x,P[1]-b.y)<Math.hypot(m[0]-b.x,m[1]-b.y)?P:m);b.x=q[0];b.y=q[1];pot.push(i);}}
+        if(b.x<PL_R&&!(b.y<13||b.y>87)){b.x=2*PL_R-b.x;b.vx=-b.vx*E;}if(b.x>200-PL_R&&!(b.y<13||b.y>87)){b.x=2*(200-PL_R)-b.x;b.vx=-b.vx*E;}
+        if(b.y<PL_R&&!(b.x<13||b.x>187||Math.abs(b.x-100)<9)){b.y=2*PL_R-b.y;b.vy=-b.vy*E;}if(b.y>100-PL_R&&!(b.x<13||b.x>187||Math.abs(b.x-100)<9)){b.y=2*(100-PL_R)-b.y;b.vy=-b.vy*E;}
+        if(b.x<-7||b.x>207||b.y<-7||b.y>107){b.on=0;b.vx=b.vy=0;const q=PL_P.reduce((m,P)=>Math.hypot(P[0]-b.x,P[1]-b.y)<Math.hypot(m[0]-b.x,m[1]-b.y)?P:m);b.x=q[0];b.y=q[1];pot.push(i);}}
       for(let i=0;i<10;i++){const a1=B[i];if(!a1||!a1.on)continue;for(let j=i+1;j<10;j++){const b=B[j];if(!b||!b.on)continue;
         const dx=b.x-a1.x,dy=b.y-a1.y,dd=Math.hypot(dx,dy);if(dd>=2*PL_R||dd<1e-9)continue;const nx=dx/dd,ny=dy/dd,vr=(a1.vx-b.vx)*nx+(a1.vy-b.vy)*ny;
         if(vr>0){const im=vr*.975;a1.vx-=im*nx;a1.vy-=im*ny;b.vx+=im*nx;b.vy+=im*ny;if(first<0&&(i===0||j===0))first=i===0?j:i;}
@@ -624,7 +632,7 @@ GAMES.r_pool={name:'البلياردو الصغير',cat:'sport',lbc:'#1F7A4A',
   status:(d,ctx)=>r2Stat(d,ctx,d.win==null?`<small>الكرة المطلوبة: ${plLow(d.bl)}</small><br>`:''),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.pts[s]}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),a=plAim(d)/10,L=d.lx,low=plLow(d.bl);
-    const ball=(k,x,y,cls)=>`<g class="pl-b ${cls||''}" data-b="${k}" style="transform:translate(${x}px,${y}px)"><circle r="${PL_R}" fill="${PL_C[k]}" stroke="rgba(0,0,0,.35)" stroke-width=".3"/>${k===9?`<path d="M-3.2-1.4h6.4v2.8h-6.4z" fill="#fff" opacity=".9"/>`:''}${k?`<circle r="1.6" fill="#fff"/><text y=".8" text-anchor="middle">${k}</text>`:'<circle cx="-1" cy="-1" r=".8" fill="#fff" opacity=".8"/>'}</g>`;
+    const ball=(k,x,y,cls)=>`<g class="pl-b ${cls||''}" data-b="${k}" style="transform:translate(${x}px,${y}px)"><circle r="${PL_R}" fill="${PL_C[k]}" stroke="rgba(0,0,0,.35)" stroke-width=".3"/>${k===9?`<path d="M-4-1.7h8v3.4h-8z" fill="#fff" opacity=".9"/>`:''}${k?`<circle r="2.1" fill="#fff"/><text y="1" text-anchor="middle">${k}</text>`:'<circle cx="-1" cy="-1" r=".8" fill="#fff" opacity=".8"/>'}</g>`;
     let s=`<div class="r2 r2pl"><svg class="pl-svg ${my?'can':''}" viewBox="-12 -12 224 124" data-k="pls" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="plf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33A86B"/><stop offset="1" stop-color="#23854F"/></linearGradient></defs>
       <rect x="-12" y="-12" width="224" height="124" rx="7" fill="#7A4A22"/><rect x="-10" y="-10" width="220" height="120" rx="6" fill="#94602F"/><rect x="-4" y="-4" width="208" height="108" rx="2" fill="#1C6B43"/><rect width="200" height="100" fill="url(#plf)"/>
       ${[25,50,75,125,150,175].map(x=>`<circle cx="${x}" cy="-7" r=".9" fill="#F3E6C8"/><circle cx="${x}" cy="107" r=".9" fill="#F3E6C8"/>`).join('')}${[25,50,75].map(y=>`<circle cx="-7" cy="${y}" r=".9" fill="#F3E6C8"/><circle cx="207" cy="${y}" r=".9" fill="#F3E6C8"/>`).join('')}

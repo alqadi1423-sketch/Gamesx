@@ -27,7 +27,7 @@ GAMES.r_horse={name:'سباق الخيل',cat:'sport',lbc:'#7B4A2A',
   privOk:(d,r,o,p)=>{if(p.pick==null||p.pick===NOPICK)return true;const s=d.pl.indexOf(r),x=hrDec(p.pick);return !!x&&x.h<6&&(x.a===0?d.co[s]<1:x.a>=hrMin(d.co[s])&&x.a<=d.co[s]);},
   viewer:d=>simulViewer(d),coverMsg:d=>d.last||'',
   points:d=>d.co.map(c=>c+'🪙'),
-  status:(d,ctx)=>simulStatus(d,ctx,`<small>الشوط ${Math.min(d.rd+1,d.R)} من ${d.R} • الأرض ${HR_G[d.tc]}</small><br>`),
+  status:(d,ctx)=>r2SimStat({...d,last:''},ctx,`<small>الشوط ${Math.min(d.rd+1,d.R)} من ${d.R} • الأرض ${HR_G[d.tc]}</small><br>`,'تراهن'),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.co[s]} 🪙`).join('، '),
   render(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&d.out[v]!=='1',my=ctx.my&&d.win==null,L=d.lr;const k=d.gid+':'+d.rd+':'+v;if(!S.r2hr||S.r2hr.k!==k)S.r2hr={k,h:null,t:0,a:10};const U=S.r2hr;
     let s=`<div class="r2 r2hr">`;
@@ -45,7 +45,7 @@ GAMES.r_horse={name:'سباق الخيل',cat:'sport',lbc:'#7B4A2A',
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const U=S.r2hr;if(!U||U.k!==d.gid+':'+d.rd+':'+ctx.v)return;
     if(a==='hh'&&i>=0&&i<6){U.h=i;render();return;}if(a==='ht'&&(i===0||i===1)){U.t=i;render();return;}if(a==='ha'&&Number.isInteger(i)&&i>0&&i<=d.co[ctx.v]){U.a=i;render();return;}
     if(a==='go'){const co=d.co[ctx.v];if(co<1){simulPick(d,ctx.v,0);return;}if(U.h==null)return;const am=r2Clamp(U.a,hrMin(co),co);simulPick(d,ctx.v,am*12+U.h*2+U.t);}},
-  net:{local:['hh','ht','ha']},
+  net:{local:['hh','ht','ha']},redeal:d=>d,
   resolve(d,picks){const pf=d.hs.map(h=>hrPerf(h,d.tc,r2N())),ord=pf.map((_,i)=>i).sort((a,b)=>pf[b]-pf[a]),co=[...d.co],bets=[];
     picks.forEach((p,s)=>{const x=hrDec(p);if(!x||d.out[s]==='1'||x.h>5)return;let a=r2Clamp(x.a,0,co[s]);if(co[s]>0&&a<hrMin(co[s]))a=hrMin(co[s]);if(!a){bets.push([s,0,0,0,0]);return;}
       const win=x.t?ord.indexOf(x.h)<2:ord[0]===x.h,got=win?Math.floor(a*(x.t?d.po[x.h]:d.od[x.h])/10):0;co[s]+=got-a;bets.push([s,x.h,x.t,a,got-a]);});
@@ -98,7 +98,7 @@ GAMES.r_falcon={name:'الصقور',cat:'sport',lbc:'#A0522D',
   icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="r2fc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6C27A"/><stop offset="1" stop-color="#E8955A"/></linearGradient></defs><rect width="100" height="100" fill="url(#r2fc)"/><circle cx="74" cy="26" r="11" fill="#FFF1C9"/><path d="M0 78q25-14 50-6t50-4V100H0z" fill="#C98B4E"/><path d="M0 88q30-8 60-2t40 0V100H0z" fill="#B0763D"/><path d="M30 46q10-14 26-10q10-12 26-8q-12 4-14 12q10 2 14 10q-14-4-22 2l-8 10-6-4 4-8q-10 0-20-4z" fill="#5A3A22"/><path d="M52 40l6-3 2 3-5 2z" fill="#F0B429"/><circle cx="55" cy="38" r="1.4" fill="#111"/></svg>`,
   init:n=>({rn:0,D:5,pts:Array(n).fill(0),sta:Array(n).fill(5),bag:0,fl:0,pr:[],sid:0,lx:null,last:''}),
   start:d=>({...d,pr:fcOpts()}),
-  net:{host:['fly','home'],local:['fp']},redeal:d=>d,
+  net:{host:['fly','home','rest'],local:['fp']},redeal:d=>d,
   points:d=>d.pts,
   status:(d,ctx)=>r2Stat(d,ctx,`<small>اليوم ${Math.min(d.rn+1,d.D)} من ${d.D}${d.win==null&&d.bag?` • الحصيلة ${d.bag}`:''}</small><br>`),
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.pts[s]}`).join('، '),
@@ -114,12 +114,14 @@ GAMES.r_falcon={name:'الصقور',cat:'sport',lbc:'#A0522D',
     if(my){s+=`<div class="fc-pr">${d.pr.map(q=>{const [n0,p0,,,c0,e0]=FC_P[q],ok=fcOk(d,t,q);return `<button class="fc-q ${q===k?'on':''}" data-ga="fp" data-i="${q}" ${ok?'':'disabled'}><i>${e0}</i><b>${n0}</b><small>+${p0} • تعب ${c0}${'🔥'}</small></button>`;}).join('')}</div>`;
       if(k>=0){const c=fcC(d),w=fcW(d,k)/2,m=r2mPar(key,FC_P[k][3]);s+=`${r2Meter(key,m,[[0,1000,'z0'],[r2Clamp(c-w*1.9,0,1000),r2Clamp(c+w*1.9,0,1000),'z1'],[r2Clamp(c-w,0,1000),r2Clamp(c+w,0,1000),'z2']],sv==null,sv,'وقّف المؤشر في الأخضر: الأصفر يفوته، والأحمر يضيع الصقر')}${r2Stop(key,'fly','🦅 أطلق الصقر',sv==null)}`;}
       else s+=`<p class="r2lbl">اختر الطريدة</p>`;
-      if(d.fl>0)s+=`<button class="btn navy wide" data-ga="home">⛺ ارجع للمخيم بـ${d.bag}</button>`;}
+      if(d.fl>0)s+=`<button class="btn navy wide" data-ga="home">⛺ ارجع للمخيم بـ${d.bag}</button>`;
+      else if(!d.pr.some(q=>fcOk(d,t,q)))s+=`<p class="r2lbl">صقرك تعبان اليوم 😴</p><button class="btn navy wide" data-ga="rest">ريّحه للجولة الجاية</button>`;}
     s+=`<div class="dt-list">${d.pl.map((_,i)=>`<span class="${i===t?'on':''}" style="--c:${col(d,i)}">${nm(d,i)} <b>${d.pts[i]}</b> ${'🔥'.repeat(d.sta[i])}</span>`).join('')}</div>`;
     return s+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
     if(a==='fp'){if(fcOk(d,t,i)){S.draft.fp=String(i);render();}return;}
     if(a==='home'){if(d.fl>0)act(fcHome({...d,last:nm(d,t)+' اكتفى'},t,''));return;}
+    if(a==='rest'){if(!d.fl&&!d.pr.some(q=>fcOk(d,t,q)))act(fcNext({...d,last:nm(d,t)+' ريّح صقره'},t));return;}
     if(a!=='fly')return;const k=r2Dr('fp',0,4,-1);if(!fcOk(d,t,k))return;const v=r2Read(i);r2Hold(d.gid+':'+(d.sid||0),v,ctx);S.draft.fp=undefined;act(fcFly(d,t,k,v));},
   bot(d,s,lv){const k=fcBot(d,s,lv);if(k<0)return d.fl>0?fcHome({...d,last:nm(d,s)+' اكتفى'},s,''):fcNext({...d,last:nm(d,s)+' ريّح صقره'},s);return fcFly(d,s,k,r2BotStop(fcC(d),lv));},
   onTimeout:d=>d.fl>0?fcHome({...d,last:nm(d,d.turn)+' رجع'},d.turn,''):fcNext({...d,last:`${nm(d,d.turn)} ما طلع`},d.turn),
@@ -190,3 +192,203 @@ GAMES.r_fish={name:'الحداق',cat:'sport',lbc:'#1F6F8B',
   after(d){r2Spin();const el=app.querySelector('.fs-svg');if(!el||!el.dataset.key||!once('fs'+el.dataset.key))return;const f=el.querySelector('.fs-f');if(f)r2Anim(f,[{opacity:0,transform:f.style.transform.replace(/translate\(([^,]+),([^)]+)\)/,(m,x,y)=>`translate(${x},${parseFloat(y)+30}px)`)},{opacity:1,transform:f.style.transform}],380);}
 };
 HELP.r_fish='حداق (صيد بالخيط) في الخليج. كل لاعب معه كم طُعم من 3 أنواع: روبيان وحبّار وسردين. بدورك اختر المكان (الشعب المرجانية، القاع العميق، عرض البحر) ونوع الطُعم وارمِ الخيط. اللي يمسك يعتمد على المكان والطُعم والمد والجزر (يتغير كل جولة): الصافي والشعري يحبون الشعب والروبيان، والهامور والزبيدي في القاع، والكنعد والجش في عرض البحر ويحبون السردين. والمكان اللي ينصاد منه كثير يقل سمكه 🐟. لو مسك شي، وقّف المؤشر في الأخضر عشان تطلّعه (الأصفر يمكن). السمك الغالي مثل الكنعد والهامور أصعب. لما يخلص طُعم الكل، الأعلى قيمة صيد يفوز.'+R2TM;
+
+/* =================================================================
+   سباق السفن الشراعية: a dhow race round a mark and back. Every round all skippers at once pick a heading (12 points of
+   the compass) and trim the sail on the meter; the boats move together on the host. A boat cannot sail into the wind
+   (its speed falls off near it), turning through the wind (a tack) or across it downwind (a gybe) costs speed, and the
+   wind shifts every round. Round the mark, then the first back across the line wins.
+   ================================================================= */
+const DH_M=[50,36],DH_LY=116,DH_POL=[[0,0],[30,.05],[40,.55],[55,.82],[90,1],[120,1],[150,.88],[180,.7]];
+const dhPol=a=>{for(let k=1;k<DH_POL.length;k++)if(a<=DH_POL[k][0]){const [a0,v0]=DH_POL[k-1],[a1,v1]=DH_POL[k];return v0+(v1-v0)*(a-a0)/(a1-a0);}return .7;};
+const dhDiff=(a,b)=>((a-b)%360+540)%360-180;
+// one boat's move: b=[x,y,heading,side,leg]; h the new heading (0..11), v the trim meter, wd where the wind comes from
+function dhMove(b,h,v,wd){const hd=h*30,tw=dhDiff(hd,wd),al=Math.abs(tw),side=tw>=0?1:-1,trim=.6+.4*Math.max(0,1-Math.abs(v-500)/350);
+  let sp=14*dhPol(al)*trim,turn='';if(b[3]&&side!==b[3]){const was=Math.abs(dhDiff(b[2]*30,wd));if(was<95||al<95){sp*=.55;turn='tack';}else{sp*=.8;turn='gybe';}}
+  return {x:b[0]+Math.sin(hd*Math.PI/180)*sp,y:b[1]-Math.cos(hd*Math.PI/180)*sp,side,sp,turn};}
+const dhTarget=b=>b[4]?[50,DH_LY+4]:DH_M;
+// distance from the mark to the segment a→b
+const dhSeg=(ax,ay,bx,by,px,py)=>{const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,t=l?r2Clamp(((px-ax)*dx+(py-ay)*dy)/l,0,1):0;return Math.hypot(ax+dx*t-px,ay+dy*t-py);};
+const dhOk=p=>Number.isInteger(p)&&p>=0&&p<12*1001&&p%1001<=1000;
+GAMES.r_dhow={name:'سباق السفن الشراعية',cat:'sport',lbc:'#1D6FA3',
+  icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="r2dh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ED0F2"/><stop offset=".55" stop-color="#CBEBF9"/><stop offset=".56" stop-color="#2F86B8"/><stop offset="1" stop-color="#16557D"/></linearGradient></defs><rect width="100" height="100" fill="url(#r2dh)"/><path d="M18 64h56l-8 12H28z" fill="#8A5A2B"/><path d="M46 64V14" stroke="#6B3E1F" stroke-width="2.5"/><path d="M47 16L76 58H47z" fill="#F7F1E1"/><path d="M30 22L70 12" stroke="#6B3E1F" stroke-width="2"/><path d="M0 84q12-4 25 0t25 0 25 0 25 0" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/><path d="M8 20h14M14 14l8 6-8 6" stroke="#fff" stroke-width="2.5" fill="none"/></svg>`,
+  init:n=>({rd:0,bt:[],pv:[],wd:0,wt:0,last:''}),
+  start:d=>{const n=d.pl.length,R=mulberry(seedOf(d.gid+':dh'));return {...d,wd:Math.round(R()*30-15),bt:d.pl.map((_,s)=>[+(30+(n>1?s*40/(n-1):20)).toFixed(1),DH_LY+6,0,0,0]),pv:d.pl.map(()=>null)};},
+  privOk:(d,r,o,p)=>p.pick==null||p.pick===NOPICK||dhOk(p.pick),
+  viewer:d=>simulViewer(d),coverMsg:d=>d.last||'',
+  points:d=>d.bt.map(b=>b[4]?'⛵ عودة':'⬆ المنارة'),
+  status:(d,ctx)=>r2SimStat({...d,last:''},ctx,`<small>الجولة ${d.rd+1} • الريح من ${dhWind(d.wd)}</small><br>`,'تختار اتجاهك'),
+  winExtra:d=>d.last,
+  render(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&d.out[v]!=='1',my=ctx.my&&d.win==null,key=d.gid+':'+d.rd+':'+v,sv=r2Stopped(key);
+    const b=me?d.bt[v]:null,h=me?r2Dr('dh',0,11,b[2]):0;
+    const boat=(s,bb,cls)=>{const hd=bb[2]*30,sd=bb[3]||1;return `<g class="dh-b ${cls||''}" data-s="${s}" style="transform:translate(${bb[0].toFixed(1)}px,${bb[1].toFixed(1)}px)"><g style="transform:rotate(${hd}deg)"><path d="M0-5.5q2.6 2.5 2.4 8.5H-2.4Q-2.6-3 0-5.5z" fill="#8A5A2B" stroke="#4A2E16" stroke-width=".4"/><path d="M0-4.5Q${sd*-5} 0 0 4" fill="${col(d,s)}" stroke="#fff" stroke-width=".4" opacity=".95"/></g></g>`;};
+    const wa=d.wd*Math.PI/180;
+    let s=`<div class="r2 r2dh"><svg class="dh-svg" viewBox="0 0 100 130" data-k="dhs" data-key="${d.gid}r${d.rd}"><defs><linearGradient id="dhs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A97CD"/><stop offset="1" stop-color="#1C6A9C"/></linearGradient><pattern id="dhw" width="16" height="10" patternUnits="userSpaceOnUse"><path d="M0 6q4-3 8 0t8 0" stroke="#fff" stroke-width=".4" fill="none" opacity=".25"/></pattern></defs>
+      <rect width="100" height="130" fill="url(#dhs)"/><rect width="100" height="130" fill="url(#dhw)"/><path d="M0 0h100v6q-25 4-50 0T0 6z" fill="#E9D7A6"/>
+      <path d="M28 ${DH_LY}H72" stroke="#fff" stroke-width=".5" stroke-dasharray="2 1.5"/><circle cx="28" cy="${DH_LY}" r="1.6" fill="#F28C28"/><circle cx="72" cy="${DH_LY}" r="1.6" fill="#F28C28"/>
+      <circle cx="${DH_M[0]}" cy="${DH_M[1]}" r="8" fill="none" stroke="#fff" stroke-width=".3" stroke-dasharray="1 1.4" opacity=".6"/><path d="M${DH_M[0]} ${DH_M[1]+2}l-2.4 3h4.8z" fill="#E5483F"/><path d="M${DH_M[0]} ${DH_M[1]-5}v7" stroke="#fff" stroke-width=".6"/><path d="M${DH_M[0]} ${DH_M[1]-5}l4 1.4-4 1.4z" fill="#F2C230"/>
+      <g transform="translate(12 16)"><circle r="8" fill="rgba(255,255,255,.85)"/><g style="transform:rotate(${d.wd}deg)"><path d="M0-6V4" stroke="#1B4F72" stroke-width="1.4"/><path d="M0 6l-2.6-3.6h5.2z" fill="#1B4F72"/></g><text y="12.5" text-anchor="middle" class="dh-wt">الريح</text></g>
+      ${d.pv.map((p,s)=>p&&d.out[s]!=='1'?`<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)}L${d.bt[s][0].toFixed(1)} ${d.bt[s][1].toFixed(1)}" stroke="#fff" stroke-width=".5" stroke-dasharray="1 1" opacity=".55"/>`:'').join('')}
+      ${me&&my?`<path d="M${b[0].toFixed(1)} ${b[1].toFixed(1)}l${(Math.sin(h*Math.PI/6)*12).toFixed(1)} ${(-Math.cos(h*Math.PI/6)*12).toFixed(1)}" stroke="#FFD84D" stroke-width=".8" stroke-dasharray="1.6 1"/>`:''}
+      ${d.bt.map((bb,s)=>d.out[s]==='1'?'':boat(s,bb,s===v?'me':'')).join('')}</svg>`;
+    s+=`<div class="dt-list">${d.pl.map((_,i)=>{const bb=d.bt[i],tg=dhTarget(bb);return `<span class="${i===v?'on':''}" style="--c:${col(d,i)}">${nm(d,i)} ${bb[4]?'⬇':'⬆'} <b>${Math.round(Math.hypot(bb[0]-tg[0],bb[1]-tg[1]))}</b></span>`;}).join('')}</div>`;
+    if(my){const m=r2mPar(key,1150),cur=b[2];
+      s+=`<p class="r2lbl">${b[4]?'ارجع لخط النهاية تحت':'روح للمنارة فوق ودور حولها'}: اختر اتجاهك</p><div class="dh-rose">${[...Array(12).keys()].map(k=>{const tw=Math.abs(dhDiff(k*30,d.wd)),sp=dhPol(tw),sd=dhDiff(k*30,d.wd)>=0?1:-1,tk=b[3]&&sd!==b[3];
+        return `<button class="dh-h ${k===h?'on':''} ${sp<.3?'dead':''}" data-ga="dh" data-i="${k}" style="--a:${k*30}deg;--q:${Math.round(sp*100)}%"><i></i><small>${tw<30?'✋':Math.round(sp*10)}${tk?'↺':''}</small></button>`;}).join('')}<div class="dh-mid"><b>${h===cur?'نفس الاتجاه':'اتجاه جديد'}</b><small>↺ = تغيير جهة الشراع (يبطّي)</small></div></div>
+        ${r2Meter(key,m,[[0,1000,'z0'],[220,780,'z1'],[380,620,'z2']],sv==null,sv,'ضبط الشراع: كل ما قربت للنص أسرع')}${r2Stop(key,'sail','⛵ أبحر',sv==null)}`;}
+    else if(me&&d.win==null)s+=`<p class="note">${hasPicked(d,v)?'اخترت، ننتظر الباقين…':''}</p>`;
+    return s+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
+    if(a==='dh'){if(Number.isInteger(i)&&i>=0&&i<12){S.draft.dh=String(i);render();}return;}
+    if(a==='sail'){const v=r2Read(i);r2Hold(d.gid+':'+d.rd+':'+ctx.v,v,ctx);simulPick(d,ctx.v,r2Dr('dh',0,11,d.bt[ctx.v][2])*1001+v);S.draft.dh=undefined;}},
+  net:{local:['dh']},redeal:d=>d,
+  resolve(d,picks){const bt=d.bt.map(b=>[...b]),pv=d.bt.map(b=>[b[0],b[1]]),fin=[];
+    picks.forEach((p,s)=>{if(d.out[s]==='1')return;const b=bt[s],h=dhOk(p)?Math.floor(p/1001):b[2],v=dhOk(p)?p%1001:250,m=dhMove(b,h,v,d.wd);
+      let x=r2Clamp(m.x,3,97),y=r2Clamp(m.y,3,127);
+      if(!b[4]&&dhSeg(b[0],b[1],x,y,DH_M[0],DH_M[1])<8)b[4]=1;
+      else if(b[4]&&b[1]<DH_LY&&y>=DH_LY){const f=(DH_LY-b[1])/(y-b[1]),cx=b[0]+(x-b[0])*f;if(cx>=18&&cx<=82)fin.push([f,s]);}
+      b[0]=+x.toFixed(2);b[1]=+y.toFixed(2);b[2]=h;b[3]=m.side;});
+    const wt=r2Clamp(d.wt+r2N()*3,-6,6),wd=Math.round(r2Clamp(d.wd+wt+r2N()*4,-45,45)),rd=d.rd+1;
+    let x={...d,bt,pv,wt:+wt.toFixed(2),wd,rd,last:`الريح صارت من ${dhWind(wd)}`};
+    if(fin.length){fin.sort((a,b)=>a[0]-b[0]);return {...x,win:fin[0][1],last:`${nm(d,fin[0][1])} قطع خط النهاية أول! ⛵`};}
+    if(rd>=40)return {...x,win:r2Best(x,bt.map((b,s)=>x.out[s]==='1'?null:b[4]*1000-Math.hypot(b[0]-dhTarget(b)[0],b[1]-dhTarget(b)[1])))};
+    return x;},
+  // a skipper: every heading tried at a fair trim, the one that ends nearest the next target (the easy one is careless)
+  botPick(d,s,lv){const b=d.bt[s],tg=dhTarget(b);let best=[];
+    for(let h=0;h<12;h++){const m=dhMove(b,h,500,d.wd);let x=m.x,y=m.y,sc=-Math.hypot(x-tg[0],y-tg[1]);if(!b[4]&&dhSeg(b[0],b[1],x,y,DH_M[0],DH_M[1])<8)sc+=30;
+      if(lv===3&&!b[4]){const nx=dhMove([x,y,h,m.side,0],h,500,d.wd);sc+=.4*(-Math.hypot(nx.x-tg[0],nx.y-tg[1])+Math.hypot(x-tg[0],y-tg[1]));}
+      best.push([sc+(lv===2?Math.random()*3:lv===1?Math.random()*9:0),h]);}
+    best.sort((p,q)=>q[0]-p[0]);return best[0][1]*1001+r2BotStop(500,lv);},
+  after(d){r2Spin();const el=app.querySelector('.dh-svg');if(!el||!once('dh'+el.dataset.key)||!d.rd)return;
+    el.querySelectorAll('.dh-b').forEach(g=>{const s=+g.dataset.s,p=d.pv[s];if(p)r2Anim(g,[{transform:`translate(${p[0]}px,${p[1]}px)`},{transform:g.style.transform}],440,0,'ease-out');});}
+};
+function dhWind(w){const a=((w%360)+360)%360;return a<23||a>337?'الشمال ⬇':a<68?'الشمال الشرقي ↙':a<113?'الشرق ⬅':a<158?'الجنوب الشرقي ↖':a<203?'الجنوب ⬆':a<248?'الجنوب الغربي ↗':a<293?'الغرب ➡':'الشمال الغربي ↘';}
+HELP.r_dhow='سباق سفن شراعية (أبوام) حول المنارة. كل جولة الكل يختار مع بعض: اتجاه سفينته من 12 اتجاه، وبعدين يوقّف مؤشر ضبط الشراع (كل ما قرب للنص أسرع)، والسفن تتحرك كلها مع بعض. الريح هي كل شي: ما تقدر تبحر عكسها مباشرة (✋)، وأسرع شي لما تكون الريح على جنبك، والرقم على كل اتجاه يوريك السرعة. عشان تطلع عكس الريح لازم «تعرّج» يمين ويسار، وكل ما غيّرت جهة الشراع (↺) تبطّي جولة. الريح تتغير شوي كل جولة، فراقبها واستغلها. أول شي روح للمنارة فوق ودور حولها، وبعدين ارجع، وأول سفينة تقطع خط النهاية تفوز. ولو لعبتوا فرق، يفوز فريق السفينة الأولى.';
+
+/* =================================================================
+   قفز الحواجز: a course of 8 fences, all riders fence by fence. Pick a pace and stop the take-off meter: in the green a
+   clean jump; in the yellow a rail (or a foot in the water) is likely, 4 faults; far out the horse refuses (4 faults and
+   time, jump again; a second refusal eliminates). A slow pace is easier but the clock counts: one fault for each second
+   over the time allowed. Fewest faults win, then the fastest time.
+   ================================================================= */
+const SJ_T=[['عمودي',150,'#E5483F'],['عريض',130,'#2F80ED'],['ثلاثي',140,'#F2C230'],['حوض ماء',120,'#4AB1E8'],['مزدوج',110,'#2E9A62']];
+const SJ_P=[['🐢 هادي',1.25,56],['🐎 متوسط',1,48],['⚡ سريع',.75,40]];
+const SJ_N=8,SJ_TA=49*SJ_N;
+function sjCourse(gid){const R=mulberry(seedOf(gid+':sj')),a=[1,2,0,1,2,0].sort(()=>R()-.5);a.splice(2+Math.floor(R()*3),0,3);a.splice(5+Math.floor(R()*2),0,4);return [0,...a].slice(0,SJ_N);}
+const sjC=d=>240+Math.floor(mulberry(seedOf(d.gid+':sjc'+(d.sid||0)))()*520);
+const sjTF=t=>Math.max(0,Math.ceil((t-SJ_TA)/10));
+const sjScore=(d,s)=>(d.ft[s]+sjTF(d.tt[s]))*100000+d.tt[s];
+function sjJump(d,t,pc,v){const ty=d.cs[d.fx],w=SJ_T[ty][1]*SJ_P[pc][1]/2,e=Math.abs(v-sjC(d)),sid=(d.sid||0)+1;
+  const r=e<=w?0:e<=w*2.3?(Math.random()<.7?1:0):2;const ft=[...d.ft],tt=[...d.tt],rf=[...d.rf];let out=d.out;
+  tt[t]+=SJ_P[pc][2]+(r===2?60:0);let tx;
+  if(r===0)tx=`${nm(d,t)} قفز ${SJ_T[ty][0]} نظيف ✓`;
+  else if(r===1){ft[t]+=4;tx=`${nm(d,t)}: ${ty===3?'رجله في الماي 💦':'طاح العارض'} (+4)`;}
+  else{ft[t]+=4;rf[t]++;tx=`${nm(d,t)}: الحصان رفض القفزة! (+4)`;if(rf[t]>=2){out=setAt(out,t,'1');tx+=' • ثاني رفض: خرج من المسابقة';}}
+  const x={...d,ft,tt,rf,out,sid,lx:{s:t,f:d.fx,r,id:sid},last:tx};
+  if(r===2&&out[t]!=='1')return {...x,last:tx+' • يعيد'};
+  return sjNext(x,t);}
+function sjNext(x,t){const al=aliveSeats(x);if(!al.length)return {...x,win:'d'};const nx=r2Adv(x,t),fx=x.fx+(nx.nr?1:0);
+  if(fx>=SJ_N)return {...x,fx:SJ_N-1,win:r2Best(x,x.pl.map((_,s)=>x.out[s]==='1'?99e5+x.tt[s]:sjScore(x,s)),true)};
+  return {...x,turn:nx.turn,fx};}
+function sjBotPace(d,s,lv){if(lv===1)return rnd(3);const sig=R2SIG[lv],w0=SJ_T[d.cs[d.fx]][1],left=SJ_N-d.fx,spent=d.tt[s],need=(SJ_TA-spent)/left;let best=null;
+  for(let p=0;p<3;p++){const w=w0*SJ_P[p][1]/2,pin=r2Pin(w,sig),pmid=r2Pin(w*2.3,sig)-pin,pref=1-pin-pmid;
+    const cost=pmid*.7*4+pref*(d.rf[s]?40:10)+Math.max(0,SJ_P[p][2]-need)*.1+SJ_P[p][2]*.002+(lv===2?Math.random()*.6:0);if(!best||cost<best[0])best=[cost,p];}
+  return best[1];}
+GAMES.r_jump={name:'قفز الحواجز',cat:'sport',lbc:'#6E8B3D',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E7CF9C"/><rect width="100" height="40" fill="#9BD3F0"/><path d="M16 84V50M84 84V50" stroke="#fff" stroke-width="4"/><path d="M14 58h72M14 70h72" stroke="#E5483F" stroke-width="5" stroke-dasharray="10 8"/><path d="M28 50q8-18 26-16l8-10 5 4-3 7q10 3 12 13l-7 2-4-6-16 4-8 10-6-2 5-9z" fill="#6B3E1F"/><path d="M44 30l6-6 6 3-2 5z" fill="#2F80ED"/><circle cx="48" cy="22" r="3.6" fill="#F2C9A0"/></svg>`,
+  init:n=>({cs:[],fx:0,ft:Array(n).fill(0),tt:Array(n).fill(0),rf:Array(n).fill(0),sid:0,lx:null,last:''}),
+  start:d=>({...d,cs:sjCourse(d.gid)}),
+  net:{host:['jump'],local:['jp']},redeal:d=>d,
+  points:d=>d.ft.map((f,s)=>d.out[s]==='1'?'خرج':f+sjTF(d.tt[s])),
+  status:(d,ctx)=>r2Stat(d,ctx,`<small>الحاجز ${d.fx+1} من ${SJ_N}: ${SJ_T[d.cs[d.fx]][0]} • الوقت المسموح ${SJ_TA/10} ث</small><br>`),
+  winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.out[s]==='1'?'خرج':`${d.ft[s]+sjTF(d.tt[s])} أخطاء، ${(d.tt[s]/10).toFixed(1)} ث`}`).join('، '),
+  render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx,pc=r2Dr('jp',0,2,1);
+    const fi=L&&L.f!==d.fx&&!my?L.f:d.fx,ty=d.cs[fi],[tn,,tc]=SJ_T[ty],r=L&&L.f===fi?L.r:-1;
+    const rail=(y,k)=>`<rect class="${r===1&&k===0?'sj-down':''}" x="118" y="${y}" width="64" height="5" rx="2" fill="${tc}" stroke="#fff" stroke-width="1"/>`;
+    const fence=ty===3?`<rect x="104" y="114" width="92" height="12" rx="4" fill="#4AB1E8"/><path d="M110 120q6-3 12 0t12 0 12 0 12 0 12 0 12 0" stroke="#fff" fill="none" stroke-width="1"/><rect x="114" y="104" width="12" height="10" fill="#7DBE62"/>`
+      :`<path d="M120 126V70M180 126V70" stroke="#fff" stroke-width="4"/>${ty===1?'<path d="M200 126V76" stroke="#fff" stroke-width="4"/>':''}${rail(78,0)}${rail(94,1)}${ty===1?`<rect x="140" y="80" width="64" height="5" rx="2" fill="${tc}" opacity=".85"/>`:ty===2?`<rect x="90" y="106" width="40" height="5" fill="${tc}"/><rect x="170" y="86" width="40" height="5" fill="${tc}"/>`:ty===4?'<path d="M240 126V82" stroke="#fff" stroke-width="4"/><rect x="228" y="88" width="28" height="5" fill="#2E9A62"/>':''}`;
+    const hx=r===0?165:r===1?160:r===2?80:40,hy=r===0||r===1?52:96,rot=r===0||r===1?-12:0;
+    let s=`<div class="r2 r2sj"><svg class="sj-svg" viewBox="0 0 300 140" data-k="sjs" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="sjsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CC9EE"/><stop offset="1" stop-color="#DDF0FA"/></linearGradient></defs>
+      <rect width="300" height="140" fill="url(#sjsk)"/><path d="M0 52h300v24H0z" fill="#5E7A8C" opacity=".5"/>${[...Array(15)].map((_,k)=>`<circle cx="${10+k*20}" cy="60" r="3" fill="${['#EC6158','#F0B429','#fff','#4AB1E8'][k%4]}" opacity=".5"/>`).join('')}<rect y="72" width="300" height="4" fill="#fff" opacity=".8"/>
+      <rect y="76" width="300" height="64" fill="#E2C48E"/><path d="M0 126h300" stroke="#CBA66A" stroke-width="1"/>${fence}
+      <g class="sj-h" style="transform:translate(${hx}px,${hy}px) rotate(${rot}deg)"><path d="M-30 20q4-18 26-18l12-14 7 5-4 9q14 4 16 18l-9 2-5-8-22 4-10 16-8-2 6-14q-6 2-9 2z" fill="#6B3E1F"/><path d="M-30 20l-6 14M-22 22l-3 14M2 24l2 12M10 22l6 12" stroke="#4A2E16" stroke-width="3" stroke-linecap="round"/><path d="M-8 -6l8-8 8 4-3 6z" fill="${col(d,L&&L.f===fi?L.s:t)}"/><circle cx="-2" cy="-16" r="4.4" fill="#F2C9A0"/><path d="M-6-19h8v-3h-8z" fill="#1E2328"/></g>
+      ${r>=0?`<text class="sj-tag ${r===0?'ok':'no'}" x="150" y="38" text-anchor="middle">${r===0?'نظيف!':r===1?(ty===3?'في الماي!':'طاح العارض!'):'رفض!'}</text>`:''}
+      <text x="150" y="14" text-anchor="middle" class="sj-n">${fi+1}. ${tn}</text></svg>`;
+    s+=`<div class="sj-course">${d.cs.map((c,k)=>`<i class="${k<d.fx?'done':k===d.fx?'on':''}" style="--c:${SJ_T[c][2]}">${k+1}</i>`).join('')}</div>`;
+    s+=`<div class="sj-tab">${d.pl.map((_,i)=>`<span class="${i===t&&d.win==null?'on':''} ${d.out[i]==='1'?'off':''}" style="--c:${col(d,i)}"><b>${nm(d,i)}</b><em>${d.out[i]==='1'?'خرج':`${d.ft[i]} أخطاء`}</em><small>⏱ ${(d.tt[i]/10).toFixed(1)}${sjTF(d.tt[i])?` (+${sjTF(d.tt[i])})`:''}${d.rf[i]?' • رفض':''}</small></span>`).join('')}</div>`;
+    if(my){const w=SJ_T[d.cs[d.fx]][1]*SJ_P[pc][1]/2,c=sjC(d),m=r2mPar(key,[1300,1100,900][pc]);
+      s+=`<p class="r2lbl">الحاجز ${d.fx+1}: ${SJ_T[d.cs[d.fx]][0]}. اختر سرعتك</p>${r2Seg('jp',SJ_P.map(p=>`${p[0]} ${(p[2]/10).toFixed(1)}ث`),pc,true)}
+        ${r2Meter(key,m,[[0,1000,'z0'],[r2Clamp(c-w*2.3,0,1000),r2Clamp(c+w*2.3,0,1000),'z1'],[r2Clamp(c-w,0,1000),r2Clamp(c+w,0,1000),'z2']],sv==null,sv,'لحظة النطّة: وقّف المؤشر في الأخضر')}${r2Stop(key,'jump','🐎 انقز',sv==null)}`;}
+    return s+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
+    if(a==='jp'){if(i>=0&&i<3){S.draft.jp=String(i);render();}return;}
+    if(a!=='jump')return;const v=r2Read(i);r2Hold(d.gid+':'+(d.sid||0),v,ctx);act(sjJump(d,d.turn,r2Dr('jp',0,2,1),v));},
+  bot(d,s,lv){const p=sjBotPace(d,s,lv);return sjJump(d,s,p,r2BotStop(sjC(d),lv));},
+  onTimeout:d=>sjJump(d,d.turn,1,sjC(d)+400>1000?sjC(d)-400:sjC(d)+400),
+  onSkip:(nd,d)=>nd,
+  after(d){r2Spin();const el=app.querySelector('.sj-svg');if(!el||!el.dataset.key||!once('sj'+el.dataset.key))return;const h=el.querySelector('.sj-h'),L=d.lx;if(!h||!L)return;
+    r2Anim(h,[{transform:'translate(40px,96px) rotate(0deg)'},...(L.r===2?[]:[{transform:'translate(110px,64px) rotate(-18deg)',offset:.6}]),{transform:h.style.transform}],440,0,'ease-out');
+    const rl=el.querySelector('.sj-down');if(rl)r2Anim(rl,[{transform:'none'},{transform:'none',offset:.6},{transform:'translate(0,30px) rotate(8deg)'}],440);
+    const tg=el.querySelector('.sj-tag');if(tg)r2Anim(tg,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],260,380);}
+};
+HELP.r_jump='قفز حواجز على مسار فيه 8 حواجز (عمودي، عريض، ثلاثي، حوض ماء، مزدوج)، والكل يقفز الحاجز نفسه بالدور وبعدين ينتقلون للي بعده. قبل كل قفزة اختر السرعة: الهادي أسهل (المنطقة الخضراء أعرض) بس ياخذ وقت أكثر، والسريع أصعب ويوفّر وقت. وبعدين وقّف مؤشر لحظة النطّة: في الأخضر قفزة نظيفة، وفي الأصفر غالبًا يطيح العارض أو تنزل رجله في الماي (4 أخطاء)، وبعيد يرفض الحصان القفزة (4 أخطاء وتضيع وقت وتعيد)، وثاني رفض يطلّعك من المسابقة. الوقت المسموح 39.2 ثانية، وكل ثانية زيادة عليها بخطأ. الأقل أخطاء يفوز، ولو تعادلوا الأسرع.'+' ولو لعبتوا فرق، الفريق اللي معدّل أخطائه أقل يفوز.';
+
+/* =================================================================
+   الحجلة: squares 1 to 10. Throw the stone onto the next square (stop the throw meter in its band; a line is a miss),
+   then hop there and back (stop the balance meter in the window). Each success moves you on; up to 3 a turn. Bold: throw
+   two squares on and hop both at once. Once a game you may make a square you just finished your house: the others must
+   hop over it, which is harder for them, and easier for you. First past square 10 wins.
+   ================================================================= */
+const HS_XY=[[80,268],[80,232],[80,196],[54,160],[106,160],[80,124],[54,88],[106,88],[80,52],[80,2]];
+const hsC=d=>200+Math.floor(mulberry(seedOf(d.gid+':hs'+(d.sid||0)))()*600);
+// the hop window: narrower the further you go and for every other player's house on the way; your own house is a rest
+function hsW(d,t,tg){let w=300-14*tg;d.hs.forEach((h,s)=>{if(h&&h<=tg)w+=s===t?50:sameTeam(d,s,t)?0:-45;});return r2Clamp(w,80,330);}
+const hsTg=(d,t,bold)=>Math.min(10,d.pr[t]+(bold?2:1));
+function hsEnd(x,t,why){const nx=nextSeat(x,t),tn=(x.tn||0)+1;const y={...x,ph:'throw',ok:0,jc:-1,tg:0,turn:nx,tn,last:why};
+  if(tn>=40*x.pl.length)return {...y,win:r2Best(y,y.pr.map((p,s)=>y.out[s]==='1'?null:p))};return y;}
+function hsThrow(d,t,bold,v){const tg=hsTg(d,t,bold),vv=r2Clamp(v+r2N()*10,0,999),sq=Math.floor(vv/100)+1,inb=vv%100>=8&&vv%100<=92,sid=(d.sid||0)+1;
+  const lx={s:t,sq:inb?sq:0,tg,k:'t',id:sid,v:Math.round(vv)};
+  if(inb&&sq===tg)return {...d,sid,lx,ph:'hop',tg,last:`${nm(d,t)}: الحجر نزل في ${tg} ✓ الحين انقز`};
+  return hsEnd({...d,sid,lx},t,`${nm(d,t)}: الحجر ${inb?`نزل في ${sq} بدل ${tg}`:'طاح على الخط'} ✗`);}
+function hsHop(d,t,v){const w=hsW(d,t,d.tg)/2,e=Math.abs(v-hsC(d)),sid=(d.sid||0)+1,ok=e<=w;const lx={s:t,sq:d.tg,k:'h',r:ok?1:0,id:sid};
+  if(!ok)return hsEnd({...d,sid,lx},t,`${nm(d,t)} فقد توازنه وهو ينقز ✗`);
+  const pr=[...d.pr];pr[t]=d.tg;const x={...d,pr,sid,lx,ok:d.ok+1,jc:d.tg,ph:'throw',last:`${nm(d,t)} خلّص المربع ${d.tg} 👣`};
+  if(pr[t]>=10)return {...x,win:t,last:`${nm(d,t)} خلّص الحجلة كلها! 🏆`};
+  if(x.ok>=3)return hsEnd(x,t,x.last+' • خلص دوره');return x;}
+const hsCanHouse=(d,t)=>d.ph==='throw'&&d.jc>0&&!d.hs[t]&&!d.hs.includes(d.jc);
+function hsBot(d,s,lv){if(lv===1)return [Math.random()<.3,Math.random()<.4];const sig=R2SIG[lv],thr=r2Pin(38,Math.hypot(sig,10));
+  const val=b=>{const tg=hsTg(d,s,b);return thr*r2Pin(hsW(d,s,tg)/2,sig)*(tg-d.pr[s])*(b?1.05:1);};const bold=d.pr[s]<=8&&val(true)>val(false)+(lv===2?Math.random()*.1-.05:0);
+  const house=hsCanHouse(d,s)&&d.jc>=3&&d.pr.some((p,o)=>o!==s&&d.out[o]!=='1'&&p<d.jc&&!sameTeam(d,s,o));return [bold,house];}
+GAMES.r_hop={name:'الحجلة',cat:'sport',lbc:'#C2577A',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B9C3CC"/><rect width="100" height="100" fill="#A9B4BE" opacity=".5"/>${[[38,78,24,18,'1'],[38,60,24,18,'2'],[26,42,24,18,'3'],[50,42,24,18,'4'],[38,24,24,18,'5']].map(([x,y,w,h,t])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#fff" stroke-width="2.4"/><text x="${x+w/2}" y="${y+13}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">${t}</text>`).join('')}<path d="M38 24a12 10 0 0 1 24 0" fill="none" stroke="#fff" stroke-width="2.4"/><ellipse cx="62" cy="51" rx="5" ry="3.4" fill="#C2577A"/><path d="M70 92q2-12 8-14q4 6-2 14z" fill="#EC6158"/></svg>`,
+  init:n=>({pr:Array(n).fill(0),hs:Array(n).fill(0),ph:'throw',tg:0,ok:0,jc:-1,tn:0,sid:0,lx:null,last:''}),
+  net:{host:['throw','hop','house'],local:['hb']},redeal:d=>d,
+  points:d=>d.pr.map(p=>p+'/10'),
+  status:(d,ctx)=>r2Stat(d,ctx,d.win==null?`<small>${d.ph==='hop'?`انقز للمربع ${d.tg} وارجع`:`ارمِ الحجر`} • نجاحات هالدور ${d.ok} من 3</small><br>`:''),
+  winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.pr[s]}/10`).join('، '),
+  render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx,bold=r2Dr('hb',0,1,0)===1&&d.pr[t]<=8,tg=d.ph==='hop'?d.tg:hsTg(d,t,bold);
+    const own=k=>d.hs.findIndex(h=>h===k);
+    let s=`<div class="r2 r2hs"><svg class="hs-svg" viewBox="0 0 160 300" data-k="hss" data-key="${L?d.gid+L.id:''}"><rect width="160" height="300" fill="#AEB8C2"/>${[...Array(12)].map((_,k)=>`<circle cx="${(k*37)%150+6}" cy="${(k*71)%290+5}" r="${1+k%3}" fill="#9AA5AF"/>`).join('')}
+      ${HS_XY.map(([x,y],k)=>{const sq=k+1,o=own(sq),cls=sq===tg&&d.win==null?'tg':sq<=d.pr[t]?'done':'';return `<g class="hs-sq ${cls}"><${sq===10?`path d="M${x-26} ${y+33}V${y+16}a26 16 0 0 1 52 0V${y+33}z"`:`rect x="${x-26}" y="${y-17}" width="52" height="34"`} fill="${o>=0?col(d,o):'rgba(255,255,255,.08)'}" fill-opacity="${o>=0?.35:1}" stroke="#fff" stroke-width="2.4"/><text x="${x}" y="${y+(sq===10?25:5)}" text-anchor="middle">${sq}</text>${o>=0?`<text x="${x+16}" y="${y+(sq===10?26:-6)}" class="hs-h">🏠</text>`:''}</g>`;}).join('')}
+      ${d.pl.map((_,i)=>{const p=d.pr[i],[x,y]=p?HS_XY[p-1]:[80,292];return d.out[i]==='1'?'':`<circle class="hs-p" cx="${x-18+i*5}" cy="${y+(p===10?24:10)}" r="4" fill="${col(d,i)}" stroke="#fff" stroke-width="1.2"/>`;}).join('')}
+      ${L&&L.k==='t'?`<g class="hs-st" style="transform:translate(${L.sq?HS_XY[L.sq-1][0]+10:80+((L.v%100)-50)/2}px,${L.sq?HS_XY[L.sq-1][1]+(L.sq===10?22:0):r2Clamp(280-L.v*.27,20,280)}px)"><ellipse rx="6" ry="4" fill="#7A4A2A" stroke="#fff" stroke-width=".8"/></g>`:d.ph==='hop'?`<g class="hs-st" style="transform:translate(${HS_XY[d.tg-1][0]+10}px,${HS_XY[d.tg-1][1]+(d.tg===10?22:0)}px)"><ellipse rx="6" ry="4" fill="#7A4A2A" stroke="#fff" stroke-width=".8"/></g>`:''}</svg>`;
+    s+=`<div class="dt-list">${d.pl.map((_,i)=>`<span class="${i===t?'on':''}" style="--c:${col(d,i)}">${nm(d,i)} <b>${d.pr[i]}/10</b>${d.hs[i]?' 🏠'+d.hs[i]:''}</span>`).join('')}</div>`;
+    if(my){const m=r2mPar(key,d.ph==='hop'?1050:1900);
+      if(d.ph==='throw'){s+=`${d.pr[t]<=8?r2Seg('hb',[`عادي: المربع ${hsTg(d,t,false)}`,`جريء: المربع ${hsTg(d,t,true)} مرة وحدة`],bold?1:0,true):''}
+        ${hsCanHouse(d,t)?`<button class="btn navy wide" data-ga="house">🏠 خلّ المربع ${d.jc} بيتك (مرة باللعبة)</button>`:''}
+        ${r2Meter(key,m,[[0,1000,'zl'],...[...Array(10).keys()].map(k=>[k*100+8,k*100+92,k+1===tg?'z2':'zx'])],sv==null,sv,`رمية الحجر: وقّف المؤشر على المربع ${tg} (1 يسار … 10 يمين)`)}${r2Stop(key,'throw','🪨 ارمِ الحجر',sv==null)}`;}
+      else{const w=hsW(d,t,d.tg)/2,c=hsC(d);s+=`${r2Meter(key,m,[[0,1000,'z0'],[r2Clamp(c-w,0,1000),r2Clamp(c+w,0,1000),'z2']],sv==null,sv,'التوازن: وقّف المؤشر في الأخضر')}${r2Stop(key,'hop','👣 انقز',sv==null)}`;}}
+    return s+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
+    if(a==='hb'){if(i===0||i===1){S.draft.hb=String(i);render();}return;}
+    if(a==='house'){if(hsCanHouse(d,t)){const hs=[...d.hs];hs[t]=d.jc;act({...d,hs,jc:-1,last:`${nm(d,t)} خلّى المربع ${d.jc} بيته 🏠`});}return;}
+    if(a==='throw'&&d.ph==='throw'){const v=r2Read(i);r2Hold(d.gid+':'+(d.sid||0),v,ctx);act(hsThrow(d,t,r2Dr('hb',0,1,0)===1&&d.pr[t]<=8,v));return;}
+    if(a==='hop'&&d.ph==='hop'){const v=r2Read(i);r2Hold(d.gid+':'+(d.sid||0),v,ctx);act(hsHop(d,t,v));}},
+  bot(d,s,lv){if(d.ph==='hop')return hsHop(d,s,r2BotStop(hsC(d),lv));const [bold,house]=hsBot(d,s,lv);
+    if(house&&hsCanHouse(d,s)){const hs=[...d.hs];hs[s]=d.jc;return {...d,hs,jc:-1,last:`${nm(d,s)} خلّى المربع ${d.jc} بيته 🏠`};}
+    const tg=hsTg(d,s,bold);return hsThrow(d,s,bold,r2BotStop((tg-1)*100+50,lv));},
+  onTimeout:d=>hsEnd(d,d.turn,`${nm(d,d.turn)} ضاع عليه الدور`),
+  after(d){r2Spin();const el=app.querySelector('.hs-svg');if(!el||!el.dataset.key||!once('hs'+el.dataset.key))return;const st=el.querySelector('.hs-st'),L=d.lx;
+    if(st&&L&&L.k==='t')r2Anim(st,[{transform:'translate(80px,296px) scale(1.4)'},{transform:st.style.transform}],420,0,'cubic-bezier(.3,.7,.4,1)');}
+};
+HELP.r_hop='الحجلة: مربعات من 1 إلى 10. بدورك ارمِ الحجر على المربع اللي بعدك: المؤشر يمر على المربعات من 1 (يسار) إلى 10 (يمين)، وقّفه داخل مربعك الأخضر (لو وقف على الخط أو مربع ثاني تخسر الدور). لو نزل الحجر صح، وقّف مؤشر التوازن في الأخضر عشان تنقز وترجع، وتتقدم مربع. تقدر تنجح 3 مرات بالدور. «الجريء» ترمي على المربع اللي بعد اللي بعدك وتنقزهم مرة وحدة (تتقدم مربعين، بس أصعب). ومرة باللعبة تقدر تخلي مربع خلّصته «بيتك» 🏠: الباقين لازم ينقزون فوقه فيصير توازنهم أصعب، وأنت ترتاح فيه. كل ما بعدت صار التوازن أصعب. أول واحد يخلّص المربع 10 يفوز. ولو لعبتوا فرق، يفوز فريق اللي يخلّص أول.';
