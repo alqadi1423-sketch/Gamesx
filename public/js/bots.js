@@ -163,7 +163,7 @@ GAMES.hand.bot=(d,s,lv)=>{if(d.ph==='sum')return hNewRound({...d,r:d.r+1});
 // the round scores stay on screen long enough to read
 GAMES.hand.botDelay=(d,s,lv)=>d.ph==='sum'?8000:BOTMS[lv]+rnd(600);
 
-/* ---------- uno, domino, 99, old maid, go fish ---------- */
+/* ---------- uno, domino, old maid (99 and go fish have their bots in more.js) ---------- */
 GAMES.uno.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);
   // first catch whoever went down to one card without saying «أونو»
   if(d.uno>=0&&d.uno!==s&&Math.random()<[0,.5,.8,1][lv])return botDo(d,s,'catch',0);
@@ -179,14 +179,7 @@ GAMES.domino.bot=(d,s,lv)=>{const H=d.hands[s].match(/.{2}/g)||[];const ok=H.map
   if(!ok.length)return botDo(d,s,d.bone.length?'draw':'pass',0);
   const i=lvRand(lv)?pickR(ok):ok.sort((a,b)=>(+H[b][0]+ +H[b][1]+(H[b][0]===H[b][1]?3:0))-(+H[a][0]+ +H[a][1]+(H[a][0]===H[a][1]?3:0)))[0];
   const [fl,fr]=domFits(H[i],d);if(fl&&fr&&d.ch&&d.ch[0]!==d.ch[d.ch.length-1]&&H[i][0]!==H[i][1])return botDo(d,s,Math.random()<.5?'L':'R',i);return botDo(d,s,'play',i);};
-GAMES.n99.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);const ok=H.map((c,i)=>v99(c,d.tot)<=99?i:-1).filter(i=>i>=0);if(!ok.length)return GAMES.n99.play(d,-1);
-  if(lvRand(lv))return GAMES.n99.play(d,pickR(ok));const special=c=>'K4T9'.includes(c[0]);
-  ok.sort((a,b)=>(special(H[a])-special(H[b]))||(v99(H[b],d.tot)-v99(H[a],d.tot)));return GAMES.n99.play(d,ok[0]);};
 GAMES.oldmaid.bot=(d,s,lv)=>{const tg=nextSeat(d,s);const n=cardsOf(d.hands[tg]).length;return n?botDo(d,s,'take',rnd(n)):GAMES.oldmaid.onTimeout&&GAMES.oldmaid.onTimeout(d);};
-GAMES.fish.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);if(!H.length)return botDo(d,s,'draw',0);
-  const ranks={};H.forEach(c=>{ranks[c[0]]=(ranks[c[0]]||0)+1;});const r=lvRand(lv)?pickR(Object.keys(ranks)):Object.keys(ranks).sort((a,b)=>ranks[b]-ranks[a])[0];
-  const others=aliveSeats(d).filter(x=>x!==s&&cardsOf(d.hands[x]).length);if(!others.length)return botDo(d,s,'draw',0);
-  S.tgt=lv===3?others.sort((a,b)=>cardsOf(d.hands[b]).length-cardsOf(d.hands[a]).length)[0]:pickR(others);return botDo(d,s,'ask',RANKS.indexOf(r));};
 
 /* ---------- dice ---------- */
 GAMES.pig.bot=(d,s,lv)=>{const hold=[0,10+rnd(15),18,20][lv];const goal=d.goal-d.sc[s];return botDo(d,s,(d.tot>=hold||d.tot>=goal)&&d.tot>0?'bank':'roll',0);};
@@ -248,15 +241,7 @@ GAMES.mono.bot=(d,s,lv)=>{const keep=[0,50,150,250][lv];
 GAMES.mono.botPick=(d,s,lv)=>{const i=d.auc;if(i==null)return 0;const price=mPrice(i);const want=[0,.5+Math.random()*.6,.85,1.05][lv]*price;const own=MP[i][0]==='p'?MGRP[MP[i][3]].filter(j=>d.own[j]===String(s)).length:0;
   return Math.max(0,Math.min(d.cash[s]-[0,0,100,150][lv],Math.round(want*(1+own*.25)/10)*10));};
 
-/* ---------- small strategy games ---------- */
-GAMES.nim.bot=(d,s,lv)=>{const x=d.p.reduce((a,b)=>a^b,0);let pi=-1,j=0;
-  if(x&&!lvRand(lv)&&(lv===3||d.pl.length===2)){for(let k=0;k<d.p.length;k++){const t=d.p[k]^x;if(t<d.p[k]){pi=k;j=t;break;}}}
-  if(pi<0){const ne=d.p.map((v,k)=>v?k:-1).filter(k=>k>=0);pi=pickR(ne);j=rnd(d.p[pi]);}return botDo(d,s,'take',pi*100+j);};
-GAMES.c31.bot=(d,s,lv)=>{// say tgt-1 to make the next player reach the target
-  const need=(d.tgt-1-d.n)%4;let k=need>=1&&need<=3&&!lvRand(lv)?need:1+rnd(3);if(d.n+k>d.tgt)k=d.tgt-d.n;return botDo(d,s,'add',k);};
-GAMES.num.bot=(d,s,lv)=>{const n=lvRand(lv)?d.lo+rnd(d.hi-d.lo+1):lv===3?Math.floor((d.lo+d.hi)/2):d.lo+Math.floor((d.hi-d.lo)*(0.3+Math.random()*.4));return botDo(d,s,'n',n);};
-GAMES.mm.bot=(d,s,lv)=>{let cands=[];for(let i=0;i<1296;i++){const g=[i%6,Math.floor(i/6)%6,Math.floor(i/36)%6,Math.floor(i/216)%6].join('');if(d.h.every(x=>mmScore(g,x.g).join()===mmScore(d.code,x.g).join()))cands.push(g);}
-  const g=lvRand(lv)||!cands.length?[0,0,0,0].map(()=>rnd(6)).join(''):(lv===2&&Math.random()<.4?[0,0,0,0].map(()=>rnd(6)).join(''):pickR(cands));S.mm=[...g].map(Number);return botDo(d,s,'go',0);};
+/* ---------- small strategy games (matchsticks, 31, guess the number, code breaker and guess the word have their bots in mind.js) ---------- */
 GAMES.hilo.bot=(d,s,lv)=>{const cur=d.dk.slice(d.p*2,d.p*2+2);const r=rv(cur);
   // hard bots count the cards already shown, the others assume a fresh deck
   const seen={};if(lv===3)for(let k=0;k<=d.p;k++){const x=rv(d.dk.slice(k*2,k*2+2));seen[x]=(seen[x]||0)+1;}
@@ -264,11 +249,6 @@ GAMES.hilo.bot=(d,s,lv)=>{const cur=d.dk.slice(d.p*2,d.p*2+2);const r=rv(cur);
   const ph=hi/tot,pl=lo/tot,best=Math.max(ph,pl);
   if(d.stk>0){const need=d.goal-d.pts[s];const risk=1-best;const stop=lv===1?d.stk>=1+rnd(4):lv===2?(d.stk>=3||risk>.42):(d.stk>=need||risk*(d.stk+1)>best*1.1||(d.stk>=4&&risk>.3));if(stop)return botDo(d,s,'bank',0);}
   return botDo(d,s,lvRand(lv)?(Math.random()<.5?'hi':'lo'):ph>=pl?'hi':'lo',0);};
-GAMES.war.botPick=(d,s,lv)=>{const used=(S.priv[d.pl[s]]||{}).used||[];const free=[1,2,3,4,5,6,7].filter(c=>!used.includes(c));if(!free.length)return null;
-  // the prize of this round is d.prize (drawn when the round starts, see more.js)
-  const pr=d.prize!=null?d.prize:4;const pick=lv===1?pickR(free):free.sort((a,b)=>Math.abs(a-pr-(lv===3?rnd(2):0))-Math.abs(b-pr-(lv===3?rnd(2):0)))[0];
-  const p=S.priv[d.pl[s]]||{};S.priv[d.pl[s]]={...p,gid:d.gid,used:[...used,pick]};return pick;};
-GAMES.word.bot=(d,s,lv)=>{const F='اليمنوتبرعهدسقكحفجشصطخثزغضذظ';const left=[...F].filter(c=>!d.g.includes(c)&&ALPHA.includes(c));const c=lvRand(lv)?pickR(left):left[0];return botDo(d,s,'k',ALPHA.indexOf(c));};
 GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);
   const clues=[...d.o].map((c,i)=>c>='a'&&c<='z'?[i,c.charCodeAt(0)-97]:null).filter(Boolean);
   const ok=free.filter(i=>clues.every(([j,k])=>Math.abs(Math.floor(i/z)-Math.floor(j/z))+Math.abs(i%z-j%z)===k));
@@ -371,19 +351,7 @@ GAMES.mines.bot=(d,s,lv)=>{const z=d.z,N=z*z;const unk=[];for(let i=0;i<N;i++)if
 GAMES.cw.botEval=(nd,s)=>{const ts=String(s);let v=0;for(let i=0;i<nd.o.length;i++){if(nd.o[i]===ts)v+=3+ +nd.n[i]*.3;else if(nd.o[i]!=='.')v-=1;}return v;};
 GAMES.cw.bot=(d,s,lv)=>botGreedy(GAMES.cw,d,s,lv);
 
-/* ---------- ultimate tic tac toe ---------- */
-GAMES.uxo.bot=(d,s,lv)=>{const legal=[];for(let i=0;i<81;i++){const k=Math.floor(i/9);if(d.b[i]==='.'&&d.w[k]==='.'&&(d.nb<0||d.nb===k))legal.push(i);}
-  if(!legal.length)return;if(lvRand(lv))return botDo(d,s,'m',pickR(legal));const me=String(s);
-  const winsAt=(str,ch)=>[...str].map((c,i)=>c==='.'&&line3(setAt(str,i,ch))===ch?i:-1).filter(i=>i>=0);
-  const others=d.pl.map((_,o)=>o).filter(o=>!sameTeam(d,o,s)).map(String);
-  const val=i=>{const k=Math.floor(i/9),j=i%9;const b=setAt(d.b,i,me),sm=small(b,k);let v=0,w=d.w;
-    if(line3(sm)===me){w=setAt(w,k,me);v+=60;if(line3(w)===me)return 1e9;v+=winsAt(w,me).length*25;}
-    if(others.some(o=>winsAt(small(d.b,k),o).includes(j)))v+=45;// block
-    if(others.some(o=>winsAt(d.w,o).includes(k)))v+=40;
-    // where the next player is sent
-    const nw=w[j]!=='.'||!small(b,j).includes('.');if(nw)v-=lv===3?30:10;else{if(others.some(o=>winsAt(small(b,j),o).length))v-=lv===3?50:15;}
-    v+=[3,1,3,1,4,1,3,1,3][j];return v+Math.random()*2;};
-  return botDo(d,s,'m',legal.sort((a,b)=>val(b)-val(a))[0]);};
+/* ---------- ultimate tic tac toe: its bot is in more.js ---------- */
 
 /* ---------- bingo ---------- */
 GAMES.bingo.bot=(d,s,lv)=>{const open=[];for(let n=1;n<=25;n++)if(d.called[n-1]==='0')open.push(n);if(lvRand(lv))return botDo(d,s,'m',pickR(open));
@@ -394,8 +362,6 @@ GAMES.bingo.bot=(d,s,lv)=>{const open=[];for(let n=1;n<=25;n++)if(d.called[n-1]=
   return botDo(d,s,'m',open.sort((a,b)=>val(b)-val(a))[0]);};
 
 /* ---------- number party games ---------- */
-GAMES.lowu.botPick=(d,s,lv)=>{if(lv===1)return 1+rnd(d.max);const q=lv===3?.6:.75;let r=Math.random()*(1-Math.pow(q,d.max))/(1-q),k=1;for(let w=1;k<d.max&&r>w;k++){r-=w;w*=q;}return k;};
-GAMES.two3.botPick=(d,s,lv)=>lv===1?15+rnd(60):lv===2?20+rnd(20):10+rnd(15);
 GAMES.major.botPick=()=>rnd(2);
 
 /* ---------- sea battle: hunt with a pattern, then finish the ship that was hit ---------- */
