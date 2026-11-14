@@ -154,27 +154,43 @@ GAMES.oldmaid.bot=(d,s,lv)=>{if(d.ph==='arr'){let h=cardsOf(d.hands[s]);const L=
   return botDo(d,s,'take',i);};
 
 /* ---------- colour memory ---------- */
-const SIM=['#E5483F','#3D8FD8','#3FAE5C','#F0B429'];
+const SIM=['#E5483F','#3D8FD8','#3FAE5C','#F0B429','#9C7BD6','#F2874B'];
+// vr 0 classic (four colours), 1 six colours, 2 «بالعكس» (repeat it from the last colour back to the first).
+// After repeating you add one colour, or press 🔥 and add two to make it harder for the next one
+let SIMV=0;const SIMVN=['🎨 كلاسيكية','🌈 ست ألوان','🔁 بالعكس'];
+const simN=d=>d.vr===1?6:4;
 GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4B50A8"/><path d="M50 50L50 12A38 38 0 0 1 88 50Z" fill="#E5483F"/><path d="M50 50L88 50A38 38 0 0 1 50 88Z" fill="#3D8FD8"/><path d="M50 50L50 88A38 38 0 0 1 12 50Z" fill="#3FAE5C"/><path d="M50 50L12 50A38 38 0 0 1 50 12Z" fill="#F0B429"/><circle cx="50" cy="50" r="13" fill="#2D4763"/></svg>`,
-  init:()=>({seq:'',last:''}),
-  status(d,ctx){const ss=S.simon,my=ctx.my;let s=(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>طول السلسلة: ${d.seq.length}. كرر السلسلة كاملة وبعدها زيد لون جديد، واللي يغلط يطلع</small>`;
-    if(my&&ss)s+='<br><b>'+(ss.phase==='show'?'ركّز…':ss.inp.length<d.seq.length?`كرر (${ss.inp.length} من ${d.seq.length})`:'زيد لون جديد')+'</b>';return s;},
+  init:()=>({seq:'',vr:SIMV,last:''}),
+  status(d,ctx){const ss=S.simon,my=ctx.my,rev=d.vr===2;let s=(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>طول السلسلة: ${d.seq.length}. ${rev?'كررها بالعكس (من آخر لون لأول لون)':'كرر السلسلة كاملة'} وبعدها زيد لون جديد، واللي يغلط يطلع</small>`;
+    if(my&&ss)s+='<br><b>'+(ss.phase==='show'?'ركّز…':ss.inp.length<d.seq.length?`${rev?'بالعكس 🔁 ':''}كرر (${ss.inp.length} من ${d.seq.length})`:ss.two?`🔥 زيد لونين (${(ss.add||[]).length} من 2)`:'زيد لون جديد')+'</b>';return s;},
   key:d=>d.gid+':'+d.seq.length+':'+d.turn+':'+d.out,
-  render(d,ctx){if(ctx.my&&(!S.simon||S.simon.key!==this.key(d)))S.simon={key:this.key(d),phase:d.seq.length?'show':'input',inp:[],run:false};
-    const ok=ctx.my&&S.simon&&S.simon.phase==='input',lit=ctx.my&&S.simon?S.simon.lit:null;
-    // a round device: four pads around a hub that shows the sequence's length; a lit pad brightens and glows
-    return `<div class="simon ${ok?'in':''}">${SIM.map((c,k)=>`<button class="simp s${k} ${k===lit?'on':''}" data-ga="p" data-i="${k}" style="--c:${c}" ${ok?'':'disabled'} aria-label="لون ${k+1}"></button>`).join('')}<div class="shub"><b>${d.seq.length}</b></div></div>`;},
+  render(d,ctx){if(ctx.my&&(!S.simon||S.simon.key!==this.key(d)))S.simon={key:this.key(d),phase:d.seq.length?'show':'input',inp:[],add:[],run:false};
+    const ss=ctx.my?S.simon:null,ok=!!ss&&ss.phase==='input',lit=ss?ss.lit:null,n=simN(d),fresh=!d.seq.length&&!d.out.includes('1');
+    const adding=ok&&ss.inp.length>=d.seq.length;
+    // a round device: the pads around a hub that shows the sequence's length; a lit pad brightens and glows
+    let s=fresh?`<div class="segs simv">${SIMVN.map((t,v)=>`<button class="seg ${v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:'';
+    s+=`<div class="simon ${ok?'in':''} ${n===6?'six':''} ${d.vr===2?'rev':''}">${SIM.slice(0,n).map((c,k)=>`<button class="simp s${k} ${k===lit?'on':''}" data-ga="p" data-i="${k}" style="--c:${c}" ${ok?'':'disabled'} aria-label="لون ${k+1}"></button>`).join('')}<div class="shub"><b data-k="${d.seq.length}">${d.seq.length}</b>${d.vr===2?'<small>🔁</small>':''}</div></div>`;
+    // progress dots while repeating, then the choice of one colour or two
+    if(ok&&d.seq.length&&!adding)s+=`<div class="sdots">${[...d.seq].map((_,k)=>`<i class="${k<ss.inp.length?'on':''}"></i>`).join('')}</div>`;
+    if(adding&&d.seq.length>=2&&!(ss.add||[]).length)s+=`<button class="stwo ${ss.two?'on':''}" data-ga="two">🔥 ${ss.two?'بتزيد لونين!':'زيد لونين وصعّبها عليهم'}</button>`;
+    return s;},
   after(d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='show'||ss.run||app.querySelector('.cover'))return;ss.run=true;const key=ss.key;const seq=[...d.seq].map(Number);let k=0;
     const flash=()=>{if(!S.simon||S.simon.key!==key)return;if(k>=seq.length){S.simon.phase='input';S.simon.lit=null;render();return;}
       S.simon.lit=seq[k];render();
       const on=Math.max(280,520-seq.length*18),off=Math.max(120,220-seq.length*8);
       setTimeout(()=>{if(!S.simon||S.simon.key!==key)return;S.simon.lit=null;render();k++;setTimeout(flash,off);},on);};
     setTimeout(flash,500);},
-  click(a,k,d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='input')return;const t=d.turn;const pos=ss.inp.length;
+  click(a,k,d,ctx){if(!ctx.my)return;
+    if(a==='vr'){if(d.seq.length||d.out.includes('1')||!Number.isInteger(k)||k<0||k>2)return;SIMV=k;S.simon=null;act({...d,vr:k});return;}
+    const ss=S.simon;if(!ss||ss.phase!=='input')return;const t=d.turn;const pos=ss.inp.length;
+    if(a==='two'){if(pos<d.seq.length||(ss.add||[]).length)return;ss.two=!ss.two;render();return;}
+    if(a!=='p'||!Number.isInteger(k)||k<0||k>=simN(d))return;
     const tap=ss.tap=(ss.tap||0)+1;ss.lit=k;setTimeout(()=>{if(S.simon===ss&&ss.tap===tap){ss.lit=null;render();}},180);
-    if(pos<d.seq.length){if(+d.seq[pos]!==k){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);S.simon=null;
-        act({...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),last:`${nm(d,t)} غلط عند اللون ${pos+1} وطلع`});return;}
+    if(pos<d.seq.length){const want=+d.seq[d.vr===2?d.seq.length-1-pos:pos];
+      if(want!==k){const out=setAt(d.out,t,'1');const al=aliveSeats(d,out);S.simon=null;try{sfx('lose');}catch(e){}
+        act({...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),last:`❌ ${nm(d,t)} غلط عند اللون ${pos+1} وطلع`});return;}
       ss.inp.push(k);render();return;}
-    S.simon=null;act({...d,seq:d.seq+k,turn:nextSeat(d,t),last:`${nm(d,t)} كرر ${d.seq.length} وزاد لون`});}
+    ss.add=[...(ss.add||[]),k];if(ss.two&&ss.add.length<2){render();return;}
+    const add=ss.add.join('');S.simon=null;act({...d,seq:d.seq+add,turn:nextSeat(d,t),last:`${nm(d,t)} كرر ${d.seq.length} وزاد ${add.length>1?'لونين 🔥':'لون'}`});}
 };

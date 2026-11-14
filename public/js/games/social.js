@@ -356,7 +356,7 @@ GAMES.mafia.botPick=(d,s,lv)=>{const r=d.roles[s];if(d.ph==='role')return 1;cons
 
 /* ---------- وصلة: كلمة من خمس حروف بست محاولات، الكل يلعب بنفس الوقت ---------- */
 const WNORM=w=>String(w).replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه');
-const WASLA='مدرسة سيارة طائرة مكتبة حديقة ملعقة مروحة نافذة وسادة سفينة مدينة قبيلة جزيرة بحيرة صحراء خريطة رسالة قصيدة عائلة جامعة طاولة خزانة ثلاجة غسالة مكنسة فراشة زرافة غزالة دجاجة بطاطس فاكهة كنافة بسكوت عصفور حمامة تمساح دلفين ثعبان بطريق نعامة سنجاب تفاحة رمانة ليمون جوافة مانجو زيتون طماطم ملفوف بيتزا فطيرة مرقوق قرصان عصيدة زبادي شوربة مزرعة حظيرة بقالة منتزه ميناء عاصمة اليمن لبنان سوريا ليبيا الهند الصين تركيا ايران فرنسا روسيا جازان نجران الخبر بريدة عنيزة سكاكا الجوف بيروت بغداد باريس مدريد طوكيو مهندس محامي ممرضة مزارع سجادة ستارة مصباح ابريق فنجان مقلاة مكواة مفتاح حقيبة محفظة نظارة قلادة مسطرة ممحاة حاسوب تلفاز راديو سماعة بنطال فستان عباءة جاكيت جوارب طاقية سروال سحابة بركان زلزال عاصفة امطار اسنان جمجمة اظافر سباحة رماية شطرنج سعادة صداقة شجاعة كرامة امانة نظافة رمادي بنفسج سماوي كتابة قراءة رياضة سياحة تجارة زراعة صناعة هندسة ادارة سياسة ثقافة ترجمة حكاية رواية سينما اغنية مشكلة اجابة شهادة وظيفة اجازة تذكرة ضيافة ظهيرة اسبوع سنوات دقيقة ثانية الفجر العصر رمضان السبت الصيف دراجة حافلة شاحنة غواصة صاروخ مركبة اسعاف تاكسي ميزان مسمار مطرقة منشار فرشاة صابون معجون منشفة نعناع ريحان خزامى الماس ياقوت تطبيق رسائل جيران اخوان اطفال والدة اعمام اخوال معلمة طالبة تلميذ سبورة قاموس جريدة صحيفة اخبار اعلان البحر الشمس القمر النجم الورد مكتوب مشروع محطات مطاعم ملابس منازل مساجد مدارس أسواق شوارع حدائق أنهار كواكب أقلام دفاتر نوافذ أبواب كراسي فنادق عربات ممرات مطابخ أنفاق أبراج وديان غابات واحات سواحل شواطئ أمواج حجارة أوراق كرتون طاووس ببغاء حيتان أسماك ضفادع أغنام أبقار أرانب فئران ثعالب غزلان جرادة بعوضة ذبابة حلزون بطيخة كمثرى خيارة كاسات ملاعق شوكات أكواب مناشف مرايا ساعات خواتم أساور سلاسل حقائب أحذية قمصان أثواب معاطف قبعات أريكة خزائن أدراج ستائر وسائد مدفأة نشافة محمصة فنجال صينية مغرفة مصفاة مقالة بطاقة هدايا أشجار أغصان بستان صيدلي أقارب أبناء أولاد أجداد أحفاد أخوات بلدان كلمات صفحات تاريخ أحياء اثنين يناير أبريل يونيو يوليو أغسطس أضواء ألوان عنابي إعصار حرارة برودة رطوبة فيضان مسافر رحلات قائمة دولار دينار تعاون ترتيب أسئلة أجوبة أفكار أهداف خسارة تعادل بطولة جائزة جوائز ألعاب بالون'.split(' ');
+const WASLA='مدرسة سيارة طائرة مكتبة حديقة ملعقة مروحة نافذة وسادة سفينة مدينة قبيلة جزيرة بحيرة صحراء خريطة رسالة قصيدة عائلة جامعة طاولة خزانة ثلاجة غسالة مكنسة فراشة زرافة غزالة دجاجة بطاطس فاكهة كنافة بسكوت عصفور حمامة تمساح دلفين ثعبان بطريق نعامة سنجاب تفاحة رمانة ليمون جوافة مانجو زيتون طماطم ملفوف بيتزا فطيرة مرقوق قرصان عصيدة زبادي شوربة مزرعة حظيرة بقالة منتزه ميناء عاصمة اليمن لبنان سوريا ليبيا الهند الصين تركيا ايران فرنسا روسيا جازان نجران الخبر بريدة عنيزة سكاكا الجوف بيروت بغداد باريس مدريد طوكيو مهندس محامي ممرضة مزارع سجادة ستارة مصباح ابريق فنجان مقلاة مكواة مفتاح حقيبة محفظة نظارة قلادة مسطرة ممحاة حاسوب تلفاز راديو سماعة بنطال فستان عباءة جاكيت جوارب طاقية سروال سحابة بركان زلزال عاصفة امطار اسنان جمجمة اظافر سباحة رماية شطرنج سعادة صداقة شجاعة كرامة امانة نظافة رمادي بنفسج سماوي كتابة قراءة رياضة سياحة تجارة زراعة صناعة هندسة ادارة سياسة ثقافة ترجمة حكاية رواية سينما اغنية مشكلة اجابة شهادة وظيفة اجازة تذكرة ضيافة ظهيرة اسبوع سنوات دقيقة ثانية الفجر العصر رمضان السبت الصيف دراجة حافلة شاحنة غواصة صاروخ مركبة اسعاف تاكسي ميزان مسمار مطرقة منشار فرشاة صابون معجون منشفة نعناع ريحان خزامى الماس ياقوت تطبيق رسائل جيران اخوان اطفال والدة اعمام اخوال معلمة طالبة تلميذ سبورة قاموس جريدة صحيفة اخبار اعلان البحر الشمس القمر النجم الورد مكتوب مشروع محطات مطاعم ملابس منازل مساجد مدارس أسواق شوارع حدائق أنهار كواكب أقلام دفاتر نوافذ أبواب كراسي فنادق عربات ممرات مطابخ أنفاق أبراج وديان غابات واحات سواحل شواطئ أمواج حجارة أوراق كرتون طاووس ببغاء حيتان أسماك ضفادع أغنام أبقار أرانب فئران ثعالب غزلان جرادة بعوضة ذبابة حلزون بطيخة كمثرى خيارة كاسات ملاعق شوكات أكواب مناشف مرايا ساعات خواتم أساور سلاسل حقائب أحذية قمصان أثواب معاطف قبعات أريكة خزائن أدراج ستائر وسائد مدفأة نشافة محمصة فنجال صينية مغرفة مصفاة مقالة بطاقة هدايا أشجار أغصان بستان صيدلي أقارب أبناء أولاد أجداد أحفاد أخوات بلدان كلمات صفحات تاريخ أحياء اثنين يناير أبريل يونيو يوليو أغسطس أضواء ألوان عنابي إعصار حرارة برودة رطوبة فيضان مسافر رحلات قائمة دولار دينار تعاون ترتيب أسئلة أجوبة أفكار أهداف خسارة تعادل بطولة جائزة جوائز ألعاب بالون صندوق برقوق طنجرة زجاجة شمسية بوابة سلالم عمارة منارة محكمة ملاهي شعبان كوريا الخرج شقراء صلالة صنعاء برلين موسكو مبرمج محاسب مترجم مخترع مسبحة مبخرة ممسحة مجرفة فانوس تجديف ينبوع اصابع حواجب عضلات عدالة اخلاص تواضع نتيجة مضغوط مشاوي فلافل تبولة معمول غريبة فطائر جاموس كناري حرباء قنديل مرجان ثيران حنيني بولنج قافلة قوافل رحالة جمهور حارسة ساحات اضاءة ديكور زخرفة خطاطة مخطوط بوصلة منظار مجرات اقمار نيازك اسلاك قصائد اغاني ألحان مزمار ربابة كمنجة بيانو'.split(' ');
 const WKEYS=['ضصثقفغعهخحج','شسيبلاتنمكط','ءئؤرذدزظوة'];
 let WDICT=null,WDLOAD=null,WDFAIL=0;
 // a failed or odd answer (404, captive portal page) leaves no dictionary and is tried again a bit later
@@ -377,33 +377,41 @@ GAMES.wasla={name:'وصلة',cat:'mind',lbc:'#2E7D5B',noTimer:false,
   simulNow:()=>true,viewer:d=>simulViewer(d),coverMsg:()=>'',
   // online: the word stays hidden till the end and you only see your own tries; the others' colours come from gsc
   mask:(d,seat)=>d.win!=null?d:{...d,ans:-1,gs:d.gs&&d.gs.map((x,s)=>s===seat?x:x.map(w=>'?'.repeat(w.length)))},
-  net:{local:['k','del','ent']},
+  net:{local:['k','del','ent','hint']},
   points:d=>d.pl.map((_,s)=>{const g=(d.gs||[])[s]||[];return d.solved&&d.solved[s]?`✓ ${g.length}`:`${g.length}/6`;}),
   winText(d){return d.win==='d'?`ما أحد عرفها! الكلمة: ${WASLA[d.ans]}`:null;},
   winExtra:d=>`الكلمة: ${WASLA[d.ans]}`,
   status(d,ctx){return `<small>كلمة من 5 حروف</small><br>المحاولة ${Math.min(6,(d.rd||0)+1)} من 6`;},
   outDone:true,
   render(d,ctx){const v=ctx.v;const gs=d.gs||d.pl.map(()=>[]);const sc=(s,r)=>wSc(d,s,r);
-    const row=(w,sc,hide,c)=>`<div class="wrow ${c||''}">${[...Array(5)].map((_,i)=>`<i class="${sc?'w'+sc[i]:''} ${w&&w[i]&&!sc?'typed':''}" style="--i:${i}">${hide?'':(w&&w[i])||''}</i>`).join('')}</div>`;
+    // a hint row (one per player, it costs a try) shows one letter in its place and blanks for the rest
+    const row=(w,sc,hide,c)=>{const h=!hide&&w&&w.includes('·');return `<div class="wrow ${c||''} ${h?'whn':''}">${[...Array(5)].map((_,i)=>`<i class="${sc?(h&&w[i]==='·'?'wh':'w'+sc[i]):''} ${w&&w[i]&&!sc?'typed':''}" style="--i:${i}">${hide||(w&&w[i])==='·'?'':(w&&w[i])||''}</i>`).join('')}</div>`;};
+    const won=s=>d.solved&&d.solved[s]&&(gs[s]||[]).length===d.solved[s];
     if(v==null||v<0)return '<p class="note">ننتظر الباقين…</p>';
     const mine=gs[v]||[];const draft=ctx.my?(S.draft.wl||''):'';
     // the newest scored row flips in; the row being typed is marked
-    let h=`<div class="wasla"><div class="wgrid">`;for(let r=0;r<6;r++){if(r<mine.length)h+=row(mine[r],sc(v,r),false,r===mine.length-1?'new':'');else if(r===mine.length&&ctx.my)h+=row(draft,null,false,'cur');else h+=row('');}h+='</div><div class="wleg"><span><i class="w2"></i>بمكانه</span><span><i class="w1"></i>بمكان ثاني</span><span><i class="w0"></i>مو موجود</span></div>';
+    let h=`<div class="wasla"><div class="wgrid">`;for(let r=0;r<6;r++){if(r<mine.length)h+=row(mine[r],sc(v,r),false,r===mine.length-1?(won(v)?'new won':'new'):'');else if(r===mine.length&&ctx.my)h+=row(draft,null,false,'cur');else h+=row('');}h+='</div><div class="wleg"><span><i class="w2"></i>بمكانه</span><span><i class="w1"></i>بمكان ثاني</span><span><i class="w0"></i>مو موجود</span></div>';
     // the others: colours only
     const others=d.pl.map((_,s)=>s).filter(s=>s!==v&&!ctx.local);
     if(others.length)h+=`<div class="wothers">${others.map(s=>`<div class="wo"><b style="color:${col(d,s)}">${nm(d,s)}</b>${(gs[s]||[]).map((g,r)=>row(g,sc(s,r),true)).join('')||'<small>…</small>'}</div>`).join('')}</div>`;
     if(!ctx.my)return h+'<p class="note">ننتظر الباقين…</p></div>';
     const st={};mine.forEach((g,r)=>{const x=sc(v,r);if(x)[...g].forEach((c,i)=>{st[c]=Math.max(st[c]??-1,x[i]);});});
-    h+=`<div class="wkb">${WKEYS.map((r,ri)=>`<div>${ri===2?'<button class="wk wide" data-ga="ent">إدخال</button>':''}${[...r].map(c=>`<button class="wk ${st[WNORM(c)]!=null?'w'+st[WNORM(c)]:''}" data-ga="k" data-i="${'ضصثقفغعهخحجشسيبلاتنمكطءئؤرذدزظوة'.indexOf(c)}">${c}</button>`).join('')}${ri===2?'<button class="wk wide" data-ga="del">⌫</button>':''}</div>`).join('')}</div></div>`;
-    return h;},
+    h+=`<div class="wkb">${WKEYS.map((r,ri)=>`<div>${ri===2?'<button class="wk wide" data-ga="ent">إدخال</button>':''}${[...r].map(c=>`<button class="wk ${st[WNORM(c)]!=null?'w'+st[WNORM(c)]:''}" data-ga="k" data-i="${'ضصثقفغعهخحجشسيبلاتنمكطءئؤرذدزظوة'.indexOf(c)}">${c}</button>`).join('')}${ri===2?'<button class="wk wide" data-ga="del">⌫</button>':''}</div>`).join('')}</div>`;
+    if(!(d.hu||'')[v]||d.hu[v]!=='1')h+=mine.length<5?`<button class="whint" data-ga="hint">🔍 اكشف حرف <small>(تحسب عليك محاولة، مرة وحدة)</small></button>`:'';
+    return h+'</div>';},
   after(){wLoad();},
   click(a,i,d,ctx){if(!ctx.my)return;let w=S.draft.wl||'';
+    if(a==='hint'){if((d.hu||'')[ctx.v]==='1'||((d.gs||[])[ctx.v]||[]).length>=5)return;S.draft.wl='';simulPick(d,ctx.v,'*');return;}
     if(a==='k'){const c='ضصثقفغعهخحجشسيبلاتنمكطءئؤرذدزظوة'[i];if(w.length<5){S.draft.wl=w+WNORM(c);render();}return;}
     if(a==='del'){S.draft.wl=w.slice(0,-1);render();return;}
     if(a==='ent'){if(w.length<5){toast('الكلمة لازم 5 حروف');return;}if(!wKnown(w)){toast('هذي الكلمة مو بالقاموس');return;}S.draft.wl='';simulPick(d,ctx.v,w);}},
-  resolve(d,picks){const ans=WNORM(WASLA[d.ans]);const gs=(d.gs||d.pl.map(()=>[])).map(x=>[...x]);const solved=[...(d.solved||d.pl.map(()=>0))];let out=d.out;
-    picks.forEach((p,s)=>{if(p===null&&d.out[s]==='1')return;gs[s].push(p?WNORM(p):'؟؟؟؟؟');if(p&&WNORM(p)===ans){solved[s]=gs[s].length;out=setAt(out,s,'1');}else if(gs[s].length>=6)out=setAt(out,s,'1');});
-    return wEnd({...d,gs,gsc:gs.map(x=>x.map(g=>wScore(g,ans).join(''))),solved,out,rd:d.rd+1});},
+  // '*' is the hint: the first place this player has not found yet is shown (a row of its own, so it costs a try)
+  resolve(d,picks){const ans=WNORM(WASLA[d.ans]);const gs=(d.gs||d.pl.map(()=>[])).map(x=>[...x]);const solved=[...(d.solved||d.pl.map(()=>0))];let out=d.out,hu=d.hu||'0'.repeat(d.pl.length);
+    picks.forEach((p,s)=>{if(p===null&&d.out[s]==='1')return;
+      if(p==='*'&&hu[s]!=='1'&&gs[s].length<5){hu=setAt(hu,s,'1');const got=new Set();gs[s].forEach(g=>[...g].forEach((c,i)=>{if(c===ans[i])got.add(i);}));
+        const at=[0,1,2,3,4].find(i=>!got.has(i))??0;gs[s].push([...'·····'].map((c,i)=>i===at?ans[i]:c).join(''));return;}
+      const g=typeof p==='string'&&p!=='*'?WNORM(p).slice(0,5):'';gs[s].push(g.length===5?g:'؟؟؟؟؟');if(g&&g===ans){solved[s]=gs[s].length;out=setAt(out,s,'1');}else if(gs[s].length>=6)out=setAt(out,s,'1');});
+    return wEnd({...d,gs,hu,gsc:gs.map(x=>x.map(g=>wScore(g,ans).join(''))),solved,out,rd:d.rd+1});},
   // d.out also marks the ones who finished, so the engine's "last one left wins" does not apply here
   onSkip:nd=>wEnd({...nd,win:null,wins:undefined})
 };
