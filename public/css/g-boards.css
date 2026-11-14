@@ -235,3 +235,28 @@ svg.bd-tv{border-radius:12px;box-shadow:0 6px 0 #3E220F,0 12px 24px rgba(0,0,0,.
 .bd-tv .tvgh{transform-box:fill-box;transform-origin:center;animation:bd-pop var(--t2) var(--spring) both}
 .bd-tv .tvhit{cursor:pointer}
 .bd-tv .tvcb{transition:transform var(--t3) var(--ease)}
+
+/* ========== motion added in the game pass: pieces fly to their square (core look only, transform/opacity) ========== */
+/* the square of a flying piece is drawn above the others while it moves */
+.bd-fly{z-index:3}
+/* dama: a taken piece fades where it stood; without motion it is simply not there */
+.bd-ch .dmp.ghost{opacity:0;animation:bd-gone .4s ease-out;pointer-events:none}
+@keyframes bd-gone{0%{opacity:.85;transform:none}100%{opacity:0;transform:scale(.55)}}
+/* tic tac toe: the variant switch before the first mark, the mark that vanishes next, the winning stroke */
+.tttv{width:min(100%,400px);margin:0 auto 8px}
+.bd-ttt{position:relative}
+.bd-ttt .tc.old svg{opacity:.38;transform:scale(.82);transition:opacity var(--t2),transform var(--t2)}
+.bd-ttt .tc.hl{animation:none;box-shadow:inset 0 -3px 0 rgba(45,71,99,.13),0 0 0 3px var(--gold)}
+.bd-ttt .tln{position:absolute;inset:9px;width:calc(100% - 18px);height:calc(100% - 18px);pointer-events:none;overflow:visible}
+.bd-ttt .tln line{stroke-dasharray:1;animation:bd-draw .4s .1s var(--ease) both;opacity:.9}
+/* snakes: the two dice to choose from, each with where it leads */
+.snpick{gap:12px}
+.snpick .snd{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;padding:0;border:0;font-weight:800;font-size:14px;color:var(--ink)}
+.snpick .snd .tapd{box-shadow:0 0 0 3px var(--c),0 6px 0 rgba(0,0,0,.14)}
+.snpick .snd:not(:disabled):active .tapd{transform:scale(.92)}
+/* minefield: flag mode, a right flag, a wrong one */
+.mnbar{gap:10px;align-items:center;justify-content:center;margin-top:10px}
+.mnbar small{color:var(--muted);font-weight:700}
+.bd-mn.flag .tile:not(:disabled){box-shadow:inset 0 0 0 2px #E5483F,inset 0 -3px 0 rgba(0,0,0,.18)}
+.bd-mn .flg{background:radial-gradient(circle,#fff 0 30%,var(--c) 100%);display:grid;place-items:center;font-size:clamp(12px,4.6vw,20px);animation:bd-boom var(--t3) var(--spring) both}
+.bd-mn .open.miss{box-shadow:inset 0 0 0 2px #E5483F}

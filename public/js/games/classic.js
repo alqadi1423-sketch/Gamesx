@@ -8,19 +8,42 @@ function lineWin(b,sz,k){for(let r=0;r<sz;r++)for(let c=0;c<sz;c++){const v=b[r*
 function bdLast(key,d,b){const L=S.bdL||(S.bdL={});const o=L[key];
   if(!o||o.gid!==d.gid||o.b.length!==b.length){L[key]={gid:d.gid,b,i:-1};return -1;}
   if(o.b!==b){let k=-1,n=0;for(let j=0;j<b.length;j++)if(b[j]!==o.b[j]){k=j;n++;}o.i=n===1?k:-1;o.b=b;}return o.i;}
+// look only: no hand-driven motion in light mode or when the phone asks for less motion
+const bdStill=()=>{try{return document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return true;}};
+/* look only: a piece already drawn on its new square slides there from the earlier squares `via` (elements, first = where it
+   started), moving by transform only. Its square is lifted above the others while it flies. Nothing waits for it */
+function bdFly(el,via,ms){if(!el||!el.animate||!via.length||bdStill())return;const b=el.getBoundingClientRect();if(!b.width)return;
+  const fr=via.map(v=>{const a=v.getBoundingClientRect();return `translate(${(a.left+a.width/2-b.left-b.width/2).toFixed(1)}px,${(a.top+a.height/2-b.top-b.height/2).toFixed(1)}px) scale(1.1)`;});
+  const host=el.parentElement;if(host&&host.classList){host.classList.add('bd-fly');setTimeout(()=>host.classList.remove('bd-fly'),ms+60);}
+  try{el.animate([...fr.map(transform=>({transform})),{transform:'none'}],{duration:ms,easing:'cubic-bezier(.3,.75,.35,1)'});}catch(e){}}
 GAMES.ttt={name:'إكس أو',cat:'board',lbc:'#B9483F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E36A5E"/><path d="M38 12V72M62 12V72M14 30H86M14 54H86" stroke="#2D4763" stroke-width="5" stroke-linecap="round"/><path d="M19 37L32 49M32 37L19 49" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="42" r="7" stroke="#4AB1E8" stroke-width="5" fill="none"/><circle cx="74" cy="19" r="6" stroke="#4AB1E8" stroke-width="5" fill="none"/></svg>`,
-  init:n=>{const [sz,k]=TTS[n]||[8,4];return {sz,k,b:'.'.repeat(sz*sz),ln:null};},
-  status:(d,ctx)=>turnTxt(d,ctx),
+  // vr 1 (two players): each keeps only three marks, and a fourth one wipes the oldest, so nobody can just block to a draw
+  init:n=>{const [sz,k]=TTS[n]||[8,4];const vr=n===2?TTTV:0;return {sz,k,b:'.'.repeat(sz*sz),ln:null,vr,q:vr?Array(n).fill(0).map(()=>[]):null,nmv:0};},
+  status:(d,ctx)=>turnTxt(d,ctx)+(d.vr?'<br><small>كل واحد له 3 علامات بس، والرابعة تمسح أقدمها</small>':''),
   render(d,ctx){const g=d.sz>5?4:d.sz>3?5:8,lm=d.ln?-1:bdLast('ttt',d,d.b);
-    return `<div class="ttt bd-ttt ${ctx.my?'my':''}" style="grid-template-columns:repeat(${d.sz},minmax(0,1fr));gap:${g}px;--c:${col(d,d.turn)}">${[...d.b].map((c,i)=>`<button class="tc ${d.ln&&d.ln.includes(i)?'hl':''} ${i===lm?'lm':''}" ${c!=='.'?`style="--c:${col(d,+c)}"`:''} data-ga="m" data-i="${i}" ${c!=='.'||!ctx.my?'disabled':''}>${c!=='.'?shape(d.pl[+c]):''}</button>`).join('')}</div>`;},
+    // the mark that goes with the next move of whoever plays now
+    const old=d.vr&&d.win==null&&d.q&&d.q[d.turn]&&d.q[d.turn].length>=d.k?d.q[d.turn][0]:-1;
+    const fresh=d.pl.length===2&&!/[0-9]/.test(d.b)&&d.win==null;
+    let h=fresh?`<div class="segs tttv">${[['0','كلاسيكية'],['1','تختفي القديمة']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:'';
+    let ln='';if(d.ln){const [x0,y0]=[d.ln[0]%d.sz,Math.floor(d.ln[0]/d.sz)],[x1,y1]=[d.ln[d.ln.length-1]%d.sz,Math.floor(d.ln[d.ln.length-1]/d.sz)];
+      ln=`<svg class="tln" viewBox="0 0 ${d.sz} ${d.sz}" preserveAspectRatio="none" aria-hidden="true"><line x1="${x0+.5}" y1="${y0+.5}" x2="${x1+.5}" y2="${y1+.5}" pathLength="1" stroke="${col(d,d.win)}" stroke-width="${.16}" stroke-linecap="round"/></svg>`;}
+    return h+`<div class="ttt bd-ttt ${ctx.my?'my':''}" style="grid-template-columns:repeat(${d.sz},minmax(0,1fr));gap:${g}px;--c:${col(d,d.turn)}">${[...d.b].map((c,i)=>`<button class="tc ${d.ln&&d.ln.includes(i)?'hl':''} ${i===lm?'lm':''} ${i===old?'old':''}" ${c!=='.'?`style="--c:${col(d,+c)}"`:''} data-ga="m" data-i="${i}" ${c!=='.'||!ctx.my?'disabled':''}>${c!=='.'?shape(d.pl[+c]):''}</button>`).join('')}${ln}</div>`;},
   click(a,i,d,ctx){
-    if(!ctx.my||d.b[i]!=='.')return;
-    const b=setAt(d.b,i,String(d.turn));const r=lineWin(b,d.sz,d.k);let win=null,ln=null;
-    if(r){win=r.w;ln=r.ln;}else if(!b.includes('.'))win='d';
-    act({...d,b,turn:nextSeat(d,d.turn),win,ln});
+    if(!ctx.my)return;
+    if(a==='vr'){if(/[0-9]/.test(d.b)||d.pl.length!==2)return;TTTV=i?1:0;act({...d,vr:TTTV,q:TTTV?d.pl.map(()=>[]):null});return;}
+    if(d.b[i]!=='.')return;const nd=tttPut(d,i);
+    act({...nd,turn:nextSeat(d,d.turn)});
   }
 };
+// a mark of whoever plays now on cell i: the board, the marks' order, the winner (the turn is left as it was)
+function tttPut(d,i){let b=d.b,q=d.q;const t=d.turn;
+  if(d.vr){q=q.map(x=>[...x]);if(q[t].length>=d.k)b=setAt(b,q[t].shift(),'.');q[t].push(i);}
+  b=setAt(b,i,String(t));const r=lineWin(b,d.sz,d.k);const nmv=(d.nmv||0)+1;
+  // the vanishing game cannot fill up: after 60 marks it is a draw
+  const win=r?r.w:(d.vr?(nmv>=60?'d':null):(b.includes('.')?null:'d'));
+  return {...d,b,q,nmv,win,ln:r?r.ln:null};}
+let TTTV=0;// the last choice on this phone, kept for the next rounds
 
 /* ================= game: dots and boxes ================= */
 const cntSeat=(s,n)=>{const a=Array(n).fill(0);for(const c of s)if(c!=='.')a[+c]++;return a;};
@@ -73,36 +96,73 @@ function snakeSVG(a,b,k){const [x1,y1]=cellXY(a),[x2,y2]=cellXY(b);const dx=x2-x
     `<circle cx="${x1}" cy="${y1}" r="2.6" fill="${c}" stroke="#2D4763" stroke-width=".6"/><circle cx="${x1-.9}" cy="${y1-.6}" r=".7" fill="#fff"/><circle cx="${x1+.9}" cy="${y1-.6}" r=".7" fill="#fff"/><circle cx="${x1-.8}" cy="${y1-.5}" r=".32" fill="#2D4763"/><circle cx="${x1+1}" cy="${y1-.5}" r=".32" fill="#2D4763"/>`;}
 GAMES.snakes={name:'السلم والثعبان',cat:'board',lbc:'#A8743F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#FBEFD9"/><path d="M0 0H33V33H0ZM66 0H100V33H66ZM33 33H66V66H33ZM0 66H33V100H0ZM66 66H100V100H66Z" fill="#F3D9AE"/><path d="M60 8L80 70M70 6L90 68" stroke="#8a5a2b" stroke-width="4"/><path d="M63 20L74 17M66 32L78 29M70 44L82 41M74 56L86 53" stroke="#8a5a2b" stroke-width="3"/><path d="M22 22C40 35 6 50 26 70" stroke="#2D4763" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M22 22C40 35 6 50 26 70" stroke="#5CC08C" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="22" cy="22" r="8" fill="#5CC08C" stroke="#2D4763" stroke-width="2.5"/><circle cx="19" cy="20" r="2" fill="#fff"/><circle cx="25" cy="20" r="2" fill="#fff"/><circle cx="40" cy="84" r="7" fill="#EC6158" stroke="#2D4763" stroke-width="2.5"/><circle cx="58" cy="84" r="7" fill="#4AB1E8" stroke="#2D4763" stroke-width="2.5"/></svg>`,
-  init:n=>({pos:Array(n).fill(0),dice:0,msg:''}),
-  status:(d,ctx)=>(d.msg?`<small>${d.msg}</small><br>`:'')+turnTxt(d,ctx),
+  // vr 1: two dice each turn and the player picks which one to walk (a real choice: dodge a snake head, aim for a ladder)
+  init:n=>({pos:Array(n).fill(0),dice:0,msg:'',vr:SNV,ph:'roll',dd:null,mvf:null}),
+  status:(d,ctx)=>(d.msg?`<small>${d.msg}</small><br>`:'')+turnTxt(d,ctx)+(d.vr&&d.ph==='pick'&&d.win==null?': اختر زهرة':''),
+  onTimeout:d=>d.ph==='pick'?snUse(d,snBest(d)):{...d,turn:nextSeat(d,d.turn)},
+  // a player who left while choosing: the dice he rolled go with him
+  onSkip:(nd,d)=>nd.turn!==d.turn?{...nd,ph:'roll',dd:null}:nd,
   render(d,ctx){
     let cells='';for(let row=9;row>=0;row--)for(let c=0;c<10;c++){const n=row%2===0?row*10+c+1:row*10+(9-c)+1;cells+=`<div class="cl ${(row+c)%2?'b':'a'}">${n}</div>`;}
     let ov=Object.entries(LAD).map(([a,b])=>ladderSVG(+a,b)).join('')+Object.entries(SNK).map(([a,b],k)=>snakeSVG(+a,b,k)).join('');
     const r=d.pl.length>4?2.4:3.1;
     // every seat keeps its own token node (hidden off the board), so a move slides it from cell to cell
-    d.pos.forEach((p,s)=>{const on=p>0&&d.out[s]!=='1';let x=-6,y=106;
-      if(on){const [cx,cy]=cellXY(p);const same=d.pos.map((q,k)=>q===p&&d.out[k]!=='1'?k:-1).filter(k=>k>=0);const m=same.length,j=same.indexOf(s);
-        x=cx+(m>1?Math.cos(2*Math.PI*j/m)*2.4:0);y=cy+1+(m>1?Math.sin(2*Math.PI*j/m)*2.4:0);}
+    d.pos.forEach((p,s)=>{const [x,y]=snXY(d,s,p);const on=p>0&&d.out[s]!=='1';
       const c=col(d,s);
-      ov+=`<g class="tk ${on?'':'off'} ${s===d.turn&&d.win==null?'on':''}" style="transform:translate(${x.toFixed(2)}px,${y.toFixed(2)}px)"><ellipse cy="${r*.62}" rx="${r*.95}" ry="${r*.45}" fill="rgba(0,0,0,.28)"/><circle r="${r}" fill="${c}" stroke="${shade(c,-.45)}" stroke-width=".7"/><circle r="${r*.62}" fill="none" stroke="${shade(c,.35)}" stroke-width=".5"/><ellipse cx="${-r*.32}" cy="${-r*.38}" rx="${r*.42}" ry="${r*.26}" fill="#fff" opacity=".6"/></g>`;});
+      ov+=`<g class="tk ${on?'':'off'} ${s===d.turn&&d.win==null?'on':''}" data-s="${s}" style="transform:translate(${x.toFixed(2)}px,${y.toFixed(2)}px)"><ellipse cy="${r*.62}" rx="${r*.95}" ry="${r*.45}" fill="rgba(0,0,0,.28)"/><circle r="${r}" fill="${c}" stroke="${shade(c,-.45)}" stroke-width=".7"/><circle r="${r*.62}" fill="none" stroke="${shade(c,.35)}" stroke-width=".5"/><ellipse cx="${-r*.32}" cy="${-r*.38}" rx="${r*.42}" ry="${r*.26}" fill="#fff" opacity=".6"/></g>`;});
     const off=d.pl.map((_,s)=>s).filter(s=>d.pos[s]===0&&d.out[s]!=='1');
-    const anim=S.rolled;S.rolled=false;
-    return `<div class="sl bd-sl"><div class="cells">${cells}</div><svg viewBox="0 0 100 100">${ov}</svg></div>
+    const anim=S.rolled;S.rolled=false;const fresh=d.pos.every(x=>x===0)&&!d.dice&&d.win==null;
+    let foot;
+    if(d.vr&&d.ph==='pick'&&d.dd){const t=d.turn;
+      foot=`<div class="row snpick">${d.dd.map((v,j)=>{const to=snLand(d.pos[t],v);const tag=to.to>to.land?'🪜':to.to<to.land?'🐍':'';
+        return `<button class="snd" data-ga="use" data-i="${j}" ${ctx.my?'':'disabled'} style="--c:${col(d,t)}"><span class="tapd ${anim?'roll':''}">${diceSVG(v)}</span><b>${to.stay?'ما يمشي':`إلى ${to.to} ${tag}`}</b></button>`;}).join('')}</div>`;}
+    else foot=`<div class="row">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}</div>`;
+    return `${fresh?`<div class="segs tttv">${[['0','زهرة وحدة'],['1','زهرتين وتختار']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:''}<div class="sl bd-sl"><div class="cells">${cells}</div><svg viewBox="0 0 100 100">${ov}</svg></div>
       ${off.length?`<div class="start">قبل البداية: ${off.map(s=>`<span class="mini" style="background:${col(d,s)}">${nm(d,s)}</span>`).join('')}</div>`:''}
-      <div class="row">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}</div>`;
+      ${foot}`;
   },
+  // the token walks cell by cell, then rides the ladder or slides down the snake (look only)
+  after(d){const m=d.mvf;if(!m)return;const k=d.gid+':'+m.join(',');if(S.snFx===k)return;S.snFx=k;if(bdStill())return;
+    const el=app.querySelector(`.bd-sl .tk[data-s="${m[0]}"]`);if(!el||!el.animate)return;const [s,from,land,to]=m;
+    const pts=[];for(let c=from;c!==land;c+=from<land?1:-1)pts.push(c);pts.push(land);if(to!==land)pts.push(to);if(pts.length<2)return;
+    const walk=to!==land?.7:1,n=pts.length-(to!==land?2:1);
+    const fr=pts.map((c,j)=>{const [x,y]=snXY(d,s,c,true);return {transform:`translate(${x.toFixed(2)}px,${y.toFixed(2)}px)`,offset:j<=n?(n?j/n*walk:0):1};});
+    try{el.animate(fr,{duration:Math.min(450,120+60*pts.length),easing:'linear'});}catch(e){}},
   click(a,i,d,ctx){
-    if(!ctx.my)return;const r=1+rnd(6),t=d.turn;let p=d.pos[t]+r,msg;
-    if(p>100){p=d.pos[t];msg=`طلع ${r}، يحتاج ${100-p} بالضبط`;}
-    else if(LAD[p]){msg=`طلع ${r}، سلّم من ${p} إلى ${LAD[p]}! 🪜`;p=LAD[p];}
-    else if(SNK[p]){msg=`طلع ${r}، الثعبان نزّله من ${p} إلى ${SNK[p]} 🐍`;p=SNK[p];}
-    else msg=`طلع ${r}، وصل ${p}`;
-    const pos=[...d.pos];pos[t]=p;const win=p===100?t:null;const extra=r===6&&win==null;
-    if(extra)msg+='، ستة! يرمي مرة ثانية';
-    S.rolled=true;
-    act({...d,pos,dice:r,msg:`${nm(d,t)}: ${msg}`,turn:extra?t:nextSeat(d,t),win});
+    if(!ctx.my)return;
+    if(a==='vr'){if(!(d.pos.every(x=>x===0)&&!d.dice))return;SNV=i?1:0;act({...d,vr:SNV});return;}
+    if(a==='use'){if(d.ph!=='pick'||!d.dd||!d.dd[i])return;act(snUse(d,i));return;}
+    if(a!=='roll'||d.ph==='pick')return;const r=1+rnd(6),t=d.turn;S.rolled=true;
+    if(d.vr){const r2=1+rnd(6);act({...d,ph:'pick',dd:[r,r2],dice:r,msg:`${nm(d,t)} رمى ${r} و${r2}`});return;}
+    act(snGo(d,r));
   }
 };
+let SNV=0;// the last dice choice on this phone, kept for the next rounds
+// where a walk of r from p ends: the cell it lands on, and where the ladder or snake there takes it
+function snLand(p,r){const land=p+r;if(land>100)return {stay:true,land:p,to:p};return {land,to:LAD[land]||SNK[land]||land};}
+// a token's place on the board (spread a little when several share a cell); at=true: the cell's centre for seat s only
+function snXY(d,s,p,at){if(p<=0)return [-6,106];const [cx,cy]=cellXY(p);if(at)return [cx,cy+1];
+  const same=d.pos.map((q,k)=>q===p&&d.out[k]!=='1'?k:-1).filter(k=>k>=0);const m=same.length,j=same.indexOf(s);
+  return [cx+(m>1?Math.cos(2*Math.PI*j/m)*2.4:0),cy+1+(m>1?Math.sin(2*Math.PI*j/m)*2.4:0)];}
+function snGo(d,r){const t=d.turn,L=snLand(d.pos[t],r);let msg;const p0=d.pos[t];
+  if(L.stay)msg=`طلع ${r}، يحتاج ${100-p0} بالضبط`;
+  else if(L.to>L.land)msg=`طلع ${r}، سلّم من ${L.land} إلى ${L.to}! 🪜`;
+  else if(L.to<L.land)msg=`طلع ${r}، الثعبان نزّله من ${L.land} إلى ${L.to} 🐍`;
+  else msg=`طلع ${r}، وصل ${L.to}`;
+  const pos=[...d.pos];pos[t]=L.to;const win=L.to===100?t:null;const extra=r===6&&win==null;
+  if(extra)msg+='، ستة! يرمي مرة ثانية';
+  return {...d,pos,dice:r,ph:'roll',dd:null,mvf:L.stay?d.mvf:[t,p0,L.land,L.to,(d.mvf?d.mvf[4]:0)+1],msg:`${nm(d,t)}: ${msg}`,turn:extra?t:nextSeat(d,t),win};}
+const snUse=(d,i)=>snGo(d,d.dd[i]);
+// the die that leaves the token furthest on (a ladder counts, a snake head does not)
+// deep: also what the next pair of dice is worth from there (a cell just under a ladder is better than one under a snake head)
+function snBest(d,deep){const p=d.pos[d.turn];const one=(q,r)=>{const L=snLand(q,r);return L.stay?q-.5:L.to===100?1e3:L.to;};
+  const nx=q=>{let t=0;for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)t+=Math.max(one(q,a),one(q,b))-q;return t/36;};
+  const v=r=>{const L=snLand(p,r);if(L.to===100)return 1e4;const at=L.stay?p:L.to;return one(p,r)+(r===6?3.5:0)+(deep?.6*nx(at):0);};
+  return v(d.dd[1])>v(d.dd[0])?1:0;}
+GAMES.snakes.bot=(d,s,lv)=>{S.rolled=true;
+  if(d.ph==='pick'&&d.dd)return snUse(d,lv===1&&Math.random()<.5?rnd(2):snBest(d,lv===3));
+  const r=1+rnd(6);if(d.vr){const r2=1+rnd(6);return {...d,ph:'pick',dd:[r,r2],dice:r,msg:`${nm(d,s)} رمى ${r} و${r2}`};}
+  return snGo(d,r);};
 
 /* ================= game: color wars ================= */
 const CWS={2:5,3:6,4:6,5:7,6:7,7:8,8:8};

@@ -42,7 +42,7 @@ function tvEnd(d,s){// side s bore off everything
     if(d.bar[l]||d.pts.some((v,i)=>tvOwn(v,l)&&homeOfS(i))){k=3;how='مارس كبير';}}
   return {...d,...tmWin(d,s),wpts:k*d.cube,end:how,ph:'end'};}
 function tvPlay(d,m){const s=d.sd;const t=tvMove(d,s,m.from,m.to);const mv=[...d.mv];mv.splice(mv.indexOf(m.die),1);
-  let nd={...d,...t,mv,lm:[m.from,m.to]};
+  let nd={...d,...t,mv,lm:[m.from,m.to,s]};
   if(t.off[s]===15)return tvEnd(nd,s);
   const left=mv.length?tvAllowed(nd,s,mv):[];
   if(!left.length)nd={...nd,ph:'roll',mv:[],sd:1-s,...tmPass(d,s)};
@@ -93,10 +93,18 @@ GAMES.tavla={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name
     else if(d.ph==='roll'){h+=`${tapDie(d.dice[0]||6,my,col(d,d.turn))}${tapDie(d.dice[1]||6,my,col(d,d.turn))}`;
       if(my&&(d.own===-1||d.own===s)&&d.cube<64)h+=`<button class="btn" data-ga="dbl">ضاعف إلى ${d.cube*2}</button>`;}
     else if(d.ph==='move'){const used=d.dice[0]===d.dice[1]?4-d.mv.length:2-d.mv.length;
-      h+=(d.dice[0]===d.dice[1]?[0,1,2,3]:[0,1]).map(j=>`<div class="tapd ${j<used?'used':''}" style="--c:${col(d,d.turn)}">${diceSVG(d.dice[d.dice[0]===d.dice[1]?0:j])}</div>`).join('');}
+      h+=(d.dice[0]===d.dice[1]?[0,1,2,3]:[0,1]).map(j=>`<div class="tapd ${j<used?'used':''} ${used?'':'roll'}" style="--c:${col(d,d.turn)}">${diceSVG(d.dice[d.dice[0]===d.dice[1]?0:j])}</div>`).join('');}
     else if(d.ph==='dbl'&&myAct)h+=`<button class="btn green" data-ga="take">أقبل (×${d.cube*2})</button><button class="btn" data-ga="drop">أرفض وأخسر ${d.cube}</button>`;
     h+='</div>';
     return h;},
+  // the checker that just moved slides from where it stood; a checker it hit flies to the bar
+  after(d,ctx){const k=d.gid+':'+d.pts.join(',')+':'+d.bar+':'+d.off;if(S.tvFx===k)return;S.tvFx=k;const L=d.lm;if(!L||L[2]==null||bdStill())return;
+    const svg=app.querySelector('svg.tvb');if(!svg)return;const flip=!ctx.local&&tmMySide(d,ctx)===1,[f,t,s]=L;
+    const own=p=>p>=1&&p<=24&&tvOwn(d.pts[p-1],s)?tvCnt(d.pts[p-1]):0;
+    const fly=(el,a,b)=>{if(!el||!el.animate)return;try{el.animate([{transform:`translate(${(a[0]-b[0]).toFixed(1)}px,${(a[1]-b[1]).toFixed(1)}px)`},{transform:'none'}],{duration:300,easing:'cubic-bezier(.3,.75,.35,1)'});}catch(e){}};
+    const to=t===25?tvXY(flip,25,s,d.off[s]-1):tvXY(flip,t,s,own(t)-1),from=f===0?tvXY(flip,0,s,d.bar[s]):tvXY(flip,f,s,own(f));
+    fly(svg.querySelector(`[data-q="${t===25?'o'+s:t}"]`),from,to);
+    if(d.hit&&t<25)fly(svg.querySelector(`[data-q="b${1-s}"]`),tvXY(flip,t,1-s,0),tvXY(flip,0,1-s,d.bar[1-s]-1));},
   click(a,i,d,ctx){const s=d.sd;
     if(a==='take'||a==='drop'){if(d.ph!=='dbl')return;if(!ctx.local&&ctx.v!==tmNow(d,1-s))return;act(tvAnswer(d,a==='take'));return;}
     if(!ctx.my)return;
@@ -111,6 +119,12 @@ GAMES.tavla={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name
     if(S.tv){const ds=[...new Set(al.filter(m=>m.from===i).map(m=>m.to))];if(ds.length===1){const m=al.filter(m=>m.from===i&&m.to===ds[0]).reduce((x,y)=>y.die<x.die?y:x);S.tv=null;act(tvPlay(d,m));return;}}
     render();}
 };
+// where the j-th checker of `side` sits at a place (1..24 a point, 0 the bar, 25 borne off), in board units (same layout as tvBoard)
+function tvXY(flip,p,side,j){const H=280,PW=24,L=6,BAR=20,OFF=26,TOP=8,CR=10.5,fw=6*PW,offX=L+12*PW+BAR+8;j=Math.max(0,j);
+  if(p===0){const low=(side===0)!==flip;j=Math.min(j,2);return [L+fw+BAR/2,low?H/2+24+j*21:H/2-24-j*21];}
+  if(p===25){const low=(side===0)!==flip;return [offX+(OFF-6)/2,(low?H-TOP-6-j*7:TOP+2+j*7)+2.7];}
+  const q=flip?25-p:p,bottom=q<=12,k=bottom?12-q:q-13;j=Math.min(j,4);
+  return [L+k*PW+(k<6?0:BAR)+PW/2,bottom?H-TOP-CR-.5-j*21:TOP+CR+.5+j*21];}
 // the board as SVG. Side 0 sees its home at the bottom right; side 1 sees the mirror so its home is there too
 function tvBoard(d,flip,srcs,sel,dests,my){
   const W=340,H=280,PW=24,TH=112,L=6,BAR=20,OFF=26,TOP=8,CR=10.5;
@@ -135,18 +149,18 @@ function tvBoard(d,flip,srcs,sel,dests,my){
   for(let q=1;q<=24;q++){const x=xOf(q),bottom=q<=12,y0=bottom?H-TOP:TOP,y1=bottom?H-TOP-TH:TOP+TH;
     g+=`<path d="M${x+.8} ${y0}L${x+PW/2} ${y1}L${x+PW-.8} ${y0}Z" fill="url(#${q%2?'tvr':'tvn'})"/>`;}
   // a checker: drop shadow, glossy body, the turned rim and its count
-  const chk=(cx,cy,side,n,cls)=>`<g class="tvk ${cls||''}"><circle cx="${cx}" cy="${cy+1.6}" r="${CR}" fill="rgba(0,0,0,.28)"/><circle cx="${cx}" cy="${cy}" r="${CR}" fill="url(#tvc${side})" stroke="${stroke[side]}" stroke-width="1"/><circle cx="${cx}" cy="${cy}" r="${CR-3.4}" fill="none" stroke="${side?'rgba(255,255,255,.16)':'rgba(110,90,62,.32)'}" stroke-width="1.2"/>${n?`<text x="${cx}" y="${cy+4.3}" font-size="12" font-weight="800" text-anchor="middle" fill="${ink[side]}">${n}</text>`:''}</g>`;
+  const chk=(cx,cy,side,n,cls,q)=>`<g class="tvk ${cls||''}"${q!=null?` data-q="${q}"`:''}><circle cx="${cx}" cy="${cy+1.6}" r="${CR}" fill="rgba(0,0,0,.28)"/><circle cx="${cx}" cy="${cy}" r="${CR}" fill="url(#tvc${side})" stroke="${stroke[side]}" stroke-width="1"/><circle cx="${cx}" cy="${cy}" r="${CR-3.4}" fill="none" stroke="${side?'rgba(255,255,255,.16)':'rgba(110,90,62,.32)'}" stroke-width="1.2"/>${n?`<text x="${cx}" y="${cy+4.3}" font-size="12" font-weight="800" text-anchor="middle" fill="${ink[side]}">${n}</text>`:''}</g>`;
   const lmTo=d.lm?d.lm[1]:null,lmFrom=d.lm?d.lm[0]:null;
   for(let p=1;p<=24;p++){const v=d.pts[p-1];if(!v)continue;const side=v>0?0:1,n=Math.abs(v),q=view(p),x=xOf(q)+PW/2,bottom=q<=12;
     const shown=Math.min(n,5);for(let j=0;j<shown;j++){const top=j===shown-1;
-      const cls=top?(sel===p?'sel':my&&srcs.has(p)&&sel==null?'mv':lmTo===p?'lmc':''):'';g+=chk(x,sy(bottom,j),side,top&&n>5?n:0,cls);}}
+      const cls=top?(sel===p?'sel':my&&srcs.has(p)&&sel==null?'mv':lmTo===p?'lmc':''):'';g+=chk(x,sy(bottom,j),side,top&&n>5?n:0,cls,top?p:null);}}
   // bar: side 0 checkers sit low, side 1 high (mirrored for side 1 viewers)
   const bx=L+fw+BAR/2;for(const side of [0,1]){const n=d.bar[side];if(!n)continue;const low=(side===0)!==flip;
     for(let j=0;j<Math.min(n,3);j++){const top=j===Math.min(n,3)-1,cy=low?H/2+24+j*21:H/2-24-j*21;
-      g+=chk(bx,cy,side,top&&n>1?n:0,top&&side===d.sd?(sel===0?'sel':my&&srcs.has(0)&&sel==null?'mv':''):'');}}
+      g+=chk(bx,cy,side,top&&n>1?n:0,top&&side===d.sd?(sel===0?'sel':my&&srcs.has(0)&&sel==null?'mv':''):'',top?'b'+side:null);}}
   // borne off: chips seen from the side, stacked in the tray
   for(const side of [0,1]){const n=d.off[side];if(!n)continue;const low=(side===0)!==flip;const ox=offX+(OFF-6)/2;
-    for(let j=0;j<n;j++){const y=low?H-TOP-6-j*7:TOP+2+j*7;g+=`<rect x="${ox-8.5}" y="${y}" width="17" height="5.4" rx="2.2" fill="url(#tvc${side})" stroke="${stroke[side]}" stroke-width=".8"/>`;}}
+    for(let j=0;j<n;j++){const y=low?H-TOP-6-j*7:TOP+2+j*7;g+=`<rect ${j===n-1?`data-q="o${side}" `:''}x="${ox-8.5}" y="${y}" width="17" height="5.4" rx="2.2" fill="url(#tvc${side})" stroke="${stroke[side]}" stroke-width=".8"/>`;}}
   // doubling cube: in the middle of the tray until someone owns it, then on the owner's side
   {const own=d.own,cy=own<0?H/2:((own===0)!==flip?H/2+30:H/2-30),cx=offX+(OFF-6)/2,v=d.cube>1?d.cube:64;
     g+=`<g class="tvcb"><rect x="${cx-9}" y="${cy-7.5}" width="18" height="18" rx="4" fill="rgba(0,0,0,.35)"/><rect x="${cx-9}" y="${cy-9}" width="18" height="18" rx="4" fill="#FBF7EE" stroke="#8B6B43" stroke-width="1"/><text x="${cx}" y="${cy+(v>9?3.4:4.2)}" font-size="${v>9?9.5:12}" font-weight="900" text-anchor="middle" fill="#2D4763">${v}</text></g>`;}
@@ -159,3 +173,59 @@ function tvBoard(d,flip,srcs,sel,dests,my){
       const q=view(p),x=xOf(q),bottom=q<=12,v=d.pts[p-1],j=tvOwn(v,d.sd)?Math.min(tvCnt(v),4):0;
       g+=`<rect x="${x}" y="${bottom?H/2:TOP}" width="${PW}" height="${H/2-TOP}" fill="#4CB97F" opacity=".16" class="tvhit" data-ga="pt" data-i="${p}"/><circle cx="${x+PW/2}" cy="${sy(bottom,j)}" r="${CR-.5}" fill="#4CB97F" fill-opacity=".45" stroke="#fff" stroke-width="1.6" stroke-dasharray="3.2 2.2" class="tvgh" data-ga="pt" data-i="${p}"/>`;}}
   return g+'</svg>';}
+
+/* ---------- backgammon bot: it plans the whole roll (every order of the dice), then judges where the checkers end up:
+   the race, made points and primes, blots by how many of the 36 rolls hit them, and checkers on the bar.
+   Easy moves one checker at a time and often carelessly; medium plans the roll but worries less about blots ---------- */
+const TVR=(()=>{const r=[];for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)r.push(a===b?[a,2*a,3*a,4*a]:[a,b,a+b]);return r;})();
+function tvPips(t,s){let p=t.bar[s]*25;for(let i=0;i<24;i++)if(tvOwn(t.pts[i],s))p+=tvCnt(t.pts[i])*(s?24-i:i+1);return p;}
+// side s still has to pass the other side's checkers
+function tvContact(t){if(t.bar[0]||t.bar[1])return true;let lo1=99,hi0=-1;for(let i=0;i<24;i++){if(t.pts[i]>0)hi0=Math.max(hi0,i);if(t.pts[i]<0)lo1=Math.min(lo1,i);}return lo1<hi0;}
+function tvJudge(t,s,lv){const o=1-s,me=tvPips(t,s),op=tvPips(t,o);let v=op-me+t.off[s]*2-t.off[o]*2;
+  if(!tvContact(t))return v;
+  const home=(x,i)=>x?i>=18:i<=5,made=x=>{let n=0;for(let i=0;i<24;i++)if(home(x,i)&&tvOwn(t.pts[i],x)&&tvCnt(t.pts[i])>=2)n++;return n;};
+  const myHome=made(s),opHome=made(o);
+  // made points, the home board and long walls (primes)
+  let run=0,best=0;for(let k=0;k<24;k++){const i=s?23-k:k,x=t.pts[i],n=tvOwn(x,s)?tvCnt(x):0;
+    if(n>=2){v+=3+(home(s,i)?4:0);run++;best=Math.max(best,run);}else run=0;if(n>5)v-=(n-5)*2;
+    // a point held deep in the other home is an anchor
+    if(n>=2&&home(o,i))v+=4;}
+  if(best>=3)v+=(best-2)*(best-2)*4;
+  // the other side on the bar against a strong home board
+  v+=t.bar[o]*(4+myHome*3)-t.bar[s]*(2+opHome*3);
+  // blots: the share of the 36 rolls that hit them, times what they would lose
+  const wt=lv===3?1:.45;const src=[];for(let i=0;i<24;i++)if(tvOwn(t.pts[i],o))src.push(i+1);
+  for(let i=0;i<24;i++){if(!(tvOwn(t.pts[i],s)&&tvCnt(t.pts[i])===1))continue;const p=i+1;
+    const ds=src.map(q=>s?p-q:q-p).filter(x=>x>0&&x<=24);if(t.bar[o])ds.push(s?p:25-p);if(!ds.length)continue;
+    let hits=0;for(const r of TVR)if(r.some(x=>ds.includes(x)))hits++;
+    v-=wt*hits/36*((s?p:25-p)+10)*(1+opHome*.15);}
+  return v;}
+// every way to play the whole roll: the end positions (one per distinct board) and the first single move that leads there
+function tvPlans(d,s){const out=new Map();
+  const rec=(t,dice,first,dep)=>{const al=dice.length?tvAllowed(t,s,dice):[];
+    if(!al.length||dep>=4){const k=t.pts.join(',')+'|'+t.bar+'|'+t.off;if(!out.has(k))out.set(k,{t,first});return;}
+    const seen=new Set();for(const m of al){const sk=m.from+':'+m.die;if(seen.has(sk))continue;seen.add(sk);
+      const nt=tvMove(t,s,m.from,m.to),rest=[...dice];rest.splice(rest.indexOf(m.die),1);rec(nt,rest,first||m,dep+1);}};
+  rec({pts:d.pts,bar:d.bar,off:d.off},d.mv,null,0);return [...out.values()].filter(x=>x.first);}
+// how likely side s wins from here, roughly (a lead of about a tenth of the race is a good double)
+const tvWinP=(t,s,lv)=>{const sc=8+(tvPips(t,0)+tvPips(t,1))/14;return 1/(1+Math.exp(-tvJudge(t,s,lv)/sc));};
+GAMES.tavla.bot=(d,s,lv)=>{const side=d.sd;
+  if(d.ph==='open')return tvOpen(d,1+rnd(6));
+  if(d.ph==='dbl'){const p=tvWinP(d,1-side,3);return tvAnswer(d,lv===1?Math.random()<.85:p>(lv===3?.24:.3));}
+  if(d.ph==='roll'){const p=tvWinP(d,side,3);
+    if(lv>1&&(d.own===-1||d.own===side)&&d.cube<16&&p>(lv===3?.7:.76)&&p<.94&&(lv===3||Math.random()<.5))return {...d,ph:'dbl',turn:tmNow(d,1-side),last:`${tmName(d,side)} طلب مضاعفة`};
+    return tvRolled(d,[1+rnd(6),1+rnd(6)]);}
+  if(d.ph==='move'){const al=tvAllowed(d,side,d.mv);if(!al.length)return tvAuto(d);
+    if(lv===1){if(Math.random()<.4)return tvPlay(d,pickR(al));let best=al[0],bv=-1e9;
+      for(const m of al){const t=tvMove(d,side,m.from,m.to);const v=tvPips(d,side)-tvPips(t,side)+(t.hit?10:0)+(tvCnt(t.pts[m.to-1]||0)>=2?4:0)+Math.random()*6;if(v>bv){bv=v;best=m;}}return tvPlay(d,best);}
+    // the plan made for this roll stays while the board is the one it expected
+    const k=d.gid+':'+d.pts.join(',')+'|'+d.bar+'|'+d.mv.join('');const P=S.tvPlan;
+    if(P&&P.k===k){const m=al.find(x=>x.from===P.m.from&&x.to===P.m.to&&x.die===P.m.die);if(m)return tvPlay(d,m);}
+    const ns=lv===3?.5:4;let best=null,bv=-1e9;for(const x of tvPlans(d,side)){const v=tvJudge(x.t,side,lv)+Math.random()*ns;if(v>bv){bv=v;best=x;}}
+    if(!best)return tvPlay(d,al[0]);const m=best.first;const nd=tvPlay(d,m);
+    // the rest of the plan: replayed from the board after this move
+    S.tvPlan=null;if(nd.ph==='move'&&nd.sd===side){const rest=tvPlans(nd,side).find(x=>x.t.pts.join(',')===best.t.pts.join(',')&&x.t.bar+''===best.t.bar+''&&x.t.off+''===best.t.off+'');
+      if(rest)S.tvPlan={k:nd.gid+':'+nd.pts.join(',')+'|'+nd.bar+'|'+nd.mv.join(''),m:rest.first};}
+    return nd;}
+  return tvAuto(d);};
+GAMES.tavla.botDelay=(d,s,lv)=>d.ph==='move'?450+rnd(300):700+rnd(500);

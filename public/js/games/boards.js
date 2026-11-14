@@ -84,21 +84,33 @@ GAMES.mines={name:'حقل الألغام',cat:'mind',lbc:'#4E6A57',
     return {z,m:m.join(''),rv:'.'.repeat(z*z),k:'.'.repeat(z*z),pts:Array(n).fill(0),last:''};},
   // online, the mines stay with the host until the end: the others see only opened cells and their counts (k)
   mask:(d,seat)=>d.win!=null?d:{...d,m:[...d.m].map((c,i)=>d.rv[i]!=='.'?c:'?').join('')},
+  // the flag switch belongs to the phone; the flag itself is checked on the host like any tap
+  net:{local:['fm']},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
-  render(d,ctx){const z=d.z,end=d.win!=null;
-    return `<div class="cellgrid bd-mn ${ctx.my?'my':''}" style="grid-template-columns:repeat(${z},minmax(0,1fr))">${[...d.rv].map((v,i)=>{
-      if(v==='.')return `<button class="cg tile ${end&&d.m[i]==='1'?'mine':''}" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>${end&&d.m[i]==='1'?MINE:''}</button>`;
+  render(d,ctx){const z=d.z,end=d.win!=null,fl=ctx.my&&S.mnF===d.gid+d.rv+d.turn,kk=d.k||'';
+    const flags=[...kk].filter(c=>c==='f').length,total=(MNS[d.pl.length]||[10,20])[1];
+    let h=`<div class="cellgrid bd-mn ${ctx.my?'my':''} ${fl?'flag':''}" style="grid-template-columns:repeat(${z},minmax(0,1fr))">${[...d.rv].map((v,i)=>{
+      if(v==='.')return `<button class="cg tile ${end&&d.m[i]==='1'?'mine':''}" data-ga="${fl?'f':'m'}" data-i="${i}" ${ctx.my?'':'disabled'}>${end&&d.m[i]==='1'?MINE:''}</button>`;
+      if(kk[i]==='f')return `<div class="cg flg" style="--c:${col(d,+v)}"><span>🚩</span></div>`;
       if(d.m[i]==='1')return `<div class="cg boom" style="--c:${col(d,+v)}">${MINE}</div>`;
-      const k=d.k&&d.k[i]!=='.'?+d.k[i]:mineCount(d.m,z,i);return `<div class="cg open n${k}" style="--l:${lit(d,+v)}">${k||''}</div>`;}).join('')}</div>`;},
+      const k=kk[i]&&kk[i]!=='.'&&kk[i]!=='x'?+kk[i]:mineCount(d.m,z,i);return `<div class="cg open n${k} ${kk[i]==='x'||d.wf&&d.wf===i+1?'miss':''}" style="--l:${lit(d,+v)}">${k||''}</div>`;}).join('')}</div>`;
+    if(ctx.my&&!end)h+=`<div class="row mnbar"><button class="btn ${fl?'red':'navy'}" data-ga="fm">${fl?'🚩 علّم: اضغط على اللغم':'🚩 علّم لغم (+3)'}</button><small>معلّمة ${flags} من ${total}</small></div>`;
+    return h;},
   click(a,i,d,ctx){
-    if(!ctx.my||d.rv[i]!=='.')return;const z=d.z,t=d.turn,ts=String(t);let rv=d.rv,out=d.out,kk=d.k||'.'.repeat(z*z);const pts=[...d.pts];let last;
-    if(d.m[i]==='1'){rv=setAt(rv,i,ts);out=setAt(out,t,'1');last=`${nm(d,t)} داس على لغم وطلع 💥`;}
+    if(a==='fm'){const k=d.gid+d.rv+d.turn;S.mnF=S.mnF===k?null:k;render();return;}
+    if(!ctx.my||d.rv[i]!=='.')return;const z=d.z,t=d.turn,ts=String(t);let rv=d.rv,out=d.out,kk=d.k||'.'.repeat(z*z);const pts=[...d.pts];let last,wf=null;
+    // a flag: right is +3 and the mine is out of the game, wrong costs 2 and opens that cell for everyone
+    if(a==='f'){S.mnF=null;rv=setAt(rv,i,ts);
+      if(d.m[i]==='1'){kk=setAt(kk,i,'f');pts[t]+=3;last=`${nm(d,t)} علّم لغم صح 🚩 +3`;}
+      else{kk=setAt(kk,i,String(mineCount(d.m,z,i)));pts[t]=Math.max(0,pts[t]-2);wf=i+1;last=`${nm(d,t)} علّم خانة سليمة ❌ −2`;}}
+    else if(a!=='m')return;
+    else if(d.m[i]==='1'){rv=setAt(rv,i,ts);out=setAt(out,t,'1');last=`${nm(d,t)} داس على لغم وطلع 💥`;}
     else{const st=[i];let got=0;while(st.length){const k=st.pop();if(rv[k]!=='.'||d.m[k]==='1')continue;rv=setAt(rv,k,ts);got++;const mc=mineCount(d.m,z,k);kk=setAt(kk,k,String(mc));
         if(mc===0){const r=Math.floor(k/z),c=k%z;for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=r+dr,cc=c+dc;if(rr>=0&&rr<z&&cc>=0&&cc<z)st.push(rr*z+cc);}}}
       pts[t]+=got;last=`${nm(d,t)} فتح ${got} خانة`;}
     const al=aliveSeats(d,out);const safeLeft=[...rv].some((v,k)=>v==='.'&&d.m[k]==='0');let win=null;
     if(al.length===1)win=al[0];else if(!al.length)win='d';else if(!safeLeft)win=mostPts(pts.map((x,s)=>out[s]==='1'?-1:x));
-    act({...d,rv,k:kk,out,pts,last,win,turn:nextSeat(d,t,out)});
+    act({...d,rv,k:kk,out,pts,last,wf,win,turn:nextSeat(d,t,out)});
   }
 };
