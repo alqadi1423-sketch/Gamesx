@@ -133,3 +133,5 @@ button.b2pt{cursor:pointer}
 .bd-tv.b2mb .tvk.fresh{transform-box:fill-box;transform-origin:center;animation:b2pop .3s ease-out}
 .chside.mbr{background:#7A2B26;color:#fff;box-shadow:none}
 .b2bd+.note,.b2bd+p.note{margin-top:18px}
+/* the action row stays in place when it is not your turn */
+.chact.b2off{visibility:hidden}

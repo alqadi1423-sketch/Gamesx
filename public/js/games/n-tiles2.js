@@ -635,7 +635,7 @@ GAMES.k_golf={name:'غولف الورق',cat:'cards',lbc:'#2E7D4F',teams:'none',
     if(d.ph==='flip')return k2gfFlip(d,d.up[s].indexOf('0'));if(!d.dc)return k2gfDraw(d,'stock');if(d.fd)return k2gfPut(d,d.up[s].indexOf('0')>=0?d.up[s].indexOf('0'):0);return k2gfThrow(d);},
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='opt')return 'كم حفرة نلعب؟';if(d.ph==='sum')return s+'انتهت الحفرة';const me=!ctx.local&&d.turn===ctx.v;
     const what=d.ph==='flip'?'اكشف ورقتين من ورقك':!d.dc?'اسحب من الكومة أو خذ المرمي':d.fd?'حطها مكان ورقة من ورقك':'حطها مكان ورقة أو ارمها';
-    return s+(me?`<b class="yt">${what}</b>`:`دور ${nameTag(d,d.turn)}`)+` • الحفرة ${d.ho+1} من ${d.nh}`;},
+    return s+(me?`<b class="yt">${what}</b>`:`دور ${nameTag(d,d.turn)}`)+` <small>• الحفرة ${d.ho+1}/${d.nh}</small>`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="k2 k2golf">`;
     if(d.ph==='opt')return h+`${k2Seats(d,()=>'')}<div class="panel k2opt"><h3>غولف الورق</h3><p>كل جولة «حفرة»، والأقل نقاط يفوز</p>${ctx.my?k2Btns([[4,'قصيرة: 4 حفر','navy'],[9,'كاملة: 9 حفر','blue']],'nh'):'<p class="note">ننتظر الاختيار</p>'}</div></div>`;
     const my=ctx.my&&d.turn===v&&(d.ph==='play'||d.ph==='flip');
@@ -643,7 +643,7 @@ GAMES.k_golf={name:'غولف الورق',cat:'cards',lbc:'#2E7D4F',teams:'none',
     const top=d.disc.slice(-2),canTop=my&&d.ph==='play'&&!d.dc&&top;
     h+=`<div class="k2felt k2gft"><div class="k2mid">${k2Stock(d.dk.length/2,my&&d.ph==='play'&&!d.dc,'stock')}<div class="k2disc">${top?`<${canTop?'button data-ga="take"':'div'} class="k2top ${canTop?'can':''}" data-k="f${d.disc.length}">${cardHTML(top,true)}</${canTop?'button':'div'}>`:'<i class="k2emp"></i>'}<small>المرمي</small></div>
       ${d.dc?`<div class="k2held"><span data-k="h${d.dc}">${cardHTML(d.dc,true)}</span><small>بيد ${nm(d,d.turn)}</small></div>`:''}</div>
-      <div class="k2gfo">${d.pl.map((_,s)=>s===v||d.out[s]==='1'?'':`<div class="k2gfp ${d.turn===s?'on':''}" style="--c:${col(d,s)}"><small>${nm(d,s)}</small>${k2gfGrid(d,s,null,true)}</div>`).join('')}</div></div>`;
+      <div class="k2gfo ${d.pl.length>4?'many':''}">${d.pl.map((_,s)=>s===v||d.out[s]==='1'?'':`<div class="k2gfp ${d.turn===s?'on':''}" style="--c:${col(d,s)}"><small>${nm(d,s)}</small>${k2gfGrid(d,s,null,true)}</div>`).join('')}</div></div>`;
     if(d.ph==='sum'){h+=`<div class="panel k2sum"><h3>نتيجة الحفرة ${d.ho+1}</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${d.rs[s]>=0?'+':''}${d.rs[s]}</em><b>${d.sc[s]}</b></div>`).join('')}${ctx.my?k2Next(d,'الحفرة الجاية'):''}</div>`;return h+'</div>';}
     if(v<0)return h+'</div>';let can=null;
     if(my&&d.ph==='flip')can=[0,1,2,3,4,5].filter(p=>d.up[v][p]==='0');else if(my&&d.dc)can=[0,1,2,3,4,5];

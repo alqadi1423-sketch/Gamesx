@@ -41,8 +41,8 @@ function b2hxThink(d,lv){const n=d.n,s=d.sd,c=String(s),b=d.b,N=n*n;const free=[
     if(worst>bv){bv=worst;best=m;}if(budget<=0)break;}
   return best;}
 function b2hxDo(d,m){const s=d.sd,n=d.n;
-  if(m.swap){const f=d.b.search(/[01]/),r=f/n|0,k=f%n,t=k*n+r;const b=setAt(setAt(d.b,f,'.'),t,'1');return b2Pass(d,s,{b,swp:1,lm:[t],nmv:(d.nmv||0)+1,last:`${tmName(d,s)} بدّل: صار الحجر الأول له`});}
-  const b=setAt(d.b,m.i,String(s));const ln=b2hxWin(b,n,s);const x={...d,b,lm:[m.i],nmv:(d.nmv||0)+1,last:`${tmName(d,s)} حط حجر`};
+  if(m.swap){const f=d.b.search(/[01]/),r=f/n|0,k=f%n,t=k*n+r;const b=setAt(setAt(d.b,f,'.'),t,'1');return b2Pass(d,s,{b,swp:1,lm:[t],nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} بدّل: صار الحجر الأول له`});}
+  const b=setAt(d.b,m.i,String(s));const ln=b2hxWin(b,n,s);const x={...d,b,lm:[m.i],nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} حط حجر`};
   if(ln)return b2Won({...x,ln},s,'join');return b2Pass(x,s);}
 const b2hxGeo=n=>{const w=10,h=w*.866,W=(n-1)*w*1.5+w*2+4,H=(n-1)*h+h*2+4;const xy=[...Array(n*n)].map((_,i)=>{const r=i/n|0,c=i%n;return [w+2+c*w+r*w/2,h+2+r*h];});return {w,h,W,H,xy};};
 const B2HXBG={};
@@ -116,21 +116,21 @@ function b2goDead(b,s,ko,n){const M=b2goMC(),cnt=new Int16Array(81*3);for(let k=
 function b2goScore(d){const A=b2goArea(d.b,d.dead);return [A.sc[0],A.sc[1]+B2GK];}
 function b2goToMark(d,why){const dead=b2goDead(d.b,d.sd,d.ko,70);return {...d,ph:'mark',dead,ok:0,ps:0,mvn:(d.mvn||0)+1,last:why};}
 function b2goDo(d,m){const s=d.sd;
-  if(m.pass){const ps=(d.ps||0)+1;const nd=b2Pass(d,s,{ps,ko:-1,lm:null,lc:[],nmv:(d.nmv||0)+1,last:`${tmName(d,s)} مرّر`});
+  if(m.pass){const ps=(d.ps||0)+1;const nd=b2Pass(d,s,{ps,ko:-1,lm:null,lc:[],nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} مرّر`});
     return ps>=2?b2goToMark(nd,'مرّروا الاثنين: نحسب النتيجة'):nd;}
   const r=b2goPlay(d.b,m.i,s,d.ko);if(!r)return d;const cap=[...d.cap];cap[s]+=r.caps.length;
-  const nd=b2Pass(d,s,{b:r.b,ko:r.ko,ps:0,cap,lm:[m.i],lc:r.caps.map(q=>[q,s?1:0]),nmv:(d.nmv||0)+1,last:`${tmName(d,s)} حط حجر${r.caps.length?` وأكل ${r.caps.length}`:''}`});
+  const nd=b2Pass(d,s,{b:r.b,ko:r.ko,ps:0,cap,lm:[m.i],lc:r.caps.map(q=>[q,s?1:0]),nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} حط حجر${r.caps.length?` وأكل ${r.caps.length}`:''}`});
   return nd.nmv>=240?b2goToMark(nd,'طالت اللعبة: نحسب النتيجة'):nd;}
-function b2goTog(d,i){if(d.b[i]==='.')return d;const g=b2goGroup([...d.b],i).st;const v=d.dead[i]==='1'?'0':'1';let dead=d.dead;for(const q of g)dead=setAt(dead,q,v);return {...d,dead,ok:0,mvn:(d.mvn||0)+1,last:`${tmName(d,d.sd)} غيّر علامة مجموعة`};}
-function b2goOk(d){const s=d.sd;if(!d.ok)return b2Pass(d,s,{ok:1,last:`${tmName(d,s)} وافق على النتيجة، الحين دور الثاني`});
+function b2goTog(d,i){if(d.b[i]==='.')return d;const g=b2goGroup([...d.b],i).st;const v=d.dead[i]==='1'?'0':'1';let dead=d.dead;for(const q of g)dead=setAt(dead,q,v);return {...d,dead,ok:0,mvn:(d.mvn||0)+1,last:`${b2Tm(d,d.sd)} غيّر علامة مجموعة`};}
+function b2goOk(d){const s=d.sd;if(!d.ok)return b2Pass(d,s,{ok:1,last:`${b2Tm(d,s)} وافق على النتيجة، الحين دور الثاني`});
   const [k,w]=b2goScore(d);return b2Won({...d,res:[k,w]},k>w?0:1,'score');}
-function b2goResume(d){return {...d,ph:'play',dead:null,ok:0,ps:0,rz:(d.rz||0)+1,mvn:(d.mvn||0)+1,last:`${tmName(d,d.sd)} يبي يكمّل اللعب`};}
+function b2goResume(d){return {...d,ph:'play',dead:null,ok:0,ps:0,rz:(d.rz||0)+1,mvn:(d.mvn||0)+1,last:`${b2Tm(d,d.sd)} يبي يكمّل اللعب`};}
 // the bot: flat Monte Carlo with all-moves-as-first (AMAF) statistics, a fixed number of playouts per level
 function b2goThink(d,lv){const s=d.sd,me=s+1,b=d.b;const cands=b2goLegal(b,s,d.ko).filter(i=>{for(const q of B2GNB[i])if(b[q]!==String(s))return true;return false;});
-  if(!cands.length)return {pass:1};const N=[0,120,400,1100][lv]||400,M=b2goMC();
+  if(!cands.length)return {pass:1};const N=[0,60,120,260][lv]||120,M=b2goMC(),tEnd=performance.now()+B2MS;
   const K=cands.length,W=new Float32Array(K),V=new Float32Array(K),AW=new Float32Array(81),AV=new Float32Array(81),idx=new Int16Array(81).fill(-1);cands.forEach((i,k)=>{idx[i]=k;});
   let total=0;const win=()=>{const o=M.owner();let sc=0;for(let i=0;i<81;i++)if(o[i]===1)sc++;else if(o[i]===2)sc--;sc-=B2GK;return me===1?sc>0:sc<0;};
-  for(let n=0;n<N;n++){let k;if(n<K)k=n;else{let bv=-1;for(let j=0;j<K;j++){const v=W[j]/V[j]+.6*Math.sqrt(Math.log(total)/V[j]);if(v>bv){bv=v;k=j;}}}
+  for(let n=0;n<N;n++){if(n>=K&&!(n&15)&&performance.now()>tEnd)break;let k;if(n<K)k=n;else{let bv=-1;for(let j=0;j<K;j++){const v=W[j]/V[j]+.6*Math.sqrt(Math.log(total)/V[j]);if(v>bv){bv=v;k=j;}}}
     const seq=M.run(b,me,d.ko,cands[k],140);total++;if(!seq){V[k]++;continue;}const w=win()?1:0;V[k]++;W[k]+=w;
     const seen=new Uint8Array(81);for(let j=1;j<seq.length;j++){const x=seq[j],i=x>>2,c=x&3;if(c!==me||seen[i])continue;seen[i]=1;if(idx[i]>=0){AV[i]++;AW[i]+=w;}}}
   let best=0,bv=-1,top=0;for(let k=0;k<K;k++){const i=cands[k],bt=Math.sqrt(300/(3*V[k]+300));const mc=W[k]/V[k],am=AV[i]?AW[i]/AV[i]:mc;const v=(1-bt)*mc+bt*am+(lv===1?Math.random()*.25:0);if(v>bv){bv=v;best=k;}if(mc>top)top=mc;}
@@ -157,7 +157,7 @@ GAMES.b_go={...B2TEAM,name:'قو',cat:'board',lbc:'#3B3B3B',
     let h=b2Board('b2go bd-b2',100,100,10.6,B2GBG,pts,flip,my);
     if(mark)h+=`<p class="note">${d.ok?'الخصم وافق على العلامات. ':''}اضغط مجموعة حجار عشان تعلّمها ميتة أو حية، والمربعات الصغيرة مساحة كل لون</p>`;
     if(my&&mark)h+=`<div class="row chact"><button class="btn green" data-ga="ok">${d.ok?'أوافق، احسبوا النتيجة':'موافق على العلامات'}</button><button class="btn" data-ga="resume">كمّلوا اللعب</button></div>`;
-    else if(my)h+=`<div class="row chact"><button class="btn" data-ga="pass">مرّر</button><button class="btn" data-ga="resign">استسلم</button></div>`;
+    else h+=b2ResignBtn({my},'<button class="btn" data-ga="pass">مرّر</button>');
     return h;},
   after:d=>b2Fly('go',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);
@@ -209,15 +209,15 @@ function b2xqScore(B){let v=0;for(let i=0;i<90;i++){const p=B[i];if(p==='.')cont
     else if(t==='c'&&c===4)x+=15;else if(t==='r'){const adv=s?r:9-r;if(adv>=5)x+=15;}
     v+=s?-x:x;}return v;}
 function b2xqThink(d,lv){const B=[...d.b];let side=d.sd,nodes=0,lim=Infinity;const STOP={},Ks=[B.indexOf('K'),B.indexOf('k')];
-  const cap=[0,2500,15000,45000][lv],maxD=[0,1,3,6][lv],ns=[0,160,30,4][lv],qsOn=lv>1;
+  const cap=[0,2500,5000,9000][lv],maxD=[0,1,3,6][lv],tEnd=performance.now()+B2MS,ns=[0,160,30,4][lv],qsOn=lv>1;
   const make=m=>{const f=(m/90)|0,t=m%90,u={f,t,c:B[t]};B[t]=B[f];B[f]='.';if(B[t]==='K')Ks[0]=t;else if(B[t]==='k')Ks[1]=t;side=1-side;return u;};
   const undo=u=>{side=1-side;B[u.f]=B[u.t];B[u.t]=u.c;if(B[u.f]==='K')Ks[0]=u.f;else if(B[u.f]==='k')Ks[1]=u.f;};
   const bad=()=>b2xqAtt(B,Ks[1-side],side);// the side that just moved left its general attacked
   const sorted=ms=>{const a=ms.map(m=>{const t=m%90,v=B[t];return {m,o:v==='.'?0:B2XQV[v.toLowerCase()]*10-B2XQV[B[(m/90)|0].toLowerCase()]/10+1};});a.sort((x,y)=>y.o-x.o);return a;};
   const ev=()=>{const v=b2xqScore(B);return side?-v:v;};
-  function qs(a,b,ply){if(++nodes>lim)throw STOP;const st=ev();if(!qsOn||st>=b||ply>16)return st;if(st>a)a=st;
+  function qs(a,b,ply){if(++nodes>lim||!(nodes&127)&&lim!==Infinity&&performance.now()>tEnd)throw STOP;const st=ev();if(!qsOn||st>=b||ply>16)return st;if(st>a)a=st;
     for(const {m,o} of sorted(b2xqPseudo(B,side))){if(o<=0)break;const u=make(m);if(bad()){undo(u);continue;}const v=-qs(-b,-a,ply+1);undo(u);if(v>=b)return v;if(v>a)a=v;}return a;}
-  function nega(dep,a,b,ply){if(++nodes>lim)throw STOP;const inC=b2xqAtt(B,Ks[side],1-side);if(inC&&ply<8)dep++;if(dep<=0)return qs(a,b,ply);
+  function nega(dep,a,b,ply){if(++nodes>lim||!(nodes&127)&&lim!==Infinity&&performance.now()>tEnd)throw STOP;const inC=b2xqAtt(B,Ks[side],1-side);if(inC&&ply<8)dep++;if(dep<=0)return qs(a,b,ply);
     let any=false,best=-Infinity;for(const {m} of sorted(b2xqPseudo(B,side))){const u=make(m);if(bad()){undo(u);continue;}any=true;const v=-nega(dep-1,-b,-a,ply+1);undo(u);
       if(v>best)best=v;if(v>a)a=v;if(a>=b)break;}
     return any?best:-(B2W-ply);}// no move at all loses, in check or not
@@ -232,7 +232,7 @@ const B2XQN={k:'الملك',a:'المستشار',e:'الفيل',h:'الحصان'
 const B2XQC={K:'帥',A:'仕',E:'相',H:'傌',R:'俥',C:'炮',P:'兵',k:'將',a:'士',e:'象',h:'馬',r:'車',c:'砲',p:'卒'};
 function b2xqDo(d,m){const s=d.sd,f=(m/90)|0,t=m%90,p=d.b[f],cap=d.b[t];const b=b2m9Set(d.b,f,t,p);const quiet=cap!=='.'?0:(d.quiet||0)+1;
   const key=b+(1-s);const hist=cap!=='.'?[key]:[...(d.hist||[]),key].slice(-120);
-  const nd=b2Pass(d,s,{b,quiet,hist,lm:[f,t],lc:cap!=='.'?[[t,1-s]]:[],last:`${tmName(d,s)} حرّك ${B2XQN[p.toLowerCase()]}${cap!=='.'?' وأكل '+B2XQN[cap.toLowerCase()]:''}`});
+  const nd=b2Pass(d,s,{b,quiet,hist,lm:[f,t],lc:cap!=='.'?[[t,1-s]]:[],last:`${b2Tm(d,s)} حرّك ${B2XQN[p.toLowerCase()]}${cap!=='.'?' وأكل '+B2XQN[cap.toLowerCase()]:''}`});
   if(!b2xqLegal(b,1-s).length)return {...nd,...tmWin(d,s),end:b2xqCheck(b,1-s)?'mate':'stale'};
   if(!b2xqMat(b))return {...nd,win:'d',end:'mat'};if(quiet>=120)return {...nd,win:'d',end:'q'};if(b2Rep(hist,key)>=3)return {...nd,win:'d',end:'rep'};
   if(b2xqCheck(b,1-s))nd.last+=' • كش';return nd;}
@@ -373,18 +373,18 @@ function b2mbAllowed(t,s,dice){const memo=new Map(),mx=b2mbDepth(t,s,dice,memo);
   let c=b2mbSingles(t,s,dice).filter(m=>{const nt=b2mbMove(t,s,m.from,m.to),rest=[...dice];rest.splice(rest.indexOf(m.die),1);return 1+b2mbDepth(nt,s,rest,memo)===mx;});
   if(mx===1&&dice.length===2&&dice[0]!==dice[1]){const big=Math.max(...dice);if(c.some(m=>m.die===big))c=c.filter(m=>m.die===big);}return c;}
 const b2mbT=d=>({a0:d.a0,a1:d.a1,pin:d.pin,off:d.off});
-function b2mbNoMove(d,s,dice){const nd=b2Pass(d,s,{ph:'roll',dice,mv:[],nm:(d.nm||0)+1,last:`${tmName(d,s)} رمى ${dice[0]} و${dice[1]} وما عنده حركة`});
+function b2mbNoMove(d,s,dice){const nd=b2Pass(d,s,{ph:'roll',dice,mv:[],nm:(d.nm||0)+1,last:`${b2Tm(d,s)} رمى ${dice[0]} و${dice[1]} وما عنده حركة`});
   // both sides locked by pins for 20 turns in a row: more checkers off wins, then the shorter way home
   if(nd.nm<20)return nd;const t=b2mbT(nd),k=t.off[0]-t.off[1]||b2mbPips(t,1)-b2mbPips(t,0);return k?{...nd,...tmWin(d,k>0?0:1),wpts:1,end:'lock',ph:'end'}:{...nd,win:'d',end:'lock',ph:'end'};}
 function b2mbRolled(d,dice){const s=d.sd,mv=dice[0]===dice[1]?[dice[0],dice[0],dice[0],dice[0]]:[...dice];
-  if(!b2mbAllowed(b2mbT(d),s,mv).length)return b2mbNoMove(d,s,dice);return {...d,ph:'move',dice,mv,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} رمى ${dice[0]} و${dice[1]}`};}
+  if(!b2mbAllowed(b2mbT(d),s,mv).length)return b2mbNoMove(d,s,dice);return {...d,ph:'move',dice,mv,mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} رمى ${dice[0]} و${dice[1]}`};}
 function b2mbOpen(d,r){const o=[...d.op];o[d.sd]=r;
-  if(d.sd===0)return {...d,op:o,sd:1,turn:tmNow(d,1),mvn:(d.mvn||0)+1,last:`${tmName(d,0)} رمى ${r}`};
+  if(d.sd===0)return {...d,op:o,sd:1,turn:tmNow(d,1),mvn:(d.mvn||0)+1,last:`${b2Tm(d,0)} رمى ${r}`};
   if(o[0]===o[1])return {...d,op:[0,0],sd:0,turn:tmNow(d,0),mvn:(d.mvn||0)+1,last:`تعادل ${r} و${r}، ارموا مرة ثانية`};
-  const s=o[0]>o[1]?0:1,dice=[o[0],o[1]];const nd={...d,op:o,sd:s,turn:tmNow(d,s),ph:'move',dice,mv:dice,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} يبدأ بـ ${o[0]} و${o[1]}`};
+  const s=o[0]>o[1]?0:1,dice=[o[0],o[1]];const nd={...d,op:o,sd:s,turn:tmNow(d,s),ph:'move',dice,mv:dice,mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} يبدأ بـ ${o[0]} و${o[1]}`};
   return b2mbAllowed(b2mbT(nd),s,dice).length?nd:b2mbNoMove(nd,s,dice);}
 function b2mbPlay(d,m){const s=d.sd,t=b2mbMove(d,s,m.from,m.to),mv=[...d.mv];mv.splice(mv.indexOf(m.die),1);
-  let nd={...d,...t,mv,nm:0,lm:[m.from,m.to,s],hp:t.pinned?m.to:-1,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} لعب ${d.dice[0]} و${d.dice[1]}${t.pinned?' وحبس حجر 🔒':''}`};delete nd.pinned;
+  let nd={...d,...t,mv,nm:0,lm:[m.from,m.to,s],hp:t.pinned?m.to:-1,mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} لعب ${d.dice[0]} و${d.dice[1]}${t.pinned?' وحبس حجر 🔒':''}`};delete nd.pinned;
   if(t.off[s]===15){const k=d.off[1-s]?1:2;return {...nd,...tmWin(d,s),wpts:k,end:k>1?'mars':'',ph:'end'};}
   const left=mv.length?b2mbAllowed(b2mbT(nd),s,mv):[];if(!left.length)nd={...nd,ph:'roll',mv:[],sd:1-s,...tmPass(d,s)};return nd;}
 function b2mbAuto(d){const me=d.sd;let x=d,g=0;while(g++<8&&x.win==null){
@@ -407,7 +407,8 @@ function b2mbPlans(d,s){const out=new Map();const rec=(t,dice,first,dep)=>{const
     const seen=new Set();for(const m of al){const sk=m.from+':'+m.die;if(seen.has(sk))continue;seen.add(sk);const nt=b2mbMove(t,s,m.from,m.to),rest=[...dice];rest.splice(rest.indexOf(m.die),1);rec(nt,rest,first||m,dep+1);}};
   rec(b2mbT(d),d.mv,null,0);return [...out.values()].filter(x=>x.first);}
 // (the same number of answers for every roll and every plan, so no plan looks better only because fewer answers were seen)
-function b2mbReply(t,o,lv){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];let bo=-1e9;
+// tEnd: a slow phone stops after the rolls it had time for (the average is over those)
+function b2mbReply(t,o,lv,tEnd){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){if(w&&tEnd&&performance.now()>tEnd)return tot/w;const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];let bo=-1e9;
     for(const x of b2mbPlans({...t,mv},o).slice(0,25)){const v=x.t.off[o]===15?1e5:b2mbJudge(x.t,o,lv);if(v>bo)bo=v;}if(bo===-1e9)bo=b2mbJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
 // where the j-th checker of a stack on point p (1..24 as side 0 counts, 25 borne off) sits, in board units
 const B2MB={W:340,H:280,PW:24,L:6,BAR:20,OFF:26,TOP:8,CR:10.5};
@@ -446,7 +447,7 @@ GAMES.b_mahbusa={...B2TEAM,name:'المحبوسة',cat:'board',lbc:'#7A2B26',
   net:{host:['roll','open'],ui:['b2']},
   points:d=>d.pl.map((_,s)=>`${s%2?'🟤':'⚪'} برّا ${d.off[s%2]}`),
   winText(d){if(d.win==='d')return d.end==='lock'?'تعادل: الحجار انحبست من الطرفين':'تعادل';const sd=d.win%2;return `فاز ${sd?'الأحمر':'الأبيض'}${d.end==='mars'?' مارس (نقطتين)':d.end==='lock'?': الحجار انحبست، وطلّع أكثر أو طريقه أقصر':d.end==='resign'?' بالاستسلام':d.end==='left'?'، الخصم طلع':''}`;},
-  status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;const who=me?'<b class="yt">دورك</b>':`دور ${tmName(d,d.sd)}`;
+  status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;const who=me?'<b class="yt">دورك</b>':`دور ${b2Tm(d,d.sd)}`;
     const side=`<span class="chside ${d.sd?'mbr':''}">${d.sd?'الأحمر':'الأبيض'}</span>`;
     if(d.ph==='open')return s+`${who} ${side}: ارمِ زهرة وحدة، الأعلى يبدأ`;if(d.ph==='roll')return s+`${who} ${side}: ارمِ الزهر`;
     const pinned=d.pin.filter(x=>x===d.sd).length;return s+`${who} ${side}: باقي ${d.mv.join(' و')}${pinned?` • عندك ${pinned} محبوس`:''}`;},
@@ -457,7 +458,7 @@ GAMES.b_mahbusa={...B2TEAM,name:'المحبوسة',cat:'board',lbc:'#7A2B26',
     else if(d.ph==='roll')h+=`${tapDie(d.dice[0]||6,my,col(d,d.turn))}${tapDie(d.dice[1]||6,my,col(d,d.turn))}`;
     else if(d.ph==='move'){const dbl=d.dice[0]===d.dice[1],used=dbl?4-d.mv.length:2-d.mv.length;
       h+=(dbl?[0,1,2,3]:[0,1]).map(j=>`<div class="tapd ${j<used?'used':''} ${used?'':'roll'}" style="--c:${col(d,d.turn)}">${diceSVG(d.dice[dbl?0:j])}</div>`).join('');}
-    return h+'</div>'+(my&&d.ph!=='open'?b2ResignBtn(ctx):'');},
+    return h+'</div>'+b2ResignBtn({my:my&&d.ph!=='open'});},
   after(d,ctx){const k=d.gid+':'+(d.mvn||0);if(S.b2mbFx===k)return;S.b2mbFx=k;const L=d.lm;if(!L||bdStill()||d.ph==='open')return;
     const svg=app.querySelector('svg.b2mb');if(!svg)return;const flip=b2Flip(d,ctx),[f,t,s]=L;const own=i=>i<24?b2mbOf(d,s)[i]-(d.pin[i]===s?1:0)+(d.pin[i]>=0?1:0):0;
     const to=t===24?b2mbXY(flip,25,s,d.off[s]-1):b2mbXY(flip,t+1,s,own(t)-1),from=b2mbXY(flip,f+1,s,own(f));
@@ -475,8 +476,8 @@ GAMES.b_mahbusa={...B2TEAM,name:'المحبوسة',cat:'board',lbc:'#7A2B26',
     if(d.ph!=='move')return b2mbAuto(d);const al=b2mbAllowed(b2mbT(d),side,d.mv);if(!al.length)return b2mbAuto(d);
     if(lv===1&&Math.random()<.35)return b2mbPlay(d,b2Rnd(al));
     const k=d.gid+':'+b2mbKey(d,d.mv);const P=S.b2mbPlan;if(P&&P.k===k){const m=al.find(x=>x.from===P.m.from&&x.to===P.m.to&&x.die===P.m.die);if(m)return b2mbPlay(d,m);}
-    const ns=[0,8,3,.5][lv];let best=null,bv=-1e9;const all=b2mbPlans(d,side);for(const x of all){x.v=b2mbJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
-    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;for(const x of all.slice(0,3)){const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
+    const ns=[0,8,3,.5][lv],tEnd=performance.now()+B2MS*.6;let best=null,bv=-1e9;const all=b2mbPlans(d,side);for(const x of all){x.v=b2mbJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
+    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;for(const x of all.slice(0,3)){if(performance.now()>tEnd)break;const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv,tEnd+B2MS*.3);if(v>bv){bv=v;best=x;}}}
     if(!best)return b2mbPlay(d,al[0]);const nd=b2mbPlay(d,best.first);S.b2mbPlan=null;
     if(nd.ph==='move'&&nd.sd===side){const rest=b2mbPlans(nd,side).find(x=>b2mbKey(x.t,[])===b2mbKey(best.t,[])&&x.t.off+''===best.t.off+'');if(rest)S.b2mbPlan={k:nd.gid+':'+b2mbKey(nd,nd.mv),m:rest.first};}
     return nd;},

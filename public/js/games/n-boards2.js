@@ -14,11 +14,12 @@ const b2Pass=(d,s,x)=>({...d,...x,sd:1-s,...tmPass(d,s),mvn:(d.mvn||0)+1});
 const b2Won=(d,s,end,x)=>({...d,...x,...tmWin(d,s),end,mvn:(d.mvn||0)+1});
 const b2Rnd=a=>a[rnd(a.length)];
 function b2Stat(d,ctx,names,tail,dk){let s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;
-  s+=`${me?'<b class="yt">دورك</b>':`دور ${tmName(d,d.sd)}`} <span class="chside ${d.sd===(dk==null?1:dk)?'bk':''}">${names[d.sd]}</span>`;
+  s+=`${me?'<b class="yt">دورك</b>':`دور ${b2Tm(d,d.sd)}`} <span class="chside ${d.sd===(dk==null?1:dk)?'bk':''}">${names[d.sd]}</span>`;
   return s+(tail?' '+tail:'');}
 function b2Resign(d){if(!S.b2Sure){S.b2Sure=1;toast('اضغط استسلم مرة ثانية للتأكيد');setTimeout(()=>{S.b2Sure=0;},2500);return;}
-  S.b2Sure=0;const s=d.sd;act(b2Won(d,1-s,'resign',{last:`${tmName(d,s)} استسلم`}));}
-const b2ResignBtn=ctx=>ctx.my?'<div class="row chact"><button class="btn" data-ga="resign">استسلم</button></div>':'';
+  S.b2Sure=0;const s=d.sd;act(b2Won(d,1-s,'resign',{last:`${b2Tm(d,s)} استسلم`}));}
+// the action row keeps its place when it is not your turn (hidden), so the page under the board never jumps
+const b2ResignBtn=(ctx,extra)=>`<div class="row chact${ctx.my?'':' b2off'}">${ctx.my&&extra||''}<button class="btn" data-ga="resign"${ctx.my?'':' disabled tabindex="-1"'}>استسلم</button></div>`;
 function b2WinTxt(d,names,why){if(d.win==='d')return (why&&why[d.end])||'تعادل';const sd=d.win%2;
   return `فاز ${names[sd]}${d.end==='resign'?' بالاستسلام':d.end==='left'?'، الخصم طلع':why&&why[d.end]?'، '+why[d.end]:''}`;}
 // the side whose view is drawn at the bottom: online a side-1 player sees the board turned round
@@ -49,9 +50,13 @@ const b2Line=(a,b,c)=>`<path d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"${c?` class="${
 /* the search: negamax with alpha-beta and iterative deepening over whole turns, capped by a node budget (never by time
    alone). P.moves(p), P.play(p,m) -> position, P.ev(p) for the side to move p.sd, P.end(p,ply) null or a final value.
    A move after which the same side moves again keeps the window. Each level has its own depth, budget and noise */
+// a side of three or more players is named by the one who plays now (a list of four names does not fit the status line)
+const b2Tm=(d,s)=>{const m=tmSeats(d,s);return m.length>2&&m.includes(d.turn)?nameTag(d,d.turn):tmName(d,s);};
 const B2STOP={};
-function b2Think(p0,P,lv,cfg){const cap=cfg.cap[lv],maxD=cfg.dep[lv],ns=cfg.ns[lv];let nodes=0,lim=Infinity;
-  function nega(p,dep,a,b,ply){if(++nodes>lim)throw B2STOP;const e=P.end(p,ply);if(e!=null)return e;if(dep<=0)return P.ev(p);
+// a slow phone stops thinking after this long (the node caps keep a desktop well under it)
+const B2MS=350;
+function b2Think(p0,P,lv,cfg){const cap=cfg.cap[lv],maxD=cfg.dep[lv],ns=cfg.ns[lv];let nodes=0,lim=Infinity;const tEnd=performance.now()+B2MS;
+  function nega(p,dep,a,b,ply){if(++nodes>lim||!(nodes&127)&&lim!==Infinity&&performance.now()>tEnd)throw B2STOP;const e=P.end(p,ply);if(e!=null)return e;if(dep<=0)return P.ev(p);
     let ms=P.moves(p);if(!ms.length)return P.stuck?P.stuck(p,ply):-(B2W-ply);if(P.order)ms=P.order(p,ms);
     let best=-Infinity;for(const m of ms){const q=P.play(p,m);const v=q.sd===p.sd?nega(q,dep-1,a,b,ply+1):-nega(q,dep-1,-b,-a,ply+1);
       if(v>best)best=v;if(v>a)a=v;if(a>=b)break;}return best;}
@@ -80,7 +85,7 @@ function b2owFinish(nd,why){const kp=[...nd.kp],p=[...nd.p];for(const s of [0,1]
   const x={...nd,p,kp};if(kp[0]===kp[1])return {...x,win:'d',end:why};return {...x,...tmWin(nd,kp[0]>kp[1]?0:1),end:why};}
 function b2owDo(d,i){const s=d.sd,r=b2owMove(d.p,s,i);const kp=[...d.kp];kp[s]+=r.n;const quiet=r.n?0:(d.quiet||0)+1;
   const key=r.p.join(',')+(1-s);const hist=r.n?[key]:[...(d.hist||[]),key].slice(-60);
-  let nd=b2Pass(d,s,{p:r.p,kp,quiet,hist,lm:[i],got:r.got,cp:r.caps,last:`${tmName(d,s)} وزّع ${d.p[i]} حبة${r.n?` وأخذ ${r.n}`:r.slam?' (ما ياخذ كل حب الخصم)':''}`});
+  let nd=b2Pass(d,s,{p:r.p,kp,quiet,hist,lm:[i],got:r.got,cp:r.caps,last:`${b2Tm(d,s)} وزّع ${d.p[i]} حبة${r.n?` وأخذ ${r.n}`:r.slam?' (ما ياخذ كل حب الخصم)':''}`});
   if(kp[s]>24)return {...nd,...tmWin(d,s),end:'more'};if(kp[0]===24&&kp[1]===24)return {...nd,win:'d',end:'half'};
   if(!b2owLegal(r.p,1-s).length)return b2owFinish(nd,'stuck');
   if(quiet>=100||b2Rep(hist,key)>=3)return b2owFinish(nd,'loop');
@@ -108,7 +113,7 @@ GAMES.b_mancala={...B2TEAM,name:'المنقلة',cat:'board',lbc:'#8A5A2B',
     return `<div class="b2ow bd-b2"><div class="owbd">${tray(flip?0:1)}<div class="owrw">${top.map(pit).join('')}${bot.map(pit).join('')}</div>${tray(flip?1:0)}</div></div>`;},
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='pit'&&b2owLegal(d.p,d.sd).includes(i))act(b2owDo(d,i));},
   bot(d,s,lv){const ms=b2owLegal(d.p,d.sd);if(lv===1&&Math.random()<.3)return b2owDo(d,b2Rnd(ms));
-    const m=b2Think({p:d.p,kp:d.kp,sd:d.sd,w:null},B2OWP,lv,{dep:[0,2,5,12],cap:[0,2000,20000,90000],ns:[0,14,4,.5]});return b2owDo(d,m!=null?m:b2Rnd(ms));},
+    const m=b2Think({p:d.p,kp:d.kp,sd:d.sd,w:null},B2OWP,lv,{dep:[0,2,5,12],cap:[0,2000,20000,35000],ns:[0,14,4,.5]});return b2owDo(d,m!=null?m:b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_mancala='المنقلة على قواعد «الأوارِه» المشهورة: لوحة صفين، كل صف 6 حفر وفي كل حفرة 4 حبات. صفك هو اللي قدامك. في دورك اختار حفرة من صفك فيها حب، وتوزع حبها حبة حبة على الحفر اللي بعدها عكس عقارب الساعة (وإذا كانت 12 حبة أو أكثر تتخطى الحفرة اللي بديت منها). إذا آخر حبة نزلت في صف الخصم وصار فيها 2 أو 3 تاخذها، وتاخذ معها اللي قبلها في صف الخصم إذا فيها 2 أو 3 بعد. ما يجوز تاخذ كل حب الخصم مرة وحدة: الحركة تنلعب بدون أخذ. وإذا صف الخصم فاضي لازم تلعب حركة توصّل له حب، وإذا ما تقدر تخلص اللعبة وتاخذ الحب اللي في جهتك. أول واحد يجمع أكثر من 24 حبة يفوز، و24 و24 تعادل. إذا صار اللعب يدور بدون أخذ، كل واحد ياخذ اللي في جهته والأكثر يفوز. إذا أكثر من لاعبين: فريقين (تحت وفوق) وأعضاء الفريق يتناوبون على الحركات.';
 
@@ -132,9 +137,9 @@ const b2m9Lost=(b,o,hand)=>b2m9Cnt(b,o)+hand[o]<3||!b2m9Steps(b,o,hand).length;
 // a step by the side to move; after it, either a piece must be taken (rm) or the turn passes
 function b2m9Step(d,f,t){const s=d.sd,c=String(s),b=b2m9Set(d.b,f,t,c),hand=[...d.hand];if(f<0)hand[s]--;
   const mill=b2m9In(b,t,c)&&b2m9Cnt(b,1-s)>0;const lm=f<0?[t]:[f,t];
-  const x={...d,b,hand,lm,lc:[],mvn:(d.mvn||0)+1,last:`${tmName(d,s)} ${f<0?'حط حجر':'حرّك حجر'}${mill?' وسكّر خط! يشيل حجر':''}`};
+  const x={...d,b,hand,lm,lc:[],mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} ${f<0?'حط حجر':'حرّك حجر'}${mill?' وسكّر خط! يشيل حجر':''}`};
   if(mill)return {...x,rm:1};return b2m9Turn(x,s,false);}
-function b2m9Take(d,i){const s=d.sd,b=setAt(d.b,i,'.');return b2m9Turn({...d,b,rm:0,lc:[[i,1-s]],mvn:(d.mvn||0)+1,last:`${tmName(d,s)} سكّر خط وشال حجر`},s,true);}
+function b2m9Take(d,i){const s=d.sd,b=setAt(d.b,i,'.');return b2m9Turn({...d,b,rm:0,lc:[[i,1-s]],mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} سكّر خط وشال حجر`},s,true);}
 function b2m9Turn(x,s,took){const quiet=took?0:(x.quiet||0)+1,mov=!x.hand[0]&&!x.hand[1];const key=x.b+(1-s);const hist=mov&&!took?[...(x.hist||[]),key].slice(-80):[key];
   const nd=b2Pass(x,s,{quiet,hist,mvn:x.mvn});
   if(b2m9Lost(x.b,1-s,x.hand))return {...nd,...tmWin(x,s),end:b2m9Cnt(x.b,1-s)+x.hand[1-s]<3?'two':'block'};
@@ -170,9 +175,9 @@ GAMES.b_morris9={...B2TEAM,name:'التسعة',cat:'board',lbc:'#6B4E2E',
     if(d.hand[s]>0){if(st.some(x=>x[1]===i)){S.b2=null;act(b2m9Step(d,-1,i));}return;}
     if(P&&st.some(x=>x[0]===P.f&&x[1]===i)){S.b2=null;act(b2m9Step(d,P.f,i));return;}
     b2Pick(d,st.some(x=>x[0]===i)&&(!P||P.f!==i)?{f:i}:null);},
-  bot(d,s,lv){if(d.rm){const r=b2m9Rm(d.b,1-d.sd);const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,rm:1,w:null},B2M9P,lv,{dep:[0,1,2,4],cap:[0,500,6000,30000],ns:[0,60,10,1]});return b2m9Take(d,m?m.x:b2Rnd(r));}
+  bot(d,s,lv){if(d.rm){const r=b2m9Rm(d.b,1-d.sd);const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,rm:1,w:null},B2M9P,lv,{dep:[0,1,2,4],cap:[0,500,2500,6000],ns:[0,60,10,1]});return b2m9Take(d,m?m.x:b2Rnd(r));}
     const ms=b2m9Moves(d.b,d.sd,d.hand);if(lv===1&&Math.random()<.25)return b2m9Do(d,b2Rnd(ms));
-    const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,w:null},B2M9P,lv,{dep:[0,1,3,6],cap:[0,1500,10000,25000],ns:[0,70,12,1]});return b2m9Do(d,m||b2Rnd(ms));},
+    const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,w:null},B2M9P,lv,{dep:[0,1,3,6],cap:[0,1500,4000,6000],ns:[0,70,12,1]});return b2m9Do(d,m||b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_morris9='التسعة (الطاحونة): كل واحد عنده 9 حجار. أول شي تتناوبون تحطون الحجار على النقاط الفاضية. إذا سويت 3 حجار على خط واحد (طاحونة) تشيل حجر من الخصم، بس مو من طاحونة إلا إذا كل حجاره في طواحين. بعد ما تخلص الحجار تحرّك حجر لنقطة جارة فاضية على الخطوط، وكل طاحونة جديدة تشيل فيها حجر. إذا بقى عندك 3 حجار بس تقدر تطير بحجرك لأي نقطة فاضية. يخسر اللي يبقى عنده حجرين أو ما عنده حركة. تعادل إذا مرت 50 حركة لكل واحد بدون شيل، أو تكرر نفس الوضع 3 مرات. الأبيض يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -185,7 +190,7 @@ function b2m3Steps(b,s){const c=String(s),n=[...b].filter(x=>x===c).length,o=[];
   if(n<3){const first=b==='.........';for(let i=0;i<9;i++)if(b[i]==='.'&&!(first&&i===4))o.push([-1,i]);return o;}
   for(let f=0;f<9;f++)if(b[f]===c)for(const t of B2M3A[f])if(b[t]==='.')o.push([f,t]);return o;}
 function b2m3Do(d,f,t){const s=d.sd,c=String(s),b=b2m9Set(d.b,f,t,c);const L=b2m3Line(b,c);const lm=f<0?[t]:[f,t];
-  const x={...d,b,lm,ln:L||null,last:`${tmName(d,s)} ${f<0?'حط حجر':'حرّك حجر'}`};
+  const x={...d,b,lm,ln:L||null,last:`${b2Tm(d,s)} ${f<0?'حط حجر':'حرّك حجر'}`};
   if(L)return b2Won(x,s,'line');const key=b+(1-s),mov=[...b].filter(v=>v!=='.').length===6;const hist=mov?[...(d.hist||[]),key].slice(-60):[];
   const nd=b2Pass(x,s,{hist,nmv:(d.nmv||0)+1});if(!b2m3Steps(b,1-s).length)return {...nd,...tmWin(d,s),end:'block'};
   if(b2Rep(hist,key)>=3||nd.nmv>=80)return {...nd,win:'d',end:'rep'};return nd;}
@@ -211,7 +216,7 @@ GAMES.b_morris3={...B2TEAM,name:'الثلاثة',cat:'board',lbc:'#3F6E8C',
     if(P&&st.some(x=>x[0]===P.f&&x[1]===i)){S.b2=null;act(b2m3Do(d,P.f,i));return;}
     b2Pick(d,st.some(x=>x[0]===i)&&(!P||P.f!==i)?{f:i}:null);},
   bot(d,s,lv){const st=b2m3Steps(d.b,d.sd);if(lv===1&&Math.random()<.35){const m=b2Rnd(st);return b2m3Do(d,m[0],m[1]);}
-    const m=b2Think({b:d.b,sd:d.sd,w:null},B2M3P,lv,{dep:[0,1,3,10],cap:[0,300,4000,60000],ns:[0,12,5,.5]})||b2Rnd(st);return b2m3Do(d,m[0],m[1]);},
+    const m=b2Think({b:d.b,sd:d.sd,w:null},B2M3P,lv,{dep:[0,1,3,10],cap:[0,300,4000,35000],ns:[0,12,5,.5]})||b2Rnd(st);return b2m3Do(d,m[0],m[1]);},
   botDelay:()=>450+rnd(350)};
 HELP.b_morris3='الثلاثة: لوحة 3×3 بخطوطها (الصفوف والأعمدة والقطرين). كل واحد عنده 3 حجار، تتناوبون تحطونها على النقاط الفاضية (أول حجر في اللعبة ما ينحط بالوسط). بعد ما تنحط كلها، في دورك تحرّك حجر واحد لنقطة جارة فاضية على خط. أول واحد يسوي 3 حجار على خط واحد يفوز. إذا الخصم ما عنده حركة تفوز، وإذا اللعب تكرر وطال تعادل. الأحمر يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -235,7 +240,7 @@ function b2aqApply(b,m,c){const a=[...b];a[m.f]='.';m.caps.forEach(x=>{a[x]='.';
 const b2aqCnt=(b,s)=>{let n=0;const c=String(s);for(const x of b)if(x===c)n++;return n;};
 const B2AQ0='11111'+'11111'+'11.00'+'00000'+'00000';
 function b2aqDo(d,m){const s=d.sd,b=b2aqApply(d.b,m,String(s));const quiet=m.caps.length?0:(d.quiet||0)+1;
-  const nd=b2Pass(d,s,{b,quiet,lm:[m.f,...m.path],lc:m.caps.map(x=>[x,1-s]),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`});
+  const nd=b2Pass(d,s,{b,quiet,lm:[m.f,...m.path],lc:m.caps.map(x=>[x,1-s]),last:`${b2Tm(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`});
   if(!b2aqMoves(b,1-s).length)return {...nd,...tmWin(d,s),end:b2aqCnt(b,1-s)?'block':'all'};
   if(quiet>=60){const a=b2aqCnt(b,0),z=b2aqCnt(b,1);return a===z?{...nd,win:'d',end:'q'}:{...nd,...tmWin(d,a>z?0:1),end:'more'};}
   return nd;}
@@ -267,12 +272,12 @@ GAMES.b_alquerq={...B2TEAM,name:'القِرْق',cat:'board',lbc:'#A0522D',
     const pts=B2AQXY.map(([x,y],i)=>{let v=d.b[i];if(V.P&&V.P.path.length){if(i===V.P.f)v='.';if(i===V.at)v=d.b[V.P.f];}
       const tap=my&&(V.to.has(i)||(!V.P||!V.P.path.length)&&V.starts.has(i));
       return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:V.at,to:V.to,mv:V.P?null:V.starts})+(V.gone.has(i)?' gone':''),p:v!=='.'?b2Stone(+v):b2Ghost(d,i)};});
-    let h=b2Board('b2aq bd-b2',80,80,12,B2AQBG,pts,flip,my);if(my&&V.P&&V.P.path.length)h+='<div class="row chact"><button class="btn" data-ga="undo">تراجع عن القفزة</button></div>';return h+b2ResignBtn(ctx);},
+    let h=b2Board('b2aq bd-b2',80,80,12,B2AQBG,pts,flip,my);return h+b2ResignBtn(ctx,my&&V.P&&V.P.path.length?'<button class="btn" data-ga="undo">تراجع عن القفزة</button>':'');},
   after:d=>b2Fly('aq',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a==='undo'){b2Pick(d,null);return;}if(a!=='pt')return;
     const m=b2Chain(d,b2aqMoves(d.b,d.sd),i);if(m)act(b2aqDo(d,m));},
   bot(d,s,lv){const ms=b2aqMoves(d.b,d.sd);if(lv===1&&Math.random()<.3)return b2aqDo(d,b2Rnd(ms));
-    return b2aqDo(d,b2Think({b:d.b,sd:d.sd,w:null},B2AQP,lv,{dep:[0,1,3,7],cap:[0,800,10000,50000],ns:[0,80,15,1]})||b2Rnd(ms));},
+    return b2aqDo(d,b2Think({b:d.b,sd:d.sd,w:null},B2AQP,lv,{dep:[0,1,3,7],cap:[0,800,4000,8000],ns:[0,80,15,1]})||b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_alquerq='القِرْق (القرقة): لوحة 5×5 نقاط بخطوطها، وكل واحد عنده 12 حجر والنقطة اللي بالوسط فاضية. في دورك تحرّك حجر لنقطة جارة فاضية على خط، لقدام أو يمين أو يسار (ما ترجع لورا). الأكل بالقفز فوق حجر الخصم لنقطة فاضية وراه على نفس الخط، بأي اتجاه، وتكمل القفز إذا تقدر. الأكل إجباري. يفوز اللي ياكل كل حجار الخصم أو يخليه بدون حركة. إذا مرت 30 حركة لكل واحد بدون أكل يفوز اللي حجاره أكثر، وإذا متساوية تعادل. الأبيض يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -294,12 +299,12 @@ function b2sgAfter(x,s,took){const b=x.b,o=1-s;const quiet=took?0:(x.quiet||0)+1
   if(!b2sgMoves(b,o,-1).length){if(!b2sgMoves(b,s,-1).length||quiet>=60)return b2sgEnd({...x,quiet,mvn:(x.mvn||0)+1},b);return {...x,quiet,ch:-1,mvn:(x.mvn||0)+1,last:x.last+'، والخصم محبوس فيلعب مرة ثانية'};}
   const nd=b2Pass(x,s,{quiet,ch:-1});if(quiet>=60)return b2sgEnd(nd,b);return nd;}
 function b2sgPlace(d,i){const s=d.sd,b=setAt(d.b,i,String(s)),hand=[...d.hand];hand[s]--;const pp=(d.pp||0)+1;
-  const x={...d,b,hand,lm:[i],lc:[],last:`${tmName(d,s)} حط حجر`};
+  const x={...d,b,hand,lm:[i],lc:[],last:`${b2Tm(d,s)} حط حجر`};
   if(!hand[0]&&!hand[1]){const tr=[...d.tr];tr[1]=(tr[1]+1)%(tmSeats(d,1).length||1);const y={...x,tr,pp:0,ph:'move',sd:1,mvn:(d.mvn||0)+1,last:'خلص التحطيط، الأسود يبدأ يحرّك'};
     y.turn=tmNow(y,1);if(!b2sgMoves(b,1,-1).length){if(!b2sgMoves(b,0,-1).length)return b2sgEnd(y,b);return {...y,sd:0,turn:tmNow(y,0),last:'خلص التحطيط، والأسود محبوس فيبدأ الأبيض'};}return y;}
   if(pp<2&&hand[s])return {...x,pp,mvn:(d.mvn||0)+1};return b2Pass(x,s,{pp:0});}
-function b2sgDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2sgAfter({...d,last:`${tmName(d,s)} وقف الأكل`},s,true);
-  const b=b2sgApply(d.b,m,c);const x={...d,b,lm:d.ch>=0&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`};
+function b2sgDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2sgAfter({...d,last:`${b2Tm(d,s)} وقف الأكل`},s,true);
+  const b=b2sgApply(d.b,m,c);const x={...d,b,lm:d.ch>=0&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${b2Tm(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرّك'}`};
   if(m.caps.length&&b2sgCnt(b,1-s)&&b2sgMoves(b,s,m.t).length)return {...x,ch:m.t,quiet:0,mvn:(d.mvn||0)+1,last:x.last+'، ويقدر يكمّل بنفس الحجر'};
   return b2sgAfter(x,s,m.caps.length>0);}
 function b2sgNext(b,s,took,q){const o=1-s;q=took?0:(q||0)+1;if(!b2sgCnt(b,o))return {b,sd:o,ch:-1,q,w:s};
@@ -330,7 +335,7 @@ GAMES.b_seega={...B2TEAM,name:'السيجة',cat:'board',lbc:'#9B6A2F',
       return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:f,to:place?null:to,mv:f>=0?null:mv})+(place&&tap?' to':''),p:v!=='.'?b2Stone(+v):b2Ghost(d,i)};});
     let h=b2Board('b2sg bd-b2',100,100,17,B2SGBG,pts,flip,my);
     if(place)h+=`<div class="b2hand">${[0,1].map(x=>`<span class="${x===s?'on':''}">${b2Stone(x)}<b>${d.hand[x]}</b></span>`).join('')}</div>`;
-    if(my&&d.ch>=0)h+='<div class="row chact"><button class="btn green" data-ga="stop">خلاص، أنهي دوري</button></div>';return h+(place?'':b2ResignBtn(ctx));},
+    return h+(place?'':b2ResignBtn(ctx,my&&d.ch>=0?'<button class="btn green" data-ga="stop">خلاص، أنهي دوري</button>':''));},
   after:d=>b2Fly('sg',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a==='stop'){if(d.ch>=0)act(b2sgDo(d,{stop:1}));return;}if(a!=='pt')return;
     if(d.ph==='place'){if(d.b[i]==='.'&&i!==12)act(b2sgPlace(d,i));return;}
@@ -365,9 +370,9 @@ function b2fnApply(b,m,c){const a=[...b];a[m.f]='.';a[m.t]=c;m.caps.forEach(x=>{
 function b2fnPass(x,s,took){const o=1-s,b=x.b,quiet=took?0:(x.quiet||0)+1;const nd=b2Pass(x,s,{ch:null,quiet,nt:(x.nt||0)+1});
   if(!b2fnCnt(b,o))return {...nd,...tmWin(x,s),end:'all'};if(!b2fnMoves(b,o,null).length)return {...nd,...tmWin(x,s),end:'block'};
   if(quiet>=60){const a=b2fnCnt(b,0),z=b2fnCnt(b,1);return a===z?{...nd,win:'d',end:'q'}:{...nd,...tmWin(x,a>z?0:1),end:'more'};}return nd;}
-function b2fnDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2fnPass({...d,last:`${tmName(d,s)} وقف الأكل`},s,true);
+function b2fnDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2fnPass({...d,last:`${b2Tm(d,s)} وقف الأكل`},s,true);
   const b=b2fnApply(d.b,m,c);const vis=d.ch?[...d.ch.vis,m.t]:[m.f,m.t];
-  const x={...d,b,lm:d.ch&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length} ${m.k==='a'?'بالتقدّم':'بالتراجع'}`:' تحرّك'}`};
+  const x={...d,b,lm:d.ch&&d.lm?[...d.lm,m.t]:[m.f,m.t],lc:m.caps.map(q=>[q,1-s]),last:`${b2Tm(d,s)}${m.caps.length?` أكل ${m.caps.length} ${m.k==='a'?'بالتقدّم':'بالتراجع'}`:' تحرّك'}`};
   // the very first turn of the game takes one capture only
   if(m.caps.length&&(d.nt||0)>0&&b2fnCnt(b,1-s)){const ch={at:m.t,ld:m.dir,vis};if(b2fnCaps(b,s,ch).length)return {...x,ch,mvn:(d.mvn||0)+1,last:x.last+'، ويقدر يكمّل'};}
   return b2fnPass(x,s,m.caps.length>0);}
@@ -395,7 +400,7 @@ GAMES.b_fanoron={...B2TEAM,name:'فانورونا',cat:'board',lbc:'#4E7A3A',
       return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:f,to:cap.size?new Set([P.t]):to,mv:f>=0?null:mv,cap})+(vis.has(i)&&i!==f?' vis':''),p:v!=='.'?b2Stone(+v):b2Ghost(d,i)};});
     let h=b2Board('b2fn bd-b2',100,56,9.4,B2FNBG,pts,flip,my);
     if(my&&cap.size)h+='<p class="note">تقدر تاكل بطريقتين: اضغط أول حجر من الخط اللي تبي تاكله</p>';
-    if(my&&d.ch)h+='<div class="row chact"><button class="btn green" data-ga="stop">خلاص، أنهي دوري</button></div>';return h+b2ResignBtn(ctx);},
+    return h+b2ResignBtn(ctx,my&&d.ch?'<button class="btn green" data-ga="stop">خلاص، أنهي دوري</button>':'');},
   after:d=>b2Fly('fn',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a==='stop'){if(d.ch)act(b2fnDo(d,{stop:1}));return;}if(a!=='pt')return;
     const ms=b2fnMoves(d.b,d.sd,d.ch),P=b2Sel(d),f=d.ch?d.ch.at:P&&P.f!=null?P.f:-1;
@@ -404,7 +409,7 @@ GAMES.b_fanoron={...B2TEAM,name:'فانورونا',cat:'board',lbc:'#4E7A3A',
     if(!d.ch)b2Pick(d,ms.some(x=>x.f===i)&&f!==i?{f:i}:null);},
   bot(d,s,lv){const ms=b2fnMoves(d.b,d.sd,d.ch);if(!ms.length)return b2fnDo(d,{stop:1});
     if(lv===1&&Math.random()<.3)return b2fnDo(d,b2Rnd(d.ch?[...ms,{stop:1}]:ms));
-    const m=b2Think({b:d.b,sd:d.sd,ch:d.ch,nt:d.nt||0,w:null},B2FNP,lv,{dep:[0,1,3,6],cap:[0,800,8000,40000],ns:[0,90,20,1]});return b2fnDo(d,m||ms[0]);},
+    const m=b2Think({b:d.b,sd:d.sd,ch:d.ch,nt:d.nt||0,w:null},B2FNP,lv,{dep:[0,1,3,6],cap:[0,800,4000,10000],ns:[0,90,20,1]});return b2fnDo(d,m||ms[0]);},
   botDelay:()=>450+rnd(400)};
 HELP.b_fanoron='فانورونا (لعبة من مدغشقر): لوحة 9×5 نقاط بخطوطها، وكل واحد عنده 22 حجر والنقطة اللي بالوسط فاضية. الحجر يمشي لنقطة جارة فاضية على خط. الأكل بطريقتين: تتقدّم باتجاه حجر للخصم (يكون في النقطة اللي بعد نقطة وصولك على نفس الخط)، أو تبتعد عن حجر للخصم لاصق فيك من الجهة الثانية. وتاكل الحجر هذا وكل حجار الخصم اللي وراه على نفس الخط بدون فراغ. إذا الحركة تقدر تاكل بالطريقتين تختار وحدة. الأكل إجباري. بعد ما تاكل تقدر تكمّل بنفس الحجر أكلة ثانية، بس مو بنفس الاتجاه اللي قبلها ولا لنقطة مريت عليها في نفس الدور، وتقدر توقف متى ما تبي (أول دور في اللعبة أكلة وحدة بس). يفوز اللي ياكل كل حجار الخصم أو يخليه بدون حركة. إذا مرت 30 حركة لكل واحد بدون أكل يفوز صاحب الحجار الأكثر، وإذا متساوية تعادل. الأبيض يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون.';
 
@@ -432,7 +437,7 @@ function b2tbApply(b,m){const a=[...b],p=a[m.f];a[m.f]='.';a[m.t]=p;const s=p===
 const b2tbCnt=(b,c)=>{let n=0;for(const x of b)if(x===c)n++;return n;};
 function b2tbDo(d,m){const s=d.sd,r=b2tbApply(d.b,m);const key=r.b+(1-s);const hist=r.caps.length?[key]:[...(d.hist||[]),key].slice(-90);
   const lc=r.caps.map(q=>[q,s]);if(r.kd!==false)lc.push([r.kd,2]);
-  const nd=b2Pass(d,s,{b:r.b,hist,lm:[m.f,m.t],lc,nmv:(d.nmv||0)+1,last:`${tmName(d,s)} ${d.b[m.f]==='k'?'حرّك الملك':'تحرّك'}${r.caps.length?` وأكل ${r.caps.length}`:''}`});
+  const nd=b2Pass(d,s,{b:r.b,hist,lm:[m.f,m.t],lc,nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} ${d.b[m.f]==='k'?'حرّك الملك':'تحرّك'}${r.caps.length?` وأكل ${r.caps.length}`:''}`});
   if(r.esc)return {...nd,...tmWin(d,1),end:'esc'};if(r.kd!==false)return {...nd,...tmWin(d,0),end:'king'};
   if(!b2tbMoves(r.b,1-s).length)return {...nd,...tmWin(d,s),end:'block'};
   if(b2Rep(hist,key)>=3||nd.nmv>=200)return {...nd,win:'d',end:nd.nmv>=200?'long':'rep'};return nd;}
@@ -472,7 +477,7 @@ GAMES.b_tablut={...B2TEAM,name:'حصار الملك',cat:'board',lbc:'#5C4A8A',
     if(P){const m=ms.find(x=>x.f===P.f&&x.t===i);if(m){S.b2=null;act(b2tbDo(d,m));return;}}b2Pick(d,ms.some(x=>x.f===i)&&(!P||P.f!==i)?{f:i}:null);},
   bot(d,s,lv){const ms=b2tbMoves(d.b,d.sd);if(lv===1&&Math.random()<.25)return b2tbDo(d,b2Rnd(ms));
     // a king that can reach the edge always goes, and an attacker always blocks the last open line it can
-    const m=b2Think({b:d.b,sd:d.sd,w:null},B2TBP,lv,{dep:[0,1,2,4],cap:[0,1500,8000,22000],ns:[0,140,30,2]});return b2tbDo(d,m||b2Rnd(ms));},
+    const m=b2Think({b:d.b,sd:d.sd,w:null},B2TBP,lv,{dep:[0,1,2,4],cap:[0,1500,3000,9000],ns:[0,140,30,2]});return b2tbDo(d,m||b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_tablut='حصار الملك (تابلوت، من ألعاب الشمال القديمة): لوحة 9×9. المهاجمين (16 حجر أسود) يحاصرون، والمدافعين (8 حجار بيض) يحمون الملك اللي بالوسط على العرش. المهاجمين يبدأون. كل حجر يمشي أي عدد من المربعات بخط مستقيم مثل القلعة في الشطرنج، بدون ما يقفز. العرش (المربع اللي بالوسط) للملك بس، وما أحد يعدّي من فوقه. تاكل حجر الخصم إذا حطيته بين حجرك وحجر ثاني لك على نفس الخط (والعرش الفاضي يحسب كأنه حجر ضده)، والملك يشارك في الأكل. يفوز المدافعين إذا وصل الملك لأي مربع على طرف اللوحة. يفوز المهاجمين إذا حاصروا الملك: من الجهات الأربع وهو على العرش، ومن الثلاث جهات الباقية إذا كان جنب العرش، وبين حجرين إذا كان بعيد. اللي ما عنده حركة يخسر. تعادل إذا تكرر نفس الوضع 3 مرات أو طالت اللعبة 200 حركة. إذا أكثر من لاعبين: فريقين يتناوبون.';
 
@@ -502,18 +507,19 @@ function b2azSplit(b,n){const N=n*n,seen=new Uint8Array(N),area=[0,0];
     if(who.size>1)return null;for(const s of who)area[s]+=sz;}
   return area;}
 function b2azDo(d,m){const s=d.sd,c=String(s),n=d.n,b=b2azApply(d.b,m,c);
-  const nd=b2Pass(d,s,{b,ph:'move',at:-1,lm:[m.f,m.t],ar:m.a,nmv:(d.nmv||0)+1,last:`${tmName(d,s)} حرّك ملكة ورمى سهم`});
+  const nd=b2Pass(d,s,{b,ph:'move',at:-1,lm:[m.f,m.t],ar:m.a,nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} حرّك ملكة ورمى سهم`});
   if(!b2azCan(b,n,1-s))return {...nd,...tmWin(d,s),end:'block'};
   const ar=b2azSplit(b,n);if(ar){const w=ar[0]===ar[1]?s:ar[0]>ar[1]?0:1;return {...nd,...tmWin(d,w),end:'area',area:ar};}
   return nd;}
 function b2azThink(d,lv){const n=d.n,s=d.sd,c=String(s);let ms=b2azMoves(d.b,n,s);if(!ms.length)return null;
-  const cap=[0,90,600,2200][lv]||600;if(ms.length>cap){for(let i=ms.length-1;i>0;i--){const j=rnd(i+1);[ms[i],ms[j]]=[ms[j],ms[i]];}ms=ms.slice(0,cap);}
+  const cap=[0,90,250,500][lv]||250,tEnd=performance.now()+B2MS;if(ms.length>cap){for(let i=ms.length-1;i>0;i--){const j=rnd(i+1);[ms[i],ms[j]]=[ms[j],ms[i]];}ms=ms.slice(0,cap);}
   const ns=[0,25,6,.5][lv];for(const m of ms){const b=b2azApply(d.b,m,c);m.v=b2azCan(b,n,1-s)?-b2azEv(b,n,1-s)+Math.random()*ns:1e6;}
   ms.sort((x,y)=>y.v-x.v);if(lv<3||ms[0].v>=1e6)return ms[0];
   // hard: the best few, each against the strongest of a sample of the other side's answers
-  let best=ms[0],bv=-Infinity;for(const m of ms.slice(0,6)){const b=b2azApply(d.b,m,c);let rs=b2azMoves(b,n,1-s);
-    if(rs.length>220){for(let i=rs.length-1;i>0;i--){const j=rnd(i+1);[rs[i],rs[j]]=[rs[j],rs[i]];}rs=rs.slice(0,220);}
-    let worst=Infinity;for(const r of rs){const b2=b2azApply(b,r,String(1-s));const v=b2azCan(b2,n,s)?b2azEv(b2,n,s):-1e6;if(v<worst)worst=v;}
+  let best=ms[0],bv=-Infinity;for(const m of ms.slice(0,6)){if(bv>-Infinity&&performance.now()>tEnd)break;const b=b2azApply(d.b,m,c);let rs=b2azMoves(b,n,1-s);
+    if(rs.length>150){for(let i=rs.length-1;i>0;i--){const j=rnd(i+1);[rs[i],rs[j]]=[rs[j],rs[i]];}rs=rs.slice(0,150);}
+    // an answer that already makes this move no better than the best so far ends its check
+    let worst=Infinity;for(const r of rs){const b2=b2azApply(b,r,String(1-s));const v=b2azCan(b2,n,s)?b2azEv(b2,n,s):-1e6;if(v<worst){worst=v;if(worst<=bv)break;}}
     if(worst>bv){bv=worst;best=m;}}return best;}
 const b2azXY=n=>[...Array(n*n)].map((_,i)=>[5+(i%n)*10,5+(i/n|0)*10]);
 const b2azBG=n=>{let g='';for(let i=0;i<n*n;i++)if(((i/n|0)+i%n)%2)g+=`<rect x="${(i%n)*10}" y="${(i/n|0)*10}" width="10" height="10"/>`;return `<svg viewBox="0 0 ${n*10} ${n*10}" aria-hidden="true"><g class="b2dk">${g}</g></svg>`;};
@@ -541,7 +547,7 @@ GAMES.b_amazons={...B2TEAM,name:'الملكات والسهام',cat:'board',lbc:
     if(a==='size'){if(!d.nmv&&d.ph==='move'&&(i===8||i===10)&&i!==n){S.b2=null;act({...d,n:i,b:b2azInit(i),mvn:(d.mvn||0)+1,last:`صارت اللوحة ${i}×${i}`});}return;}
     if(a!=='pt')return;
     if(d.ph==='shoot'){if(b2azRay(d.b,n,d.at).includes(i)){const f=d.lm[0];act(b2azDo({...d,b:b2m9Set(d.b,d.at,f,c)},{f,t:d.at,a:i}));}return;}
-    const P=b2Sel(d);if(P&&b2azRay(d.b,n,P.f).includes(i)){S.b2=null;act({...d,b:b2m9Set(d.b,P.f,i,c),ph:'shoot',at:i,lm:[P.f,i],ar:-1,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} حرّك ملكة، الحين يرمي سهم`});return;}
+    const P=b2Sel(d);if(P&&b2azRay(d.b,n,P.f).includes(i)){S.b2=null;act({...d,b:b2m9Set(d.b,P.f,i,c),ph:'shoot',at:i,lm:[P.f,i],ar:-1,mvn:(d.mvn||0)+1,last:`${b2Tm(d,s)} حرّك ملكة، الحين يرمي سهم`});return;}
     b2Pick(d,d.b[i]===c&&b2azRay(d.b,n,i).length&&(!P||P.f!==i)?{f:i}:null);},
   bot(d,s,lv){const n=d.n,c=String(d.sd);
     if(d.ph==='shoot'){// a half-played turn (a human's timer or a seat change): shoot at the best square from here

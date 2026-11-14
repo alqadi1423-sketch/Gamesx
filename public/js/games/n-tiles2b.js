@@ -269,7 +269,10 @@ GAMES.k_soli={name:'سوليتير السباق',cat:'cards',lbc:'#1E7A52',teams
   resolve:(d,picks)=>k2kResult(d,picks),
   botPick:()=>undefined,botDelay:()=>1e9,
   status(d,ctx){if(d.win!=null)return '';const v=ctx.v,p=v>=0?k2kMine(d,v,ctx):null;const left=Math.max(0,K2KL-(Date.now()-d.t0));
-    const others=d.pl.map((r,s)=>{const q=(ctx.priv||S.priv)[r];return s===v?'':`${nm(d,s)} ${q&&q.h!=null?q.h:0}${hasPicked(d,s)?'✓':''}`;}).filter(Boolean).join('، ');
+    // two others fit by name; with more, the one furthest ahead and how many finished
+    const os=d.pl.map((r,s)=>{const q=(ctx.priv||S.priv)[r];return {s,h:q&&q.h!=null?q.h:0,ok:hasPicked(d,s)};}).filter(o=>o.s!==v&&d.out[o.s]!=='1');
+    const one=o=>`${nm(d,o.s)} ${o.h}${o.ok?'✓':''}`,top=os.reduce((a,o)=>!a||o.h>a.h?o:a,null),fin=os.filter(o=>o.ok).length;
+    const others=os.length<=2?os.map(one).join('، '):`الأقرب ${one(top)}${fin?` • خلّص ${fin}`:''}`;
     return `<small>${others}</small><br>`+(p?(hasPicked(d,v)?'<b>خلّصت، ننتظر الباقين</b>':`<b class="yt">بيوتك ${p.h} من 52</b>`):'تتفرج')+(k2kMulti(d)?'':` • <span data-until="${Date.now()+left}">${Math.ceil(left/1000)}</span> ث`);},
   render(d,ctx){const v=ctx.v;if(d.win!=null||v<0)return `<div class="k2 k2kl"><p class="note">${d.rt?'بالبيوت: '+d.rt:'تتفرج على السباق'}</p></div>`;
     const p=k2kMine(d,v,ctx);if(!p)return '<div class="k2 k2kl"><p class="note">نجهز التوزيعة…</p></div>';const my=ctx.my&&!hasPicked(d,v);
