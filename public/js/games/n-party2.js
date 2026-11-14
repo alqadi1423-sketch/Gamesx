@@ -258,7 +258,7 @@ function p2GtMake(kd,def){return {name:def.name,cat:'party',lbc:def.lbc,noTimer:
         if(hs.length&&(ctx.local||hs.includes(v)))h+=`<div class="p2-guess"><input class="field" data-draft="p2g" data-enter="${hs.length===1?'lg':''}" maxlength="24" value="${escH(S.draft.p2g||'')}" placeholder="وش الكلمة؟" autocomplete="off" enterkeyhint="send"></div><div class="p2-row">${(S.mode==='online'?[v]:hs).map(s=>`<button class="btn red p2-lg" style="--c:${col(d,s)}" data-ga="lg" data-i="${s}">${hs.length>1||S.mode==='online'?'خمّن: '+nm(d,s):'خمّن'}</button>`).join('')}</div>`;
         return h+score+feed;}
       if(iAc||p2GtSees(d,v)||(ctx.local&&!isBot(d,ac))){h+=card;
-        if(iAc||ctx.local){h+=`<p class="p2-lead small">مين عرفها؟</p><div class="p2-row">${gs.map(s=>`<button class="p2-who" style="--c:${col(d,s)}" data-ga="ok" data-i="${s}">${isBot(d,s)?'🤖 ':''}${nm(d,s)}</button>`).join('')}</div>
+        if(iAc||ctx.local){h+=`<p class="p2-lead small">مين عرفها؟</p><div class="p2-row">${gs.map(s=>`<button class="p2-gsr" style="--c:${col(d,s)}" data-ga="ok" data-i="${s}">${isBot(d,s)?'🤖 ':''}${nm(d,s)}</button>`).join('')}</div>
           <div class="p2-row"><button class="btn soft" data-ga="skip">تخطي ⏭</button>${p2GtF(d)&&(ctx.local||!js.length)?'<button class="btn p2-buzz" data-ga="buzz">🚨 قال ممنوعة</button>':''}</div>`;}
         else h+=`<p class="p2-lead small">أنت الرقيب: لو قال ${nm(d,ac)} كلمة ممنوعة اضغط</p><button class="big p2-buzzbig" data-ga="buzz">🚨 قال كلمة ممنوعة!</button>`;
         return h+score+feed;}
@@ -331,7 +331,7 @@ GAMES.p_potato={name:'البطاطا الحارة',cat:'party',lbc:'#D35400',noT
   mask:(d,seat)=>d.win!=null?d:{...d,fz:-1},
   net:{local:[]},
   status(d,ctx){if(d.ph==='pre')return 'البطاطا تسخن…';if(d.ph==='boom')return `<b class="p2-red">${d.last}</b>`;
-    const me=!ctx.local&&ctx.v===d.turn;const C=P2POTC()[d.c];return `${me?'<b class="yt">البطاطا عندك!</b>':`البطاطا عند ${nameTag(d,d.turn)}`}<br><small>قل ${C?C[0]:''} ومرّرها بسرعة</small>`;},
+    const me=!ctx.local&&ctx.v===d.turn;const C=P2POTC()[d.c];return `${me?'<b class="yt">البطاطا عندك!</b>':`البطاطا عند ${nameTag(d,d.turn)}`}<br><small>قل كلمة من «${C?C[0]:''}» ومرّرها بسرعة</small>`;},
   render(d,ctx){const C=P2POTC()[d.c]||['',[]];let h=`<div class="p2 p2-pot">`;
     h+=`<div class="p2-potcat"><small>الفئة</small><b>${C[0]||'…'}</b></div>`;
     const hold=d.ph==='play'?d.turn:d.ex;
@@ -529,7 +529,7 @@ function p2LkPass(d,s){const x={...d,ps:[...d.ps,s],last:`${nm(d,s)} خلّاه�
 function p2LkPlay(d){const x={...d,ph:'play',turn:d.by,rv:0,ra:[]};return p2LkReveal(x);}
 function p2LkReveal(d){if(d.rv>=d.bid)return d;const A=p2LkAs(d.w);return {...d,rv:d.rv+1,ra:[...d.ra,A[d.rv]]};}
 function p2LkGuess(d,txt){const E=P2W[d.w];const ok=!!E&&p2Match(E.alts,txt)===2;const P=[...d.pts];const pr=6-d.bid;let last;
-  if(ok){P[d.by]+=pr;last=`${nm(d,d.by)} عرفها! +${pr}`;}else if(d.pv>=0&&d.out[d.pv]!=='1'){P[d.pv]+=pr;last=`غلط! النقاط (${pr}) راحت لـ ${nm(d,d.pv)}`;}else last='غلط! وما أحد ياخذ النقاط';
+  if(ok){P[d.by]+=pr;last=`${nm(d,d.by)} عرفها وأخذ ${pr}`;}else if(d.pv>=0&&d.out[d.pv]!=='1'){P[d.pv]+=pr;last=`غلط! النقاط (${pr}) راحت لـ ${nm(d,d.pv)}`;}else last='غلط! وما أحد ياخذ النقاط';
   return {...d,ph:'show',pts:P,gs:[p2T(txt,24),ok?1:0],ts:Date.now(),last};}
 function p2LkNext(d){const cn=d.cn+1;if(cn>=d.C)return {...d,ph:'end',win:mostPts(d.pts)};return p2LkCard(d,cn,nextSeat(d,d.sb));}
 // what a well-read bot makes of the linked words it has seen: the cards that share the most of them
@@ -553,7 +553,7 @@ GAMES.p_link={name:'ربط الكلمات',cat:'party',lbc:'#1E8449',
     h+=`<div class="p2-target ${d.ph==='show'?(d.gs&&d.gs[1]?'ok':'no'):''}">${d.ph==='show'&&E?`<span>${E.em}</span><b>${E.w}</b><small>${E.cat}</small>`:'<span>🔗</span><b>الكلمة السرية</b>'}</div>`;
     if(d.ph==='bid'){const can=(ctx.local||v===d.turn)&&!isBot(d,d.turn);
       h+=`<div class="p2-bidnow">${d.by>=0?`<span style="--c:${col(d,d.by)}">${nm(d,d.by)}: أعرفها بـ <b>${d.bid}</b></span>`:'<span>ما أحد زايد للحين</span>'}</div>`;
-      if(can)h+=`<p class="p2-lead small">${nm(d,d.turn)}، كم كلمة تحتاج عشان تعرفها؟</p><div class="p2-bids">${[5,4,3,2,1].map(b=>`<button data-ga="b" data-i="${b}" ${b<d.bid?'':'disabled'}><b>${b}</b><small>+${6-b}</small></button>`).join('')}</div>${d.by>=0?`<button class="btn soft wide" data-ga="pass">خلّها له 👋</button>`:''}`;
+      if(can)h+=`<p class="p2-lead small">${nm(d,d.turn)}، كم كلمة تحتاج عشان تعرفها؟</p><div class="p2-bids">${[5,4,3,2,1].map(b=>`<button data-ga="b" data-i="${b}" ${b<d.bid?'':'disabled'}><b>${b}</b><small><span class="p2-num">+${6-b}</span></small></button>`).join('')}</div>${d.by>=0?`<button class="btn soft wide" data-ga="pass">خلّها له 👋</button>`:''}`;
       else h+=`<p class="note">${isBot(d,d.turn)?'🤖 ':''}${nm(d,d.turn)} يفكر…</p>`;}
     if(d.ph==='play'){const can=(ctx.local||v===d.by)&&!isBot(d,d.by);
       if(can)h+=`<div class="p2-row"><button class="btn soft" data-ga="rv" ${d.rv<d.bid?'':'disabled'}>اكشف كلمة (${d.rv}/${d.bid})</button></div><div class="p2-guess"><input class="field" data-draft="p2lg" data-enter="lg" maxlength="24" value="${escH(S.draft.p2lg||'')}" placeholder="وش الكلمة؟" autocomplete="off" enterkeyhint="send"><button class="btn red" data-ga="lg">جاوب</button></div>`;

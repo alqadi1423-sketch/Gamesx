@@ -95,7 +95,7 @@ GAMES.p_most={name:'مين الأكثر',cat:'party',lbc:'#B9770E',teams:'none',
       return h+`<p class="p2-lead small">${nm(d,v)}، مين تختار؟</p>`+p2Tiles(d,{v,ga:'v',can:s=>d.out[s]!=='1',sub:s=>s===v?'أنت':''})+'</div>';}
     const cnt=d.pl.map(()=>0);(d.vt||[]).forEach(x=>{if(x>=0)cnt[x]++;});
     h+=p2Tiles(d,{v,badge:s=>cnt[s]?`<u class="p2-cnt">${cnt[s]}</u>`:'',cls:s=>d.top.includes(s)?'crown':'',sub:s=>d.top.includes(s)?'👑':''});
-    h+=`<ul class="p2-votes">${(d.vt||[]).map((t,s)=>t>=0?`<li><b style="color:${col(d,s)}">${nm(d,s)}</b> ← <b style="color:${col(d,t)}">${nm(d,t)}</b>${d.top.includes(t)?' <em>+1</em>':''}</li>`:'').join('')}</ul>`;
+    h+=`<ul class="p2-votes">${(d.vt||[]).map((t,s)=>t>=0?`<li><b style="color:${col(d,s)}">${nm(d,s)}</b> ← <b style="color:${col(d,t)}">${nm(d,t)}</b>${d.top.includes(t)?` <em>${p2Sg(1)}</em>`:''}</li>`:'').join('')}</ul>`;
     return h+p2Next(d,ctx,d.r+1>=d.R,'السؤال الجاي ←')+'</div>';},
   click(a,i,d,ctx){const v=ctx.v;if(a==='v'&&d.ph==='vote'&&ctx.my&&d.out[i]!=='1'){simulPick(d,v,i);return;}
     if(a==='next'&&d.ph==='show'&&(ctx.local||v===d.turn)){act(GAMES.p_most.next(d));}},
@@ -147,7 +147,7 @@ GAMES.p_story={name:'قصة متسلسلة',cat:'party',lbc:'#6E2C00',teams:'non
       if(me&&d.tw>=0)h+=`<div class="p2-twist">🔑 كلمتك السرية: <b>${P2STW[d.tw]}</b><small>دخّلها بجملتك وتاخذ نقطة</small></div><div class="p2-guess col"><input class="field" data-draft="p2sl${d.turn}" data-enter="sl" maxlength="70" value="${escH(S.draft['p2sl'+d.turn]||'')}" placeholder="كمّل القصة بجملة وحدة…" autocomplete="off"><button class="btn red" data-ga="sl">أضف ✍️</button></div>`;
       else h+=`<p class="note">${isBot(d,d.turn)?'🤖 ':''}${nm(d,d.turn)} يكتب…</p>`;}
     if(d.ph==='vote'){if(!ctx.my||v==null||v<0)return h+'<p class="note">ننتظر الأصوات…</p>'+p2Wait(d)+'</div>';
-      h+=`<p class="p2-lead small">${nm(d,v)}، أي جملة أحلى؟</p><div class="p2-stm">${p2StRound(d).filter(([l])=>l[1]&&l[0]!==v).map(([l,k])=>`<button class="p2-st" data-ga="v" data-i="${k}" style="--c:${col(d,l[0])}"><small>${nm(d,l[0])}</small><span>${escH(l[1])}</span></button>`).join('')}</div>`;}
+      h+=`<p class="p2-lead small">${nm(d,v)}، أي جملة أحلى؟</p><div class="p2-stm">${p2StRound(d).filter(([l])=>l[1]&&l[0]!==v).map(([l,k])=>`<button class="p2-st" data-ga="v" data-i="${k}" style="--c:${col(d,l[0])}"><small class="nm">${nm(d,l[0])}</small><span>${escH(l[1])}</span></button>`).join('')}</div>`;}
     if(d.ph==='show')h+=p2Next(d,ctx,d.r+1>=d.R,'الجولة الجاية ←');
     return h+'</div>';},
   click(a,i,d,ctx){const v=ctx.v;
@@ -292,10 +292,10 @@ GAMES.p_major={name:'توقع الأغلبية',cat:'party',lbc:'#1F618D',minP:3
       const k=d.gid+':'+d.rd+':'+v;if(!S.p2mj||S.p2mj.k!==k)S.p2mj={k,o:-1,p:-1,c:2};const M=S.p2mj;
       h+=`<p class="p2-step"><b>١</b> جوابك أنت</p><div class="p2-opts">${Q.o.map((o,i)=>`<button class="${M.o===i?'on':''}" data-ga="mo" data-i="${i}">${o}</button>`).join('')}</div>`;
       h+=`<p class="p2-step"><b>٢</b> وش تتوقع أكثر جواب بينكم؟</p><div class="p2-opts maj">${Q.o.map((o,i)=>`<button class="${M.p===i?'on':''}" data-ga="mp" data-i="${i}">${o}</button>`).join('')}</div>`;
-      h+=`<p class="p2-step"><b>٣</b> كم أنت واثق؟</p><div class="p2-conf">${[1,2,3].map(c=>`<button class="${M.c===c?'on':''}" data-ga="mc" data-i="${c}">${'🔥'.repeat(c)}<small>+${c} / −${c-1}</small></button>`).join('')}</div>`;
+      h+=`<p class="p2-step"><b>٣</b> كم أنت واثق؟</p><div class="p2-conf">${[1,2,3].map(c=>`<button class="${M.c===c?'on':''}" data-ga="mc" data-i="${c}">${'🔥'.repeat(c)}<small>تكسب ${c}${c>1?` • تخسر ${c-1}`:""}</small></button>`).join('')}</div>`;
       return h+`<button class="big red" data-ga="msend" ${M.o>=0&&M.p>=0?'':'disabled'}>تم ✓</button></div>`;}
     const mx=Math.max(1,...d.cnt);h+=`<div class="p2-bars">${Q.o.map((o,i)=>`<div class="p2-bar ${d.mj.includes(i)?'top':''}"><b>${o}</b><span><i style="transform:scaleX(${(d.cnt[i]/mx).toFixed(3)})"></i></span><em>${d.cnt[i]}</em></div>`).join('')}</div>`;
-    h+=`<ul class="p2-votes">${(d.pk||[]).map((x,s)=>x?`<li><b style="color:${col(d,s)}">${nm(d,s)}</b> جاوب ${Q.o[x.o]} وتوقع ${Q.o[x.p]} ${'🔥'.repeat(x.c)} <em class="${x.g>0?'ok':x.g<0?'no':''}">${x.g>0?'+'+x.g:x.g<0?x.g:'0'}</em></li>`:'').join('')}</ul>`;
+    h+=`<ul class="p2-votes">${(d.pk||[]).map((x,s)=>x?`<li><b style="color:${col(d,s)}">${nm(d,s)}</b> جاوب ${Q.o[x.o]} وتوقع ${Q.o[x.p]} ${'🔥'.repeat(x.c)} <em class="${x.g>0?'ok':x.g<0?'no':''}">${p2Sg(x.g)}</em></li>`:'').join('')}</ul>`;
     return h+p2Next(d,ctx,d.r+1>=d.R,'السؤال الجاي ←')+'</div>';},
   click(a,i,d,ctx){const v=ctx.v;
     if(['mo','mp','mc'].includes(a)&&d.ph==='vote'&&S.p2mj){if(a==='mo')S.p2mj.o=i;if(a==='mp')S.p2mj.p=i;if(a==='mc'&&i>=1&&i<=3)S.p2mj.c=i;render();return;}
@@ -355,7 +355,7 @@ GAMES.p_qa={name:'سؤال وجواب',cat:'party',lbc:'#117864',teams:'none',mi
     h+=`<div class="p2-ansl">${d.an.map((t,k)=>{const m=d.mt[k],o=d.ow[k];const ok=shown&&m===o;
       return `<div class="p2-an ${sel===k&&iA&&!shown?'sel':''} ${shown?(ok?'ok':'no'):''}" data-k="an${d.k}_${k}"><${iA&&!shown?'button':'span'} class="p2-ant" ${iA&&!shown?`data-ga="qsel" data-i="${k}"`:''}>«${escH(t)}»</${iA&&!shown?'button':'span'}>
         <div class="p2-anw">${shown?`<i style="--c:${col(d,o)}">✍️ ${nm(d,o)}</i>${m>=0&&m!==o?`<i class="x" style="--c:${col(d,m)}">قال ${nm(d,m)}</i>`:''}`:m>=0?`<i style="--c:${col(d,m)}">${nm(d,m)}</i>`:'<i class="q">؟</i>'}</div></div>`;}).join('')}</div>`;
-    if(d.ph==='match'){if(iA){h+=sel>=0?`<p class="p2-lead small">مين كتب «${escH(d.an[sel])}»؟</p><div class="p2-row">${ws.map(s=>`<button class="p2-who" style="--c:${col(d,s)}" data-ga="mt" data-i="${sel*8+s}">${nm(d,s)}</button>`).join('')}</div>`:'<p class="note">اضغط على جواب وبعدها على اللي تتوقعه كتبه</p>';
+    if(d.ph==='match'){if(iA){h+=sel>=0?`<p class="p2-lead small">مين كتب «${escH(d.an[sel])}»؟</p><div class="p2-row">${ws.map(s=>`<button class="p2-gsr" style="--c:${col(d,s)}" data-ga="mt" data-i="${sel*8+s}">${nm(d,s)}</button>`).join('')}</div>`:'<p class="note">اضغط على جواب وبعدها على اللي تتوقعه كتبه</p>';
         h+=`<button class="big red" data-ga="done" ${d.mt.every(x=>x>=0)?'':'disabled'}>اكشف ✓</button>`;}
       else h+='<p class="note">يوزّع الأجوبة…</p>';}
     if(d.ph==='show')h+=p2Next(d,ctx,d.k+1>=d.K,'اللي بعده يسأل ←');
@@ -397,7 +397,9 @@ const P2AUV=[-20,-10,0,5,10,15,20,25,30,40,50,60];
 const P2AUB=[0,5,10,15,20,25,30,40,50,60,80,100,150];
 const p2AuPk=(d,i)=>{let s=(d.st+i)%d.pl.length;for(let j=0;j<d.pl.length&&d.out[s]==='1';j++)s=(s+1)%d.pl.length;return s;};
 const p2AuLeft=d=>{const left=[...P2AUV];d.bx.forEach((v,i)=>{if(i<d.i||(i===d.i&&d.ph==='show')){const k=left.indexOf(v);if(k>=0)left.splice(k,1);}});return left;};
-const p2AuBox=v=>v>=40?'gold':v>=15?'good':v>0?'ok':v===0?'empty':'bad';
+const p2Sg=x=>`<span class="p2-num">${x>0?'+'+x:x}</span>`;
+const p2AuWord=x=>x>0?`ربح ${x}`:x<0?`خسارة ${-x}`:'فاضي';
+const p2AuBox=v=>v>=40?'v-gold':v>=15?'v-good':v>0?'v-ok':v===0?'v-empty':'v-bad';
 GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B9770E"/><rect x="12" y="44" width="46" height="40" rx="4" fill="#7E5109"/><rect x="12" y="44" width="46" height="12" fill="#A04000"/><rect x="31" y="44" width="8" height="40" fill="#F4D03F"/><text x="35" y="77" font-size="20" font-weight="900" text-anchor="middle" fill="#fff">؟</text><g transform="rotate(-35 70 34)"><rect x="56" y="22" width="30" height="14" rx="4" fill="#5D4037"/><rect x="68" y="36" width="6" height="34" rx="3" fill="#8D6E63"/></g><path d="M66 88h26" stroke="#5D4037" stroke-width="6" stroke-linecap="round"/><circle cx="80" cy="14" r="6" fill="#F4D03F"/></svg>`,
   init:n=>({ph:'bid',i:0,B:n<=4?8:10,bx:[],co:Array(n).fill(100),pk:0,rd:1,bids:null,wn:-1,last:'',res:''}),
@@ -412,13 +414,13 @@ GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
   viewer:d=>d.win==null&&d.ph==='bid'?simulViewer(d):null,coverMsg:d=>d.res||'',
   status(d,ctx){const s=d.res?`<small>${d.res}</small><br>`:'';return s+`<small>الصندوق ${d.i+1} من ${d.B} • 👁 ${nm(d,d.pk)} شاف داخله</small><br>`+(d.ph==='bid'?'زايدوا بالسر':'انفتح الصندوق');},
   render(d,ctx){const v=ctx.v;let h='<div class="p2 p2-auc">';
-    h+=`<div class="p2-boxes">${d.bx.map((x,i)=>{const open=i<d.i||i===d.i&&d.ph==='show';return `<i class="${i===d.i?'now':''} ${open?'open '+p2AuBox(x):''}" data-k="bx${i}">${open?(x>0?'+'+x:x):i===d.i?'🎁':''}</i>`;}).join('')}</div>`;
-    const left=p2AuLeft(d);h+=`<div class="p2-left"><small>القيم الباقية بالصناديق</small><span>${left.map(x=>`<b class="${p2AuBox(x)}">${x>0?'+'+x:x}</b>`).join('')}</span></div>`;
+    h+=`<div class="p2-boxes">${d.bx.map((x,i)=>{const open=i<d.i||i===d.i&&d.ph==='show';return `<i class="${i===d.i?'now':''} ${open?'open '+p2AuBox(x):''}" data-k="bx${i}">${open?p2Sg(x):i===d.i?'🎁':''}</i>`;}).join('')}</div>`;
+    const left=p2AuLeft(d);h+=`<div class="p2-left"><small>القيم الباقية بالصناديق</small><span>${left.map(x=>`<b class="${p2AuBox(x)}">${p2Sg(x)}</b>`).join('')}</span></div>`;
     if(d.ph==='bid'){const peek=v!=null&&v>=0&&v===d.pk&&d.bx[d.i]!=null&&d.bx[d.i]>-99;
-      h+=`<div class="p2-bigbox ${peek?'peek '+p2AuBox(d.bx[d.i]):''}"><span>🎁</span>${peek?`<b>داخله: ${d.bx[d.i]>0?'+'+d.bx[d.i]:d.bx[d.i]}</b><small>أنت بس تشوفه 🤫</small>`:`<small>${nm(d,d.pk)} شاف داخله</small>`}</div>`;
+      h+=`<div class="p2-bigbox ${peek?'peek '+p2AuBox(d.bx[d.i]):''}"><span>🎁</span>${peek?`<b>داخله: ${p2Sg(d.bx[d.i])}</b><small>أنت بس تشوفه 🤫</small>`:`<small>${nm(d,d.pk)} شاف داخله</small>`}</div>`;
       if(!ctx.my||v==null||v<0)return h+'<p class="note">ننتظر المزايدات…</p>'+p2Wait(d)+'</div>';
       return h+`<p class="p2-lead small">${nm(d,v)}، معك <b>${d.co[v]}</b> 🪙. كم تزايد؟</p><div class="p2-bids au">${P2AUB.filter(b=>b<=d.co[v]).map(b=>`<button data-ga="bid" data-i="${b}"><b>${b||'ما أبي'}</b></button>`).join('')}${P2AUB.includes(d.co[v])||d.co[v]<=0?'':`<button data-ga="bid" data-i="${d.co[v]}"><b>${d.co[v]}</b><small>كل اللي معي</small></button>`}</div></div>`;}
-    const x=d.bx[d.i];h+=`<div class="p2-bigbox open ${p2AuBox(x)}"><span>📦</span><b>${x>0?'+'+x:x} 🪙</b><small>${d.wn>=0?`راح لـ ${nm(d,d.wn)} بـ ${d.bids[d.wn]}`:'محد زايد عليه'}</small></div>`;
+    const x=d.bx[d.i];h+=`<div class="p2-bigbox open ${p2AuBox(x)}"><span>📦</span><b>${p2Sg(x)} 🪙</b><small>${d.wn>=0?`راح لـ ${nm(d,d.wn)} بـ ${d.bids[d.wn]}`:'محد زايد عليه'}</small></div>`;
     h+=`<ul class="p2-votes">${(d.bids||[]).map((b,s)=>b>=0?`<li><b style="color:${col(d,s)}">${nm(d,s)}</b> زايد ${b}${s===d.wn?' 🏆':''}</li>`:'').join('')}</ul>`;
     return h+p2Next(d,ctx,d.i+1>=d.B,'الصندوق الجاي ←')+'</div>';},
   click(a,i,d,ctx){const v=ctx.v;if(a==='bid'&&d.ph==='bid'&&ctx.my&&Number.isInteger(i)&&i>=0&&i<=d.co[v]){simulPick(d,v,i);return;}
@@ -428,7 +430,7 @@ GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
   resolve(d,picks){const bids=picks.map((p,s)=>Number.isInteger(p)&&p>=0&&p<=d.co[s]?p:-1);const mx=Math.max(...bids);const co=[...d.co];let wn=-1;const x=d.bx[d.i];
     if(mx>0){const top=bids.map((b,s)=>b===mx?s:-1).filter(s=>s>=0);const ord=[...Array(d.pl.length).keys()].map(k=>(d.pk+1+k)%d.pl.length);
       top.sort((a,b)=>co[a]-co[b]||ord.indexOf(a)-ord.indexOf(b));wn=top[0];co[wn]=Math.max(0,co[wn]-mx+x);}
-    return {...d,ph:'show',bids,wn,co,turn:wn>=0?wn:p2Rot(d,d.i),ts:Date.now(),res:wn>=0?`${nm(d,wn)} فاز بالصندوق (${x>0?'+'+x:x})`:'محد زايد'};},
+    return {...d,ph:'show',bids,wn,co,turn:wn>=0?wn:p2Rot(d,d.i),ts:Date.now(),res:wn>=0?`${nm(d,wn)} فاز بالصندوق (${p2AuWord(x)})`:'محد زايد'};},
   host(d){if(d.ph==='show'&&Date.now()-d.ts>10000)return GAMES.p_auction.next(d);return null;},
   // a hard bot counts the values that are left; the one who peeked bids on what it saw
   botPick(d,s,lv){const co=d.co[s];const left=p2AuLeft(d);const ev=left.reduce((a,b)=>a+b,0)/Math.max(1,left.length);const peek=s===d.pk&&d.bx[d.i]>-99?d.bx[d.i]:null;

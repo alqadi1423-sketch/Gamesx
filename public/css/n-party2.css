@@ -1,6 +1,7 @@
 /* ألعاب الجمعات (2): تمثيل صامت، الكلمات الممنوعة، البطاطا الحارة، عشرين سؤال، مين أنا، ربط الكلمات، حقيقتين وكذبة،
    مين الأكثر، قصة متسلسلة، الرسام المزيف، توقع الأغلبية، سؤال وجواب، المزاد. Everything is scoped under .p2 */
 .p2{--paper:#FFF8EC;--paper-ink:#3A2E22;--paper-line:#E9D9BE;width:min(100%,460px);margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.p2 .big{background-color:var(--navy)}
 .p2 .green{background:var(--ok)} .p2 .red{background:var(--red)}
 .p2 .big{margin:8px 0}
 .p2 .wide{width:100%}
@@ -47,7 +48,8 @@
 .p2-cat{display:inline-block;padding:2px 12px;border-radius:99px;background:#F4E2C4;color:#8A5A2B;font-size:13px;font-weight:800}
 .p2-card.f{background:linear-gradient(180deg,#FFF 0,#FFF 58%,#FDECEA 58%)}
 .p2-fb{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:5px}
-.p2-fb li{padding:4px;border-radius:9px;background:#fff;color:var(--bad);font-weight:800;font-size:16px;box-shadow:inset 0 0 0 2px #F5B7B1;text-decoration:line-through;text-decoration-thickness:2px}
+.p2-fb li{padding:5px 4px;border-radius:9px;background:#fff;color:#B03A2E;font-weight:900;font-size:18px;box-shadow:inset 0 0 0 2px #F5B7B1}
+.p2-fb li::before{content:"⛔ ";font-size:13px}
 .p2-card.fake{background:radial-gradient(circle at 50% 0,#4A3B6B,#2B2140 75%);color:#fff;box-shadow:inset 0 0 0 2px rgba(255,216,77,.5),var(--e3)}
 .p2-card.fake b{color:#FFD84D;font-size:28px} .p2-card.fake p{color:#D9CCEA}
 .p2-cardback{margin:6px auto;width:150px;height:110px;border-radius:var(--r-l);display:grid;place-items:center;align-content:center;gap:2px;color:#fff;background:repeating-linear-gradient(45deg,#7D3C98 0 10px,#8E44AD 10px 20px);box-shadow:inset 0 0 0 4px rgba(255,255,255,.35),0 4px 0 rgba(0,0,0,.16)}
@@ -63,8 +65,8 @@
 .p2-guess .field{margin:0;flex:1;min-width:0}
 .p2-guess .btn{flex:none}
 .p2-guess.col{flex-direction:column;align-items:stretch}
-.p2-who{padding:10px 14px;border-radius:var(--r-m);background:var(--c);color:#fff;font-weight:800;font-size:16px;box-shadow:0 3px 0 rgba(0,0,0,.2);transition:transform var(--t1)}
-.p2-who:active{transform:translateY(2px);box-shadow:none}
+.p2-gsr{padding:10px 14px;border-radius:var(--r-m);background:var(--c);color:#fff;font-weight:800;font-size:16px;box-shadow:0 3px 0 rgba(0,0,0,.2);transition:transform var(--t1)}
+.p2-gsr:active{transform:translateY(2px);box-shadow:none}
 .p2-lg{background:var(--c,var(--red))}
 .p2 .p2-buzz{background:#B03A2E}
 .p2 .p2-buzzbig{background:#C0392B;font-size:22px}
@@ -227,8 +229,8 @@ button.p2-st:active{transform:translateY(2px)}
 .p2-an.sel{box-shadow:inset 0 0 0 3px var(--blue)}
 .p2-an.ok{box-shadow:inset 0 0 0 3px var(--ok)} .p2-an.no{box-shadow:inset 0 0 0 3px var(--bad)}
 .p2-ant{flex:1;min-width:0;text-align:start;font:inherit;font-size:17px;font-weight:800;background:none;color:inherit;word-break:break-word}
-.p2-anw{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
-.p2-anw i{font-style:normal;font-size:12px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--c);color:#fff;white-space:nowrap}
+.p2-anw{flex:none;max-width:45%;display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+.p2-anw i{font-style:normal;font-size:12px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--c);color:#fff;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .p2-anw i.x{opacity:.7;text-decoration:line-through} .p2-anw i.q{background:#B9C4D0}
 
 /* الرسام المزيف: an easel with everyone's lines in their colour */
@@ -267,21 +269,23 @@ button.p2-st:active{transform:translateY(2px)}
 .p2-boxes i{width:34px;height:30px;border-radius:7px;background:#A0522D;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:900;color:#fff}
 .p2-boxes i.now{box-shadow:0 0 0 3px var(--gold);font-size:16px}
 .p2-boxes i.open{background:#B9C4D0;color:#2D4763}
-.p2-boxes i.gold{background:#F0B429} .p2-boxes i.good{background:#7DCEA0} .p2-boxes i.ok{background:#D5F0DC} .p2-boxes i.empty{background:#D6DBE1} .p2-boxes i.bad{background:#F1948A}
+.p2-boxes i.v-gold{background:#F0B429} .p2-boxes i.v-good{background:#7DCEA0} .p2-boxes i.v-ok{background:#D5F0DC} .p2-boxes i.v-empty{background:#D6DBE1} .p2-boxes i.v-bad{background:#F1948A}
 .p2-left{text-align:center}
 .p2-left small{display:block;color:var(--mut);font-weight:700}
-.p2-left span{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
-.p2-left b{padding:0 6px;border-radius:6px;font-size:12px;background:var(--surface-2)}
-.p2-left b.bad{color:var(--bad)} .p2-left b.gold{color:#B9770E}
+.p2-left>span{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
+.p2-left b{padding:0 6px;border-radius:6px;font-size:13px;font-weight:800;background:var(--surface-2);color:var(--ink)}
+.p2-left b.v-bad{color:var(--bad)} .p2-left b.v-gold{color:#B9770E}
 .p2-bigbox{display:flex;flex-direction:column;align-items:center;padding:12px;border-radius:var(--r-l);background:linear-gradient(180deg,#A0522D,#7E3E1E);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.25);animation:p2pop .3s var(--spring) both}
-.p2-bigbox span{font-size:52px;line-height:1.1} .p2-bigbox b{font-size:24px} .p2-bigbox small{opacity:.9;font-weight:700}
+.p2-bigbox>span{font-size:52px;line-height:1.1} .p2-bigbox b{font-size:24px} .p2-bigbox small{opacity:.9;font-weight:700}
 .p2-bigbox.peek{box-shadow:0 0 0 3px var(--gold),0 5px 0 rgba(0,0,0,.25)}
-.p2-bigbox.open.gold,.p2-bigbox.open.good{background:linear-gradient(180deg,#27AE60,#1E8449)}
-.p2-bigbox.open.bad{background:linear-gradient(180deg,#E74C3C,#B03A2E)}
-.p2-bigbox.open.empty,.p2-bigbox.open.ok{background:linear-gradient(180deg,#5D6D7E,#34495E)}
+.p2-bigbox.open.v-gold,.p2-bigbox.open.v-good{background:linear-gradient(180deg,#27AE60,#1E8449)}
+.p2-bigbox.open.v-bad{background:linear-gradient(180deg,#E74C3C,#B03A2E)}
+.p2-bigbox.open.v-empty,.p2-bigbox.open.v-ok{background:linear-gradient(180deg,#5D6D7E,#34495E)}
 
 @media (prefers-color-scheme:dark){
   .p2-cat{background:#E9D3AE}
   .p2-q.done{background:#243241}
 }
 .p2 .p2-fskip{align-self:center}
+.p2-st small.nm{width:auto;height:auto;padding:2px 9px;border-radius:99px;background:var(--c);color:#fff;font-size:12px;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p2-num{display:inline-block;direction:ltr;unicode-bidi:isolate}
