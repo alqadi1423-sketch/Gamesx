@@ -20,7 +20,7 @@ html.lite{--e1:0 1px 0 var(--line);--e2:0 2px 0 var(--line);--e3:0 6px 0 rgba(15
 html.lite *,html.lite *::before,html.lite *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
 /* what carries a message still shows for its time, by fading only */
 html.lite .floatrx,html.lite .ytb,html.lite .dmg,html.lite .toast{animation-name:rmfade!important;animation-timing-function:linear!important}
-html.lite .floatrx{animation-duration:2.2s!important}html.lite .ytb{animation-duration:1.7s!important}html.lite .toast{animation-duration:2s!important}html.lite .dmg{animation-duration:1.3s!important;transform:translate(-50%,-20px)}
+html.lite .floatrx{animation-duration:1.8s!important}html.lite .ytb{animation-duration:1.7s!important}html.lite .toast{animation-duration:2s!important}html.lite .dmg{animation-duration:1.3s!important;transform:translate(-50%,-20px)}
 /* waiting spinners keep turning (a plain rotation of a small element) */
 html.lite .status.pend::after,html.lite .scan i{animation-duration:.9s!important;animation-iteration-count:infinite!important}
 /* the turn timer and progress bars keep sliding smoothly */

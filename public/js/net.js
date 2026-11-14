@@ -4,7 +4,7 @@
    publishes its name, chat, and a queue q of moves sealed to the host; the host plays them in order and acks each sender.
    Seats belong to device keys (ids[role] = fp), so a seat, its score and a kick follow the person, not the colour. */
 // 2: teams, and the rebuilt draw and guess, categories, sea battle, bomb, lucky boxes, camel race and higher or lower
-const NETV=2,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=6000,PUB_MS=40,QMAX=6;
+const NETV=3,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=6000,PUB_MS=40,QMAX=6;
 // every phone publishes at least every HB_MS (hb = its clock); a peer whose presence has not changed for HB_DEAD is taken as asleep
 const HB_MS=4000,HB_DEAD=12000,TAKE_NEXT=6000;
 const HOSTK=['h','g','s','d','sc','cfg','ids','pp','vw','bk','ack'];
@@ -114,13 +114,23 @@ function onPeers(ch){
   if(H&&!amHost())followHost(H);
   else if(!H&&!amHost())maybeTakeOver();
   if(S.mode!=='online')return;
-  // names, reactions and chat; a peer speaks only for the seat its key holds
+  // names, avatars, reactions and chat; a peer speaks only for the seat its key holds. A reaction or a sticker is an index into
+  // our own emoji (checked), a line of text is cut to CHMAX and only ever shown escaped
   for(const fp in P){const pr=P[fp].pr,r=roleOfFp(fp),n=typeof pr.n==='string'?pr.n.slice(0,14):'';
-    if(r>=0){if(typeof pr.n==='string')S.names[r]=n;
-      const rx=pr.rx;if(rx&&Number.isInteger(rx.e)&&typeof rx.t==='number'&&rx.t>(S.rxSeen[r]||0)){S.rxSeen[r]=rx.t;if(Date.now()-rx.t<8000)setTimeout(()=>floatRx(r,rx.e),0);}}
-    if(Array.isArray(pr.ch))for(const m of pr.ch.slice(-10)){if(!m||typeof m.i!=='string'||m.i.length>40||typeof m.x!=='string'||m.s===1)continue;const o=S.chat[m.i];
-      if(o){if(o.r===-1&&r>=0)o.r=r;continue;}
-      S.chat[m.i]={i:m.i,r:r>=0?r:-1,n,t:typeof m.t==='number'&&isFinite(m.t)?m.t:Date.now(),x:m.x.slice(0,200)};if(S.chatReady&&S.modal!=='chat'&&!(S.browse||!S.st.g))chatPop(S.chat[m.i]);}}
+    if(r>=0){if(typeof pr.n==='string')S.names[r]=n;S.avs[r]=EMO_AV.includes(pr.av)?pr.av:-1;
+      const rx=pr.rx;if(rx&&typeof rx==='object'&&emoOk(rx.e)&&typeof rx.t==='number'&&isFinite(rx.t)&&rx.t>(S.rxSeen[r]||0)){S.rxSeen[r]=rx.t;if(Math.abs(Date.now()-rx.t)<8000)setTimeout(()=>floatRx(r,rx.e),0);}}
+    if(Array.isArray(pr.ch))for(const m of pr.ch.slice(-CHN)){if(!m||typeof m!=='object'||typeof m.i!=='string'||!/^\w{1,40}$/.test(m.i)||m.s===1)continue;
+      const stk=emoOk(m.k),txt=typeof m.x==='string'&&m.x.trim()!=='';if(stk===txt)continue;
+      const o=S.chat[m.i];if(o){if(o.r===-1&&r>=0&&o.f===fp)o.r=r;continue;}
+      if(S.chatSkip.has(m.i))continue;
+      // the host closed the chat: what is sent meanwhile is never shown, not even when it opens again
+      if(!chatOn()){S.chatSkip.add(m.i);continue;}
+      // one phone gets at most 10 new lines in 10 s here, so a flood cannot bury the chat
+      const now=Date.now(),inT=(S.chatIn[fp]||[]).filter(t=>now-t<10000);if(inT.length>=10){S.chatSkip.add(m.i);S.chatIn[fp]=inT;continue;}inT.push(now);S.chatIn[fp]=inT;
+      const t=typeof m.t==='number'&&isFinite(m.t)&&m.t<=now&&m.t>now-864e5?m.t:now;
+      S.chat[m.i]={i:m.i,r:r>=0?r:-1,n,f:fp,t,...(stk?{k:m.k}:{x:m.x.slice(0,CHMAX)})};
+      if(S.chatReady&&S.modal!=='chat'&&!(S.browse||!S.st.g)&&!hideSet().has(fp))chatPop(S.chat[m.i]);}}
+  {const ks=Object.keys(S.chat);if(ks.length>300){ks.sort((a,b)=>S.chat[a].t-S.chat[b].t);for(const k of ks.slice(0,ks.length-300))delete S.chat[k];}if(S.chatSkip.size>500)S.chatSkip=new Set([...S.chatSkip].slice(-200));}
   recomputeRoles();S.chatReady=true;if(peers.some(p=>!p.sameTab))S.roomEmpty=false;
   if(amHost()){seatPeers();processIntents();
     // a peer that came back (or changed its key) has no view in the last message: publish one for it now
@@ -302,7 +312,7 @@ async function doPublish(){
   // this tab was asleep and the same browser opened the room in a newer tab meanwhile: give way before saying anything
   {const x=otherTab(S.code);if(x&&(x.since||0)>(S.tabSince||0)){tabMark(null);leaveRoom(TAB_MSG);return;}}
   const hb=Math.max(Date.now(),(S.lastHb||0)+1);S.lastHb=hb;
-  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-10),hb};
+  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-CHN),hb};const av=myAv();if(av>=0)o.av=av;
   if(S.pubRx){o.rx=S.pubRx;S.pubRx=null;}
   if(amHost()){const G=GAMES[S.st.g],d=S.st.d,me=SEAL.fp,small=(nr.max||3800)<8000;
     const pubD=d?viewOf(G,d,-1):null;const pp={},pubX={};
