@@ -277,7 +277,7 @@ function p2GtMake(kd,def){return {name:def.name,cat:'party',lbc:def.lbc,noTimer:
     if(d.ph!=='act')return;
     if(a==='ok'&&iAc&&p2GtGuessers(d).includes(i)){act(p2GtDone(d,i));return;}
     if(a==='skip'&&iAc){act(p2GtDone(d,-1));return;}
-    if(a==='buzz'&&p2GtF(d)&&(ctx.local||p2GtJudges(d).includes(v)||(iAc&&!p2GtJudges(d).length))){act({...gtDone(d,-2),last:'🚨 كلمة ممنوعة! نقصت نقطة'});return;}
+    if(a==='buzz'&&p2GtF(d)&&(ctx.local||p2GtJudges(d).includes(v)||(iAc&&!p2GtJudges(d).length))){act({...p2GtDone(d,-2),last:'🚨 كلمة ممنوعة! نقصت نقطة'});return;}
     // a typed guess: on one phone it is checked here, online the host checks it (the word is not on this phone)
     if((a==='send'||a==='lg')&&d.w>=0||a==='send'&&S.mode==='online'){const s=a==='lg'?i:v;if(s==null||s<0||!p2GtGuessers(d).includes(s))return;if(a==='lg'&&S.mode==='online'&&s!==v)return;
       const txt=p2T(S.draft.p2g,24);if(!txt)return;S.draft.p2g='';
@@ -383,7 +383,7 @@ function p2Q20Bot(d,s,lv){const cands=p2Q20Cands(d);const kn=p2Q20Known(d);
   if(lv===2&&cands.length<=2)return guess(p2Pick(cands));
   const best=lv===2&&Math.random()<.3?p2Pick(qs):p2TqBest(cands,qs,val);
   if(best==null)return guess(p2Pick(cands));return p2Q20Act(d,s,isC?'c':'a',best);}
-function p2Q20Act(d,s,k,v){if(k==='g'){if(v===d.it)return p2Q20Show({...d,ql:[...d.ql,[s,'g',v,1]],qn:d.qn+1},s);return {...q20After(d,[s,'g',v,0]),last:`${nm(d,s)} خمّن غلط`};}
+function p2Q20Act(d,s,k,v){if(k==='g'){if(v===d.it)return p2Q20Show({...d,ql:[...d.ql,[s,'g',v,1]],qn:d.qn+1},s);return {...p2Q20After(d,[s,'g',v,0]),last:`${nm(d,s)} خمّن غلط`};}
   return {...d,ph:'ans',cq:[s,k,v],turn:d.h,last:''};}
 function p2Q20Ans(d,k,v){const I=p2TqIt(d.it);if(!I)return 3;if(k==='c')return (d.it>>4)===v?1:0;if(k==='a')return (v>>4)===(d.it>>4)?I.v[v&15]:0;return 3;}
 GAMES.p_20q={name:'عشرين سؤال',cat:'party',lbc:'#16A085',
@@ -398,7 +398,7 @@ GAMES.p_20q={name:'عشرين سؤال',cat:'party',lbc:'#16A085',
   coverMsg:()=>'دورك تختار الشي السري',
   onSkip(nd){if(nd.win!=null)return nd;if(nd.out[nd.h]==='1')return p2Q20Next({...nd,last:`${nm(nd,nd.h)} طلع`});
     if(nd.ph==='ask'&&nd.out[nd.ak]==='1'){const ak=p2Q20Asker(nd,nd.ak);return {...nd,ak,turn:ak};}return nd;},
-  onTimeout(d){if(d.ph==='pick')return {...d,it:p2Pick(d.ch),ph:'ask',ak:p2Q20Asker(d,d.h),turn:p2Q20Asker(d,d.h)};if(d.ph==='ask')return {...q20After(d,[d.ak,'t','(ما سأل)',3])};
+  onTimeout(d){if(d.ph==='pick')return {...d,it:p2Pick(d.ch),ph:'ask',ak:p2Q20Asker(d,d.h),turn:p2Q20Asker(d,d.h)};if(d.ph==='ask')return {...p2Q20After(d,[d.ak,'t','(ما سأل)',3])};
     if(d.ph==='ans'){const [s,k,v]=d.cq;return p2Q20After(d,[s,k,v,3]);}if(d.ph==='show')return p2Q20Next(d);return d;},
   status(d,ctx){const hd=`<small>${nm(d,d.h)} ماسك الشي • سؤال ${Math.min(P2Q20,d.qn+(d.ph==='ans'?1:0))} من ${P2Q20}${d.last?' • '+d.last:''}</small><br>`;const me=s=>!ctx.local&&ctx.v===s;
     if(d.ph==='pick')return `${me(d.h)?'<b class="yt">أنت</b>':nameTag(d,d.h)} يختار شي سري`;
@@ -460,7 +460,7 @@ function p2WhoNextAsk(d,from){return {...d,ph:'ask',ask:nextSeat(d,from),turn:ne
 function p2WhoCands(d,s){const C=P2Q[d.c];const seen=new Set(d.cd.filter((x,t)=>t!==s&&x>=0));const wr=new Set(d.wr.filter(e=>e[0]===s).map(e=>e[1]));
   const sc=C.items.map((I,i)=>{if(seen.has(i)||wr.has(i))return [i,-1];let bad=0;for(const [a,q,ans] of d.ql)if(a===s&&!p2TqFit(I.v[q],ans))bad++;return [i,bad];}).filter(e=>e[1]>=0);
   const mn=Math.min(...sc.map(e=>e[1]));return sc.filter(e=>e[1]===mn).map(e=>e[0]);}
-function p2WhoGuess(d,s,i){if(d.cd[s]===i)return {...d,ph:'end',win:s,gs:[s,i],last:`${nm(d,s)} عرف نفسه!`};return {...whoNextAsk({...d,wr:[...d.wr,[s,i]].slice(-40)},s),last:`${nm(d,s)} خمّن ${P2Q[d.c].items[i].w} وطلع غلط`};}
+function p2WhoGuess(d,s,i){if(d.cd[s]===i)return {...d,ph:'end',win:s,gs:[s,i],last:`${nm(d,s)} عرف نفسه!`};return {...p2WhoNextAsk({...d,wr:[...d.wr,[s,i]].slice(-40)},s),last:`${nm(d,s)} خمّن ${P2Q[d.c].items[i].w} وطلع غلط`};}
 GAMES.p_who={name:'مين أنا',cat:'party',lbc:'#2E86C1',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3498DB"/><circle cx="50" cy="62" r="24" fill="#FAD7A0"/><path d="M26 92c2-10 12-14 24-14s22 4 24 14z" fill="#2D4763"/><rect x="30" y="14" width="40" height="30" rx="5" fill="#fff" stroke="#2D4763" stroke-width="3"/><text x="50" y="38" font-size="22" font-weight="900" text-anchor="middle" fill="#E74C3C">؟</text><path d="M28 42h44" stroke="#2D4763" stroke-width="3"/><circle cx="42" cy="62" r="3" fill="#2D4763"/><circle cx="58" cy="62" r="3" fill="#2D4763"/><path d="M44 72q6 4 12 0" stroke="#2D4763" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
   init:n=>({ph:'ask',c:0,cd:Array(n).fill(-1),ql:[],wr:[],ask:0,cq:-1,gs:null,last:''}),
@@ -473,7 +473,7 @@ GAMES.p_who={name:'مين أنا',cat:'party',lbc:'#2E86C1',teams:'none',
   winText:d=>typeof d.win==='number'?`${nm(d,d.win)} عرف مين هو! 🎯`:null,
   winExtra:d=>d.pl.map((_,s)=>{const I=P2Q[d.c].items[d.cd[s]];return `${nm(d,s)}: ${I?I.em+' '+I.w:''}`;}).join('، '),
   onSkip(nd){if(nd.win!=null)return nd;if(nd.ph==='ans'&&(nd.out[nd.ask]==='1'||nd.out[nd.turn]==='1'))return p2WhoNextAsk(nd,nd.ask);if(nd.ph==='ask'&&nd.out[nd.ask]==='1')return p2WhoNextAsk(nd,nd.ask);return nd;},
-  onTimeout(d){if(d.ph==='ask')return {...whoNextAsk(d,d.ask),last:`${nm(d,d.ask)} ما لحق يسأل`};return {...whoNextAsk({...d,ql:[...d.ql,[d.ask,d.cq,3]].slice(-60)},d.ask)};},
+  onTimeout(d){if(d.ph==='ask')return {...p2WhoNextAsk(d,d.ask),last:`${nm(d,d.ask)} ما لحق يسأل`};return {...p2WhoNextAsk({...d,ql:[...d.ql,[d.ask,d.cq,3]].slice(-60)},d.ask)};},
   status(d,ctx){const me=s=>!ctx.local&&ctx.v===s;const top=`<small>كلكم من نوع: ${P2Q[d.c].e} ${P2Q[d.c].c}${d.last?' • '+d.last:''}</small><br>`;
     if(d.ph==='ask')return top+(me(d.ask)?'<b class="yt">دورك: اسأل عن بطاقتك أو خمّنها</b>':`${nameTag(d,d.ask)} يسأل عن بطاقته`);
     return top+(me(d.turn)?`<b class="yt">جاوب ${nm(d,d.ask)}</b>`:`${nameTag(d,d.turn)} يجاوب ${nameTag(d,d.ask)}`);},

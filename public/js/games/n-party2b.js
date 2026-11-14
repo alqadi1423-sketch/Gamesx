@@ -395,7 +395,7 @@ HELP.p_qa='بالدور واحد يسأل المجموعة: يختار سؤال 
 const P2AUV=[-20,-10,0,5,10,15,20,25,30,40,50,60];
 const P2AUB=[0,5,10,15,20,25,30,40,50,60,80,100,150];
 const p2AuPk=(d,i)=>{let s=(d.st+i)%d.pl.length;for(let j=0;j<d.pl.length&&d.out[s]==='1';j++)s=(s+1)%d.pl.length;return s;};
-const p2AuLeft=d=>{const left=[...AUV];d.bx.forEach((v,i)=>{if(i<d.i||(i===d.i&&d.ph==='show')){const k=left.indexOf(v);if(k>=0)left.splice(k,1);}});return left;};
+const p2AuLeft=d=>{const left=[...P2AUV];d.bx.forEach((v,i)=>{if(i<d.i||(i===d.i&&d.ph==='show')){const k=left.indexOf(v);if(k>=0)left.splice(k,1);}});return left;};
 const p2AuBox=v=>v>=40?'gold':v>=15?'good':v>0?'ok':v===0?'empty':'bad';
 GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B9770E"/><rect x="12" y="44" width="46" height="40" rx="4" fill="#7E5109"/><rect x="12" y="44" width="46" height="12" fill="#A04000"/><rect x="31" y="44" width="8" height="40" fill="#F4D03F"/><text x="35" y="77" font-size="20" font-weight="900" text-anchor="middle" fill="#fff">؟</text><g transform="rotate(-35 70 34)"><rect x="56" y="22" width="30" height="14" rx="4" fill="#5D4037"/><rect x="68" y="36" width="6" height="34" rx="3" fill="#8D6E63"/></g><path d="M66 88h26" stroke="#5D4037" stroke-width="6" stroke-linecap="round"/><circle cx="80" cy="14" r="6" fill="#F4D03F"/></svg>`,
@@ -434,7 +434,7 @@ GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
     let want;if(lv===1)want=Math.random()<.3?0:rnd(Math.max(1,Math.min(co,40)));
     else if(peek!=null)want=peek>0?Math.round(peek*(lv===3?.7:.55)):0;
     else want=Math.max(0,Math.round(ev*(lv===3?.6:.5)+(rnd(9)-4)));
-    want=Math.min(co,want);const b=[...AUB,co].filter(x=>x<=co&&x<=want).sort((a,b)=>b-a)[0];return b==null?0:b;},
+    want=Math.min(co,want);const b=[...P2AUB,co].filter(x=>x<=co&&x<=want).sort((a,b)=>b-a)[0];return b==null?0:b;},
   bot(d,s){if(d.ph==='show'&&d.turn===s)return GAMES.p_auction.next(d);return d;},
   botDelay:(d,s,lv)=>d.ph==='show'?4500:BOTMS[lv]+rnd(2500)};
 HELP.p_auction='كل واحد يبدأ بـ 100 عملة 🪙. فيه صناديق سرية تنباع واحد ورا الثاني، وداخل كل صندوق قيمة من قائمة معروفة للكل (من −20 إلى +60، والقيم اللي باقية تطلع فوق). قبل كل صندوق واحد بالدور يشوف داخله بالسر. الكل يزايد بالسر بنفس الوقت: أعلى مزايدة تدفع مزايدتها وتاخذ الصندوق بقيمته (ممكن تخسر لو طلع فاضي أو بالسالب). لو تعادلت المزايدات ياخذه اللي فلوسه أقل. بعد آخر صندوق، أكثر واحد عنده فلوس يفوز. راقب مين شاف الصندوق وكم يزايد! مع الفرق: فلوس الفريق تنجمع.';
