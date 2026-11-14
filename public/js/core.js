@@ -604,6 +604,13 @@ const ICO_PPL='<svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true
 function gridWarm(){app.dataset.gv='0';const ric=window.requestIdleCallback||(f=>setTimeout(f,150));
   const step=()=>{if(app.dataset.s!=='grid')return;const n=app.querySelectorAll('.gsec').length,v=+app.dataset.gv||0;if(v>=Math.min(n,14))return;app.dataset.gv=String(v+1);ric(step,{timeout:2000});};
   ric(step,{timeout:2000});}
+// games each way of playing leaves out (owner's review of every game): on one phone passed around, games whose fun is many secret
+// picks or racing on one screen; against bots, games whose fun is people (drawing, acting, talking) or pure luck
+const NOLOCAL=new Set(["arena", "caps", "close", "g_cycles", "geo", "hide", "islam", "k_ers", "k_snap", "k_soli", "k_speed", "lowu", "mafia", "major", "math", "odd", "p_2t1l", "p_auction", "p_major", "p_most", "p_who", "prov", "r_dhow", "rps", "sci", "scr", "seq", "stroop", "tf", "trivia", "two3", "u_bin", "u_cage", "u_futo", "u_hito", "u_kakuro", "u_light", "u_link", "u_maze", "u_nono", "u_slide", "u_slither", "u_star", "u_words", "w_ant", "w_cross", "w_miss", "w_plur", "w_syn", "war", "z_animal", "z_body", "z_emoji", "z_flags", "z_hist", "z_invent", "z_kora", "z_logic", "z_lugha", "z_riddle", "z_saudi", "z_space", "z_sport"]),NOBOT=new Set(["bara", "d_beetle", "d_bunco", "d_ceelo", "d_chi", "d_golf", "mafia", "major", "p_2t1l", "p_fake", "p_forbid", "p_major", "p_mime", "p_most", "p_potato", "p_qa", "p_story", "snakes", "tele"]);
+function modeKey(){if(S.mode!=='local')return 'net';const b=Object.keys(S.bots||{}).filter(r=>+r<S.localN).length,h=S.localN-b;return (h>=2?'L':'')+(b?'B':'');}
+// automated test runs (navigator.webdriver) keep every game in every way of playing so each one stays covered, unless they ask (__modesOn)
+function modeOk(k){if(navigator.webdriver&&!window.__modesOn)return true;const m=modeKey();return !(m.includes('L')&&NOLOCAL.has(k))&&!(m.includes('B')&&NOBOT.has(k));}
+const modeGames=()=>Object.keys(GAMES).filter(modeOk);
 // a tile is few nodes (its star and the players badge are drawn by CSS): 200 of them stay light
 function tileHTML(k,fav,n){const G=GAMES[k],dim=!fitN(k,n);
   const b=NEWG.includes(k)?'<i class="newb">جديد</i>':UPG.includes(k)?'<i class="newb upg">مطوّرة</i>':'';
@@ -611,8 +618,8 @@ function tileHTML(k,fav,n){const G=GAMES[k],dim=!fitN(k,n);
 // the sections of tiles; kept between renders (a heartbeat online, a typed letter elsewhere) while nothing in them changed.
 // Each section is skipped by the browser while it is off screen (style.css .gsec content-visibility)
 function gridBody(q,cat,n){
-  const fv=favGames(),key=[q,cat,n,fv.join(),Object.keys(GAMES).length].join('|');if(S.gridC&&S.gridC.k===key)return S.gridC.h;
-  const all=Object.keys(GAMES),fav=new Set(fv),up=k=>NEWG.includes(k)||UPG.includes(k)?1:0;
+  const fv=favGames().filter(modeOk),key=[q,cat,n,fv.join(),Object.keys(GAMES).length,modeKey()].join('|');if(S.gridC&&S.gridC.k===key)return S.gridC.h;
+  const all=modeGames(),fav=new Set(fv),up=k=>NEWG.includes(k)||UPG.includes(k)?1:0;
   const sec=(t,ks)=>`<section class="gsec" style="contain-intrinsic-size:auto ${Math.ceil(ks.length/3)*172}px"><h2 class="cat">${t} <small>${ks.length}</small></h2><div class="grid">${ks.map(k=>tileHTML(k,fav.has(k),n)).join('')}</div></section>`;
   let h;
   if(q){const ks=all.filter(k=>gMatch(k,q));const st=k=>normQ(GAMES[k].name).startsWith(q)?0:1;ks.sort((a,b)=>st(a)-st(b));
@@ -627,8 +634,8 @@ function renderGrid(){
     if(live)mid+=liveCard(S.st.g,'resumegame','اللعبة الحالية','ارجع لها');
     mid+=players().length<2?(S.roomEmpty?'':'<p class="note">أرسل الرمز لأصحابك</p>'):canPick()?'':'<p class="note">صاحب الغرفة 👑 يختار اللعبة</p>';
   }
-  const q=normQ(S.draft.q||''),cat=!q&&CATN[S.gcat]?S.gcat:'',n=hereN(),all=Object.keys(GAMES);
-  const mine=S.mode==='local'||canPick(),rec=!q&&!cat&&mine?recentGames():[],fav=!q&&!cat&&mine?favGames():[];
+  const q=normQ(S.draft.q||''),cat=!q&&CATN[S.gcat]?S.gcat:'',n=hereN(),all=modeGames();
+  const mine=S.mode==='local'||canPick(),rec=!q&&!cat&&mine?recentGames().filter(modeOk):[],fav=!q&&!cat&&mine?favGames().filter(modeOk):[];
   const cnt={};for(const k of all){const c=catOf(k);cnt[c]=(cnt[c]||0)+1;}
 
   OUT=`${topBar('اختر لعبة',S.mode==='online'?'leave':'home',S.mode==='local'?'<button class="ib" data-a="m-settings" aria-label="الإعدادات">⚙️</button>':'')}${roomBar(true)}${mid}${standings()}
@@ -859,16 +866,17 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
     case 'gcat':S.gcat=t.dataset.v||'';if(S.draft.q)S.draft.q='';render();{const m=app.querySelector('.gsent');if(m&&scrollY>m.offsetTop)window.scrollTo(0,m.offsetTop);}break;
     case 'qclear':S.draft.q='';render();{const el=app.querySelector('[data-draft="q"]');if(el)el.focus({preventScroll:true});}break;
     case 'fav':{const g=t.dataset.g;if(!GAMES[g])break;toggleFav(g);render();break;}
-    case 'rand':{const n=hereN(),q=normQ(S.draft.q||''),cat=!q&&CATN[S.gcat]?S.gcat:'';let ks=Object.keys(GAMES).filter(k=>fitN(k,n)&&gMatch(k,q)&&(!cat||catOf(k)===cat));
+    case 'rand':{const n=hereN(),q=normQ(S.draft.q||''),cat=!q&&CATN[S.gcat]?S.gcat:'';let ks=modeGames().filter(k=>fitN(k,n)&&gMatch(k,q)&&(!cat||catOf(k)===cat));
       if(!ks.length)ks=Object.keys(GAMES).filter(k=>fitN(k,n));if(!ks.length)break;const g=ks[rnd(ks.length)];toast('🎲 '+GAMES[g].name);shellAct({dataset:{a:'pick',g}});break;}
     case 'quick':{const g=t.dataset.v;if(!GAMES[g])break;S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0,...localTeams()}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;
-      if(keepHuman()){render();break;}setGame(g);if(!S.st.g)render();break;}
+      if(keepHuman()){render();break;}if(!modeOk(g)){render();break;}setGame(g);if(!S.st.g)render();break;}
     case 'next':
     case 'rpick':
     case 'pick':{const g=t.dataset.g||t.dataset.v;if(!GAMES[g])break;
       if(S.mode==='online'&&!canPick()){if(S.st.g===g&&S.st.d){S.browse=false;render();}else toast('صاحب الغرفة 👑 هو اللي يختار اللعبة');return;}
       if(S.st.g===g&&S.st.d&&S.st.d.win==null){S.browse=false;render();return;}
       if(S.mode==='local'&&keepHuman()){render();return;}
+      if(!modeOk(g)){toast(NOBOT.has(g)&&modeKey().includes('B')?'هذي اللعبة حلوة مع ناس، مو ضد البوت':'هذي اللعبة أحلى أونلاين، كل واحد بجواله');return;}
       setGame(g);break;}
     case 'again':if(matchOver()&&!isHost())return;newRound();break;
     case 'reveal':S.seen=i;S.tgt=null;render();break;
