@@ -184,3 +184,435 @@ GAMES.c_shakba.bot=(d,s,lv)=>{if(d.ph==='sum')return skNext(d);const H=cardsOf(d
       if(lv===1)v+=Math.random()*6;if(v>bv){bv=v;best=[c,o];}}}
   return skPlay(d,best[0],best[1]);};
 GAMES.c_shakba.botDelay=(d,s,lv)=>d.ph==='sum'?7000:900+rnd(700);
+
+/* ---------- shedding games: the seats with their card counts, the hand ---------- */
+function shSeats(d,o){return `<div class="sh-seats">${d.pl.map((_,s)=>`<span class="sh-seat ${d.turn===s&&d.win==null&&d.ph!=='sum'?'on':''} ${d.out[s]==='1'||(o.done&&o.done(s))?'done':''}" style="--c:${col(d,s)}"><i>${o.cnt?o.cnt(s):cardsOf(d.hands[s]).length}</i>${nm(d,s)}${o.x?o.x(s):''}</span>`).join('')}</div>`;}
+// a hand of buttons: playable cards rise, a selection is raised further
+function shHand(d,v,L,can,sel,big){const hc=cardsOf(d.hands[v]||'');const ids=handIds(hc,'sh'+v+'-');
+  return `<div class="bhand c2hand ${hc.length>13||big?'big':''}">${hc.map((c,i)=>can&&L.includes(c)?`<button class="bcard ${sel&&sel.includes(c)?'sel':''}" id="${ids[i]}" data-ga="card" data-i="${i}">${c2Card(c)}</button>`:`<button class="bcard ${can?'dim':''}" id="${ids[i]}" disabled>${c2Card(c)}</button>`).join('')}</div>`;}
+const shWho=(d,ctx)=>!ctx.local&&d.turn===ctx.v?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
+const shKey=(d,t)=>[t,d.gid,d.turn,(d.hands[d.turn]||'').length,(d.dk||'').length,(d.disc||d.pile||'').length].join(':');
+const shSel=(d,t)=>Array.isArray(S.sel)&&S.sel[0]===shKey(d,t)?S.sel.slice(1).filter(c=>cardsOf(d.hands[d.turn]).includes(c)):[];
+function shToggle(d,t,c,ok){let s=shSel(d,t);s=s.includes(c)?s.filter(x=>x!==c):ok(s,c)?[...s,c]:[c];S.sel=[shKey(d,t),...s];render();}
+function shDeal(d,k){const n=d.pl.length;let dk=shuffle(c2Deck()).join('');const hands=Array(n).fill('');
+  for(let j=0;j<k;j++)for(let q=1;q<=n;q++){const s=(d.dl+q)%n;if(d.out[s]==='1')continue;hands[s]+=dk.slice(0,2);dk=dk.slice(2);}
+  return {...d,hands:hands.map(h=>c2Sort(h)),dk};}
+
+/* =================================================================
+   الثمانيات (crazy eights): 5 cards each (7 with two players), one turned up. Play a card of the suit or rank on top; an 8
+   goes on anything and names the suit. You may draw from the stock instead (one at a time); with the stock empty and no
+   card to play you pass. The first out wins the hand and scores what the others hold: 8 = 50, picture = 10, ace = 1,
+   others their number. A blocked hand goes to the lowest hand. First to 100 wins.
+   ================================================================= */
+const e8Pen=c=>c[0]==='8'?50:'TJQK'.includes(c[0])?10:c[0]==='A'?1:+c[0];
+function e8Deal(d){const n=d.pl.length,al=aliveSeats(d).length;let x=shDeal(d,al===2?7:5),dk=x.dk;
+  let top=dk.slice(0,2);dk=dk.slice(2);while(top[0]==='8'){const at=2*rnd(dk.length/2);dk=dk.slice(0,at)+top+dk.slice(at);top=dk.slice(0,2);dk=dk.slice(2);}
+  return {...x,dk,disc:top,su:top[1],ph:'play',ps:0,drew:0,sum:null,lp:-1,turn:nextSeat(x,x.dl)};}
+const e8Ok=(d,c)=>c[0]==='8'||c[1]===d.su||c[0]===d.disc.slice(-2)[0];
+const e8Legal=(d,s)=>cardsOf(d.hands[s]).filter(c=>e8Ok(d,c));
+function e8Play(d,c,su){const s=d.turn,hands=[...d.hands];hands[s]=c2Rm(hands[s],c);
+  const nd={...d,hands,disc:d.disc+c,su:c[0]==='8'?su:c[1],ps:0,drew:0,lp:s,last:`${nameTag(d,s)} نزّل ${c[0]==='8'?'ثمانية وطلب '+C2SN[su]:c2Mini(c).replace(/<[^>]+>/g,'')+C2SN[c[1]]}`};
+  if(!hands[s])return e8End(nd,s);return {...nd,turn:nextSeat(nd,s)};}
+function e8Draw(d){const s=d.turn,hands=[...d.hands];hands[s]=c2Sort(hands[s]+d.dk.slice(0,2));return {...d,hands,dk:d.dk.slice(2),drew:d.drew+1,last:`${nameTag(d,s)} سحب`};}
+function e8Pass(d){const s=d.turn,ps=d.ps+1,nd={...d,ps,drew:0,last:`${nameTag(d,s)} مرّر`};
+  if(ps>=aliveSeats(d).length){const al=aliveSeats(d),v=al.map(x=>cardsOf(d.hands[x]).reduce((a,c)=>a+e8Pen(c),0)),mn=Math.min(...v);return e8End(nd,al[v.indexOf(mn)],true);}
+  return {...nd,turn:nextSeat(nd,s)};}
+function e8End(d,w,blocked){const pen=d.pl.map((_,s)=>s===w||d.out[s]==='1'?0:cardsOf(d.hands[s]).reduce((a,c)=>a+e8Pen(c),0));const got=pen.reduce((a,x)=>a+x,0);
+  const sc=[...d.sc];sc[w]+=got;const nd={...d,sc,ph:'sum',sum:{w,pen,got,blocked:!!blocked},turn:w,last:blocked?`انقفلت اللعبة، ${nameTag(d,w)} أقل ورق`:`${nameTag(d,w)} خلّص ورقه`};
+  if(sc[w]>=100)return {...nd,win:w};return nd;}
+const e8Next=d=>({...e8Deal({...d,dl:nextSeat(d,d.dl)}),last:''});
+const e8Key=d=>shKey(d,'e8');
+GAMES.c_eights={name:'الثمانيات',cat:'cards',lbc:'#2E7D9A',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E7D9A"/><circle cx="50" cy="50" r="40" fill="#3792B3"/><g transform="rotate(-10 40 52)"><rect x="24" y="26" width="34" height="50" rx="5" fill="#fff"/><text x="41" y="60" font-size="26" font-weight="900" text-anchor="middle" fill="#D43C33">8</text></g>${['s','h','d','c'].map((s,i)=>`<circle cx="${70+(i%2)*14}" cy="${34+Math.floor(i/2)*14}" r="7" fill="#fff"/><text x="${70+(i%2)*14}" y="${38.5+Math.floor(i/2)*14}" font-size="10" text-anchor="middle" fill="${'hd'.includes(s)?'#D43C33':'#2D4763'}">${C2SN[s]}</text>`).join('')}<rect x="60" y="66" width="34" height="14" rx="7" fill="#F0B429"/><text x="77" y="77" font-size="10" font-weight="900" text-anchor="middle" fill="#245F75">100</text></svg>`,
+  init:n=>({dl:n-1,hands:Array(n).fill(''),dk:'',disc:'',su:'s',ps:0,drew:0,lp:-1,sc:Array(n).fill(0),ph:'play',last:''}),
+  start:(d,base)=>e8Deal(d),
+  mask:shMask,
+  redeal:d=>d.win!=null||d.ph==='sum'?d:{...e8Deal(d),last:'انعادت الجولة من جديد'},
+  viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.sc.map(x=>x),
+  winText:d=>d.win!=null?`فاز ${nm(d,d.win)} بـ${d.sc[d.win]} نقطة`:null,
+  onSkip(nd,d){if(nd.win!=null)return nd;return nd.out[d.turn]==='1'?{...nd,drew:0}:nd;},
+  onTimeout(d){if(d.ph==='sum')return e8Next(d);const L=e8Legal(d,d.turn);if(L.length){const c=L[0];return e8Play(d,c,c[1]);}return d.dk.length?{...e8Draw(d),turn:nextSeat(d,d.turn)}:e8Pass(d);},
+  status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';return s+shWho(d,ctx)+`: نزّل ${C2SN[d.su]} أو ${d.disc.slice(-2)[0]==='T'?'10':d.disc.slice(-2)[0]} أو ثمانية`;},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph==='play';const top=d.disc.slice(-2);
+    let h=`<div class="c2">${shSeats(d,{x:s=>` <em>${d.sc[s]}</em>`})}<div class="sh-tab"><${my&&d.dk.length?'button data-ga="draw"':'div'} class="sh-stk">${cardHTML('??',true)}<small>${d.dk.length/2}</small></${my&&d.dk.length?'button':'div'}>
+      <div class="sh-pile"><span class="sh-top" data-k="e${d.disc.length}">${c2Card(top,true)}</span></div><span class="sh-suit">الطلب <em class="${'hd'.includes(d.su)?'rs':''}">${C2SN[d.su]}</em></span></div>`;
+    if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${nameTag(d,r.w)} ياخذ ${r.got} نقطة${r.blocked?' (انقفلت)':''}</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${s===r.w?'🏆':r.pen[s]}</em><b>${d.sc[s]}</b></div>`).join('')}
+      ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
+    const pend=my&&Array.isArray(S.sel)&&S.sel[0]===e8Key(d)?S.sel[1]:null;
+    if(pend)h+=`<p class="lbl c2lb">اختر النوع اللي تطلبه</p>`+c2Btns([...'shdc'.split('').map((s,i)=>[i,C2SN[s],'bsuit '+('hd'.includes(s)?'rs':'')]),[9,'رجوع','']],'suit');
+    else if(my){const L=e8Legal(d,v);h+=`<div class="row bopts">${d.dk.length?'<button class="btn blue" data-ga="draw">اسحب ورقة</button>':L.length?'':'<button class="btn navy" data-ga="pass">مرّر</button>'}</div>`;}
+    if(v>=0&&d.hands[v]!=null)h+=shHand(d,v,my?e8Legal(d,v):[],my&&!pend,pend?[pend]:null);return h+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(e8Next(d));return;}if(d.ph!=='play')return;const s=d.turn;
+    if(a==='draw'){if(!d.dk.length)return;S.sel=[];act(e8Draw(d));return;}
+    if(a==='pass'){if(d.dk.length||e8Legal(d,s).length)return;act(e8Pass(d));return;}
+    if(a==='card'){const c=cardsOf(d.hands[s])[i];if(!c||!e8Ok(d,c))return;if(c[0]==='8'){S.sel=[e8Key(d),c];render();return;}act(e8Play(d,c));return;}
+    if(a==='suit'){const c=Array.isArray(S.sel)&&S.sel[0]===e8Key(d)?S.sel[1]:null;S.sel=[];if(i===9||!c||!cardsOf(d.hands[s]).includes(c)||!'shdc'[i]){render();return;}act(e8Play(d,c,'shdc'[i]));}}};
+HELP.c_eights='كل لاعب ياخذ 5 أوراق (7 لو كنتوا اثنين)، وتنقلب ورقة في الوسط. في دورك نزّل ورقة من نفس نوع الورقة اللي فوق أو نفس رقمها. الثمانية تنزل على أي شي، واللي ينزلها يختار النوع اللي بعدها. تقدر تسحب من الكومة ورقة ورقة بدل ما تنزل، ولو خلصت الكومة وما عندك ورقة تنفع تمرّر. أول من يخلص ورقه ياخذ نقاط اللي باقي عند الباقين: الثمانية 50، الصور 10، الإكة 1، والباقي برقمها. ولو انقفلت اللعبة (الكل مرّر) ياخذها صاحب أقل ورق. أول من يوصل 100 يفوز.';
+// the bot: sheds the costly cards first, keeps its eights for when it is stuck (or someone is about to go out), and names its longest suit
+GAMES.c_eights.bot=(d,s,lv)=>{if(d.ph==='sum')return e8Next(d);const H=cardsOf(d.hands[s]),L=e8Legal(d,s);
+  if(!L.length)return d.dk.length?e8Draw(d):e8Pass(d);
+  if(lv===1&&Math.random()<.4){const c=L[rnd(L.length)];return e8Play(d,c,c[0]==='8'?'shdc'[rnd(4)]:null);}
+  const nx=nextSeat(d,s),danger=cardsOf(d.hands[nx]).length<=2;const nonE=L.filter(c=>c[0]!=='8');
+  const cnt=x=>H.filter(c=>c[1]===x&&c[0]!=='8').length;
+  const pick=(nonE.length&&!(danger&&lv===3&&L.some(c=>c[0]==='8')&&!nonE.some(c=>c[1]!==d.su)))?nonE.slice().sort((a,b)=>e8Pen(b)+cnt(b[1])*2-(e8Pen(a)+cnt(a[1])*2))[0]:L.find(c=>c[0]==='8')||L[0];
+  if(pick[0]==='8'){const rest=H.filter(c=>c!==pick);const su='shdc'.split('').sort((a,b)=>rest.filter(c=>c[1]===b).length-rest.filter(c=>c[1]===a).length)[0];return e8Play(d,pick,su);}
+  return e8Play(d,pick);};
+GAMES.c_eights.botDelay=(d,s,lv)=>d.ph==='sum'?6000:800+rnd(600);
+
+/* =================================================================
+   الكذاب (cheat / I doubt it): the whole pack is dealt. In turn each player puts 1 to 4 cards face down and says they are
+   of the rank in order (ace, 2, 3 … king, then ace again). The next player either calls «كذاب!» or plays on (believing).
+   A call turns the cards up: a lie sends the whole pile to the liar, the truth sends it to the caller. A player who goes out
+   wins once the next player believes him (or calls wrongly).
+   ================================================================= */
+const CH_R='A23456789TJQK',chRn=r=>({A:'إكة',T:'عشرة',J:'ولد',Q:'بنت',K:'شايب'})[r]||r;
+function chDeal(d){const n=d.pl.length;const dk=shuffle(c2Deck());const hands=Array(n).fill('');let j=0;for(const c of dk){let s=(d.dl+1+j)%n;while(d.out[s]==='1'){j++;s=(d.dl+1+j)%n;}hands[s]+=c;j++;}
+  return {...d,hands:hands.map(h=>c2Sort(h)),pile:'',rk:0,lp:null,fin:-1,rv:null,ph:'play',turn:nextSeat(d,d.dl)};}
+function chPlay(d,cs){const s=d.turn,hands=[...d.hands];for(const c of cs)hands[s]=c2Rm(hands[s],c);const r=CH_R[d.rk];
+  const nd={...d,hands,pile:d.pile+cs.join(''),lp:{s,n:cs.length,r},rk:(d.rk+1)%13,fin:hands[s]?-1:s,rv:null,last:`${nameTag(d,s)}: ${cs.length} × ${chRn(r)}`};
+  return {...nd,turn:nextSeat(nd,s)};}
+function chCall(d){const s=d.turn,lp=d.lp,cs=cardsOf(d.pile).slice(-lp.n),lie=cs.some(c=>c[0]!==lp.r),lo=lie?lp.s:s;
+  const hands=[...d.hands];hands[lo]=c2Sort(hands[lo]+d.pile);
+  const nd={...d,hands,pile:'',lp:null,fin:-1,rv:{c:cs,by:lp.s,ch:s,lie,n:cardsOf(d.pile).length},last:lie?`${nameTag(d,s)} كشف ${nameTag(d,lp.s)}: كذاب! ياخذ ${cardsOf(d.pile).length} ورقة`:`${nameTag(d,lp.s)} كان صادق! ${nameTag(d,s)} ياخذ ${cardsOf(d.pile).length} ورقة`};
+  if(!lie&&d.fin===lp.s)return {...nd,win:lp.s};return nd;}
+const chBelieve=d=>d.fin>=0?{...d,win:d.fin,last:`${nameTag(d,d.turn)} صدّق، و${nameTag(d,d.fin)} خلّص ورقه`}:d;
+const chKeyT='ch';
+GAMES.c_cheat={name:'الكذاب',cat:'cards',lbc:'#7A3E9D',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7A3E9D"/><circle cx="50" cy="50" r="40" fill="#8C4FB0"/>${[0,1,2].map(k=>`<g transform="rotate(${-14+k*14} 50 80)"><rect x="34" y="28" width="32" height="46" rx="5" fill="#fff" stroke="#5B2C78" stroke-width="1.5"/><rect x="38" y="32" width="24" height="38" rx="3" fill="#2D4763"/><circle cx="50" cy="51" r="5" fill="#EC6158"/></g>`).join('')}<circle cx="74" cy="26" r="15" fill="#F0B429"/><text x="74" y="33" font-size="20" font-weight="900" text-anchor="middle" fill="#5B2C78">?</text></svg>`,
+  init:n=>({dl:n-1,hands:Array(n).fill(''),pile:'',rk:0,lp:null,fin:-1,rv:null,ph:'play',last:''}),
+  start:(d,base)=>chDeal(d),
+  mask:shMask,
+  redeal:d=>d.win!=null?d:{...chDeal(d),last:'انعادت اللعبة من جديد'},
+  viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.hands.map(h=>cardsOf(h).length+' ورقة'),
+  winText:d=>d.win!=null?`فاز ${nm(d,d.win)}، خلّص ورقه أول واحد`:null,
+  onSkip(nd,d){if(nd.win!=null)return nd;// the cards of a player who left go under the pile; a claim waiting on him is believed
+    const s=d.turn,hands=[...nd.hands];let pile=nd.pile;if(nd.out[s]==='1'&&hands[s]){pile=hands[s]+pile;hands[s]='';}let x={...nd,hands,pile};
+    if(x.lp&&x.out[x.lp.s]==='1')x={...x,lp:null,fin:-1};if(x.fin>=0&&x.out[x.fin]!=='1'&&x.turn!==d.turn)return x;return x;},
+  onTimeout(d){if(d.lp&&d.fin>=0)return chBelieve(d);const H=cardsOf(d.hands[d.turn]);const m=H.filter(c=>c[0]===CH_R[d.rk]);return chPlay(d,m.length?m:[H[0]]);},
+  status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';return s+shWho(d,ctx)+(d.lp?(d.fin>=0?`: ${nm(d,d.fin)} خلّص ورقه، تصدّقه؟`:`: تصدّق ${nm(d,d.lp.s)}؟ وإلا نزّل ${chRn(CH_R[d.rk])}`):`: نزّل ${chRn(CH_R[d.rk])}`);},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v;const sel=my?shSel(d,chKeyT):[];
+    let h=`<div class="c2">${shSeats(d,{})}<div class="sh-tab"><div class="sh-pile">${d.pile?`<span class="sh-top" data-k="p${d.pile.length}">${cardHTML('??',true)}</span>`:'<div class="card big hempty"></div>'}</div>`;
+    h+=`<div class="sh-stk"><small>${cardsOf(d.pile).length} ورقة</small></div>`;
+    if(d.rv)h+=`<span class="sh-msg ${d.rv.lie?'bad':'ok'}" data-k="rv${d.rv.n}">${d.rv.lie?'كذب! 🤥':'صادق 😇'}</span><div class="sh-reveal" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);--cwm:26px">${d.rv.c.map(c2Mini).join('')}</div>`;
+    else if(d.lp)h+=`<span class="sh-claim" data-k="c${d.pile.length}">${nm(d,d.lp.s)}: ${d.lp.n} × ${chRn(d.lp.r)}</span>`;
+    h+=`<span class="sh-msg">المطلوب: ${chRn(CH_R[d.rk])}</span></div>`;
+    if(my){h+=`<div class="row bopts">${d.lp?`<button class="btn red" data-ga="call">كذاب! 🤥</button>`:''}${d.lp&&d.fin>=0?'<button class="btn green" data-ga="believe">أصدّقه</button>':`<button class="btn green" data-ga="play" ${sel.length?'':'disabled'}>نزّل ${sel.length||''} وقل ${chRn(CH_R[d.rk])}</button>`}</div>`;}
+    if(v>=0&&d.hands[v]!=null)h+=shHand(d,v,cardsOf(d.hands[v]),my&&!(d.lp&&d.fin>=0),sel);return h+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
+    if(a==='call'&&d.lp){S.sel=[];act(chCall(d));return;}
+    if(a==='believe'&&d.lp&&d.fin>=0){act(chBelieve(d));return;}
+    if(d.lp&&d.fin>=0)return;
+    if(a==='card'){const c=cardsOf(d.hands[d.turn])[i];if(c)shToggle(d,chKeyT,c,s=>s.length<4);return;}
+    if(a==='play'){const cs=shSel(d,chKeyT);if(!cs.length||cs.length>4)return;S.sel=[];act(chPlay(d,cs));}}};
+HELP.c_cheat='الورق كله يتوزع. بالدور كل واحد ينزّل من ورقة إلى 4 مقلوبة ويقول إنها من الرقم المطلوب، والأرقام تمشي بالترتيب: إكة، 2، 3… لين الشايب وترجع للإكة. تقدر تكذب وتنزّل غيرها! اللي بعدك يا يقول «كذاب!» يا يصدّق ويكمل وينزّل الرقم اللي بعده. إذا قال كذاب تنكشف الأوراق: لو طلعت كذبة ياخذ الكذاب كل الكومة، ولو طلعت صادقة ياخذها اللي اتهمك، وبعدها يكمل اللي قال كذاب. أول من يخلص ورقه يفوز، بس لازم اللي بعده يصدّقه (أو يتهمه وتطلع صادقة).';
+// the bot: tells the truth when it can, bluffs with the cards it needs last, and calls when the claim cannot be true
+// (it holds too many of that rank), when a rival would go out, or when a big claim looks unlikely
+GAMES.c_cheat.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);
+  if(d.lp){const r=d.lp.r,have=H.filter(c=>c[0]===r).length,imp=have+d.lp.n>4;const claimHand=cardsOf(d.hands[d.lp.s]).length+d.lp.n;
+    let call=imp&&lv>1;if(d.fin>=0)call=imp||Math.random()<[0,.4,.65,.75][lv];
+    else if(!call){const unk=4-have,p=lv===1?.15:Math.min(.9,(d.lp.n>unk?1:0)+(d.lp.n>=3?.35:d.lp.n===2?.18:.08)*(lv===3?1.2:1)+(claimHand<=3?.2:0)-cardsOf(d.pile).length*.012);call=Math.random()<p;}
+    if(call)return chCall(d);if(d.fin>=0)return chBelieve(d);}
+  const r=CH_R[d.rk],m=H.filter(c=>c[0]===r);if(m.length&&(lv>1||Math.random()<.7))return chPlay(d,m);
+  // a bluff: the card whose rank comes round last
+  const far=c=>(CH_R.indexOf(c[0])-d.rk+13)%13;const pool=H.slice().sort((a,b)=>far(b)-far(a));
+  const k=lv===3&&H.length>6&&Math.random()<.3?2:1;return chPlay(d,pool.slice(0,Math.min(k,pool.length)));};
+GAMES.c_cheat.botDelay=(d,s,lv)=>900+rnd(900);
+
+/* =================================================================
+   واحد وثلاثين (31 / scat): 3 cards each and one turned up; everyone has 3 lives. On your turn draw from the stock or take
+   the top discard, then throw one; or knock instead (the others get one more turn each). A hand counts its best suit:
+   ace 11, pictures 10. Then the lowest hand loses a life (a knocker who is lowest loses two; on a tie the knocker is safe).
+   31 at once ends the deal and everyone else loses a life. No lives left: out. The last one in wins.
+   ================================================================= */
+const scV=c=>c[0]==='A'?11:'TJQK'.includes(c[0])?10:+c[0];
+const scVal=h=>{const cs=cardsOf(h);return Math.max(0,...'shdc'.split('').map(s=>cs.filter(c=>c[1]===s).reduce((a,c)=>a+scV(c),0)));};
+function scDeal(d){const x=shDeal(d,3);const disc=x.dk.slice(0,2);const nd={...x,dk:x.dk.slice(2),disc,kn:-1,left:0,ph:'draw',took:'',sum:null,last:'',turn:nextSeat(x,x.dl)};
+  const b=aliveSeats(nd).find(s=>scVal(nd.hands[s])===31);return b!=null?scShow(nd,b):nd;}
+function scDraw(d,disc){const s=d.turn,hands=[...d.hands];let dk=d.dk,ds=d.disc,c;
+  if(disc){c=ds.slice(-2);ds=ds.slice(0,-2);}else{if(!dk.length){dk=shuffle(cardsOf(ds.slice(0,-2))).join('');ds=ds.slice(-2);}c=dk.slice(0,2);dk=dk.slice(2);}
+  hands[s]=hands[s]+c;return {...d,hands,dk,disc:ds,ph:'disc',took:disc?c:'',last:`${nameTag(d,s)} ${disc?'أخذ الورقة المكشوفة':'سحب'}`};}
+function scThrow(d,c){const s=d.turn,hands=[...d.hands];hands[s]=c2Rm(hands[s],c);let nd={...d,hands,disc:d.disc+c,ph:'draw',took:'',last:`${nameTag(d,s)} رمى ورقة`};
+  if(scVal(hands[s])===31)return scShow(nd,s);return scAfter(nd,s);}
+function scAfter(d,s){if(d.kn>=0){const left=d.left-1;if(left<=0)return scShow({...d,left:0},-1);return {...d,left,turn:nextSeat(d,s)};}return {...d,turn:nextSeat(d,s)};}
+function scKnock(d){const s=d.turn,al=aliveSeats(d).length;return {...d,kn:s,left:al-1,last:`${nameTag(d,s)} دق! 👊 الباقين لهم دور واحد`,turn:nextSeat(d,s)};}
+function scShow(d,b31){const al=aliveSeats(d),val=d.pl.map((_,s)=>d.out[s]==='1'?-1:scVal(d.hands[s]));const loss=Array(d.pl.length).fill(0);
+  if(b31>=0)al.forEach(s=>{if(s!==b31)loss[s]=1;});
+  else{const mn=Math.min(...al.map(s=>val[s])),lo=al.filter(s=>val[s]===mn);if(lo.includes(d.kn)){if(lo.length===1)loss[d.kn]=2;else lo.forEach(s=>{if(s!==d.kn)loss[s]=1;});}else lo.forEach(s=>loss[s]=1);}
+  const lives=d.lives.map((x,s)=>Math.max(0,x-loss[s]));let out=d.out;lives.forEach((x,s)=>{if(!x&&out[s]!=='1')out=setAt(out,s,'1');});
+  const alive=d.pl.map((_,s)=>s).filter(s=>out[s]!=='1');
+  const nd={...d,lives,ph:'sum',sum:{val,loss,b31},out:d.out,dead:out,turn:al.includes(d.turn)?d.turn:al[0],last:b31>=0?`${nameTag(d,b31)} جاب 31! 🎉`:'كشفنا الورق'};
+  if(alive.length<=1){const w=alive.length?alive[0]:al.sort((a,b)=>val[b]-val[a])[0];return {...nd,win:w};}
+  return nd;}
+// the next deal: the seats with no lives left are taken out (d.out) only now, so the summary still shows everybody
+function scNext(d){const out=d.dead||d.out;const x={...d,out,dead:null};return {...scDeal({...x,dl:nextSeat(x,x.dl)}),last:''};}
+GAMES.c_scat={name:'واحد وثلاثين',cat:'cards',lbc:'#C7662B',outDone:false,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C7662B"/><circle cx="50" cy="50" r="40" fill="#D97A3E"/>${['A','K','T'].map((r,k)=>`<g transform="rotate(${-16+k*16} 50 84)"><rect x="35" y="26" width="30" height="44" rx="5" fill="#fff"/><text x="50" y="52" font-size="15" font-weight="800" text-anchor="middle" fill="#D43C33">${r==='T'?'10':r}♥</text></g>`).join('')}<rect x="30" y="74" width="40" height="18" rx="9" fill="#2D4763"/><text x="50" y="88" font-size="14" font-weight="900" text-anchor="middle" fill="#fff">31</text></svg>`,
+  init:n=>({dl:n-1,hands:Array(n).fill(''),dk:'',disc:'',lives:Array(n).fill(3),kn:-1,left:0,ph:'draw',took:'',last:''}),
+  start:(d,base)=>scDeal(d),
+  mask:shMask,
+  redeal:d=>d.win!=null||d.ph==='sum'?d:{...scDeal(d),last:'انعادت الجولة من جديد'},
+  viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.lives.map(x=>x?'❤️'.repeat(x):'💀'),
+  winText:d=>d.win!=null?`فاز ${nm(d,d.win)}، آخر واحد باقي`:null,
+  onSkip(nd,d){if(nd.win!=null)return nd;let x=nd;if(d.ph==='disc'&&nd.out[d.turn]==='1')x={...x,ph:'draw',took:''};if(x.kn>=0&&x.out[x.kn]==='1')x={...x,kn:-1,left:0};
+    if(x.kn>=0){x={...x,left:Math.max(1,x.left-1)};}return x;},
+  onTimeout(d){if(d.ph==='sum')return scNext(d);if(d.ph==='draw')return scDraw(d,false);const H=cardsOf(d.hands[d.turn]).filter(c=>c!==d.took);return scThrow(d,H.sort((a,b)=>scV(a)-scV(b))[0]);},
+  status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';
+    return s+shWho(d,ctx)+(d.ph==='draw'?`: اسحب، خذ المكشوفة${d.kn<0?'، أو دق':''}`:': ارمِ ورقة')+(d.kn>=0?` <small>• ${nm(d,d.kn)} داق</small>`:'');},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v;const top=d.disc.slice(-2);const can=my&&d.ph==='draw';
+    let h=`<div class="c2">${shSeats(d,{cnt:s=>d.lives[s],done:s=>!d.lives[s],x:s=>s===d.kn?' 👊':''})}<div class="sh-tab"><${can?'button data-ga="stock"':'div'} class="sh-stk">${cardHTML('??',true)}<small>${d.dk.length/2}</small></${can?'button':'div'}>
+      <${can&&top?'button data-ga="take"':'div'} class="sh-stk sh-pile"><span class="sh-top" data-k="s${d.disc.length}">${top?c2Card(top,true):'<div class="card big hempty"></div>'}</span><small>المكشوفة</small></${can&&top?'button':'div'}></div>`;
+    if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${r.b31>=0?`${nameTag(d,r.b31)} جاب 31!`:'النتيجة'}</h3>${d.pl.map((_,s)=>r.val[s]<0?'':`<div class="bsr"><span>${nameTag(d,s)}${s===d.kn?' 👊':''}</span><em>${cardsOf(d.hands[s]).map(c2Mini).join('')} ${r.val[s]}</em><b>${r.loss[s]?'‎-'+r.loss[s]+' 💔':'✓'} ${'❤️'.repeat(d.lives[s])||'💀'}</b></div>`).join('')}
+      ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
+    if(my&&d.ph==='draw'&&d.kn<0)h+=`<div class="row bopts"><button class="btn red" data-ga="knock">دق 👊</button></div>`;
+    if(v>=0&&d.hands[v]!=null&&d.out[v]!=='1'){const L=my&&d.ph==='disc'?cardsOf(d.hands[v]).filter(c=>c!==d.took):[];h+=`<p class="lbl c2lb">مجموعك ${scVal(d.hands[v])}</p>`+shHand(d,v,L,my&&d.ph==='disc',null);}
+    return h+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(scNext(d));return;}
+    if(d.ph==='draw'){if(a==='stock'){act(scDraw(d,false));return;}if(a==='take'&&d.disc){act(scDraw(d,true));return;}if(a==='knock'&&d.kn<0){act(scKnock(d));return;}return;}
+    if(d.ph==='disc'&&a==='card'){const c=cardsOf(d.hands[d.turn])[i];if(!c||c===d.took)return;act(scThrow(d,c));}}};
+HELP.c_scat='كل لاعب ياخذ 3 أوراق وعنده 3 أرواح، وتنقلب ورقة في الوسط. في دورك تسحب من الكومة أو تاخذ الورقة المكشوفة، وبعدها ترمي ورقة (مو نفس الورقة اللي أخذتها من الأرض). يدك تنحسب بأعلى مجموع من نوع واحد: الإكة 11، الصور 10، والباقي برقمها، والهدف توصل 31. بدل السحب تقدر «تدق» إذا حسيت إن يدك قوية: الباقين لهم دور واحد بعدها نكشف. صاحب أقل مجموع يخسر روح، ولو كان الداق هو الأقل يخسر روحين، ولو تعادل الداق مع غيره يسلم الداق ويخسر الثاني. اللي يجيب 31 بالضبط يكشف على طول وكل الباقين يخسرون روح. اللي تخلص أرواحه يطلع، وآخر واحد باقي يفوز.';
+GAMES.c_scat.bot=(d,s,lv)=>{if(d.ph==='sum')return scNext(d);const H=cardsOf(d.hands[s]);
+  const best3=cs=>{let b=-1,bc=null;for(const c of cs){const r=cs.filter(x=>x!==c).join('');const v=scVal(r);if(v>b){b=v;bc=c;}}return [b,bc];};
+  if(d.ph==='draw'){const cur=scVal(d.hands[s]),al=aliveSeats(d).length;
+    const kt=lv===1?26+rnd(5):lv===2?25:(al>3?24:26)-(d.lives[s]===1?-2:0);
+    if(d.kn<0&&cur>=kt&&Math.random()<(lv===1?.5:1))return scKnock(d);
+    const top=d.disc.slice(-2);if(top){const [v]=best3([...H,top]);if(v>cur+(lv===1?0:2)||(v>=cur+1&&scV(top)>=10))return scDraw(d,true);}return scDraw(d,false);}
+  const cs=H.filter(c=>c!==d.took);if(lv===1&&Math.random()<.3)return scThrow(d,cs[rnd(cs.length)]);
+  let bc=cs[0],bv=-1;for(const c of cs){const v=scVal(H.filter(x=>x!==c).join(''))*10-scV(c)*.1;if(v>bv){bv=v;bc=c;}}return scThrow(d,bc);};
+GAMES.c_scat.botDelay=(d,s,lv)=>d.ph==='sum'?6000:800+rnd(600);
+
+/* =================================================================
+   الرئيس والوزير (president): the whole pack is dealt; 3 is lowest, then up to ace and 2 the highest. The leader plays one card
+   or a set of the same rank; each next player beats it with as many cards of a higher rank, or passes (out of that trick).
+   When all pass, the last to play leads again. The order of going out gives the titles: الرئيس، الوزير … الشعب.
+   Next round the last gives his 2 best cards to the president, who gives back 2 of his choice (the second last and the
+   minister swap 1). Five rounds; points by finishing place, the most points win.
+   ================================================================= */
+const PR_R='3456789TJQKA2',prR=c=>PR_R.indexOf(c[0]);
+const prSort=h=>cardsOf(h).sort((a,b)=>prR(a)-prR(b)||'cdhs'.indexOf(a[1])-'cdhs'.indexOf(b[1])).join('');
+const prTitle=(n,i)=>i===0?'الرئيس':i===n-1?'الشعب':i===1&&n>=4?'الوزير':i===n-2&&n>=4?'نائب الشعب':'مواطن';
+function prDeal(d){const n=d.pl.length,al=aliveSeats(d);const dk=shuffle(c2Deck());const h0=Array(n).fill('');
+  let j=0;for(const c of dk){h0[al[j%al.length]]+=c;j++;}const hs=h0.map(prSort);
+  const nd={...d,hands:hs,tp:'',tc:0,tr:-1,lead:-1,pa:'0'.repeat(n),fin:'',ph:'play',sw:null,sum:null};
+  // the first round: the holder of 3♣ leads; later the last of the round before leads after the swaps
+  if(!d.order){const s=hs.findIndex(h=>cardsOf(h).includes('3c'));return {...nd,turn:s};}
+  const ord=d.order.split('').map(Number).filter(s=>d.out[s]!=='1'),k=ord.length>=3?2:1,pres=ord[0],scum=ord[ord.length-1];
+  const take=(h,m)=>cardsOf(h).sort((a,b)=>prR(b)-prR(a)).slice(0,m);
+  const hands=[...hs];const give=(from,to,cs)=>{for(const c of cs)hands[from]=c2Rm(hands[from],c);hands[to]=prSort(hands[to]+cs.join(''));};
+  if(ord.length>=2){give(scum,pres,take(hands[scum],k));}
+  const vic=ord.length>=4?[ord[1],ord[ord.length-2]]:null;if(vic)give(vic[1],vic[0],take(hands[vic[1]],1));
+  const sw=[{s:pres,to:scum,k}];if(vic)sw.push({s:vic[0],to:vic[1],k:1});
+  return {...nd,hands,ph:'swap',sw,turn:pres,last:`${nm(d,scum)} عطى الرئيس أفضل ${k===2?'ورقتين':'ورقة'}`};}
+function prGive(d,cs){const w=d.sw[0],hands=[...d.hands];for(const c of cs)hands[w.s]=c2Rm(hands[w.s],c);hands[w.to]=prSort(hands[w.to]+cs.join(''));
+  const sw=d.sw.slice(1),nd={...d,hands,sw:sw.length?sw:null,last:`${nameTag(d,w.s)} رجّع ${cs.length===2?'ورقتين':'ورقة'} لـ${nameTag(d,w.to)}`};
+  if(sw.length)return {...nd,turn:sw[0].s};const ord=d.order.split('').map(Number).filter(s=>d.out[s]!=='1');return {...nd,ph:'play',turn:ord[ord.length-1]};}
+const prActive=(d,s)=>d.out[s]!=='1'&&cardsOf(d.hands[s]).length>0;
+// the next seat that still plays this trick
+function prNext(d,from){const n=d.pl.length;for(let k=1;k<=n;k++){const s=(from+k)%n;if(prActive(d,s)&&d.pa[s]!=='1')return s;}return -1;}
+function prOk(d,cs){if(!cs.length||cs.length>4||cs.some(c=>c[0]!==cs[0][0]))return false;if(!d.tc)return true;return cs.length===d.tc&&prR(cs[0])>d.tr;}
+function prPlay(d,cs){const s=d.turn,hands=[...d.hands];for(const c of cs)hands[s]=c2Rm(hands[s],c);
+  let nd={...d,hands,tp:cs.join(''),tc:cs.length,tr:prR(cs[0]),lead:s,last:`${nameTag(d,s)} نزّل ${cs.length>1?cs.length+' × ':''}${cs[0][0]==='T'?'10':cs[0][0]}`};
+  if(!hands[s]){nd.fin+=s;nd.last+=` وخلّص ${prTitle(d.pl.length,nd.fin.length-1)==='الرئيس'?'(الرئيس 👑)':''}`;const left=nd.pl.map((_,x)=>x).filter(x=>prActive(nd,x));if(left.length<=1)return prEnd({...nd,fin:nd.fin+left.join('')});}
+  return prTurn(nd,s);}
+function prPass(d){const s=d.turn;return prTurn({...d,pa:setAt(d.pa,s,'1'),last:`${nameTag(d,s)} باس`},s);}
+// after a play or a pass: the next one still in the trick, or a new trick for the last to play (the next one if he is out)
+function prTurn(d,s){const nx=prNext(d,s);
+  if(nx>=0&&!(nx===d.lead&&d.tc)){return {...d,turn:nx};}
+  let ld=d.lead;if(!prActive(d,ld)){ld=prNext({...d,pa:'0'.repeat(d.pl.length)},ld);}
+  return {...d,tp:'',tc:0,tr:-1,pa:'0'.repeat(d.pl.length),turn:ld,last:d.last+' • لمّة جديدة'};}
+function prEnd(d){const n=d.pl.length,ord=d.fin.split('').map(Number),sc=[...d.sc];ord.forEach((s,i)=>sc[s]+=ord.length-1-i);
+  const nd={...d,sc,order:d.fin,ph:'sum',sum:{ord},rd:d.rd+1,turn:ord[0],last:`${nameTag(d,ord[0])} صار الرئيس 👑`};
+  if(nd.rd>=5){const al=aliveSeats(nd),mx=Math.max(...al.map(s=>sc[s]));const ws=al.filter(s=>sc[s]===mx).sort((a,b)=>ord.indexOf(a)-ord.indexOf(b));return {...nd,win:ws[0],wins:[ws[0]]};}
+  return nd;}
+const prNextR=d=>({...prDeal(d),last:d.last});
+const prKeyT='pr';
+GAMES.c_pres={name:'الرئيس والوزير',cat:'cards',lbc:'#9C7A1E',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9C7A1E"/><circle cx="50" cy="54" r="38" fill="#B38F2A"/><g transform="rotate(-12 38 60)"><rect x="22" y="38" width="30" height="42" rx="4" fill="#fff"/><text x="37" y="65" font-size="17" font-weight="800" text-anchor="middle" fill="#2D4763">2♠</text></g><g transform="rotate(10 62 60)"><rect x="48" y="38" width="30" height="42" rx="4" fill="#fff"/><text x="63" y="65" font-size="17" font-weight="800" text-anchor="middle" fill="#D43C33">2♥</text></g><path d="M30 30l7-14 13 10 13-10 7 14z" fill="#F7CF5A" stroke="#7A5C10" stroke-width="2" stroke-linejoin="round"/><rect x="30" y="29" width="40" height="7" rx="2" fill="#E5A81F"/></svg>`,
+  init:n=>({dl:n-1,hands:Array(n).fill(''),tp:'',tc:0,tr:-1,lead:-1,pa:'0'.repeat(n),fin:'',order:'',ph:'play',sw:null,sc:Array(n).fill(0),rd:0,last:''}),
+  start:(d,base)=>prDeal(d),
+  mask:shMask,
+  redeal:d=>d.win!=null||d.ph==='sum'?d:{...prDeal(d),last:'انعادت الجولة من جديد'},
+  viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.sc.map(x=>x),
+  winText:d=>d.win!=null?`فاز ${nm(d,d.win)} بـ${d.sc[d.win]} نقطة بعد 5 جولات`:null,
+  onSkip(nd,d){if(nd.win!=null)return nd;let x=nd;if(x.ph==='swap'){return {...x,sw:null,ph:'play',turn:nextSeat(x,d.turn)};}
+    if(x.ph==='play'){if(x.out[d.turn]==='1'){const left=x.pl.map((_,s)=>s).filter(s=>prActive(x,s));if(left.length<=1)return prEnd({...x,fin:x.fin+left.join('')});return prTurn(x,d.turn);}}return x;},
+  onTimeout(d){if(d.ph==='sum')return prNextR(d);if(d.ph==='swap'){const H=cardsOf(d.hands[d.turn]);return prGive(d,H.slice(0,d.sw[0].k));}
+    if(d.tc)return prPass(d);const H=cardsOf(d.hands[d.turn]);return prPlay(d,[H[0]]);},
+  status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+`انتهت الجولة ${d.rd} من 5`;
+    if(d.ph==='swap')return s+shWho(d,ctx)+`: اختر ${d.sw[0].k===2?'ورقتين':'ورقة'} تعطيها لـ${nm(d,d.sw[0].to)}`;
+    return s+shWho(d,ctx)+(d.tc?`: اغلب ${d.tc>1?d.tc+' × ':''}${d.tp[0]==='T'?'10':d.tp[0]} أو باس`:': ابدأ لمّة جديدة')+` <small>• جولة ${d.rd+1} من 5</small>`;},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v;const sel=my?shSel(d,prKeyT):[];const n=d.pl.length;
+    const tl=s=>{const i=d.order?d.order.indexOf(String(s)):-1;return i>=0?` <u>${prTitle(n,i)}</u>`:'';};
+    let h=`<div class="c2">${shSeats(d,{x:s=>`${d.fin.includes(String(s))?' ✓':d.pa[s]==='1'?' <em>باس</em>':''}${tl(s)}`,done:s=>d.fin.includes(String(s))})}
+      <div class="sh-tab"><div class="sh-pile">${d.tp?cardsOf(d.tp).map(c=>`<span class="sh-top" data-k="t${c}">${c2Card(c,true)}</span>`).join(''):'<p class="note" style="color:#fff">لمّة جديدة</p>'}</div>${d.tp&&d.lead>=0?`<span class="sh-suit">${nm(d,d.lead)}</span>`:''}</div>`;
+    if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>نتيجة الجولة ${d.rd}</h3>${r.ord.map((s,i)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${prTitle(r.ord.length,i)}</em><b>+${r.ord.length-1-i} → ${d.sc[s]}</b></div>`).join('')}
+      ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
+    if(my&&d.ph==='swap'){const k=d.sw[0].k;h+=`<div class="row bopts"><button class="btn green" data-ga="give" ${sel.length===k?'':'disabled'}>أعطِ ${nm(d,d.sw[0].to)} (${sel.length}/${k})</button></div>`;}
+    else if(my)h+=`<div class="row bopts"><button class="btn green" data-ga="play" ${prOk(d,sel)?'':'disabled'}>نزّل${sel.length?' ('+sel.length+')':''}</button>${d.tc?'<button class="btn navy" data-ga="pass">باس</button>':''}</div>`;
+    if(v>=0&&d.hands[v]!=null&&d.hands[v]){const H=cardsOf(d.hands[v]);const L=d.ph==='swap'?H:H.filter(c=>{if(!d.tc)return true;return prR(c)>d.tr&&H.filter(x=>x[0]===c[0]).length>=d.tc;});h+=shHand(d,v,L,my,sel);}
+    return h+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(prNextR(d));return;}const s=d.turn;
+    if(a==='card'){const c=cardsOf(d.hands[s])[i];if(!c)return;if(d.ph==='swap'){const k=d.sw[0].k;shToggle(d,prKeyT,c,sl=>sl.length<k);return;}shToggle(d,prKeyT,c,sl=>sl.length<4&&sl.every(x=>x[0]===c[0]));return;}
+    if(a==='give'&&d.ph==='swap'){const cs=shSel(d,prKeyT);if(cs.length!==d.sw[0].k)return;S.sel=[];act(prGive(d,cs));return;}
+    if(a==='pass'&&d.ph==='play'&&d.tc){S.sel=[];act(prPass(d));return;}
+    if(a==='play'&&d.ph==='play'){const cs=shSel(d,prKeyT);if(!prOk(d,cs))return;S.sel=[];act(prPlay(d,cs));}}};
+HELP.c_pres='الورق كله يتوزع. الترتيب من الأصغر: 3، 4 … الشايب، الإكة، وأكبر ورقة الاثنين. في أول جولة يبدأ اللي معه 3 سباتي. اللي يبدأ ينزّل ورقة وحدة أو أكثر من نفس الرقم (لين 4)، واللي بعده لازم ينزّل نفس العدد من رقم أعلى أو يقول باس (وما يرجع لهالمّة). لما الكل يقول باس، آخر واحد نزّل يبدأ لمّة جديدة. ترتيب الخلاص يحدد الألقاب: الأول الرئيس، الثاني الوزير، والأخير الشعب. من الجولة الثانية: الشعب يعطي الرئيس أفضل ورقتين عنده والرئيس يرجّع له ورقتين يختارها، ونائب الشعب يعطي الوزير أفضل ورقة والوزير يرجّع له ورقة (مع 4 لاعبين وأكثر). والشعب يبدأ اللعب. كل جولة تاخذ نقاط حسب ترتيبك (الأول أكثر)، وبعد 5 جولات يفوز صاحب أكثر نقاط.';
+// the bot: leads its lowest set, beats with the smallest set that does not break a bigger one, keeps 2s and aces for the end,
+// and gives back its lowest cards
+GAMES.c_pres.bot=(d,s,lv)=>{if(d.ph==='sum')return prNextR(d);const H=cardsOf(d.hands[s]);
+  if(d.ph==='swap')return prGive(d,H.slice(0,d.sw[0].k));
+  const by={};for(const c of H)(by[c[0]]=by[c[0]]||[]).push(c);const ranks=Object.keys(by).sort((a,b)=>PR_R.indexOf(a)-PR_R.indexOf(b));
+  if(lv===1&&Math.random()<.3){if(d.tc)return prPass(d);return prPlay(d,by[ranks[0]]);}
+  if(!d.tc){// lead the lowest rank as a whole set; near the end a high card first so the last cards are not stuck
+    if(ranks.length===2&&lv>1&&PR_R.indexOf(ranks[1])>=11)return prPlay(d,by[ranks[1]]);return prPlay(d,by[ranks[0]]);}
+  const ok=ranks.filter(r=>PR_R.indexOf(r)>d.tr&&by[r].length>=d.tc);if(!ok.length)return prPass(d);
+  const exact=ok.filter(r=>by[r].length===d.tc),r=(exact.length&&lv>1?exact:ok)[0];
+  const hi=PR_R.indexOf(r)>=11,many=H.length>6;if(hi&&many&&lv>1&&cardsOf(d.hands[d.lead]||'').length>3&&Math.random()<.6)return prPass(d);
+  return prPlay(d,by[r].slice(0,d.tc));};
+GAMES.c_pres.botDelay=(d,s,lv)=>d.ph==='sum'?6000:800+rnd(600);
+
+/* =================================================================
+   كونكان (Gulf rummy, the rules Jawaker plays): two packs and two jokers (three of each from 6 players), 14 cards each;
+   the starter draws first. Draw from the stock or take the top discard (only to put it down at once in a meld). Melds are
+   runs of one suit (3+, ace low or high) or groups of one rank in different suits (3 or 4), one joker at most each.
+   The first laydown must reach 51 and hold at least one run; after that you may lay any meld, add to anyone's melds and
+   swap a joker for the card it stands for. Every turn ends with a discard; the first out wins the round.
+   Score: the winner -30, an unopened hand +100, the others the cards they hold (ace 11, pictures 10, joker 15).
+   A full hand (all down at once, nothing laid before) doubles it, and so does a «كونكان» (a run of 10 and a group of 4,
+   or a run of 11 and a group of 3); a كونكان in the fifth round wins the game outright. Five rounds, lowest total wins.
+   ================================================================= */
+const KK_REQ=51;
+function kkDealCore(n){const dk=hDeck(n);const hands=[];let k=0;for(let s=0;s<n;s++){hands.push(hSortHand(dk.slice(k,k+14).join('')));k+=14;}
+  return {hands,dk:dk.slice(k).join(''),disc:'',melds:[],op:'0'.repeat(n),ph:'draw',took:'',ld:-1,tc:0,lo:false,op0:-1,sum:null};}
+function kkRound(d){const n=d.pl.length;let st=(d.dl+1)%n;if(d.out[st]==='1')st=nextSeat(d,st);
+  return {...d,...kkDealCore(n),turn:st,last:`الجولة ${d.r} من 5: ${nm(d,st)} يبدأ`};}
+// a konkan: the cards laid this turn are one run of 10 with a group of 4, or one run of 11 with a group of 3
+const kkIsKonkan=groups=>{if(groups.length!==2)return false;const m=groups.map(hMeld);if(m.some(x=>!x))return false;const r=m.find(x=>x.t==='r'),g=m.find(x=>x.t==='g');
+  return !!r&&!!g&&((r.c.length===10&&g.c.length===4)||(r.c.length===11&&g.c.length===3));};
+function kkEnd(d,w,full,konkan){const n=d.pl.length,mul=full||konkan?2:1;
+  const pts=d.pl.map((_,s)=>{if(d.out[s]==='1')return 0;if(s===w)return -30*mul;if(d.op[s]!=='1')return 100*mul;return cardsOf(d.hands[s]).reduce((x,c)=>x+hPen(c),0)*mul;});
+  const tot=d.tot.map((x,s)=>x+pts[s]);
+  const nd={...d,tot,ph:'sum',sum:{w,full:!!full,konkan:!!konkan,pts},turn:w,last:`${nm(d,w)} خلّص${konkan?' بكونكان! 👑':full?' هند كامل! 🔥':''}`};
+  if(konkan&&d.r>=5)return {...nd,win:w,wins:[w]};
+  if(d.r>=5){const al=d.pl.map((_,s)=>s).filter(s=>d.out[s]!=='1');if(d.tm){const ts=[...new Set(al.map(s=>d.tm[s]))],tt=ts.map(t=>al.filter(s=>d.tm[s]===t).reduce((a,s)=>a+tot[s],0)),mn=Math.min(...tt);const t=ts[tt.indexOf(mn)];const ws=al.filter(s=>d.tm[s]===t);return {...nd,win:ws[0],wins:ws};}
+    const mn=Math.min(...al.map(s=>tot[s])),ws=al.filter(s=>tot[s]===mn);return {...nd,win:ws[0],wins:ws};}
+  return nd;}
+function kkDraw(d,fromDisc){const t=d.turn;let dk=d.dk,disc=d.disc,last;const hands=[...d.hands];
+  if(fromDisc){const c=disc.slice(-2);hands[t]=hSortHand(hands[t]+c);return {...d,hands,disc:disc.slice(0,-2),ph:'play',took:c,last:`${nm(d,t)} أخذ ${hJ(c)?'الجوكر':'ورقة الأرض'}`};}
+  if(!dk.length){const top=disc.slice(-2);dk=shuffle(cardsOf(disc.slice(0,-2))).join('');disc=top;last='خلص السحب، انخلطت الأرض من جديد';}
+  const c=dk.slice(0,2);hands[t]=hSortHand(hands[t]+c);return {...d,hands,dk:dk.slice(2),disc,ph:'play',took:'',last:last||`${nm(d,t)} سحب`};}
+function kkDiscard(d,c){const t=d.turn,hc=cardsOf(d.hands[t]),i=hc.indexOf(c);if(i<0)return null;hc.splice(i,1);
+  const hands=[...d.hands];hands[t]=hc.join('');const nd={...d,hands,disc:d.disc+c,took:'',ld:t};
+  if(!hc.length)return kkEnd(nd,t,d.op0===0&&!d.lo,!!d.kk);
+  return {...nd,ph:'draw',turn:nextSeat(d,t),tc:0,lo:false,op0:-1,kk:false,last:`${nm(d,t)} رمى ${hJ(c)?'جوكر':''}`.trim()};}
+// lay meld groups from the hand (the opening rules checked here)
+function kkLay(d,groups){const t=d.turn;let hc=cardsOf(d.hands[t]);const melds=[...d.melds];let val=0,run=false;
+  for(const g of groups){for(const c of g){const i=hc.indexOf(c);if(i<0)return {err:'الورق مو عندك'};hc.splice(i,1);}
+    const m=hMeld(g);if(!m)return {err:'هذي مو مجموعة صحيحة'};melds.push({...m,o:t});val+=hValue(m);if(m.t==='r')run=true;}
+  if(!hc.length)return {err:'لازم تخلي ورقة ترميها'};
+  const opening=d.op[t]!=='1';
+  if(opening&&val<KK_REQ)return {err:`أول نزول لازم يكون ${KK_REQ} أو أكثر (مجموعك ${val})`};
+  if(opening&&!run)return {err:'أول نزول لازم يكون فيه تسلسل واحد على الأقل'};
+  if(d.took&&!groups.some(g=>g.includes(d.took)))return {err:'لازم تنزّل ورقة الأرض اللي أخذتها'};
+  const hands=[...d.hands];hands[t]=hc.join('');
+  return {d:{...d,hands,melds,op:setAt(d.op,t,'1'),tc:(d.tc||0)+1,op0:d.op0<0?(opening?0:1):d.op0,kk:opening&&hc.length===1&&kkIsKonkan(groups),
+    took:d.took&&groups.some(g=>g.includes(d.took))?'':d.took,last:`${nm(d,t)} نزّل ${groups.length===1?'مجموعة':groups.length+' مجموعات'}${opening?` بـ ${val}`:''}`}};}
+const kkKey=d=>d.gid+':'+d.r+':'+d.turn+':'+d.hands[d.turn]+d.melds.length;
+GAMES.c_konkan={name:'كونكان',cat:'cards',lbc:'#7B2D4F',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B2D4F"/><circle cx="50" cy="50" r="40" fill="#8E3A5E"/>${[0,1,2,3].map(k=>`<rect x="${14+k*18}" y="${30+k*3}" width="22" height="32" rx="3" fill="#fff" stroke="#5A1F39" stroke-width="1.2"/><text x="${25+k*18}" y="${51+k*3}" font-size="13" font-weight="800" text-anchor="middle" fill="${k%2?'#D43C33':'#2D4763'}">${['9','10','J','Q'][k]}</text>`).join('')}<rect x="28" y="74" width="44" height="14" rx="7" fill="#F0B429"/><text x="50" y="85" font-size="11" font-weight="900" text-anchor="middle" fill="#5A1F39">51</text></svg>`,
+  init:n=>({dl:n-1,...kkDealCore(n),tot:Array(n).fill(0),r:1,last:'الجولة 1 من 5'}),
+  start:(d,base)=>kkRound({...d,dl:(base.turn+d.pl.length-1)%d.pl.length}),
+  hide:{seat:['hands'],all:['dk']},net:{ui:['kk']},
+  redeal:d=>d.win!=null||d.ph==='sum'?d:{...kkRound(d),last:`انعادت الجولة ${d.r} من جديد`},
+  viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.pl.map((_,s)=>`${cardsOf(d.hands[s]).length} ورقة${d.tot[s]?` • ${d.tot[s]}`:''}`),
+  winText:d=>d.win!=null?`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')}${d.sum&&d.sum.konkan&&d.r>=5?' بالكونكان 👑':' بأقل مجموع'}`:null,
+  winExtra:d=>d.pl.map((_,s)=>`${nm(d,s)} ${d.tot[s]}`).join('، '),
+  onTimeout(d){if(d.ph==='sum')return kkRound({...d,r:d.r+1,dl:nextSeat(d,d.dl)});let x=d;if(x.ph==='draw')x=kkDraw(x,false);
+    if(x.took){const back=[...x.hands];const hc=cardsOf(back[x.turn]);const i=hc.indexOf(x.took);if(i>=0){hc.splice(i,1);back[x.turn]=hc.join('');x=kkDraw({...x,hands:back,disc:x.disc+x.took,took:''},false);}}
+    const hc=cardsOf(x.hands[x.turn]);const c=hc.find(c=>!hJ(c))||hc[0];return kkDiscard(x,c);},
+  onSkip(nd,d){if(nd.win!=null||nd.turn===d.turn||d.ph==='sum')return nd;const t=d.turn,hands=[...nd.hands];let disc=nd.disc;
+    if(d.took){const hc=cardsOf(hands[t]);const i=hc.indexOf(d.took);if(i>=0){hc.splice(i,1);hands[t]=hc.join('');disc+=d.took;}}
+    return {...nd,hands,disc,ph:'draw',took:'',tc:0,lo:false,op0:-1,kk:false,last:`${nm(d,t)} طلع`};},
+  status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
+    if(d.ph==='sum')return s+`انتهت الجولة ${d.r}`;
+    return s+`${who}: ${d.ph==='draw'?'اسحب من الكومة أو خذ ورقة الأرض':d.took?'نزّل ورقة الأرض بمجموعة، وبعدها ارمِ ورقة':'نزّل أو أضف، وبعدها ارمِ ورقة'}<br><small>الجولة ${d.r} من 5 • أول نزول ${KK_REQ} أو أكثر وفيه تسلسل</small>`;},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my;const k=kkKey(d);
+    if(!S.kk||S.kk.k!==k)S.kk={k,sel:[],pend:[]};const U=S.kk;let h='';
+    if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${nm(d,r.w)} خلّص الجولة ${d.r}${r.konkan?' بكونكان 👑':r.full?' بهند كامل':''}</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${r.pts[s]>0?'+':''}${r.pts[s]}${d.op[s]!=='1'&&s!==r.w?' <small>ما نزّل</small>':''}</em><b>${d.tot[s]}</b></div>`).join('')}
+      ${my&&d.win==null?'<button class="big green" data-ga="nextr">الجولة التالية</button>':''}</div>`;return h;}
+    const top=d.disc.slice(-2);const canDraw=my&&d.ph==='draw';
+    h+=`<div class="htable"><div class="hpile"><button class="hstock" data-ga="stock" ${canDraw?'':'disabled'}><div class="card back"></div><small>${d.dk.length/2}</small></button>
+      <${canDraw&&top?'button':'div'} class="hdisc" ${canDraw&&top?'data-ga="take"':''}><span class="hdk" data-k="h${d.disc.length}">${top?hCard(top):'<div class="card hempty"></div>'}</span><small>${d.ld>=0&&top&&d.pl[d.ld]!=null?`رماها ${nm(d,d.ld)}`:'الأرض'}</small></${canDraw&&top?'button':'div'}></div>`;
+    if(d.melds.length){const selC=U.sel.map(i=>cardsOf(d.hands[d.turn])[i]);const canAdd=my&&d.ph==='play'&&d.op[d.turn]==='1'&&!d.took&&selC.length;
+      h+=`<div class="hmelds">${d.melds.map((m,i)=>{const ok=canAdd&&((selC.length===1&&hAdd(m,selC[0]))||hSwap(m,selC));
+        return `<${ok?'button':'div'} class="hm ${ok?'can':''}" style="--c:${col(d,m.o)}" ${ok?`data-ga="add" data-i="${i}"`:''}>${m.c.map((c,j)=>hMini(j===m.jk?'XX':c)).join('')}</${ok?'button':'div'}>`;}).join('')}</div>`;}
+    h+='</div>';
+    if(my&&U.pend.length){const val=U.pend.reduce((x,g)=>x+hValue(hMeld(g)),0),run=U.pend.some(g=>hMeld(g).t==='r');
+      h+=`<div class="panel hpend"><div class="hmelds">${U.pend.map(g=>`<div class="hm">${hMeld(g).c.map((c,j)=>hMini(j===hMeld(g).jk?'XX':c)).join('')}</div>`).join('')}</div>
+        <p class="note">المجموع ${val} من ${KK_REQ}${run?'':' • يبي تسلسل'}</p><div class="row"><button class="btn green" data-ga="confirm">ثبّت النزول</button><button class="btn" data-ga="cancel">تراجع</button></div></div>`;}
+    const show=v>=0?v:null;if(show==null)return h;
+    const all=cardsOf(d.hands[show]);const taken=all.map(()=>false);
+    if(show===d.turn)for(const g of U.pend)for(const c of g){const i=all.findIndex((x,j)=>x===c&&!taken[j]);if(i>=0)taken[i]=true;}
+    const idx=all.map((_,i)=>i).filter(i=>!taken[i]);const act2=my&&show===d.turn&&d.ph==='play';const ids=handIds(all,'kk'+show+'-');
+    h+=`<p class="lbl" style="text-align:center">ورقك ${d.op[show]==='1'?'<small>(نزّلت)</small>':''}</p><div class="hand hhand">${idx.map(i=>`<button class="hc ${U.sel.includes(i)?'sel':''} ${d.took&&all[i]===d.took&&show===d.turn?'took':''}" id="${ids[i]}" ${act2?`data-ga="sel" data-i="${i}"`:'disabled'}>${hCard(all[i])}</button>`).join('')}</div>`;
+    if(act2){const sel=U.sel.map(i=>all[i]);const m=sel.length>=3?hMeld(sel):null;
+      h+=`<div class="row hact"><button class="btn green" data-ga="meld" ${m?'':'disabled'}>نزّل${m?` (${hValue(m)})`:''}</button><button class="btn red" data-ga="disc" ${sel.length===1&&!U.pend.length?'':'disabled'}>ارمِ</button>${d.took&&d.tc===0&&!U.pend.length?'<button class="btn" data-ga="back">رجّع ورقة الأرض</button>':''}</div>`;}
+    return h;},
+  click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn;const U=S.kk&&S.kk.k===kkKey(d)?S.kk:(S.kk={k:kkKey(d),sel:[],pend:[]});
+    if(a==='nextr'&&d.ph==='sum'&&d.win==null){act(kkRound({...d,r:d.r+1,dl:nextSeat(d,d.dl)}));return;}
+    if(a==='stock'&&d.ph==='draw'){act(kkDraw(d,false));return;}
+    if(a==='take'&&d.ph==='draw'&&d.disc){act(kkDraw(d,true));return;}
+    if(d.ph!=='play')return;const all=cardsOf(d.hands[t]);
+    if(a==='sel'){if(!all[i])return;const j=U.sel.indexOf(i);if(j>=0)U.sel.splice(j,1);else U.sel.push(i);render();return;}
+    if(a==='back'&&d.took&&d.tc===0){const hands=[...d.hands];const hc=cardsOf(hands[t]);if(hc.indexOf(d.took)<0)return;hc.splice(hc.indexOf(d.took),1);hands[t]=hc.join('');S.kk=null;act({...d,hands,disc:d.disc+d.took,took:'',ph:'draw',last:`${nm(d,t)} رجّع ورقة الأرض`});return;}
+    if(a==='cancel'){U.pend=[];U.sel=[];render();return;}
+    if(a==='meld'){const sel=U.sel.map(x=>all[x]);if(sel.some(c=>!c)||!hMeld(sel))return;
+      if(d.op[t]==='1'){const r=kkLay(d,[sel]);if(r.err){toast(r.err);return;}S.kk=null;act(r.d);return;}
+      U.pend.push(sel);U.sel=[];render();return;}
+    if(a==='confirm'){const r=kkLay(d,U.pend);if(r.err){toast(r.err);return;}S.kk=null;act(r.d);return;}
+    if(a==='add'){const sel=U.sel.map(x=>all[x]);const m=d.melds[i];if(!m||d.op[t]!=='1'||sel.some(c=>!c))return;
+      if(d.took){toast(sel.includes(d.took)?'ورقة الأرض تنزل بمجموعة جديدة، ما تنضاف':'نزّل ورقة الأرض أول');return;}
+      let nm2=sel.length===1?hAdd(m,sel[0]):null;let gain=[];if(!nm2){nm2=hSwap(m,sel);if(nm2)gain=['XX'];}
+      if(!nm2)return;const hc=[...all];for(const c of sel)hc.splice(hc.indexOf(c),1);hc.push(...gain);
+      if(!hc.length){toast('لازم تخلي ورقة ترميها');return;}
+      const melds=[...d.melds];melds[i]={...nm2,o:m.o};const hands=[...d.hands];hands[t]=hSortHand(hc.join(''));
+      S.kk=null;act({...d,hands,melds,tc:(d.tc||0)+1,lo:d.lo||m.o!==t,last:gain.length?`${nm(d,t)} أخذ الجوكر`:`${nm(d,t)} أضاف ورقة`});return;}
+    if(a==='disc'){if(U.pend.length){toast('ثبّت النزول أو تراجع عنه أول');return;}if(d.took){toast('لازم تنزّل ورقة الأرض اللي أخذتها');return;}
+      const c=all[U.sel[0]];if(!c)return;const nd=kkDiscard(d,c);if(nd){S.kk=null;act(nd);}}}};
+HELP.c_konkan='كونكان بقوانين الخليج: كوتشينتين مع جوكرين (ومن 6 لاعبين ثلاث كوتشينات وثلاث جواكر)، وكل لاعب ياخذ 14 ورقة، واللي يبدأ يسحب أول. في دورك تسحب من الكومة أو تاخذ آخر ورقة مرمية (بس إذا بتنزلها على طول في مجموعة). المجموعات: تسلسل من نفس النوع (3 أوراق أو أكثر، والإكة تجي قبل 2 أو بعد الشايب) أو نفس الرقم من أنواع مختلفة (3 أو 4)، والجوكر يعوّض ورقة وحدة بالمجموعة. أول نزول لازم مجموعه 51 أو أكثر (الإكة 11 والصور 10) ولازم يكون فيه تسلسل واحد على الأقل. بعد ما تنزل تقدر تنزّل أي مجموعة، وتضيف على مجموعاتك ومجموعات غيرك، وتبدّل الجوكر بالورقة اللي يمثلها. كل دور تخلصه برمي ورقة، وأول من يخلص ورقه يفوز بالجولة. الحساب: الفايز ‎-30، اللي ما نزّل +100، والباقين مجموع ورقهم (الإكة 11، الصور 10، الجوكر 15). الهند (تنزل كل ورقك مرة وحدة بدون ما نزّلت قبل) يضاعف الحساب، والكونكان (تسلسل 10 أوراق مع أربع متشابهة، أو تسلسل 11 مع ثلاث متشابهة) بعد يضاعفه، وإذا جبت الكونكان في الجولة الخامسة تفوز باللعبة على طول. بعد 5 جولات يفوز صاحب أقل مجموع.';
+// the bot: hand.js's meld finder, with the opening bar of 51 and a run in it
+function kkBest(cs,must,needRun){const b=hBest(cs,must);if(!needRun||b.sets.some(z=>hMeld(z.g).t==='r'))return b;
+  // the richest split that keeps a run: try each run candidate first
+  const runs=hCands(cs).filter(x=>hMeld(x.g)&&hMeld(x.g).t==='r');let best={p:0,sets:[],v:0};
+  for(const r of runs.slice(0,30)){const rest=[...cs];let ok=true;for(const c of r.g){const i=rest.indexOf(c);if(i<0){ok=false;break;}rest.splice(i,1);}if(!ok||rest.length<1)continue;
+    const b2=hBest(rest,must&&!r.g.includes(must)?must:undefined);const tot={p:b2.p+r.p,sets:[r,...b2.sets],v:b2.v+r.v};if(tot.p>best.p)best=tot;}
+  return best;}
+GAMES.c_konkan.bot=(d,s,lv)=>{if(d.ph==='sum')return kkRound({...d,r:d.r+1,dl:nextSeat(d,d.dl)});
+  let x=d;const t=d.turn,opened=()=>x.op[t]==='1';
+  if(x.ph==='draw'){const top=x.disc.slice(-2);
+    if(top&&Math.random()<[0,.4,.85,1][lv]&&(!hJ(top)||lv>1)){const b=kkBest([...cardsOf(x.hands[t]),top],top,!opened());if(b.sets.length&&(opened()||b.v>=KK_REQ))return kkDraw(x,true);}
+    return kkDraw(x,false);}
+  if(x.took){const b=kkBest(cardsOf(x.hands[t]),x.took,!opened());const r=b.sets.length&&(opened()||b.v>=KK_REQ)?kkLay(x,b.sets.map(z=>z.g)):null;
+    if(r&&r.d)x=r.d;else{const hc=cardsOf(x.hands[t]),back=[...x.hands];hc.splice(hc.indexOf(x.took),1);back[t]=hc.join('');x=kkDraw({...x,hands:back,disc:x.disc+x.took,took:'',ph:'draw'},false);}}
+  const play=lv>1||Math.random()<.6;
+  if(play&&opened()&&!x.took)for(let i=0;i<x.melds.length;i++){const m=x.melds[i];if(m.jk<0)continue;const hc=cardsOf(x.hands[t]);
+    const tries=m.t==='r'?[[m.c[m.jk]]]:(()=>{const nat=m.c.filter((_,j)=>j!==m.jk),miss='shdc'.split('').filter(q=>!nat.some(c=>c[1]===q)).map(q=>nat[0][0]+q);return nat.length===2?[miss]:miss.map(c=>[c]);})();
+    for(const cs of tries){if(!cs.every(c=>hc.includes(c))||hc.length-cs.length<1)continue;const nm2=hSwap(m,cs);if(!nm2)continue;
+      const h2=[...hc];cs.forEach(c=>h2.splice(h2.indexOf(c),1));h2.push('XX');const melds=[...x.melds];melds[i]={...nm2,o:m.o};const hands=[...x.hands];hands[t]=hSortHand(h2.join(''));
+      x={...x,melds,hands,tc:(x.tc||0)+1,lo:x.lo||m.o!==t,last:`${nm(x,t)} أخذ الجوكر`};break;}}
+  if(play&&!x.took){const b=kkBest(cardsOf(x.hands[t]),undefined,!opened());if(b.sets.length&&(opened()||b.v>=KK_REQ)){const r=kkLay(x,b.sets.map(z=>z.g));if(r.d)x=r.d;}}
+  if(play&&opened()){let ch=true,g=0;while(ch&&g++<20){ch=false;const h2=cardsOf(x.hands[t]);if(h2.length<=1)break;
+    for(const c of h2){if(hJ(c)||c===x.took)continue;for(let i=0;i<x.melds.length;i++){const m2=hAdd(x.melds[i],c);if(!m2)continue;
+      const melds=[...x.melds];melds[i]={...m2,o:x.melds[i].o};const h3=[...h2];h3.splice(h3.indexOf(c),1);const hands=[...x.hands];hands[t]=h3.join('');
+      x={...x,melds,hands,tc:(x.tc||0)+1,lo:x.lo||x.melds[i].o!==t,last:`${nm(x,t)} أضاف ورقة`};ch=true;break;}if(ch)break;}}}
+  const hc=cardsOf(x.hands[t]);const keep=opened()?[]:kkBest(hc,undefined,true).sets.flatMap(z=>z.g);const kc=hCnt(keep);
+  const free=hc.filter(c=>{if(kc[c]){kc[c]--;return false;}return !hJ(c);});const pool=free.length?free:hc.filter(c=>!hJ(c)).length?hc.filter(c=>!hJ(c)):hc;
+  const rush=x.pl.some((_,o)=>o!==t&&x.out[o]!=='1'&&x.op[o]==='1'&&cardsOf(x.hands[o]).length<=4);
+  const cost=c=>hNear(c,hc.filter((_,j)=>j!==hc.indexOf(c)))*5-hPen(c)*(rush?.6:.25)+(lv===1?Math.random()*6:0);
+  const dc=pool.slice().sort((a,b)=>cost(a)-cost(b))[0]||hc[0];
+  return kkDiscard(x,dc)||x;};
+GAMES.c_konkan.botDelay=(d,s,lv)=>d.ph==='sum'?8000:BOTMS[lv]+rnd(600);
