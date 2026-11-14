@@ -1,0 +1,116 @@
+/* puzzles2: the solving races (n-puzzle2.js). Paper boards on a soft card, ink pieces, green for a finished line, red for a clash */
+.u2{--paper:#FBF6EA;--paper-2:#EFE4CC;--grid:#CDBB94;--ink2:#2D4763;--mark:#B85C50;--okc:#2E9B57;--badc:#E5534B;--hl:#FFE7A3;
+  width:100%;max-width:460px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+@media (prefers-color-scheme:dark){.u2{--hl:#F5D77A}}
+.u2 .spd-card{width:100%}
+.u2pick .lbl{margin:8px 0 2px;font-size:14px}
+.u2pick .note,.u2ready .note{margin:2px 0}
+.u2seg{display:inline-flex;gap:4px;padding:4px;border-radius:14px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--edge)}
+.u2seg button{min-width:48px;min-height:40px;padding:0 12px;border-radius:10px;font-weight:800;font-size:16px;color:var(--mut);background:transparent;transition:transform var(--t1)}
+.u2seg button:active{transform:scale(.95)}
+.u2seg button.on{background:var(--navy);color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+@media (prefers-color-scheme:dark){.u2seg button.on{background:#E7EEF6;color:#111923}}
+.u2lvs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;margin-top:2px}
+.u2lvs .btn{flex-direction:column;min-height:66px;padding:6px 4px;gap:0;line-height:1.2}
+.u2lvs .btn b{font-size:18px}.u2lvs .btn small{font-size:13px;opacity:.92;font-weight:700;direction:ltr}
+.u2tag{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--surface-2);color:var(--mut);font-size:13px;font-weight:800;box-shadow:inset 0 0 0 1px var(--edge)}
+.u2ready .u2tag{margin-top:2px}
+.u2bar{display:flex;align-items:center;gap:8px;width:100%;justify-content:space-between;min-height:30px}
+.u2clk{font-weight:800;font-size:16px;padding:2px 12px;border-radius:999px;background:var(--surface);box-shadow:var(--e1)}
+.u2clk b{display:inline-block;min-width:2.2em;direction:ltr}
+.u2pen{color:var(--bad);font-weight:800;font-size:14px}
+.u2acts{display:flex;gap:8px;width:100%;margin-top:2px}
+.u2acts .btn{flex:1 1 0;min-height:44px;font-size:15px;padding:0 6px;min-width:0}
+.u2acts .u2quit.sure{background:var(--bad);color:#fff;box-shadow:0 3px 0 #a63a33}
+.u2tools{margin:2px auto 0}
+.u2tools button{min-width:64px}
+.u2end{padding-top:4px}
+
+/* the board: a grid drawn left to right, taps and drags on it go to the game */
+.u2grid{display:grid;grid-template-columns:repeat(var(--w),minmax(0,1fr));direction:ltr;touch-action:none;user-select:none;-webkit-user-select:none;position:relative;
+  gap:1px;background:var(--grid);border:2px solid var(--ink2);border-radius:6px;overflow:hidden;box-shadow:var(--e2)}
+.u2grid>i{font-style:normal;aspect-ratio:1;display:grid;place-items:center;background:var(--paper);color:var(--ink2);font-weight:800;min-width:0}
+.u2grid>i.er{box-shadow:inset -2px 0 0 var(--ink2)}.u2grid>i.eb{box-shadow:inset 0 -2px 0 var(--ink2)}.u2grid>i.er.eb{box-shadow:inset -2px 0 0 var(--ink2),inset 0 -2px 0 var(--ink2)}
+
+/* nonogram: number clues above and to the left, ink squares and crosses */
+.u2nn{--cs:min(34px,calc((min(100vw,460px) - 46px - var(--mx) * 12px) / var(--w)));display:grid;grid-template-columns:auto auto;direction:ltr;gap:3px;justify-content:center;margin:0 auto}
+.u2nn-k{grid-area:1/1}
+.u2nn-cc{grid-area:1/2;display:grid;grid-template-columns:repeat(var(--w),var(--cs));gap:1px;padding:0 2px;align-items:end}
+.u2nn-cc span{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;line-height:1.05;font-size:13px;font-weight:800;padding:2px 0;border-radius:6px 6px 0 0;background:var(--surface-2);color:var(--ink)}
+.u2nn-rc{grid-area:2/1;display:grid;grid-template-rows:repeat(var(--h),var(--cs));gap:1px;padding:2px 0}
+.u2nn-rc span{display:flex;justify-content:flex-end;align-items:center;gap:4px;padding:0 5px;font-size:13px;font-weight:800;border-radius:6px 0 0 6px;background:var(--surface-2);color:var(--ink)}
+.u2nn-cc span.ok,.u2nn-rc span.ok{color:var(--okc);opacity:.55}
+.u2nn-cc span.bad,.u2nn-rc span.bad{color:#fff;background:var(--badc)}
+.u2nn .u2grid{grid-area:2/2;grid-template-columns:repeat(var(--w),var(--cs))}
+.u2nn .u2grid>i.c1{background:var(--ink2)}
+.u2nn .u2grid>i.c2{color:var(--mark);font-size:calc(var(--cs) * .6);font-weight:900}
+.u2 .u2n{margin:0;min-height:20px;font-weight:700}
+
+/* binary grid: amber and navy counters, the given ones sit on a darker square */
+.u2-bn .u2grid{width:min(100%,370px)}
+.u2-bn .u2grid>i.fx{background:var(--paper-2)}
+.u2-bn .u2grid>i>s{text-decoration:none;display:grid;place-items:center;width:76%;height:76%;border-radius:50%;color:#fff;font-size:clamp(13px,4.6vw,22px);font-weight:900;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22);animation:u2pop var(--t2) var(--spring) both}
+.u2-bn .u2grid>i.v0>s{background:#F2A33A}.u2-bn .u2grid>i.v1>s{background:#2D4763}
+.u2-bn .u2grid>i.fx>s{animation:none;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3),0 0 0 2px rgba(255,255,255,.7)}
+.u2-bn .u2grid>i.bad{background:#FAD4D0}.u2-bn .u2grid>i.bad>s{box-shadow:0 0 0 3px var(--badc)}
+@keyframes u2pop{from{transform:scale(.6);opacity:.4}to{transform:none;opacity:1}}
+
+/* lights out: dark panel, warm bulbs (only the glow's opacity changes) */
+.u2-lo .u2grid{width:min(100%,340px);gap:6px;padding:6px;background:#1C2538;border-color:#141B29;border-radius:14px}
+.u2-lo .u2grid>i{position:relative;background:#3A4B6B;border-radius:10px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.25);overflow:hidden}
+.u2-lo .u2grid>i>s{position:absolute;inset:0;border-radius:10px;background:radial-gradient(circle at 50% 45%,#FFF8D2 0 18%,#FFD54A 46%,#F0A92B 100%);opacity:0;transition:opacity var(--t2)}
+.u2-lo .u2grid>i.on>s{opacity:1}
+.u2-lo .u2grid>i.last{outline:3px solid rgba(255,255,255,.55);outline-offset:-3px}
+
+/* sliding tiles: wooden tray, tiles slide with transform */
+.u2sl{position:relative;width:min(100%,340px);aspect-ratio:1;background:#6E4422;border:6px solid #6E4422;border-radius:16px;touch-action:none;user-select:none;-webkit-user-select:none;direction:ltr;box-shadow:var(--e2),inset 0 0 0 2px #5A3618}
+.u2sl b{position:absolute;left:0;top:0;width:calc(100% / var(--w));height:calc(100% / var(--w));display:grid;place-items:center;border:3px solid #6E4422;border-radius:12px;
+  background:linear-gradient(180deg,#F8E3B8,#E9C98F);color:#6E4422;font-size:clamp(20px,8vw,34px);font-weight:900;box-shadow:inset 0 -4px 0 rgba(110,68,34,.25);transition:transform var(--t2) var(--ease)}
+.u2sl b.ok{background:linear-gradient(180deg,#E4F2C9,#C7E19A);color:#2E6B2F}
+
+/* maze: paper, green hedges, an amber trail and a red ball */
+.u2mzw{width:min(100%,370px)}
+.u2mz{display:block;width:100%;height:auto;touch-action:none;background:#F3FAEC;border:3px solid #1E5A40;border-radius:8px;box-shadow:var(--e2);user-select:none;-webkit-user-select:none}
+.u2mz .wl{fill:none;stroke:#1E5A40;stroke-width:1.3;stroke-linecap:round}
+.u2mz .ex{fill:#BFE3A5}
+.u2mz .tr{fill:none;stroke:#F2A33A;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
+.u2mz .bl{fill:#EC6158;stroke:#fff;stroke-width:1}
+.u2pad{display:flex;gap:8px;direction:ltr;justify-content:center;width:100%}
+.u2pad .btn{flex:1 1 0;max-width:80px;min-height:46px;padding:0;font-size:20px}
+.u2tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+
+/* number pad and notes (futoshiki, cages, kakuro) */
+.u2np{display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr));gap:6px;width:100%;max-width:420px}
+.u2np .btn{min-height:46px;padding:0;font-size:21px;min-width:0}
+.u2nt{display:block;font-size:10px;line-height:1.05;font-weight:700;color:var(--mut);letter-spacing:-.5px;padding:0 2px;word-break:break-all}
+
+/* futoshiki: cells with signs between them */
+.u2fu{display:grid;align-items:center;width:min(100%,360px);direction:ltr;padding:8px;border-radius:var(--r-l);background:var(--paper);box-shadow:var(--e2),inset 0 0 0 2px var(--grid)}
+.u2fc{aspect-ratio:1;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 2px var(--grid);font-size:clamp(18px,6.5vw,28px);font-weight:900;color:#2F80C2;padding:0;display:grid;place-items:center;min-width:0}
+.u2fc.fx{color:var(--ink2);background:var(--paper-2)}
+.u2fc:disabled{opacity:1}
+.u2fc.cur{box-shadow:inset 0 0 0 3px #E8833A;background:#FFF1D6}
+.u2fc.bad{color:var(--badc);background:#FDE3E0}
+.u2fu em{font-style:normal;display:grid;place-items:center;color:#E8833A;font-weight:900;font-size:18px;min-height:16px;line-height:1}
+.u2fu em.bad{color:var(--badc)}
+
+/* cages: thick lines between cages, the target in the corner */
+.u2-cc .u2grid,.u2-hi .u2grid,.u2-sb .u2grid{width:min(100%,370px)}
+.u2-cc .u2grid>i{position:relative;background:#fff}
+.u2grid>i.br{box-shadow:inset -3px 0 0 var(--ink2)}.u2grid>i.bb{box-shadow:inset 0 -3px 0 var(--ink2)}.u2grid>i.br.bb{box-shadow:inset -3px 0 0 var(--ink2),inset 0 -3px 0 var(--ink2)}
+.u2-cc .u2grid>i>u{position:absolute;top:2px;left:4px;text-decoration:none;font-size:clamp(9px,2.8vw,12px);font-weight:900;color:#145E54;line-height:1}
+.u2-cc .u2grid>i>b{font-size:clamp(18px,6vw,28px);color:#2F80C2}
+.u2-cc .u2grid>i.cur{background:#FFF1D6}
+.u2-cc .u2grid>i.bad>b{color:var(--badc)}.u2-cc .u2grid>i.bad{background:#FDE3E0}
+
+/* hitori: shaded cells go dark, kept ones get a ring */
+.u2-hi .u2grid>i{font-size:clamp(16px,5.4vw,26px);font-weight:900}
+.u2-hi .u2grid>i.s1{background:#3B2A28;color:#7d635d}
+.u2-hi .u2grid>i.s2{background:radial-gradient(circle,transparent 52%,#2F80C2 54% 62%,transparent 64%),var(--paper)}
+.u2-hi .u2grid>i.bad{color:var(--badc);background-color:#FDE3E0}.u2-hi .u2grid>i.s1.bad{background:#8E2C25;color:#fff}
+
+/* star battle: pastel regions with thick borders, gold stars */
+.u2-sb .u2grid>i{background:var(--rc);font-size:clamp(20px,7vw,32px);color:#C77C0E;line-height:1}
+.u2-sb .u2grid>i.s2{color:#7a6a55;font-size:16px}
+.u2-sb .u2grid>i.s1{animation:u2pop var(--t2) var(--spring) both}
+.u2-sb .u2grid>i.bad{color:var(--badc)}
