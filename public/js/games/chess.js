@@ -79,14 +79,17 @@ function chMove(d,m){const s=d.sd,a=chApply(d,m),ns=1-s;const key=chKey(a.b,ns,a
   if(hist.filter(k=>k===key).length>=3)return {...nd,win:'d',end:'rep'};
   if(chk)nd.last+=' • كش ملك';
   return nd;}
-// piece drawings
+// piece drawings (40x40, shared base); .cut lines are details drawn with the outline colour
+const CHB='<path d="M9.4 36.2c0-2.9 2-4.8 4.8-4.8h11.6c2.8 0 4.8 1.9 4.8 4.8z"/>';
 const CHP={
-  p:'<circle cx="20" cy="12" r="5.5"/><path d="M14 30c0-6 3-9 6-11 3 2 6 5 6 11z"/><rect x="11" y="30" width="18" height="5" rx="2"/>',
-  r:'<path d="M11 8h4v3h3V8h4v3h3V8h4v7l-3 3v9l3 3v5H11v-5l3-3v-9l-3-3z"/>',
-  n:'<path d="M13 35v-5c0-5 4-7 5-11l-6 2-2-4 8-8c2-2 4-3 7-2 5 2 6 8 6 14v14z"/><circle cx="20" cy="13" r="1.4" class="eye"/>',
-  b:'<circle cx="20" cy="6.5" r="2.5"/><path d="M20 9c5 4 7 8 7 12 0 3-2 5-4 6h-6c-2-1-4-3-4-6 0-4 2-8 7-12z"/><path d="M21.5 14l-3 5" class="cut"/><rect x="11" y="29" width="18" height="6" rx="2"/>',
-  q:'<path d="M9 13l4 13h14l4-13-6 6-5-10-5 10z"/><circle cx="9" cy="12" r="2.2"/><circle cx="31" cy="12" r="2.2"/><circle cx="20" cy="8" r="2.2"/><rect x="11" y="27" width="18" height="8" rx="2"/>',
-  k:'<path d="M18.5 3h3v3h3v3h-3v3h-3V9h-3V6h3z"/><path d="M10 18c0-4 4-6 10-6s10 2 10 6l-3 9H13z"/><rect x="11" y="27" width="18" height="8" rx="2"/>'};
+  p:'<circle cx="20" cy="11.4" r="5.4"/><rect x="14.4" y="16.4" width="11.2" height="3.2" rx="1.6"/><path d="M16.6 19.6h6.8c1.6 3.6 3.8 7.4 4.8 11.8H11.8c1-4.4 3.2-8.2 4.8-11.8z"/>'+CHB,
+  r:'<path d="M11.4 6.6h4.2v3.4h2.7V6.6h3.4v3.4h2.7V6.6h4.2v7.2l-2.9 2.3v12.1l2.6 3.2H11.7l2.6-3.2V16.1l-2.9-2.3z"/><path d="M14.3 16.1h11.4M14.3 28.2h11.4" class="cut"/>'+CHB,
+  n:'<path d="M13.2 31.4c-.1-4.4 1.5-7.4 4.5-9.9-2.5.3-4.3 1.3-5.7 2.7-1.5.6-2.8-.3-2.9-1.7-.1-1.2.4-2.3 1.3-3.1l5.2-6.4c.4-1.7 1.1-3 2.1-4l-.4-3.6 2.8 1.9 1.6-2.4.9 3c4.9 1.3 8.3 5.8 8.7 12.6.3 4.3-.4 8.1-1.5 10.9z"/><path d="M25.2 10.4c2.9 2.2 4.6 5.6 4.8 10.4" class="cut"/><circle cx="18.4" cy="13" r="1.3" class="eye"/>'+CHB,
+  b:'<circle cx="20" cy="6.2" r="2.4"/><path d="M20 8.7c-4.5 3.3-7.3 7.1-7.3 10.7 0 3.2 2 5.4 4 6.2h6.6c2-.8 4-3 4-6.2 0-3.6-2.8-7.4-7.3-10.7z"/><path d="M21.9 13.4l-3.8 4.6" class="cut"/><path d="M15 25.6h10l2.2 5.8H12.8z"/>'+CHB,
+  q:'<path d="M9 13.8l3.6 12h14.8L31 13.8l-4.8 4.4-.7-7.1-3.6 6.1L20 9.3l-1.9 7.9-3.6-6.1-.7 7.1z"/><circle cx="9" cy="12.6" r="2"/><circle cx="14.5" cy="9.9" r="2"/><circle cx="20" cy="7.6" r="2"/><circle cx="25.5" cy="9.9" r="2"/><circle cx="31" cy="12.6" r="2"/><path d="M12.6 25.8h14.8l1.3 5.6H11.3z"/>'+CHB,
+  k:'<path d="M18.6 2.6h2.8v2.7h2.7v2.7h-2.7v3.4h-2.8V8h-2.7V5.3h2.7z"/><path d="M20 11.6c-6.7 0-10.7 2.5-10.7 6.3 0 2.6 1.6 5 3.5 7.9h14.4c1.9-2.9 3.5-5.3 3.5-7.9 0-3.8-4-6.3-10.7-6.3z"/><path d="M20 12v13.6" class="cut"/><path d="M12.8 25.8h14.4l1.3 5.6H11.5z"/>'+CHB};
+// shared shading for the pieces: one hidden set of gradients per board
+const CHDEFS='<svg class="bd-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><linearGradient id="chgw" x1="0" y1="0" x2="1" y2=".35"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F2ECE0"/><stop offset="1" stop-color="#D3C6AE"/></linearGradient><linearGradient id="chgb" x1="0" y1="0" x2="1" y2=".35"><stop offset="0" stop-color="#66788F"/><stop offset=".45" stop-color="#2E3B4C"/><stop offset="1" stop-color="#151C26"/></linearGradient></defs></svg>';
 const chPiece=p=>{const s=chSide(p),t=p.toLowerCase();return `<svg viewBox="0 0 40 40" class="chp ${s?'bk':'wh'}">${CHP[t]}</svg>`;};
 GAMES.chess={name:'شطرنج',cat:'board',lbc:'#5B4632',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9A66B"/>${[0,1,2,3].map(r=>[0,1,2,3].map(c=>(r+c)%2?`<rect x="${c*25}" y="${r*25}" width="25" height="25" fill="#8B6B43"/>`:'').join('')).join('')}<g transform="translate(18 14) scale(1.6)" fill="#fff" stroke="#2D4763" stroke-width="1.6" stroke-linejoin="round">${CHP.k}</g></svg>`,
@@ -105,10 +108,10 @@ GAMES.chess={name:'شطرنج',cat:'board',lbc:'#5B4632',
     const legal=my?chLegal(d,s):[];const tg=sel!=null?legal.filter(m=>m.f===sel):[];
     const kc=chCheck(d.b,s)?chKing(d.b,s):-1;
     const order=[...Array(64).keys()];if(flip)order.reverse();
-    let h=`<div class="chwrap">${chTaken(d,flip?0:1)}<div class="chb">`;
+    let h=`<div class="chwrap bd-ch">${CHDEFS}${chTaken(d,flip?0:1)}<div class="chb ${my?'my':''}">`;
     for(const i of order){const r=i>>3,c=i&7,dark=(r+c)%2,p=d.b[i];
       const t=tg.find(m=>m.t===i),mv=legal.some(m=>m.f===i);
-      const cls=['sq',dark?'dk':'lt',d.lm&&d.lm.includes(i)?'lm':'',sel===i?'sel':'',i===kc?'kc':'',t?(p!=='.'||t.ep?'cap':'to'):''].join(' ');
+      const cls=['sq',dark?'dk':'lt',d.lm&&d.lm.includes(i)?'lm':'',d.lm&&d.lm[1]===i?'lmt':'',sel===i?'sel':'',i===kc?'kc':'',t?(p!=='.'||t.ep?'cap':'to'):''].join(' ');
       const lab=(flip?r===0:r===7)?`<i class="fl">${'abcdefgh'[c]}</i>`:'',lab2=(flip?c===7:c===0)?`<i class="rk">${8-r}</i>`:'';
       const can=my&&(t||mv||sel!=null);
       h+=`<${can?'button':'div'} class="${cls}" ${can?`data-ga="sq" data-i="${i}"`:''}>${p!=='.'?chPiece(p):''}${lab}${lab2}</${can?'button':'div'}>`;}
@@ -155,6 +158,7 @@ function dmMoves(b,s){let caps=[];for(let f=0;f<64;f++){const p=b[f];if(dmSide(p
   return out;}
 function dmApply(d,m){const b=[...d.b];const p=b[m.f];b[m.f]='.';m.caps.forEach(x=>b[x]='.');const to=m.path[m.path.length-1];
   const s=dmSide(p),row=to>>3;b[to]=(!dmKing(p)&&row===(s?7:0))?(s?'B':'A'):p;return {b:b.join(''),crown:b[to]!==p};}
+const DMCROWN='<svg viewBox="0 0 24 24" class="crw"><path d="M3.5 8.5l4.3 3.8L12 5.2l4.2 7.1 4.3-3.8-1.9 9.7H5.4z" fill="#F4C542" stroke="#8C5E0C" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.8 15.4h12.4" stroke="#8C5E0C" stroke-width="1.1"/><circle cx="12" cy="4.4" r="1.4" fill="#F4C542" stroke="#8C5E0C" stroke-width=".9"/></svg>';
 const dmCount=(b,s)=>[...b].filter(p=>dmSide(p)===s).length;
 GAMES.dama={name:'داما',cat:'board',lbc:'#7A3B2E',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8C994"/>${[1,2,3].map(k=>`<path d="M${k*25} 0V100M0 ${k*25}H100" stroke="#A97D45" stroke-width="2"/>`).join('')}<circle cx="37.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="62.5" cy="37.5" r="10" fill="#2D4763"/><circle cx="37.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="10" fill="#fff" stroke="#A97D45" stroke-width="2"/><circle cx="62.5" cy="62.5" r="4" fill="#EDB02F"/></svg>`,
@@ -175,11 +179,11 @@ GAMES.dama={name:'داما',cat:'board',lbc:'#7A3B2E',
     const starts=new Set(ms.map(m=>m.f));
     const gone=new Set();if(P)okNow[0]&&okNow[0].caps.slice(0,P.path.length).forEach(x=>gone.add(x));
     const order=[...Array(64).keys()];if(flip)order.reverse();
-    let h=`<div class="chwrap"><div class="chb dmb">`;
+    let h=`<div class="chwrap bd-ch"><div class="chb dmb ${my?'my':''}">`;
     for(const i of order){let p=d.b[i];if(P&&i===P.f&&P.path.length)p='.';if(P&&i===at&&P.path.length)p=d.b[P.f];
-      const cls=['sq',d.lm&&d.lm.includes(i)?'lm':'',at===i?'sel':'',nexts.has(i)?'to':'',gone.has(i)?'gone':''].join(' ');
       const can=my&&(nexts.has(i)||(!P||!P.path.length)&&starts.has(i));
-      h+=`<${can?'button':'div'} class="${cls}" ${can?`data-ga="sq" data-i="${i}"`:''}>${p!=='.'?`<span class="dmp ${dmSide(p)?'bk':'wh'}">${dmKing(p)?'<b>♛</b>':''}</span>`:''}</${can?'button':'div'}>`;}
+      const cls=['sq',d.lm&&d.lm.includes(i)?'lm':'',d.lm&&d.lm[d.lm.length-1]===i?'lmt':'',at===i?'sel':'',nexts.has(i)?'to':'',gone.has(i)?'gone':'',can&&at!==i&&!nexts.has(i)?'mv':''].join(' ');
+      h+=`<${can?'button':'div'} class="${cls}" ${can?`data-ga="sq" data-i="${i}"`:''}>${p!=='.'?`<span class="dmp ${dmSide(p)?'bk':'wh'} ${dmKing(p)?'kg':''}">${dmKing(p)?DMCROWN:''}</span>`:''}</${can?'button':'div'}>`;}
     h+='</div></div>';
     if(my&&P&&P.path.length)h+='<div class="row chact"><button class="btn" data-ga="undo">تراجع عن الأكلة</button></div>';
     if(my)h+=`<div class="row chact"><button class="btn" data-ga="resign">استسلم</button></div>`;

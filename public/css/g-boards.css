@@ -1,1 +1,215 @@
-/* boards games: look and motion (loaded after style.css; uses the tokens at the top of style.css) */
+/* boards games: look and motion (loaded after style.css; uses the tokens at the top of style.css)
+   ttt, cw, dots, guess, sea, snakes (classic.js) · c4, gomoku, mines, treasure (boards.js) · chess, dama (chess.js) · tavla (tavla.js).
+   Every rule is scoped to a bd-* board class (or a class only these games use), because .cellgrid/.cg/.tc/.pc are shared. */
+
+/* ---------- shared motion ---------- */
+@keyframes bd-pop{0%{transform:scale(.3);opacity:0}60%{opacity:1}100%{transform:none}}
+@keyframes bd-land{0%{transform:translateY(-14%) scale(1.12)}100%{transform:none}}
+@keyframes bd-win{0%,100%{transform:none}50%{transform:scale(1.1)}}
+@keyframes bd-glow{0%,100%{box-shadow:0 0 0 3px var(--gold),0 0 0 0 rgba(240,180,41,.0)}50%{box-shadow:0 0 0 3px var(--gold),0 0 14px 4px rgba(240,180,41,.75)}}
+@keyframes bd-rev{0%{transform:scale(.55);opacity:.2}100%{transform:none;opacity:1}}
+@keyframes bd-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes bd-drop{0%{transform:translateY(calc(var(--r,1) * -118%))}72%{transform:translateY(0)}86%{transform:translateY(-9%)}100%{transform:none}}
+@keyframes bd-ring{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.25);opacity:0}}
+@keyframes bd-boom{0%{transform:scale(.2) rotate(-20deg);opacity:0}55%{transform:scale(1.18) rotate(6deg);opacity:1}100%{transform:none}}
+
+/* ========== tic tac toe ========== */
+.bd-ttt{background:linear-gradient(160deg,#36577A,#243A52);padding:9px;border-radius:var(--r-xl);box-shadow:inset 0 2px 0 rgba(255,255,255,.14),0 5px 0 #1A2B3D,var(--e2)}
+.bd-ttt .tc{background:linear-gradient(#FFFFFF,#F1F5FA);border-radius:12px;box-shadow:inset 0 -3px 0 rgba(45,71,99,.13),0 1px 0 rgba(0,0,0,.18);position:relative;transition:transform var(--t1) var(--ease),background var(--t2)}
+.bd-ttt .tc svg{animation:bd-pop var(--t3) var(--spring) both}
+.bd-ttt.my .tc:not(:disabled):hover{background:linear-gradient(#FFFFFF,#FFF8DD)}
+.bd-ttt .tc.lm{box-shadow:inset 0 -3px 0 rgba(45,71,99,.13),inset 0 0 0 3px var(--c);background:#FFFFFF}
+.bd-ttt .tc.hl{background:linear-gradient(#FFF7D6,#FFE9A3);animation:bd-glow .9s ease-in-out 3}
+.bd-ttt .tc.hl svg{animation:bd-pop var(--t3) var(--spring) both,bd-win .9s ease-in-out 3}
+@media (prefers-color-scheme:dark){.bd-ttt .tc{background:linear-gradient(#EEF3F8,#DDE6F0)}.bd-ttt .tc.lm{background:#EEF3F8}.bd-cw .cc{background:linear-gradient(#ECE5DA,#DCD2C2)}}
+
+/* ========== color wars ========== */
+.bd-cw{background:linear-gradient(160deg,#58456F,#3B2D4E);padding:9px;border-radius:var(--r-xl);box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 5px 0 #2A1F38,var(--e2)}
+.bd-cw .cc{background:linear-gradient(#F6F0E6,#E7DECF);box-shadow:inset 0 -3px 0 rgba(75,58,98,.16);transition:transform var(--t1) var(--ease),background var(--t2)}
+.bd-cw .cc.own{box-shadow:inset 0 -3px 0 rgba(0,0,0,.1)}
+.bd-cw .cc.can{box-shadow:inset 0 -3px 0 rgba(0,0,0,.1),0 0 0 2.5px rgba(255,216,77,.9)}
+.bd-cw .cc svg{animation:bd-pop var(--t3) var(--spring) both}
+.bd-cw .cc .pip{transform-box:fill-box;transform-origin:center;animation:bd-pop var(--t2) var(--spring) both}
+
+/* ========== dots and boxes ========== */
+svg.bd-dots{background:radial-gradient(circle at 30% 20%,#FFFFFF,#F3F6FA);border-radius:var(--r-xl);box-shadow:0 0 0 1px rgba(45,71,99,.08),0 4px 0 var(--line),var(--e1)}
+.bd-dots .ghost{stroke:#D5E0EC;stroke-dasharray:2 2}
+.bd-dots .hit{stroke:transparent;cursor:pointer;transition:stroke var(--t1)}
+.bd-dots .hit:hover,.bd-dots .hit:active{stroke:var(--c);stroke-opacity:.32}
+.bd-dots .ln{stroke-dasharray:1;animation:bd-draw var(--t3) var(--ease) both}
+.bd-dots .bx,.bd-dots .bxs{transform-box:fill-box;transform-origin:center;animation:bd-pop var(--t3) var(--spring) both}
+.bd-dots .bxs{animation-delay:.08s}
+.bd-dots .dt{fill:#2D4763}
+@media (prefers-color-scheme:dark){svg.bd-dots{background:radial-gradient(circle at 30% 20%,#F2F6FA,#DFE7F0);box-shadow:0 4px 0 #0b1118,var(--e1)}}
+
+/* ========== snakes and ladders ========== */
+.bd-sl{border-radius:var(--r-l);box-shadow:0 0 0 5px #9A6A3A,0 0 0 7px #74491F,0 9px 0 4px rgba(0,0,0,.16);margin:7px 0}
+.bd-sl .cl{font-size:10.5px;color:#A47E4A;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+.bd-sl .cl.a{background:linear-gradient(135deg,#FDF4E2,#F8EAD0)}.bd-sl .cl.b{background:linear-gradient(135deg,#F5DDB3,#EDCF9C)}
+.bd-sl .cells>.cl:first-child{color:#2E8B57}
+.bd-sl .lad .rail{stroke:#6E4520;stroke-width:1.5;stroke-linecap:round}
+.bd-sl .lad .rail.hi{stroke:#C98D4E;stroke-width:.7}
+.bd-sl .lad .rung{stroke:#A8743F;stroke-width:1}
+.bd-sl .tk{transition:transform .38s var(--ease),opacity var(--t2)}
+.bd-sl .tk.off{opacity:0}
+.bd-sl .tk.on circle:nth-child(2){stroke:#fff;stroke-width:1.1}
+@media (prefers-color-scheme:dark){.bd-sl{box-shadow:0 0 0 5px #8A5C30,0 0 0 7px #5E3A18,0 9px 0 4px rgba(0,0,0,.35)}.bd-sl .cl{color:#9A7442}}
+
+/* ========== sea battle ========== */
+.bd-sea{direction:ltr;gap:0;padding:6px;border-radius:var(--r-l);background:
+  radial-gradient(120% 70% at 30% 0%,rgba(255,255,255,.22),transparent 60%),
+  repeating-radial-gradient(ellipse 22px 9px at 50% 100%,rgba(255,255,255,.07) 0 1.5px,transparent 2px 9px),
+  linear-gradient(170deg,#58B3E6,var(--sea-1) 35%,var(--sea-2) 75%,#24679A);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 5px 0 #1D5A88,var(--e2)}
+.bd-sea .sc{background:transparent;border-radius:0;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.28)}
+.bd-sea .sc.can{background:transparent;transition:background var(--t1)}
+.bd-sea .sc.can:hover{background:rgba(255,255,255,.16)}
+.bd-sea .sc.can:active{background:rgba(255,216,77,.4)}
+/* hull: each ship cell draws its part, across (sh-h) or down (sh-v); s0 is the bow, s1 the stern */
+.bd-sea .sc.ship{background:transparent}
+.bd-sea .sc.ship::before{content:'';position:absolute;inset:17% -1px;background:linear-gradient(#C5D2DD,#93A6B8 55%,#6F8396);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.bd-sea .sc.ship.sh-v::before{inset:-1px 17%;background:linear-gradient(90deg,#C5D2DD,#93A6B8 55%,#6F8396);box-shadow:inset -2px 0 0 rgba(0,0,0,.18)}
+.bd-sea .sc.ship.sh-h.s0::before{left:7%;border-radius:60% 0 0 60%/50% 0 0 50%}
+.bd-sea .sc.ship.sh-h.s1::before{right:9%;border-radius:0 28% 28% 0/0 40% 40% 0}
+.bd-sea .sc.ship.sh-v.s0::before{top:7%;border-radius:60% 60% 0 0/50% 50% 0 0}
+.bd-sea .sc.ship.sh-v.s1::before{bottom:9%;border-radius:0 0 28% 28%/0 0 40% 40%}
+/* deck hatch in the middle of each segment */
+.bd-sea .sc.ship:not(.hit)::after{content:'';position:absolute;inset:38%;border-radius:50%;background:#5E7286;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+/* hit: a fire burst; miss: a splash ring; sunk: a dark wreck */
+.bd-sea .sc.hit{background:transparent}
+.bd-sea .sc.hit::after{content:'';position:absolute;inset:8%;display:block;background:radial-gradient(circle,#FFF3B0 0 16%,#FFB23E 32%,#F0603A 55%,#C9302A 70%,transparent 72%);
+  clip-path:polygon(50% 0,61% 30%,93% 18%,72% 45%,100% 62%,66% 66%,72% 100%,50% 75%,28% 100%,34% 66%,0 62%,28% 45%,7% 18%,39% 30%);animation:bd-boom var(--t3) var(--spring) both}
+.bd-sea .sc.miss::after{content:'';position:absolute;inset:30%;border-radius:50%;background:radial-gradient(circle,#fff 0 22%,rgba(255,255,255,.0) 26%);box-shadow:0 0 0 2px rgba(255,255,255,.75),0 0 0 5px rgba(255,255,255,.18)}
+.bd-sea .sc.miss.lst::before{content:'';position:absolute;inset:12%;border-radius:50%;border:2px solid #fff;animation:bd-ring .6s ease-out both}
+.bd-sea .sc.ship.sunk::before{background:linear-gradient(#5A6470,#3B434D 60%,#2A3038);box-shadow:inset 0 -2px 0 rgba(0,0,0,.3)}
+.bd-sea .sc.ship.sh-v.sunk::before{background:linear-gradient(90deg,#5A6470,#3B434D 60%,#2A3038)}
+.bd-sea .sc.sunk.hit::after{inset:24%;background:radial-gradient(circle,#FFB23E 0 18%,#C9302A 45%,#3B1F1A 70%,transparent 72%);opacity:.9}
+.bd-sea .sc.lst.hit{z-index:1}
+.bd-sea.small{padding:4px;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 3px 0 #1D5A88}
+.bd-sea.small .sc.miss::after{inset:34%;box-shadow:0 0 0 1.5px rgba(255,255,255,.75)}
+.bd-sea.small .sc.ship:not(.hit)::after{display:none}
+.bd-sea.aim{box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 0 0 3px rgba(255,216,77,.55),0 5px 0 #1D5A88,var(--e2)}
+
+/* ========== guess who ========== */
+.gw .pc{transition:transform var(--t2) var(--ease)}
+.gw .pc .fr{background:linear-gradient(#FFFFFF,#F6F2FB);box-shadow:0 0 0 1.5px #E4D8F2 inset,0 2px 0 rgba(30,10,50,.35),0 3px 6px rgba(30,10,50,.18);border-radius:9px}
+.gw .pc .fr svg{border-radius:8px 8px 3px 3px;margin:2px 2px 0;width:calc(100% - 4px)}
+.gw .pc .fr b{font-size:10.5px;letter-spacing:-.2px}
+.gw .pc .bk{background:radial-gradient(circle at 50% 42%,rgba(240,180,41,.28) 0 22%,transparent 23%),repeating-linear-gradient(45deg,#4a2d66 0 5px,#56377A 5px 10px);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14),inset 0 0 0 4px rgba(74,45,102,.9),inset 0 0 0 5px rgba(240,180,41,.35)}
+.gw .pc .bk span{color:rgba(255,226,140,.75);text-shadow:0 1px 0 rgba(0,0,0,.3)}
+.gw .pc.pick{cursor:pointer}
+.gw.gm .pc.pick{animation:none}
+.gw.gm .pc.pick .fr{box-shadow:0 0 0 2.5px var(--sel),0 2px 0 rgba(30,10,50,.35),0 4px 10px rgba(30,10,50,.25)}
+.gw.gm .pc.pick:hover,.gw.gm .pc.pick:focus-visible{transform:translateY(-3px)}
+.gw.gm .pc.pick:active{transform:scale(.94)}
+.secret .pc .fr{box-shadow:0 0 0 2px #E4D8F2 inset,0 2px 0 rgba(30,10,50,.25)}
+
+/* ========== connect four ========== */
+.cellgrid.bd-c4{background:linear-gradient(170deg,#3E8BDA,#2C69B1 60%,#245C9E);padding:8px;border-radius:var(--r-l);overflow:hidden;box-shadow:inset 0 2px 0 rgba(255,255,255,.28),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 0 #1C4C86,var(--e2)}
+.bd-c4 .cg{background:transparent;padding:0;border-radius:50%;position:relative;display:grid;place-items:center;overflow:visible}
+.bd-c4 .hole,.bd-c4 .dk{display:block;width:88%;aspect-ratio:1;border-radius:50%;position:relative}
+.bd-c4 .hole{background:radial-gradient(circle at 50% 30%,#DCE8F5,#BCD0E6);box-shadow:inset 0 3px 3px rgba(10,40,80,.38),0 1px 0 rgba(255,255,255,.25)}
+.bd-c4 .nx .hole::after{content:'';position:absolute;inset:16%;border-radius:50%;background:var(--c);opacity:.3}
+.bd-c4 .cg:not(:disabled):hover .hole{box-shadow:inset 0 3px 3px rgba(10,40,80,.38),0 0 0 2px rgba(255,255,255,.55)}
+.bd-c4 .dk{background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.6),rgba(255,255,255,0) 38%),radial-gradient(circle,rgba(0,0,0,0) 54%,rgba(0,0,0,.16) 56% 62%,rgba(0,0,0,0) 64%),var(--c);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.25);
+  animation:bd-drop calc(.16s + var(--r,1) * .026s) cubic-bezier(.55,0,1,.45) both}
+.bd-c4 .dk.lm::after{content:'';position:absolute;inset:39%;border-radius:50%;background:rgba(255,255,255,.85)}
+.bd-c4 .dk.won{box-shadow:0 0 0 3px var(--gold),inset 0 -3px 0 rgba(0,0,0,.2);animation:bd-drop calc(.16s + var(--r,1) * .026s) cubic-bezier(.55,0,1,.45) both,bd-win .8s .35s ease-in-out 3}
+@media (prefers-color-scheme:dark){.bd-c4 .hole{background:radial-gradient(circle at 50% 30%,#22344A,#152335);box-shadow:inset 0 3px 3px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.12)}}
+
+/* ========== five in a row (stones on the lines of a wooden board) ========== */
+.cellgrid.bd-gm{--p:7px;--ln:rgba(92,58,24,.55);position:relative;gap:0;padding:var(--p);border-radius:var(--r-m);
+  background:radial-gradient(130% 90% at 20% 10%,rgba(255,255,255,.28),transparent 60%),linear-gradient(135deg,#EFCF97,#E2B672 60%,#D7A862);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 0 0 4px #A8743F,0 7px 0 4px rgba(0,0,0,.15),var(--e2);margin:4px 0}
+.cellgrid.bd-gm::before{content:'';position:absolute;pointer-events:none;
+  inset:calc(var(--p) + (100% - 2 * var(--p)) / var(--z) / 2);
+  background-image:linear-gradient(90deg,var(--ln) 1px,transparent 1px),linear-gradient(var(--ln) 1px,transparent 1px);
+  background-size:calc(100% / (var(--z) - 1) - .0001px) calc(100% / (var(--z) - 1) - .0001px);border-right:1px solid var(--ln);border-bottom:1px solid var(--ln)}
+.bd-gm .cg{background:transparent;border-radius:50%;padding:0;position:relative;display:grid;place-items:center}
+.bd-gm .cg.hs::before{content:'';position:absolute;width:22%;height:22%;border-radius:50%;background:rgba(92,58,24,.75)}
+.bd-gm.my .cg:not(:disabled):hover::after{content:'';position:absolute;inset:9%;border-radius:50%;background:var(--c);opacity:.35}
+.bd-gm .st{position:relative;display:block;width:86%;aspect-ratio:1;border-radius:50%;z-index:1;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.7),rgba(255,255,255,0) 42%),var(--c);box-shadow:inset 0 -2px 0 rgba(0,0,0,.22),0 1.5px 1px rgba(60,30,0,.4);animation:bd-pop var(--t2) var(--spring) both}
+.bd-gm .st.lm::after{content:'';position:absolute;inset:36%;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.bd-gm .st.won{box-shadow:0 0 0 2px var(--gold),0 0 8px 2px rgba(240,180,41,.8);animation:bd-pop var(--t2) var(--spring) both,bd-win .8s .1s ease-in-out 3}
+
+/* ========== minesweeper ========== */
+.cellgrid.bd-mn{background:linear-gradient(160deg,#557560,#3F5C4A);gap:3px;padding:7px;border-radius:var(--r-l);box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 5px 0 #2F4638,var(--e2)}
+.bd-mn .cg{border-radius:6px;font-size:16px}
+.bd-mn .tile{background:linear-gradient(150deg,#BCD6C0,#9CBBA3);box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(30,60,40,.28),0 1px 0 rgba(0,0,0,.2);transition:transform var(--t1) var(--ease),filter var(--t1)}
+.bd-mn.my .tile:not(:disabled):hover{background:linear-gradient(150deg,#CBE2CE,#AACAB1)}
+.bd-mn .tile.mine{background:linear-gradient(150deg,#D7DEDA,#BFC9C3);padding:16%}
+.bd-mn .open{background:var(--l);box-shadow:inset 0 2px 3px rgba(0,0,0,.16);animation:bd-rev var(--t2) var(--ease) both;font-weight:900;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+.bd-mn .n1{color:#2563B5}.bd-mn .n2{color:#23804D}.bd-mn .n3{color:#CF3A30}.bd-mn .n4{color:#5B35A0}.bd-mn .n5{color:#94351A}.bd-mn .n6{color:#167F82}.bd-mn .n7{color:#2B2B2B}.bd-mn .n8{color:#6E6E6E}
+.bd-mn .boom{background:radial-gradient(circle,#FFE38A 0 18%,var(--c) 52%,#8E2A22 100%);padding:14%;animation:bd-boom var(--t3) var(--spring) both;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.bd-mn .mi{width:100%;height:100%;display:block}
+.bd-mn .tile.mine .mi{animation:bd-pop var(--t3) var(--spring) both}
+
+/* ========== treasure hunt ========== */
+.cellgrid.bd-tr{background:linear-gradient(160deg,#C9A15B,#A9803F);gap:4px;padding:7px;border-radius:var(--r-l);box-shadow:inset 0 2px 0 rgba(255,255,255,.22),0 5px 0 #86622D,var(--e2)}
+.bd-tr .cg{border-radius:7px;position:relative}
+.bd-tr .sand{background:radial-gradient(circle at 28% 30%,rgba(140,100,40,.22) 0 1px,transparent 1.6px),radial-gradient(circle at 70% 64%,rgba(140,100,40,.18) 0 1.2px,transparent 1.8px),radial-gradient(circle at 62% 22%,rgba(255,255,255,.5) 0 1px,transparent 1.6px),linear-gradient(150deg,#F2DDB0,#E2C48C);box-shadow:inset 0 2px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(120,80,20,.22);transition:transform var(--t1) var(--ease)}
+.bd-tr.my .sand:not(:disabled):hover{background:linear-gradient(150deg,#F8E8C6,#EBD09E)}
+.bd-tr .dug{background:radial-gradient(circle at 50% 42%,#9A7440,#B9925A 62%,#CDA86D);box-shadow:inset 0 3px 4px rgba(60,35,5,.45);animation:bd-rev var(--t2) var(--ease) both}
+.bd-tr .dug b{display:grid;place-items:center;width:64%;aspect-ratio:1;border-radius:50%;background:var(--h);color:#fff;font-size:15px;font-weight:900;text-shadow:0 1px 0 rgba(0,0,0,.25);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.3)}
+.bd-tr .dug i{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px #fff}
+.bd-tr .dug.lm{box-shadow:inset 0 3px 4px rgba(60,35,5,.45),0 0 0 2px var(--c)}
+.bd-tr .gold{background:radial-gradient(circle,#FFF4C2,#FFD84D 55%,#E2A92A);font-size:22px;animation:bd-glow .9s ease-in-out 3}
+.bd-tr .gold span{animation:bd-boom var(--t3) var(--spring) both;display:block}
+
+/* ========== chess and dama: wooden board, frame, coordinates ========== */
+.bd-ch{gap:6px}
+.bd-ch .bd-defs{position:absolute;width:0;height:0;overflow:hidden}
+.bd-ch .chb{border-radius:6px;box-shadow:0 0 0 2px #4A2C14,0 0 0 9px #7A4B26,0 0 0 10px #4A2C14,0 12px 0 6px rgba(0,0,0,.16),0 14px 26px 6px rgba(0,0,0,.18);margin:10px}
+.bd-ch .chb .sq{background:linear-gradient(135deg,#F3E0BF,#EAD2A6)}
+.bd-ch .chb .sq.dk{background:linear-gradient(135deg,#BD8F5E,#A97A49)}
+.bd-ch .chb .sq i{font-size:9.5px;font-weight:800;color:#A97A49;opacity:.95}
+.bd-ch .chb .sq.dk i{color:#F3E0BF}
+/* last move, selection, legal targets, captures, king in check */
+.bd-ch .chb .sq.lm{box-shadow:inset 0 0 0 100px rgba(255,214,64,.36)}
+.bd-ch .chb .sq.sel{box-shadow:inset 0 0 0 100px rgba(255,216,77,.42),inset 0 0 0 3px var(--sel)}
+.bd-ch .chb .sq.sel .chp{transform:scale(1.07) translateY(-2px)}
+.bd-ch .chb .sq.to::after{width:30%;height:30%;background:rgba(32,22,10,.26);box-shadow:none}
+.bd-ch .chb .sq.cap::after{inset:4%;border-radius:50%;background:none;box-shadow:inset 0 0 0 4px rgba(32,22,10,.3)}
+.bd-ch .chb .sq.kc{box-shadow:none;background:radial-gradient(circle,#FF6B5E 0,rgba(236,70,60,.75) 30%,rgba(236,70,60,0) 72%),linear-gradient(135deg,#F3E0BF,#EAD2A6)}
+.bd-ch .chb .sq.dk.kc{background:radial-gradient(circle,#FF6B5E 0,rgba(236,70,60,.75) 30%,rgba(236,70,60,0) 72%),linear-gradient(135deg,#BD8F5E,#A97A49)}
+.bd-ch .chb.my button.sq:active .chp{transform:scale(.94)}
+/* pieces: shaded body, dark outline in both colours */
+.bd-ch .chp{width:88%;height:88%;transition:transform var(--t1) var(--ease);filter:drop-shadow(0 1.5px 0 rgba(40,20,0,.35))}
+.chp.wh{fill:url(#chgw);stroke:#2B2620;stroke-width:1.25}
+.chp.bk{fill:url(#chgb);stroke:#0B1017;stroke-width:1.25}
+.chp .cut{fill:none;stroke-width:1}
+.chp.wh .cut{stroke:#7D6B52}.chp.bk .cut{stroke:#8C9CB0}
+.chp.wh .eye{fill:#2B2620;stroke:none}.chp.bk .eye{fill:#C9D3DE;stroke:none}
+.bd-ch .sq.lmt .chp{animation:bd-land var(--t2) var(--ease)}
+.bd-ch .chtk{min-height:22px;padding:1px 10px;gap:0}
+.bd-ch .chtk .chp{width:21px;height:21px;margin-inline-end:-5px;filter:none}
+.chpro button .chp{filter:drop-shadow(0 1.5px 0 rgba(40,20,0,.3))}
+/* dama: one wood colour with grid lines, glossy discs, gold crowned kings */
+.bd-ch .dmb .sq,.bd-ch .dmb .sq.dk{background:linear-gradient(135deg,#EFD3A0,#E3C188);box-shadow:inset 0 0 0 .5px rgba(120,80,30,.55)}
+.bd-ch .dmb .sq.lm{box-shadow:inset 0 0 0 .5px rgba(120,80,30,.55),inset 0 0 0 100px rgba(255,214,64,.34)}
+.bd-ch .dmb .sq.sel{box-shadow:inset 0 0 0 100px rgba(255,216,77,.4),inset 0 0 0 3px var(--sel)}
+.bd-ch .dmb .sq.to::after{width:28%;height:28%;background:rgba(32,22,10,.28)}
+.dmp{position:relative;width:78%;height:78%;transition:transform var(--t1) var(--ease)}
+.bd-ch .dmp.wh{background:radial-gradient(circle at 36% 30%,#FFFFFF,#F2ECE0 45%,#D4C6AA);box-shadow:inset 0 0 0 1px rgba(110,90,62,.55),0 2.5px 0 #A88F67,0 4px 4px rgba(60,30,0,.25)}
+.bd-ch .dmp.bk{background:radial-gradient(circle at 36% 30%,#6A7F99,#2E3F55 50%,#18222F);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 2.5px 0 #0C1219,0 4px 4px rgba(0,0,0,.3)}
+.bd-ch .dmp::before{content:'';position:absolute;inset:20%;border-radius:50%;box-shadow:0 0 0 1.5px rgba(110,90,62,.3)}
+.bd-ch .dmp.bk::before{box-shadow:0 0 0 1.5px rgba(255,255,255,.14)}
+.bd-ch .dmp .crw{position:relative;width:62%;height:62%;filter:drop-shadow(0 1px 0 rgba(0,0,0,.3))}
+.bd-ch .dmb .sq.sel .dmp{transform:scale(1.07) translateY(-2px)}
+.bd-ch .dmb .sq.mv .dmp{box-shadow:0 0 0 2px rgba(240,180,41,.85),0 2.5px 0 #A88F67,0 4px 4px rgba(60,30,0,.25)}
+.bd-ch .dmb .sq.mv .dmp.bk{box-shadow:0 0 0 2px rgba(240,180,41,.9),0 2.5px 0 #0C1219,0 4px 4px rgba(0,0,0,.3)}
+.bd-ch .dmb .sq.gone .dmp{opacity:.3;transform:scale(.85)}
+.bd-ch .dmb .sq.lmt .dmp{animation:bd-land var(--t2) var(--ease)}
+.bd-ch .dmb .sq.lmt .dmp.kg .crw{animation:bd-pop var(--t3) var(--spring) both}
+.bd-ch .dmb.my button.sq:active .dmp{transform:scale(.94)}
+
+/* ========== tavla ========== */
+svg.bd-tv{border-radius:12px;box-shadow:0 6px 0 #3E220F,0 12px 24px rgba(0,0,0,.2)}
+.bd-tv .tvk.mv circle:nth-child(2){stroke:#F0B429;stroke-width:2.4}
+.bd-tv .tvk.sel{transform:translateY(-2px)}
+.bd-tv .tvk.sel circle:nth-child(2){stroke:#FFD84D;stroke-width:3.2}
+.bd-tv .tvk.lmc circle:nth-child(2){stroke:#F0B429;stroke-width:1.8}
+.bd-tv .tvk{transition:transform var(--t1) var(--ease)}
+.bd-tv .tvgh{transform-box:fill-box;transform-origin:center;animation:bd-pop var(--t2) var(--spring) both}
+.bd-tv .tvhit{cursor:pointer}
+.bd-tv .tvcb{transition:transform var(--t3) var(--ease)}

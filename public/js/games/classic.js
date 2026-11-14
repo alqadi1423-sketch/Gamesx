@@ -4,11 +4,16 @@ const TTS={2:[3,3],3:[5,4],4:[6,4],5:[7,4],6:[7,4],7:[8,4],8:[8,4]};
 function lineWin(b,sz,k){for(let r=0;r<sz;r++)for(let c=0;c<sz;c++){const v=b[r*sz+c];if(v==='.')continue;
   for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]){const cells=[];for(let j=0;j<k;j++){const rr=r+dr*j,cc=c+dc*j;if(rr<0||rr>=sz||cc<0||cc>=sz||b[rr*sz+cc]!==v)break;cells.push(rr*sz+cc);}
     if(cells.length===k)return {w:+v,ln:cells};}}return null;}
+// look only: the one cell a move changed, found by comparing with the board this phone saw before (kept in S, never in d); -1 when unknown
+function bdLast(key,d,b){const L=S.bdL||(S.bdL={});const o=L[key];
+  if(!o||o.gid!==d.gid||o.b.length!==b.length){L[key]={gid:d.gid,b,i:-1};return -1;}
+  if(o.b!==b){let k=-1,n=0;for(let j=0;j<b.length;j++)if(b[j]!==o.b[j]){k=j;n++;}o.i=n===1?k:-1;o.b=b;}return o.i;}
 GAMES.ttt={name:'إكس أو',cat:'board',lbc:'#B9483F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E36A5E"/><path d="M38 12V72M62 12V72M14 30H86M14 54H86" stroke="#2D4763" stroke-width="5" stroke-linecap="round"/><path d="M19 37L32 49M32 37L19 49" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="42" r="7" stroke="#4AB1E8" stroke-width="5" fill="none"/><circle cx="74" cy="19" r="6" stroke="#4AB1E8" stroke-width="5" fill="none"/></svg>`,
   init:n=>{const [sz,k]=TTS[n]||[8,4];return {sz,k,b:'.'.repeat(sz*sz),ln:null};},
   status:(d,ctx)=>turnTxt(d,ctx),
-  render(d,ctx){const g=d.sz>5?4:d.sz>3?5:8;return `<div class="ttt" style="grid-template-columns:repeat(${d.sz},minmax(0,1fr));gap:${g}px">${[...d.b].map((c,i)=>`<button class="tc ${d.ln&&d.ln.includes(i)?'hl':''}" data-ga="m" data-i="${i}" ${c!=='.'||!ctx.my?'disabled':''}>${c!=='.'?shape(d.pl[+c]):''}</button>`).join('')}</div>`;},
+  render(d,ctx){const g=d.sz>5?4:d.sz>3?5:8,lm=d.ln?-1:bdLast('ttt',d,d.b);
+    return `<div class="ttt bd-ttt ${ctx.my?'my':''}" style="grid-template-columns:repeat(${d.sz},minmax(0,1fr));gap:${g}px;--c:${col(d,d.turn)}">${[...d.b].map((c,i)=>`<button class="tc ${d.ln&&d.ln.includes(i)?'hl':''} ${i===lm?'lm':''}" ${c!=='.'?`style="--c:${col(d,+c)}"`:''} data-ga="m" data-i="${i}" ${c!=='.'||!ctx.my?'disabled':''}>${c!=='.'?shape(d.pl[+c]):''}</button>`).join('')}</div>`;},
   click(a,i,d,ctx){
     if(!ctx.my||d.b[i]!=='.')return;
     const b=setAt(d.b,i,String(d.turn));const r=lineWin(b,d.sz,d.k);let win=null,ln=null;
@@ -25,16 +30,17 @@ GAMES.dots={name:'نقاط ومربعات',cat:'board',lbc:'#8F86C9',
   points:d=>cntSeat(d.bx,d.pl.length),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra(d){const c=cntSeat(d.bx,d.pl.length);return 'المربعات: '+c.map((x,s)=>`${nm(d,s)} ${x}`).join('، ');},
   render(d,ctx){
-    const B=d.B,st=80/B,P=k=>10+k*st,sw=B>4?2.6:3.2,hw=B>4?7:9;let bx='',hits='',lines='',dots='';
-    for(let r=0;r<B;r++)for(let c=0;c<B;c++){const o=d.bx[r*B+c];if(o!=='.')bx+=`<rect x="${P(c)}" y="${P(r)}" width="${st}" height="${st}" fill="${lit(d,+o)}"/>`;}
-    const seg=(x1,y1,x2,y2,val,a,i)=>{
-      if(val!=='.')return [false,`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col(d,+val)}" stroke-width="${sw}" stroke-linecap="round"/>`];
-      return [true,`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="ghost" stroke-width="1.4"/>`+(ctx.my?`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="hit" stroke-width="${hw}" data-ga="${a}" data-i="${i}"/>`:'')];};
-    const add=([e,s])=>{if(e)hits+=s;else lines+=s;};
-    for(let r=0;r<=B;r++)for(let c=0;c<B;c++){const k=r*B+c;add(seg(P(c),P(r),P(c+1),P(r),d.h[k],'h',k));}
-    for(let r=0;r<B;r++)for(let c=0;c<=B;c++){const k=r*(B+1)+c;add(seg(P(c),P(r),P(c),P(r+1),d.v[k],'v',k));}
-    for(let r=0;r<=B;r++)for(let c=0;c<=B;c++)dots+=`<circle cx="${P(c)}" cy="${P(r)}" r="${B>4?1.9:2.3}" fill="#2D4763" pointer-events="none"/>`;
-    return `<svg class="dots" viewBox="0 0 100 100">${bx}${hits}${lines}${dots}</svg>`;
+    const B=d.B,st=80/B,P=k=>10+k*st,sw=B>4?2.6:3.2,hw=B>4?7:9;let bx='',segs='',dots='';
+    // every box and every line keeps its own slot, so only what was just drawn is new and plays its animation
+    for(let r=0;r<B;r++)for(let c=0;c<B;c++){const o=d.bx[r*B+c];
+      bx+=o==='.'?'<g></g>':`<g><rect class="bx" x="${P(c)+.6}" y="${P(r)+.6}" width="${st-1.2}" height="${st-1.2}" rx="1.6" fill="${lit(d,+o)}"/><g class="bxs"><g transform="translate(${P(c)+st*.3} ${P(r)+st*.3}) scale(${st*.4/40})">${SHP[d.pl[+o]](col(d,+o))}</g></g></g>`;}
+    const seg=(x1,y1,x2,y2,val,a,i)=>{const xy=`x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"`;
+      if(val!=='.')return `<g><line ${xy} class="ln" pathLength="1" stroke="${col(d,+val)}" stroke-width="${sw}" stroke-linecap="round"/></g>`;
+      return `<g><line ${xy} class="ghost" stroke-width="1.4"/>${ctx.my?`<line ${xy} class="hit" stroke-width="${hw}" stroke-linecap="round" data-ga="${a}" data-i="${i}"/>`:''}</g>`;};
+    for(let r=0;r<=B;r++)for(let c=0;c<B;c++){const k=r*B+c;segs+=seg(P(c),P(r),P(c+1),P(r),d.h[k],'h',k);}
+    for(let r=0;r<B;r++)for(let c=0;c<=B;c++){const k=r*(B+1)+c;segs+=seg(P(c),P(r),P(c),P(r+1),d.v[k],'v',k);}
+    for(let r=0;r<=B;r++)for(let c=0;c<=B;c++)dots+=`<circle cx="${P(c)}" cy="${P(r)}" r="${B>4?1.9:2.3}" class="dt" pointer-events="none"/>`;
+    return `<svg class="dots bd-dots" viewBox="0 0 100 100" style="--c:${col(d,d.turn)}">${bx}${segs}${dots}</svg>`;
   },
   click(a,i,d,ctx){
     if(!ctx.my)return;let {h,v,bx}=d;const B=d.B,t=String(d.turn);
@@ -53,12 +59,18 @@ const cellXY=n=>{const r=Math.floor((n-1)/10),c=r%2===0?(n-1)%10:9-(n-1)%10;retu
 const PIPS={1:[[50,50]],2:[[28,28],[72,72]],3:[[26,26],[50,50],[74,74]],4:[[28,28],[72,28],[28,72],[72,72]],5:[[26,26],[74,26],[50,50],[26,74],[74,74]],6:[[28,24],[72,24],[28,50],[72,50],[28,76],[72,76]]};
 const diceSVG=n=>`<svg viewBox="0 0 100 100">${(PIPS[n]||[]).map(([x,y])=>`<circle cx="${x}" cy="${y}" r="10" fill="#2D4763"/>`).join('')}</svg>`;
 function ladderSVG(a,b){const [x1,y1]=cellXY(a),[x2,y2]=cellXY(b);const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),nx=-dy/L*2,ny=dx/L*2;
-  let s=`<line class="rail" x1="${x1+nx}" y1="${y1+ny}" x2="${x2+nx}" y2="${y2+ny}"/><line class="rail" x1="${x1-nx}" y1="${y1-ny}" x2="${x2-nx}" y2="${y2-ny}"/>`;
-  const k=Math.max(2,Math.floor(L/3.5));for(let j=1;j<k;j++){const t=j/k,x=x1+dx*t,y=y1+dy*t;s+=`<line class="rung" x1="${x+nx}" y1="${y+ny}" x2="${x-nx}" y2="${y-ny}"/>`;}return s;}
+  const rl=(o,cls)=>`<line class="${cls}" x1="${x1+nx*o}" y1="${y1+ny*o}" x2="${x2+nx*o}" y2="${y2+ny*o}"/>`;
+  let s=`<g class="lad">${rl(1,'rail')}${rl(-1,'rail')}`;
+  const k=Math.max(2,Math.floor(L/3.5));for(let j=1;j<k;j++){const t=j/k,x=x1+dx*t,y=y1+dy*t;s+=`<line class="rung" x1="${x+nx}" y1="${y+ny}" x2="${x-nx}" y2="${y-ny}"/>`;}
+  return s+`${rl(1,'rail hi')}${rl(-1,'rail hi')}</g>`;}
 const SC=['#5CC08C','#E8746B','#9C7BD6','#F2A93B'];
 function snakeSVG(a,b,k){const [x1,y1]=cellXY(a),[x2,y2]=cellXY(b);const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),nx=-dy/L*5,ny=dx/L*5;const c=SC[k%4];
   const p=`M${x1} ${y1} C ${x1+dx*.33+nx} ${y1+dy*.33+ny}, ${x1+dx*.66-nx} ${y1+dy*.66-ny}, ${x2} ${y2}`;
-  return `<path d="${p}" stroke="#2D4763" stroke-width="3.6" fill="none" stroke-linecap="round"/><path d="${p}" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="${x1}" cy="${y1}" r="2.6" fill="${c}" stroke="#2D4763" stroke-width=".6"/><circle cx="${x1-.9}" cy="${y1-.6}" r=".7" fill="#fff"/><circle cx="${x1+.9}" cy="${y1-.6}" r=".7" fill="#fff"/>`;}
+  // the head looks away from the body: along the curve's first handle, backwards
+  const hx=dx*.33+nx,hy=dy*.33+ny,hl=Math.hypot(hx,hy)||1,ux=-hx/hl,uy=-hy/hl;
+  return `<path d="${p}" stroke="#2D4763" stroke-width="3.6" fill="none" stroke-linecap="round"/><path d="${p}" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="${p}" stroke="${shade(c,-.28)}" stroke-width="1.1" stroke-dasharray="1.2 2.2" fill="none" stroke-linecap="round" opacity=".7"/><path d="${p}" stroke="#fff" stroke-width=".5" fill="none" opacity=".35" transform="translate(-.45 -.45)"/>`+
+    `<path d="M${x1+ux*2.4} ${y1+uy*2.4}l${ux*1.6} ${uy*1.6}m0 0l${ux*.6-uy*.6} ${uy*.6+ux*.6}m${-ux*.6+uy*.6} ${-uy*.6-ux*.6}l${ux*.6+uy*.6} ${uy*.6-ux*.6}" stroke="#E5483F" stroke-width=".45" fill="none" stroke-linecap="round"/>`+
+    `<circle cx="${x1}" cy="${y1}" r="2.6" fill="${c}" stroke="#2D4763" stroke-width=".6"/><circle cx="${x1-.9}" cy="${y1-.6}" r=".7" fill="#fff"/><circle cx="${x1+.9}" cy="${y1-.6}" r=".7" fill="#fff"/><circle cx="${x1-.8}" cy="${y1-.5}" r=".32" fill="#2D4763"/><circle cx="${x1+1}" cy="${y1-.5}" r=".32" fill="#2D4763"/>`;}
 GAMES.snakes={name:'السلم والثعبان',cat:'board',lbc:'#A8743F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#FBEFD9"/><path d="M0 0H33V33H0ZM66 0H100V33H66ZM33 33H66V66H33ZM0 66H33V100H0ZM66 66H100V100H66Z" fill="#F3D9AE"/><path d="M60 8L80 70M70 6L90 68" stroke="#8a5a2b" stroke-width="4"/><path d="M63 20L74 17M66 32L78 29M70 44L82 41M74 56L86 53" stroke="#8a5a2b" stroke-width="3"/><path d="M22 22C40 35 6 50 26 70" stroke="#2D4763" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M22 22C40 35 6 50 26 70" stroke="#5CC08C" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="22" cy="22" r="8" fill="#5CC08C" stroke="#2D4763" stroke-width="2.5"/><circle cx="19" cy="20" r="2" fill="#fff"/><circle cx="25" cy="20" r="2" fill="#fff"/><circle cx="40" cy="84" r="7" fill="#EC6158" stroke="#2D4763" stroke-width="2.5"/><circle cx="58" cy="84" r="7" fill="#4AB1E8" stroke="#2D4763" stroke-width="2.5"/></svg>`,
   init:n=>({pos:Array(n).fill(0),dice:0,msg:''}),
@@ -67,12 +79,15 @@ GAMES.snakes={name:'السلم والثعبان',cat:'board',lbc:'#A8743F',
     let cells='';for(let row=9;row>=0;row--)for(let c=0;c<10;c++){const n=row%2===0?row*10+c+1:row*10+(9-c)+1;cells+=`<div class="cl ${(row+c)%2?'b':'a'}">${n}</div>`;}
     let ov=Object.entries(LAD).map(([a,b])=>ladderSVG(+a,b)).join('')+Object.entries(SNK).map(([a,b],k)=>snakeSVG(+a,b,k)).join('');
     const r=d.pl.length>4?2.4:3.1;
-    d.pos.forEach((p,s)=>{if(p>0&&d.out[s]!=='1'){const [x,y]=cellXY(p);const same=d.pos.map((q,k)=>q===p&&d.out[k]!=='1'?k:-1).filter(k=>k>=0);const m=same.length,j=same.indexOf(s);
-      const ox=m>1?Math.cos(2*Math.PI*j/m)*2.4:0,oy=m>1?Math.sin(2*Math.PI*j/m)*2.4:0;
-      ov+=`<circle cx="${x+ox}" cy="${y+1+oy}" r="${r}" fill="${col(d,s)}" stroke="#2D4763" stroke-width=".8"/>`;}});
+    // every seat keeps its own token node (hidden off the board), so a move slides it from cell to cell
+    d.pos.forEach((p,s)=>{const on=p>0&&d.out[s]!=='1';let x=-6,y=106;
+      if(on){const [cx,cy]=cellXY(p);const same=d.pos.map((q,k)=>q===p&&d.out[k]!=='1'?k:-1).filter(k=>k>=0);const m=same.length,j=same.indexOf(s);
+        x=cx+(m>1?Math.cos(2*Math.PI*j/m)*2.4:0);y=cy+1+(m>1?Math.sin(2*Math.PI*j/m)*2.4:0);}
+      const c=col(d,s);
+      ov+=`<g class="tk ${on?'':'off'} ${s===d.turn&&d.win==null?'on':''}" style="transform:translate(${x.toFixed(2)}px,${y.toFixed(2)}px)"><ellipse cy="${r*.62}" rx="${r*.95}" ry="${r*.45}" fill="rgba(0,0,0,.28)"/><circle r="${r}" fill="${c}" stroke="${shade(c,-.45)}" stroke-width=".7"/><circle r="${r*.62}" fill="none" stroke="${shade(c,.35)}" stroke-width=".5"/><ellipse cx="${-r*.32}" cy="${-r*.38}" rx="${r*.42}" ry="${r*.26}" fill="#fff" opacity=".6"/></g>`;});
     const off=d.pl.map((_,s)=>s).filter(s=>d.pos[s]===0&&d.out[s]!=='1');
     const anim=S.rolled;S.rolled=false;
-    return `<div class="sl"><div class="cells">${cells}</div><svg viewBox="0 0 100 100">${ov}</svg></div>
+    return `<div class="sl bd-sl"><div class="cells">${cells}</div><svg viewBox="0 0 100 100">${ov}</svg></div>
       ${off.length?`<div class="start">قبل البداية: ${off.map(s=>`<span class="mini" style="background:${col(d,s)}">${nm(d,s)}</span>`).join('')}</div>`:''}
       <div class="row">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}</div>`;
   },
@@ -94,15 +109,15 @@ const CWS={2:5,3:6,4:6,5:7,6:7,7:8,8:8};
 const NB=(i,Z)=>{const r=Math.floor(i/Z),c=i%Z,o=[];if(r>0)o.push(i-Z);if(r<Z-1)o.push(i+Z);if(c>0)o.push(i-1);if(c<Z-1)o.push(i+1);return o;};
 const CP={1:[[50,50]],2:[[34,34],[66,66]],3:[[50,30],[31,64],[69,64]]};
 function cwCell(c,n){const pts=CP[n]||[];
-  return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="${c}"/>${pts.map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9" fill="#fff"/>`).join('')}${n>3?`<text x="50" y="62" text-anchor="middle" font-size="36" fill="#fff" font-weight="800">${n}</text>`:''}</svg>`;}
+  return `<svg viewBox="0 0 100 100" class="blob"><circle cx="50" cy="53" r="44" fill="${shade(c,-.3)}"/><circle cx="50" cy="49" r="44" fill="${c}"/><ellipse cx="40" cy="27" rx="22" ry="11" fill="#fff" opacity=".28"/>${pts.map(([x,y])=>`<g class="pip"><circle cx="${x}" cy="${y+2}" r="9.5" fill="rgba(0,0,0,.18)"/><circle cx="${x}" cy="${y}" r="9.5" fill="#fff"/></g>`).join('')}${n>3?`<text x="50" y="62" text-anchor="middle" font-size="36" fill="#fff" font-weight="800">${n}</text>`:''}</svg>`;}
 GAMES.cw={name:'حرب الألوان',cat:'board',lbc:'#4B3A62',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4B3A62"/>${[0,1,2].map(r=>[0,1,2].map(c=>{const x=6+c*31,y=6+r*31;const k=(r*3+c)%4;const bg=k===0?'#FAD2CE':k===1?'#CDEAFA':'#EFE8DD';const dot=k===0?'#EC6158':k===1?'#4AB1E8':'';return `<rect x="${x}" y="${y}" width="27" height="27" rx="7" fill="${bg}"/>`+(dot?`<circle cx="${x+13.5}" cy="${y+13.5}" r="10" fill="${dot}"/><circle cx="${x+10}" cy="${y+10}" r="2.6" fill="#fff"/><circle cx="${x+17}" cy="${y+17}" r="2.6" fill="#fff"/>`:'');}).join('')).join('')}</svg>`,
   init:n=>{const Z=CWS[n]||8;return {Z,o:'.'.repeat(Z*Z),n:'0'.repeat(Z*Z),mv:Array(n).fill(0)};},
   status(d,ctx){return turnTxt(d,ctx);},
   render(d,ctx){
     const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z;
-    return `<div class="cw" style="grid-template-columns:repeat(${Z},minmax(0,1fr));gap:${Z>6?4:6}px">${[...d.o].map((o,i)=>{const can=ctx.my&&(first?o==='.':o===t);
-      return `<button class="cc ${can?'can':''}" style="${o!=='.'?`background:${lit(d,+o)}`:''}" data-ga="m" data-i="${i}" ${can?'':'disabled'}>${o!=='.'?cwCell(col(d,+o),+d.n[i]):''}</button>`;}).join('')}</div>`;
+    return `<div class="cw bd-cw" style="grid-template-columns:repeat(${Z},minmax(0,1fr));gap:${Z>6?4:6}px;--c:${col(d,d.turn)}">${[...d.o].map((o,i)=>{const can=ctx.my&&(first?o==='.':o===t);
+      return `<button class="cc ${can?'can':''} ${o!=='.'?'own':''}" style="${o!=='.'?`background:${lit(d,+o)}`:''}" data-ga="m" data-i="${i}" ${can?'':'disabled'}>${o!=='.'?cwCell(col(d,+o),+d.n[i]):''}</button>`;}).join('')}</div>`;
   },
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn,ts=String(t),Z=d.Z,N=d.pl.length;const o=[...d.o],n=[...d.n].map(Number);
@@ -139,12 +154,16 @@ const seaReady=(p,d)=>!!(p&&p.gid===d.gid&&(p.ready||d.auto)&&p.f);
 const allReady=(d,pr)=>d.pl.every((r,s)=>d.out[s]==='1'||seaReady(pr[r],d));
 // online, seats still placing ships whose player has left; the turn seat is left to the room's own skip button
 const seaGone=(d,pr)=>S.mode!=='online'||d.win!=null?[]:aliveSeats(d).filter(s=>s!==d.turn&&!S.roles.has(d.pl[s])&&Date.now()-((S.goneAt||{})[d.pl[s]]??S.joinT??0)>=GRACE&&!seaReady(pr[d.pl[s]],d));
-function seaGrid(f,sh,show,click,small){
+// a ship cell's place in its hull: across or down, and whether it is the bow (first) or the stern (last) segment
+function seaSeg(f,i){const L=f[i],r=i>>3,c=i&7,at=(rr,cc)=>rr>=0&&rr<8&&cc>=0&&cc<8&&f[rr*8+cc]===L;
+  const h=at(r,c-1)||at(r,c+1);const a=h?at(r,c-1):at(r-1,c),b=h?at(r,c+1):at(r+1,c);
+  return `${h?'sh-h':'sh-v'} ${a?'':'s0'} ${b?'':'s1'}`;}
+function seaGrid(f,sh,show,click,small,lk){
   const sunk=new Set();
   if(f)for(const L of SL){const cs=[];for(let i=0;i<64;i++)if(f[i]===L)cs.push(i);if(cs.length&&cs.every(i=>sh[i]==='o'))sunk.add(L);}
-  let s=`<div class="sea ${small?'small':''}">`;
+  let s=`<div class="sea bd-sea ${small?'small':''} ${click?'aim':''}">`;
   for(let i=0;i<64;i++){const c=f?f[i]:'.';const ship=c!=='.'&&(show||sunk.has(c));const st=sh[i];
-    const cls=`sc ${ship?'ship':''} ${sunk.has(c)?'sunk':''} ${st==='o'?'hit':st==='x'?'miss':''}`;
+    const cls=`sc ${ship?'ship '+seaSeg(f,i):''} ${sunk.has(c)?'sunk':''} ${st==='o'?'hit':st==='x'?'miss':''} ${i===lk?'lst':''}`;
     s+=click&&st==='.'?`<button class="${cls} can" data-ga="fire" data-i="${i}"></button>`:`<div class="${cls}"></div>`;}
   return s+'</div>';
 }
@@ -184,7 +203,7 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
         (seaReady(mine,d)?'<p class="hint">جاهز ✓</p>':`<div class="acts"><button class="btn navy" data-ga="shuffle">🔀 غيّر</button><button class="btn red" data-ga="ready">جاهز ✓</button></div>`);}
     const myTurn=ctx.my&&d.turn===v;const o=curTarget(d,v);if(o==null)return '';
     const of=pr[d.pl[o]]?pr[d.pl[o]].f:null;
-    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(of,d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1')}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true)}`;
+    return `${tabsHTML(d,v,myTurn?'اختر مين تضرب':'شوف بحور الباقين')}<p class="lbl">بحر ${nameTag(d,o)}</p>${seaGrid(of,d.sh[o],d.win!=null||d.out[o]==='1',myTurn&&d.out[v]!=='1',false,bdLast('sea'+o,d,d.sh[o]))}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false,true,bdLast('sea'+v,d,d.sh[v]))}`;
   },
   click(a,i,d,ctx){
     if(a==='tgt'){S.tgt=i;render();return;}

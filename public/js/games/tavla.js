@@ -113,30 +113,49 @@ GAMES.tavla={name:'طاولة الزهر',cat:'board',lbc:'#6B3D1F',
 };
 // the board as SVG. Side 0 sees its home at the bottom right; side 1 sees the mirror so its home is there too
 function tvBoard(d,flip,srcs,sel,dests,my){
-  const W=340,H=280,PW=24,TH=112,L=6,BAR=20,OFF=26,TOP=8;
+  const W=340,H=280,PW=24,TH=112,L=6,BAR=20,OFF=26,TOP=8,CR=10.5;
   const view=p=>flip?25-p:p;// displayed point number
   const xOf=q=>{// q displayed point 1..24
     const bottom=q<=12;const k=bottom?12-q:q-13;const half=k<6?0:1;return L+k*PW+half*BAR;};
-  const C=['#F4F0E6','#2D4763'];const stroke=['#2D4763','#fff'];
-  let g=`<svg viewBox="0 0 ${W} ${H}" class="tvb"><rect width="${W}" height="${H}" rx="12" fill="#7A4A26"/><rect x="${L-2}" y="${TOP-2}" width="${12*PW+BAR+4}" height="${H-2*TOP+4}" rx="6" fill="#E9CF9E"/>`;
-  g+=`<rect x="${L+6*PW}" y="${TOP-2}" width="${BAR}" height="${H-2*TOP+4}" fill="#7A4A26"/>`;
-  const offX=L+12*PW+BAR+8;g+=`<rect x="${offX}" y="${TOP}" width="${OFF-6}" height="${H-2*TOP}" rx="5" fill="#5C3519"/>`;
+  const stroke=['#6E5A3E','#0E151F'],ink=['#2D4763','#F4F0E6'];
+  const sy=(bottom,j)=>bottom?H-TOP-CR-.5-j*21:TOP+CR+.5+j*21;// centre of the j-th checker of a stack
+  let g=`<svg viewBox="0 0 ${W} ${H}" class="tvb bd-tv"><defs>`+
+    `<linearGradient id="tvw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A5530"/><stop offset=".5" stop-color="#6E3F20"/><stop offset="1" stop-color="#5A3218"/></linearGradient>`+
+    `<linearGradient id="tvf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2DDB4"/><stop offset="1" stop-color="#E2C48F"/></linearGradient>`+
+    `<linearGradient id="tvr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D2564B"/><stop offset=".5" stop-color="#B93E35"/><stop offset="1" stop-color="#A3352D"/></linearGradient>`+
+    `<linearGradient id="tvn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#47698A"/><stop offset=".5" stop-color="#34536F"/><stop offset="1" stop-color="#2A455D"/></linearGradient>`+
+    `<radialGradient id="tvc0" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#F1EADB"/><stop offset="1" stop-color="#CDBF9F"/></radialGradient>`+
+    `<radialGradient id="tvc1" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#5D7491"/><stop offset=".55" stop-color="#2D4058"/><stop offset="1" stop-color="#18222F"/></radialGradient></defs>`;
+  // frame, the two fields, the bar and the tray
+  const fw=6*PW,offX=L+12*PW+BAR+8;
+  g+=`<rect width="${W}" height="${H}" rx="12" fill="url(#tvw)"/><rect x="1.5" y="1.5" width="${W-3}" height="${H-3}" rx="11" fill="none" stroke="rgba(255,255,255,.14)"/>`;
+  for(const x of [L,L+fw+BAR])g+=`<rect x="${x}" y="${TOP}" width="${fw}" height="${H-2*TOP}" rx="3" fill="url(#tvf)"/><rect x="${x}" y="${TOP}" width="${fw}" height="${H-2*TOP}" rx="3" fill="none" stroke="rgba(60,30,10,.35)" stroke-width="1.2"/>`;
+  g+=`<rect x="${L+fw+3}" y="${TOP}" width="${BAR-6}" height="${H-2*TOP}" rx="3" fill="rgba(0,0,0,.18)"/><rect x="${L+fw+BAR/2-3}" y="${H/2-16}" width="6" height="10" rx="1.5" fill="#C9A15B" opacity=".8"/><rect x="${L+fw+BAR/2-3}" y="${H/2+6}" width="6" height="10" rx="1.5" fill="#C9A15B" opacity=".8"/>`;
+  g+=`<rect x="${offX}" y="${TOP}" width="${OFF-6}" height="${H-2*TOP}" rx="5" fill="#4A2913"/><rect x="${offX}" y="${TOP}" width="${OFF-6}" height="${H-2*TOP}" rx="5" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/><path d="M${offX+3} ${H/2}h${OFF-12}" stroke="rgba(255,255,255,.12)"/>`;
   for(let q=1;q<=24;q++){const x=xOf(q),bottom=q<=12,y0=bottom?H-TOP:TOP,y1=bottom?H-TOP-TH:TOP+TH;
-    g+=`<path d="M${x} ${y0}L${x+PW/2} ${y1}L${x+PW} ${y0}Z" fill="${q%2?'#C9473E':'#3F6E8F'}" opacity=".9"/>`;}
-  // checkers
-  const chk=(cx,cy,side,n,hl)=>`<circle cx="${cx}" cy="${cy}" r="10.5" fill="${C[side]}" stroke="${hl?'#ffd84d':stroke[side]}" stroke-width="${hl?3.2:1.6}"/>${n?`<text x="${cx}" y="${cy+4.5}" font-size="12" font-weight="800" text-anchor="middle" fill="${stroke[side]}">${n}</text>`:''}`;
+    g+=`<path d="M${x+.8} ${y0}L${x+PW/2} ${y1}L${x+PW-.8} ${y0}Z" fill="url(#${q%2?'tvr':'tvn'})"/>`;}
+  // a checker: drop shadow, glossy body, the turned rim and its count
+  const chk=(cx,cy,side,n,cls)=>`<g class="tvk ${cls||''}"><circle cx="${cx}" cy="${cy+1.6}" r="${CR}" fill="rgba(0,0,0,.28)"/><circle cx="${cx}" cy="${cy}" r="${CR}" fill="url(#tvc${side})" stroke="${stroke[side]}" stroke-width="1"/><circle cx="${cx}" cy="${cy}" r="${CR-3.4}" fill="none" stroke="${side?'rgba(255,255,255,.16)':'rgba(110,90,62,.32)'}" stroke-width="1.2"/>${n?`<text x="${cx}" y="${cy+4.3}" font-size="12" font-weight="800" text-anchor="middle" fill="${ink[side]}">${n}</text>`:''}</g>`;
+  const lmTo=d.lm?d.lm[1]:null,lmFrom=d.lm?d.lm[0]:null;
   for(let p=1;p<=24;p++){const v=d.pts[p-1];if(!v)continue;const side=v>0?0:1,n=Math.abs(v),q=view(p),x=xOf(q)+PW/2,bottom=q<=12;
-    const shown=Math.min(n,5);for(let j=0;j<shown;j++){const cy=bottom?H-TOP-11-j*21:TOP+11+j*21;g+=chk(x,cy,side,j===shown-1&&n>5?n:0,sel===p&&j===shown-1);}}
+    const shown=Math.min(n,5);for(let j=0;j<shown;j++){const top=j===shown-1;
+      const cls=top?(sel===p?'sel':my&&srcs.has(p)&&sel==null?'mv':lmTo===p?'lmc':''):'';g+=chk(x,sy(bottom,j),side,top&&n>5?n:0,cls);}}
   // bar: side 0 checkers sit low, side 1 high (mirrored for side 1 viewers)
-  const bx=L+6*PW+BAR/2;for(const side of [0,1]){const n=d.bar[side];if(!n)continue;const low=(side===0)!==flip;
-    for(let j=0;j<Math.min(n,3);j++){const cy=low?H/2+22+j*21:H/2-22-j*21;g+=chk(bx,cy,side,j===Math.min(n,3)-1&&n>1?n:0,sel===0&&side===d.sd);}}
-  // borne off
+  const bx=L+fw+BAR/2;for(const side of [0,1]){const n=d.bar[side];if(!n)continue;const low=(side===0)!==flip;
+    for(let j=0;j<Math.min(n,3);j++){const top=j===Math.min(n,3)-1,cy=low?H/2+24+j*21:H/2-24-j*21;
+      g+=chk(bx,cy,side,top&&n>1?n:0,top&&side===d.sd?(sel===0?'sel':my&&srcs.has(0)&&sel==null?'mv':''):'');}}
+  // borne off: chips seen from the side, stacked in the tray
   for(const side of [0,1]){const n=d.off[side];if(!n)continue;const low=(side===0)!==flip;const ox=offX+(OFF-6)/2;
-    for(let j=0;j<n;j++){const y=low?H-TOP-6-j*7:TOP+2+j*7;g+=`<rect x="${ox-9}" y="${y}" width="18" height="5" rx="2" fill="${C[side]}" stroke="${stroke[side]}" stroke-width=".8"/>`;}}
-  // what can be tapped
-  if(my){for(const p of srcs){if(p===0){g+=`<rect x="${L+6*PW}" y="${TOP}" width="${BAR}" height="${H-2*TOP}" fill="#ffd84d" opacity=".25" data-ga="pt" data-i="0"/>`;continue;}
-      const q=view(p),x=xOf(q),bottom=q<=12;g+=`<rect x="${x}" y="${bottom?H/2:TOP}" width="${PW}" height="${H/2-TOP}" fill="#ffd84d" opacity="${sel===p?.35:.14}" data-ga="pt" data-i="${p}"/>`;}
-    for(const p of dests){if(p===25){g+=`<rect x="${offX}" y="${TOP}" width="${OFF-6}" height="${H-2*TOP}" rx="5" fill="#4CB97F" opacity=".75" data-ga="pt" data-i="25"/>`;continue;}
-      const q=view(p),x=xOf(q),bottom=q<=12;g+=`<rect x="${x}" y="${bottom?H/2:TOP}" width="${PW}" height="${H/2-TOP}" fill="#4CB97F" opacity=".35" data-ga="pt" data-i="${p}"/><circle cx="${x+PW/2}" cy="${bottom?H/2+16:H/2-16}" r="5" fill="#4CB97F" data-ga="pt" data-i="${p}"/>`;}}
-  if(d.lm){const [f,t]=d.lm;if(t>=1&&t<=24){const q=view(t),x=xOf(q),bottom=q<=12;g+=`<path d="M${x+3} ${bottom?H-TOP+1:TOP-1}h${PW-6}" stroke="#ffd84d" stroke-width="3"/>`;}}
+    for(let j=0;j<n;j++){const y=low?H-TOP-6-j*7:TOP+2+j*7;g+=`<rect x="${ox-8.5}" y="${y}" width="17" height="5.4" rx="2.2" fill="url(#tvc${side})" stroke="${stroke[side]}" stroke-width=".8"/>`;}}
+  // doubling cube: in the middle of the tray until someone owns it, then on the owner's side
+  {const own=d.own,cy=own<0?H/2:((own===0)!==flip?H/2+30:H/2-30),cx=offX+(OFF-6)/2,v=d.cube>1?d.cube:64;
+    g+=`<g class="tvcb"><rect x="${cx-9}" y="${cy-7.5}" width="18" height="18" rx="4" fill="rgba(0,0,0,.35)"/><rect x="${cx-9}" y="${cy-9}" width="18" height="18" rx="4" fill="#FBF7EE" stroke="#8B6B43" stroke-width="1"/><text x="${cx}" y="${cy+(v>9?3.4:4.2)}" font-size="${v>9?9.5:12}" font-weight="900" text-anchor="middle" fill="#2D4763">${v}</text></g>`;}
+  // last move: a faint ring where the checker came from
+  if(lmFrom>=1&&lmFrom<=24&&!d.pts[lmFrom-1]){const q=view(lmFrom),bottom=q<=12;g+=`<circle cx="${xOf(q)+PW/2}" cy="${sy(bottom,0)}" r="${CR-1}" fill="none" stroke="#F0B429" stroke-width="1.6" stroke-dasharray="3 2.4" opacity=".75"/>`;}
+  // what can be tapped: the whole half-column of a point, the bar or the tray
+  if(my){for(const p of srcs){if(p===0){g+=`<rect x="${L+fw}" y="${TOP}" width="${BAR}" height="${H-2*TOP}" fill="#FFD84D" opacity="${sel===0?.22:.1}" class="tvhit" data-ga="pt" data-i="0"/>`;continue;}
+      const q=view(p),x=xOf(q),bottom=q<=12;g+=`<rect x="${x}" y="${bottom?H/2:TOP}" width="${PW}" height="${H/2-TOP}" fill="#FFD84D" opacity="${sel===p?.22:.07}" class="tvhit" data-ga="pt" data-i="${p}"/>`;}
+    for(const p of dests){if(p===25){g+=`<rect x="${offX}" y="${TOP}" width="${OFF-6}" height="${H-2*TOP}" rx="5" fill="#4CB97F" opacity=".55" class="tvhit tvto" data-ga="pt" data-i="25"/>`;continue;}
+      const q=view(p),x=xOf(q),bottom=q<=12,v=d.pts[p-1],j=tvOwn(v,d.sd)?Math.min(tvCnt(v),4):0;
+      g+=`<rect x="${x}" y="${bottom?H/2:TOP}" width="${PW}" height="${H/2-TOP}" fill="#4CB97F" opacity=".16" class="tvhit" data-ga="pt" data-i="${p}"/><circle cx="${x+PW/2}" cy="${sy(bottom,j)}" r="${CR-.5}" fill="#4CB97F" fill-opacity=".45" stroke="#fff" stroke-width="1.6" stroke-dasharray="3.2 2.2" class="tvgh" data-ga="pt" data-i="${p}"/>`;}}
   return g+'</svg>';}
