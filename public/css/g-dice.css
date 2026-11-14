@@ -1,1 +1,332 @@
 /* dice games: look and motion (loaded after style.css; uses the tokens at the top of style.css) */
+
+/* ================= the shared die (.dice, .tapd, diceSVG) ================= */
+/* a rounded ivory cube: soft face gradient, a bright top edge, a darker underside and a lip it stands on */
+:root{--dc-face:radial-gradient(125% 125% at 28% 18%,#fff 0 38%,#F1F5FA 64%,#D6DFEA 100%);
+ --dc-edge:inset 0 2px 0 rgba(255,255,255,.95),inset 0 -3px 4px rgba(45,71,99,.16),inset 0 0 0 1px rgba(45,71,99,.08);
+ --dc-lip:0 3px 0 #B9C7D6,0 6px 10px rgba(20,40,70,.18)}
+@media (prefers-color-scheme:dark){:root{--dc-lip:0 3px 0 #8FA2B7,0 7px 12px rgba(0,0,0,.5)}}
+.dice,.tapd{position:relative;background:var(--dc-face);border-radius:24%;box-shadow:var(--dc-edge),var(--dc-lip);color:#2D4763}
+.dice{padding:8px}
+.dice>svg,.tapd>svg{position:relative;display:block;width:100%;height:100%;overflow:visible}
+/* the flat top face inside the bevel */
+.dice::before,.tapd::before{content:'';position:absolute;inset:8%;border-radius:20%;background:linear-gradient(150deg,#fff 30%,#F3F6FA);box-shadow:0 1px 1px rgba(255,255,255,.9),0 -1px 2px rgba(45,71,99,.06);pointer-events:none}
+button.dice{cursor:pointer;transition:transform var(--t1) var(--ease)}
+button.dice:active:not(:disabled){transform:scale(.92)}
+button.dice:disabled{cursor:default}
+/* the tap-to-roll die keeps the player's colour as a ring around it */
+.tapd{border-radius:22%;padding:9px;box-shadow:var(--dc-edge),0 0 0 3px var(--surface),0 0 0 6px var(--c),0 6px 0 3px rgba(0,0,0,.14),0 10px 16px rgba(20,40,70,.16)}
+.tapd.can{box-shadow:var(--dc-edge),0 0 0 3px var(--surface),0 0 0 6px var(--c),0 0 0 9px rgba(240,180,41,.35),0 6px 0 3px rgba(0,0,0,.14),0 10px 16px rgba(20,40,70,.16)}
+.tapd.can:active{transform:scale(.92);animation:none}
+.ldie.tapd{width:66px;height:66px;padding:7px}
+/* selected, held or kept */
+.dice.held,.dice.sel,.dice[style*="box-shadow:0 0 0 4px #ffd84d"]{transform:translateY(-5px);box-shadow:var(--dc-edge),0 0 0 3px var(--sel),0 8px 0 rgba(176,130,20,.35),0 12px 16px rgba(20,40,70,.2)!important}
+.dice.held::after{content:'';position:absolute;left:50%;bottom:-12px;width:22px;height:5px;margin-left:-11px;border-radius:3px;background:var(--gold);box-shadow:0 1px 0 rgba(0,0,0,.2)}
+/* farkle: dice set aside this turn */
+.dice[style*="opacity:.25"]{opacity:.38!important;transform:scale(.88);box-shadow:var(--dc-edge),0 2px 0 #B9C7D6}
+/* an empty die before the first roll */
+.dice.ghost{background:rgba(255,255,255,.25);box-shadow:inset 0 0 0 2px rgba(45,71,99,.18);border:0}
+.dice.ghost::before{background:none;box-shadow:inset 0 0 0 2px rgba(45,71,99,.12);border-radius:20%;border:2px dashed rgba(45,71,99,.22);inset:6%}
+.dice.ghost>svg{opacity:.12}
+@media (prefers-color-scheme:dark){.dice.ghost{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12)}.dice.ghost::before{border-color:rgba(255,255,255,.2);box-shadow:none}.dice.ghost>svg .pw{fill:#fff}.dice.ghost>svg{opacity:.14}}
+/* rolling: a short shake while the result is drawn, then the die tumbles in and settles (one keyframe each) */
+@keyframes dc-roll{0%{transform:translate(-12px,-22px) rotate(-200deg) scale(.7);opacity:.3}40%{transform:translate(2px,3px) rotate(16deg) scale(1.05);opacity:1}65%{transform:translate(0,-4px) rotate(-6deg) scale(.99)}82%{transform:translate(0,0) rotate(2deg)}100%{transform:none}}
+@keyframes dc-shake{0%,100%{transform:none}25%{transform:translate(-3px,-6px) rotate(-16deg)}50%{transform:translate(3px,-2px) rotate(12deg)}75%{transform:translate(-2px,-7px) rotate(-8deg)}}
+.dice.roll,.tapd.roll,.tapd.land,.ldie.land,.mdice .dice.land{animation:dc-roll .46s cubic-bezier(.2,.7,.3,1)}
+.tapd.spin,.ldie.spin,.mdice .dice.spin{animation:dc-shake .26s linear infinite}
+
+/* ================= five dice (yatzy) ================= */
+.ytray{display:flex;gap:9px;justify-content:center;align-items:center;width:100%;max-width:440px;margin:0 auto;padding:14px 10px 16px;border-radius:var(--r-l);background:radial-gradient(120% 140% at 50% 0%,var(--felt-1),var(--felt-2));box-shadow:inset 0 3px 10px rgba(0,0,0,.35),inset 0 0 0 3px rgba(0,0,0,.1),0 3px 0 #135335,var(--e1)}
+.ytray .dice{width:56px;height:56px;flex:none;padding:8px}
+.ytray .dice.ghost{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2)}
+.ytray .dice.ghost::before{border-color:rgba(255,255,255,.35);box-shadow:none}
+.ytray .dice.ghost>svg{opacity:.22}.ytray .dice.ghost>svg .pw{fill:#fff}.ytray .dice.ghost>svg .pf{fill:#fff}
+.ytray .dice.held::after{bottom:-11px}
+.ytray .dice.held{box-shadow:var(--dc-edge),0 0 0 3px var(--sel),0 8px 0 rgba(0,0,0,.25),0 12px 16px rgba(0,0,0,.25)!important}
+.yroll{display:inline-flex;align-items:center;gap:10px}
+.yleft{display:inline-flex;gap:4px}.yleft i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35)}.yleft i.on{background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+/* the score card: upper section with the bonus bar on one side, lower section on the other, total across the bottom */
+.ysheet.ycard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 8px;width:100%;max-width:440px;margin:12px auto 0;padding:8px;background:var(--surface);border-radius:var(--r-l);box-shadow:inset 0 4px 0 var(--c),var(--e1)}
+.ycol{display:flex;flex-direction:column;min-width:0}
+.ycard .yc{display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:37px;margin:0;padding:3px 4px;background:none;border-radius:0;box-shadow:none;border-bottom:1px solid var(--line);font-size:14px;font-weight:700;color:var(--ink);width:100%;text-align:start}
+.ycard .yc>span{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ycard .yc .yi{flex:none;width:18px;height:18px;padding:2px;border-radius:5px;background:#fff;box-shadow:inset 0 0 0 1px rgba(45,71,99,.18),0 1px 0 rgba(45,71,99,.15)}
+.ycard .yc .yi svg{display:block;width:100%;height:100%}
+.ycard .yc b{flex:none;min-width:36px;height:27px;line-height:27px;padding:0 5px;border-radius:9px;text-align:center;font-size:15px;font-weight:800;color:var(--mut);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)}
+.ycard .yc.done{opacity:1;background:none}
+.ycard .yc.done>span{color:var(--mut)}
+.ycard .yc.done b{color:#fff;background:#2D4763;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.ycard .yc.done .yi{opacity:.6}
+.ycard .yc.pv b{color:#1F6FA3;background:#E3F3FC;box-shadow:inset 0 0 0 1.5px #4AB1E8}
+.ycard .yc.zero b{color:var(--mut);background:var(--surface-2)}
+.ycard button.yc:not(:disabled){cursor:pointer;border-radius:10px;box-shadow:none}
+.ycard button.yc.pv:not(:disabled){background:rgba(240,180,41,.08)}
+.ycard button.yc.top:not(:disabled) b{color:#7A5200;background:#FFF1C2;box-shadow:inset 0 0 0 2px var(--gold)}
+.ycard button.yc:active:not(:disabled){transform:scale(.97)}
+.ycard .yc:disabled{opacity:1}
+.ybon{display:flex;align-items:center;gap:6px;min-height:37px;padding:3px 4px;font-size:13px;font-weight:800;color:var(--mut)}
+.ybon>span{flex:none}
+.ybar{flex:1;min-width:20px;height:8px;border-radius:5px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.ybar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#F7CF5A,var(--gold));transition:width var(--t3) var(--ease)}
+.ybon b{flex:none;font-size:13px;color:var(--ink);direction:ltr}
+.ybon.got b{color:#fff;background:var(--ok);border-radius:8px;padding:1px 7px}
+.ybon.got .ybar i{background:var(--ok)}
+.ytot{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:8px;padding:6px 12px;border-radius:12px;background:#2D4763;color:#fff;font-weight:800}
+.ytot>span{flex:1}.ytot>b{font-size:22px;color:#FFD84D}
+.ytot .yxb{flex:none;font-size:13px;background:rgba(255,255,255,.14);border-radius:99px;padding:1px 10px}.ytot .yxb b{color:#FFD84D}
+@media (prefers-color-scheme:dark){
+ .ycard .yc.pv b{color:#BFE6FB;background:rgba(74,177,232,.18)}
+ .ycard button.yc.top:not(:disabled) b{color:#FFE7A0;background:rgba(240,180,41,.2)}
+ .ycard .yc.done b{background:#4A6688}
+ .ytot{background:#1A2836;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}}
+
+/* ================= liar's dice ================= */
+.lbid{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:440px;margin:0 auto 10px;padding:8px 14px;background:var(--surface);border-radius:var(--r-l);box-shadow:inset 0 -4px 0 var(--c,var(--line)),var(--e1);animation:dl-pop var(--t3) var(--spring)}
+.lbid small{font-size:14px;color:var(--mut);font-weight:700}
+.lbid>b{font-size:34px;line-height:1;font-weight:900;color:var(--ink)}
+.lbid em{font-style:normal;font-size:22px;color:var(--mut);font-weight:800}
+.lbid .dice{width:42px;height:42px;padding:5px;flex:none}
+.lbid i{font-style:normal;font-size:13px;font-weight:800;color:#fff;background:var(--c);border-radius:99px;padding:1px 10px;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.lbid.none{animation:none;min-height:52px}
+.ltable{width:100%;max-width:440px;margin:0 auto 6px;padding:10px 8px 12px;border-radius:var(--r-l);background:radial-gradient(120% 140% at 50% 0%,var(--felt-1),var(--felt-2));box-shadow:inset 0 3px 10px rgba(0,0,0,.35),0 3px 0 #135335,var(--e1);text-align:center}
+.lcups{display:flex;justify-content:center;gap:4px}
+.lcup{display:flex;flex-direction:column;align-items:center;flex:1 1 0;max-width:60px;min-width:0;transition:transform var(--t2) var(--ease)}
+.lcup svg{display:block;width:100%;max-width:48px;height:auto}
+.lcup.on{transform:translateY(-4px)}
+.lcup.on svg{filter:drop-shadow(0 0 4px rgba(255,236,160,.95))}
+.lcup.out{opacity:.35;filter:grayscale(.8)}
+.lcn{display:flex;gap:2px;justify-content:center;min-height:8px;margin-top:2px}
+.lcn i{width:7px;height:7px;border-radius:2px;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.3)}
+.ltable .lbl{color:#E3F5E9;margin:8px 0 4px;font-size:14px}
+.ldice{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.ldice .dice{width:50px;height:50px;padding:7px;animation:dl-pop var(--t3) var(--spring)}
+.lfaces{gap:7px;margin:8px 0}
+.lfaces .dice{width:46px;height:46px;padding:6px}
+@keyframes dl-pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+
+/* ================= shut the box ================= */
+.sbox{position:relative;gap:4px;padding:12px 10px 14px;border-radius:var(--r-l);background:linear-gradient(180deg,#7A4A27,#5E3618);box-shadow:inset 0 0 0 3px #4A2A12,inset 0 6px 10px rgba(0,0,0,.35),0 5px 0 #3E220E,0 8px 16px rgba(0,0,0,.2);perspective:420px}
+.sbox::before{content:'';position:absolute;inset:3px;border-radius:15px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 3px,transparent 3px 9px);pointer-events:none}
+.stile{position:relative;background:linear-gradient(180deg,#FBEBCB,#EBCB93);color:#5B3A20;border-radius:7px;font-size:21px;font-weight:900;box-shadow:inset 0 2px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(150,100,40,.25),0 3px 0 #9C7340,0 5px 5px rgba(0,0,0,.25);transform-origin:50% 100%;transition:transform var(--t2) var(--spring),box-shadow var(--t2)}
+.sbox.live .stile:not(.shut){box-shadow:inset 0 2px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(150,100,40,.25),0 3px 0 #9C7340,0 0 0 2px rgba(255,224,138,.65)}
+.stile:active:not(:disabled){transform:scale(.94)}
+.stile.sel{background:linear-gradient(180deg,#FFE88A,#F5C842);transform:translateY(-5px);box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 0 0 3px var(--sel),0 7px 0 #B8902A,0 9px 10px rgba(0,0,0,.3)}
+/* a shut tile lies flat in the box */
+.stile.shut{background:linear-gradient(180deg,#4A2B14,#3A210F);box-shadow:inset 0 2px 4px rgba(0,0,0,.5);transform:none;display:grid;place-items:end center;overflow:hidden}
+.stile.shut span{font-size:12px;font-weight:800;color:rgba(255,220,170,.3);margin-bottom:5px}
+.stile.shut.flip{animation:sh-flip .36s ease-in}
+@keyframes sh-flip{0%{transform:rotateX(0);background:#EBCB93}60%{transform:rotateX(70deg);background:#8a5f35}100%{transform:none}}
+.stray{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;max-width:440px;margin:12px auto 0;padding:12px 10px;border-radius:var(--r-l);background:radial-gradient(120% 140% at 50% 0%,var(--felt-1),var(--felt-2));box-shadow:inset 0 3px 10px rgba(0,0,0,.35),0 3px 0 #135335,var(--e1)}
+.stray .tapd{width:70px;height:70px;padding:8px;box-shadow:var(--dc-edge),0 5px 0 rgba(0,0,0,.25),0 9px 14px rgba(0,0,0,.25)}
+.stray .tapd.can{box-shadow:var(--dc-edge),0 0 0 3px rgba(255,236,160,.85),0 5px 0 rgba(0,0,0,.25),0 9px 14px rgba(0,0,0,.25)}
+.rollsum{font-size:24px;font-weight:900;color:#2D4763;background:#FFF3CC;border-radius:99px;padding:2px 14px;box-shadow:0 3px 0 rgba(0,0,0,.2);animation:dl-pop var(--t3) var(--spring)}
+
+/* ================= camel race ================= */
+.race.camel{gap:6px}
+.camel .lane{position:relative;background:var(--surface);box-shadow:var(--e1);transition:box-shadow var(--t2)}
+.camel .lane.on{box-shadow:0 0 0 3px var(--c),var(--e2)}
+.camel .lane.won{box-shadow:0 0 0 3px var(--gold),var(--e2)}
+.camel .lname i{box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.camel .track{height:32px;border-radius:16px;overflow:visible;background:linear-gradient(180deg,#F6E2B0,#E9C77E 70%,#DDB66A);box-shadow:inset 0 2px 3px rgba(120,80,20,.25),inset 0 -2px 0 rgba(255,255,255,.4)}
+.camel .track::before{content:'';position:absolute;inset:0;border-radius:16px;background:radial-gradient(circle at 20% 70%,rgba(255,255,255,.35) 0 2px,transparent 3px) 0 0/18px 12px;opacity:.6;pointer-events:none}
+.camel .track .fill{background:linear-gradient(180deg,var(--l),color-mix(in srgb,var(--c) 45%,var(--l)));opacity:.85;transition:width .5s var(--ease)}
+.camel .track .mk{top:50%;width:18px;height:18px;margin-top:-9px;display:grid;place-items:center;border-radius:50%;font-size:11px;line-height:1;opacity:1;background:rgba(255,255,255,.75);box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.camel .track .mk.up{background:#FFF3B8}.camel .track .mk.dn{background:#E7F5E2}
+.camel .flag{inset-inline-end:0;top:0;bottom:0;width:12px;font-size:0;border-radius:0;border-start-end-radius:16px;border-end-end-radius:16px;background:repeating-conic-gradient(#2D4763 0 25%,#fff 0 50%) 0 0/6px 6px;opacity:.8}
+.camel .camelp{top:-3px;font-size:28px;transform:translateX(50%);transition:inset-inline-start .5s var(--ease);filter:none;z-index:1}
+.camel .camelp>span{display:block;filter:drop-shadow(0 3px 1px rgba(90,60,20,.35))}
+.camel .camelp.hop>span{animation:cm-hop .5s var(--ease)}
+.camel .camelp.slip>span{animation:cm-slip .5s var(--ease)}
+@keyframes cm-hop{0%,100%{transform:none}30%{transform:translateY(-8px) rotate(8deg)}60%{transform:translateY(-3px) rotate(-4deg)}}
+@keyframes cm-slip{0%,100%{transform:none}25%{transform:rotate(-14deg)}55%{transform:rotate(10deg)}}
+/* many riders: thinner lanes so the die stays on screen */
+.race.camel.many{gap:4px}.camel.many .lane{padding:3px 8px}.camel.many .track{height:26px}.camel.many .camelp{font-size:23px;top:-2px}.camel.many .track .mk{width:15px;height:15px;margin-top:-7.5px;font-size:9px}.camel.many .lname i{width:20px;height:20px}
+
+/* ================= lucky boxes ================= */
+.lgrid{display:grid;gap:8px;width:min(100%,420px);margin:0 auto;padding:12px;border-radius:var(--r-l);background:radial-gradient(120% 120% at 50% 0%,#9A3740,#6B1F27);box-shadow:inset 0 3px 10px rgba(0,0,0,.35),0 4px 0 #4E141B,var(--e1)}
+.lgrid>*{min-width:0}
+.gbox{position:relative;aspect-ratio:1;padding:0;border-radius:10px;display:grid;place-items:center;
+ background:linear-gradient(90deg,transparent 42%,#E5483F 42% 58%,transparent 58%),linear-gradient(180deg,#FFD56A,#F0B429 60%,#D99A16);
+ box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(150,90,0,.3),0 4px 0 #A06E0A,0 6px 8px rgba(0,0,0,.3);transition:transform var(--t1) var(--ease)}
+/* lid with a bow */
+.gbox::before{content:'';position:absolute;left:-3px;right:-3px;top:-2px;height:28%;border-radius:8px 8px 4px 4px;background:linear-gradient(90deg,transparent 42%,#C93A33 42% 58%,transparent 58%),linear-gradient(180deg,#FFE08A,#F5C342);box-shadow:0 2px 0 rgba(150,90,0,.35)}
+.gbox::after{content:'';position:absolute;top:-9px;left:50%;width:22px;height:12px;margin-left:-11px;background:radial-gradient(circle at 25% 55%,#E5483F 0 4px,transparent 5px),radial-gradient(circle at 75% 55%,#E5483F 0 4px,transparent 5px),radial-gradient(circle at 50% 75%,#B8302A 0 3px,transparent 4px)}
+.lgrid.live .gbox:not(.op):not(:disabled){cursor:pointer}
+.gbox:active:not(:disabled){transform:scale(.92)}
+.gbox:disabled{opacity:1}
+.gbox>span{position:relative;font-size:24px;z-index:1}
+.gbox.bomb{filter:saturate(.5) brightness(.85)}
+/* opened: the box is gone, a coin in the opener's colour sits in its place */
+.gbox.op{background:radial-gradient(circle at 50% 40%,var(--l),color-mix(in srgb,var(--c) 30%,var(--l)));box-shadow:inset 0 0 0 3px var(--c),inset 0 3px 6px rgba(0,0,0,.18);animation:lb-open var(--t3) var(--spring)}
+.gbox.op::before,.gbox.op::after{display:none}
+.gbox.op b{font-size:22px;font-weight:900;color:#2D4763}
+.gbox.boom{background:radial-gradient(circle,#FFD27A,#E5483F 70%,#8E1F1A);box-shadow:inset 0 0 0 3px var(--c),0 0 0 2px rgba(255,200,120,.4)}
+.gbox.boom>span{font-size:26px}
+@keyframes lb-open{0%{transform:scale(.5) rotate(-8deg);opacity:0}100%{transform:none;opacity:1}}
+
+/* ================= ludo and jakaro ================= */
+.lboard,.jboard{box-shadow:0 5px 0 var(--line),0 12px 26px rgba(20,40,70,.14)}
+.pawn .pb,.marble .pb{transform-box:fill-box;transform-origin:50% 100%}
+.marble .pb{transform-origin:50% 50%}
+.pawn.can,.marble.can{cursor:pointer}
+.pawn.can .pb,.marble.can .pb{animation:lu-bob 1s ease-in-out infinite}
+@keyframes lu-bob{50%{transform:translateY(-.14px)}}
+.pawn.hop .pb,.marble.hop .pb{animation:lu-hop .15s ease-out}
+@keyframes lu-hop{50%{transform:translateY(-.3px) scale(1.1)}}
+.pawn.land .pb,.marble.land .pb{animation:lu-land .32s var(--spring)}
+@keyframes lu-land{0%{transform:scale(1.2,.78)}55%{transform:scale(.94,1.08)}100%{transform:none}}
+.pawn.zap,.marble.zap{opacity:.6}
+.lupanel{gap:16px;margin-top:16px}
+.lupanel .hint{margin:0;color:var(--ink)}
+.lupanel .note{margin:0}
+
+/* ================= monopoly ================= */
+.mboard{background:radial-gradient(90% 90% at 50% 45%,#E3F3E8,#C4E3CF);border:3px solid #2D4763;border-radius:14px;box-shadow:0 5px 0 #1D3148,0 12px 26px rgba(20,40,70,.18)}
+.mboard .mc{background:linear-gradient(180deg,#FFFFFF,#F5F8F4);border:.5px solid rgba(45,71,99,.55);color:#1F3550;font-weight:800}
+.mboard .mc .nm{font-size:8px;font-weight:800;letter-spacing:-.2px;line-height:1.1}
+.mboard .mc .pr{display:inline-block;margin-top:1px;padding:0 3px;border-radius:5px;font-size:7.5px;line-height:10px;font-weight:800;color:#2D4763;background:#E6EEF6;max-height:none;overflow:visible}
+.mboard .mc .pr.ow{display:grid;place-items:center;width:13px;height:13px;padding:0;border-radius:50%;background:var(--o);box-shadow:0 0 0 1.5px #fff,0 1px 2px rgba(0,0,0,.35)}
+.mboard .mc .pr.ow svg{width:8px;height:8px;display:block}
+.mboard .mc.own{background:linear-gradient(180deg,#fff,#F8FAF7);background:color-mix(in srgb,var(--o) 14%,#fff);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--o) 70%,transparent)}
+.mboard .mc.mort .pr.ow{background:repeating-linear-gradient(45deg,var(--o) 0 2px,#9AA8B6 2px 4px);opacity:.7}
+.mboard .mc.mort{background-image:repeating-linear-gradient(45deg,rgba(45,71,99,.1) 0 3px,transparent 3px 6px)}
+.mboard .mc .bar{box-shadow:inset 0 -1px 0 rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.35)}
+.mboard .mc.msb .bar,.mboard .mc.mst .bar{height:24%}
+/* houses and hotels as little buildings */
+.mboard .mc .hs{width:5px;height:5px;border:0;background:#2FA35B;clip-path:polygon(50% 0,100% 45%,100% 100%,0 100%,0 45%);filter:drop-shadow(0 0 .5px #fff)}
+.mboard .mc .ho{width:9px;height:6px;border:0;background:#E5483F;clip-path:polygon(15% 0,85% 0,100% 30%,100% 100%,0 100%,0 30%)}
+.mboard .mc.msk .ic{font-size:17px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.15))}
+.mboard .mc.msk .nm{font-size:8.5px}
+.mboard .mc.pick{box-shadow:inset 0 0 0 2.5px var(--gold),0 0 0 2px rgba(240,180,41,.4);z-index:2}
+/* glossy tokens in the players' colours */
+.mboard .mc .tks{gap:1px}
+.mboard .mc .tks i{width:10px;height:10px;border:1.5px solid #fff;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85) 0 14%,transparent 42%),var(--c);box-shadow:0 1.5px 2px rgba(0,0,0,.4)}
+.mboard .mc .tks i.cur{width:13px;height:13px;animation:mo-tok 1.4s ease-in-out infinite}
+@keyframes mo-tok{50%{transform:translateY(-2px)}}
+.mfly{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85) 0 14%,transparent 42%),var(--c)}
+/* the middle of the board: a calm table for the dice and the actions */
+.mboard .mcenter{gap:7px}
+.mboard .mlogo{font-size:21px;letter-spacing:.5px;padding:1px 18px;border-radius:10px;background:linear-gradient(180deg,#F05A50,#D63F36);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 3px 0 #A52F28,0 6px 10px rgba(0,0,0,.15)}
+.mboard .mdice{gap:10px;padding:6px 10px;border-radius:16px;background:rgba(45,71,99,.08);box-shadow:inset 0 2px 4px rgba(0,0,0,.08)}
+.mboard .mdice .dice{width:46px;height:46px;padding:6px}
+.mboard button.mdice{padding:6px 10px}
+.mboard .mdice.can{background:rgba(240,180,41,.22);box-shadow:inset 0 0 0 2px rgba(240,180,41,.75)}
+.mboard .mdice.can .dice{box-shadow:var(--dc-edge),var(--dc-lip)}
+.mboard .mwho{color:#2D4763;background:#fff;box-shadow:0 2px 0 rgba(45,71,99,.15),inset 0 0 0 2px var(--c);padding:2px 12px 2px 8px;font-size:14px}
+.mboard .mwho i{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85) 0 14%,transparent 42%),var(--c);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.mny{direction:ltr;unicode-bidi:isolate;font-weight:900}
+.mboard .mbuy{color:#2D4763;background:#fff;box-shadow:0 2px 0 rgba(45,71,99,.15)}
+.mboard .macts .btn{min-height:40px}
+.mboard .mtab{color:#2D4763;background:#fff;padding:3px 14px;font-size:13px;box-shadow:0 2px 0 rgba(45,71,99,.18)}
+.mboard .mtab:active{transform:translateY(2px);box-shadow:none}
+.mboard .mwait{color:#4A6178}
+.mboard .mcard{background:#fff;color:#2D4763;border:0;border-radius:10px;padding:8px 12px;box-shadow:inset 0 3px 0 var(--gold),0 3px 0 rgba(45,71,99,.15),0 6px 12px rgba(0,0,0,.12)}
+.mboard .moffer{box-shadow:inset 0 3px 0 #4AB1E8,0 3px 0 rgba(45,71,99,.15)}
+/* the title deed of a place */
+.mboard .mdet{max-width:228px;border-radius:12px;box-shadow:0 0 0 1.5px rgba(45,71,99,.2),0 10px 22px rgba(0,0,0,.18);padding-bottom:8px;color:#2D4763}
+.mboard .mdet .dh{margin:6px 6px 0;border-radius:8px;padding:6px 8px;font-size:17px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15);text-shadow:0 1px 0 rgba(0,0,0,.2)}
+.mboard .mdet table{width:88%;margin:6px auto 4px}
+.mboard .mdet td{padding:2px 6px;border-bottom:1px dashed rgba(45,71,99,.15)}
+.mboard .mdet tr:last-child td{border-bottom:0}
+.mboard .mdet tr.on{background:#FFF0B3}
+.mboard .mdet small{color:#5c7088}
+.mboard .mdet .x{top:10px;left:10px}
+/* your places and the trade sheet */
+.mpanel{border-radius:var(--r-l);box-shadow:var(--e2);padding:12px}
+.mph b{font-size:17px}
+.mprops{gap:7px}
+.mp{background:var(--surface);border-inline-start:0;box-shadow:inset 0 0 0 1px var(--line),var(--e1);border-radius:12px;padding:7px 10px;position:relative;overflow:hidden}
+.mp::before{content:'';position:absolute;inset-block:0;inset-inline-start:0;width:6px;background:var(--g)}
+.mp b{padding-inline-start:4px}
+.mp small{font-weight:800}
+.mpanel .lbl{margin:10px 0 4px;font-size:14px}
+.mpanel .mtl .sm{border:0;box-shadow:inset 0 0 0 1.5px var(--line);background:var(--surface-2);color:var(--ink)}
+.mpanel .mtl .sm.go{background:#2D4763;color:#fff;box-shadow:0 0 0 2px var(--sel)}
+.mpanel .mbid b{min-width:64px;font-size:22px;direction:ltr}
+.mpanel .tabs{margin:2px 0 4px}
+@media (prefers-color-scheme:dark){.mp{background:var(--surface-2)}.mpanel .mtl .sm.go{background:#4A6688}}
+.mboard .mc.msb:not(.mt-p),.mboard .mc.mst:not(.mt-p){padding-top:1px;padding-bottom:1px}
+.mboard .mc.msl:not(.mt-p),.mboard .mc.msr:not(.mt-p){padding-left:1px;padding-right:1px}
+.mboard .mc.mt-rr .ic,.mboard .mc.mt-ut .ic,.mboard .mc.mt-tax .ic{font-size:11px}
+
+/* ================= arena brawl ================= */
+.arena{gap:8px;padding:14px;border-radius:var(--r-xl);
+ background:repeating-radial-gradient(ellipse at 50% 60%,transparent 0 46px,rgba(140,90,35,.13) 47px 49px),radial-gradient(ellipse at 50% 55%,#F6DFB2,#E3B978 58%,#C38F50);
+ box-shadow:inset 0 0 0 5px #8A6440,inset 0 0 0 7px #6B4A2C,inset 0 10px 18px rgba(0,0,0,.28),0 5px 0 #5A3E24,0 10px 20px rgba(0,0,0,.15)}
+.arena .fcard{padding:6px 6px 8px;border-radius:var(--r-m);background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,248,236,.78));box-shadow:inset 0 4px 0 var(--c),0 3px 0 rgba(90,60,30,.3),0 6px 10px rgba(0,0,0,.12);overflow:visible;min-width:0}
+.arena .fsvg{width:100%;max-width:78px;height:auto;aspect-ratio:80/84}
+.arena .fcard b{font-size:13px;margin-top:1px}
+.arena .fcard.tgt{box-shadow:inset 0 4px 0 var(--c),0 0 0 3px #E5483F,0 0 0 6px rgba(229,72,63,.25),0 3px 0 rgba(90,60,30,.3)}
+.arena .fcard.tgt::before{content:'';position:absolute;top:30%;left:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:2px dashed rgba(229,72,63,.8);pointer-events:none}
+.arena .fcard.dead{opacity:.45;filter:grayscale(1)}
+/* struck: the card shakes and a flash bursts over the fighter */
+.arena .fcard.hit::after{content:'';position:absolute;left:12%;right:12%;top:4%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95) 0 12%,rgba(255,210,90,.75) 28%,rgba(229,72,63,0) 62%);animation:ar-burst .42s ease-out forwards;pointer-events:none}
+@keyframes ar-burst{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.35);opacity:0}}
+.arena .dmg{top:2%;font-size:21px;text-shadow:0 2px 0 #fff,0 0 6px #fff;z-index:2}
+/* health: a dark track, a glossy fill and the number on it */
+.arena .hpb{position:relative;height:13px;margin-top:4px;border-radius:7px;background:#3A2A1C;box-shadow:inset 0 1px 2px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.6)}
+.arena .hpb i{border-radius:7px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -2px 0 rgba(0,0,0,.15)}
+.arena .hpb em{position:absolute;inset:0;font-style:normal;font-size:10px;line-height:13px;font-weight:900;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.7);text-align:center}
+.arena .hpb.low{animation:ar-low 1s ease-in-out 3}
+@keyframes ar-low{50%{box-shadow:inset 0 1px 2px rgba(0,0,0,.5),0 0 0 2px rgba(229,72,63,.6)}}
+.arena .enp{gap:3px}.arena .enp i{width:14px;height:6px;border-radius:3px;background:rgba(58,42,28,.25)}
+.arena .enp i.on{background:linear-gradient(180deg,#FFE08A,#F5B041);box-shadow:0 0 4px rgba(245,176,65,.8)}
+
+/* ================= tanks ================= */
+.tanks{border-radius:var(--r-l);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08),0 5px 0 var(--line),0 10px 22px rgba(20,40,70,.14)}
+.tanks .tkon{animation:tk-bob 1s ease-in-out infinite;transform-box:fill-box}
+@keyframes tk-bob{50%{transform:translateY(-.7px)}}
+.tank.on{filter:drop-shadow(0 0 .8px #fff) drop-shadow(0 0 1.6px rgba(255,216,77,.9))}
+.aimc{border-radius:var(--r-l);box-shadow:var(--e1);padding:10px 14px}
+.aimc input[type=range]{accent-color:#E5483F;height:26px}
+
+/* ================= dice wars ================= */
+.dwmap{background:radial-gradient(ellipse at 50% 35%,#7CC4EC,#3A8FCB 60%,#256FA8);box-shadow:inset 0 0 0 3px rgba(255,255,255,.25),0 5px 0 #1C5A88,0 10px 20px rgba(20,40,70,.15);border-radius:var(--r-xl)}
+.hx polygon{stroke-linejoin:round}
+.hx.sel polygon{filter:none}
+.hx[data-ga]:active polygon{opacity:.8}
+.dwroll>div{border-radius:var(--r-m);box-shadow:inset 0 4px 0 var(--c),var(--e1);padding:6px 6px 8px}
+.dwroll>div.w{box-shadow:inset 0 4px 0 var(--c),0 0 0 3px var(--gold),var(--e2)}
+.dwroll span{gap:3px;margin:3px 0 2px}
+.dwroll span i.dice{width:20px;height:20px;padding:2px;border-radius:5px;line-height:normal;box-shadow:var(--dc-edge),0 2px 0 #B9C7D6}
+.dwroll span i.dice::before{inset:6%;border-radius:4px}
+.dwroll em{font-size:20px}
+
+/* ================= sword duel ================= */
+.duel{border-radius:var(--r-xl);background:linear-gradient(#081827,#173A5E 45%,#3E5F86 62%,#C0603E 63%,#7B341E);box-shadow:0 6px 0 #0B1520,0 12px 24px rgba(0,0,0,.25)}
+.duel .stars{position:absolute;inset:0 0 40% 0;background:radial-gradient(circle at 12% 20%,#fff 0 1px,transparent 1.5px),radial-gradient(circle at 28% 42%,rgba(255,255,255,.8) 0 1px,transparent 1.5px),radial-gradient(circle at 70% 14%,#fff 0 1.2px,transparent 1.8px),radial-gradient(circle at 84% 36%,rgba(255,255,255,.7) 0 1px,transparent 1.5px),radial-gradient(circle at 44% 10%,rgba(255,255,255,.8) 0 1px,transparent 1.5px),radial-gradient(circle at 92% 8%,#fff 0 1px,transparent 1.5px);pointer-events:none}
+.duel .hills{position:absolute;left:-10%;right:-10%;bottom:0;height:58px;background:radial-gradient(60% 100% at 25% 100%,#5E2716 98%,transparent 100%),radial-gradient(70% 100% at 80% 100%,#6B2E1A 98%,transparent 100%);pointer-events:none}
+.duel .sam{z-index:1}
+.duel b{z-index:2;text-shadow:0 0 24px #fff,0 4px 0 #7B1E14}
+.duel.go{background:linear-gradient(#4A1414,#A93226 45%,#D9573A 62%,#C0603E 63%,#7B341E)}
+.duel.go .moon{background:#FFE9A8;box-shadow:0 0 60px #FFD27A}
+.duel.go b{animation:du-pop .22s var(--spring)}
+@keyframes du-pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+
+/* ================= tapping battle ================= */
+.tw .memnum{font-size:56px;padding:10px 20px;letter-spacing:2px;color:var(--ink);background:var(--surface);box-shadow:var(--e1)}
+.tapbtn{background:radial-gradient(circle at 38% 30%,#7EE2A6,#2ECC71 38%,#1E8449 75%);box-shadow:inset 0 -8px 0 rgba(0,0,0,.18),inset 0 6px 0 rgba(255,255,255,.3),0 0 0 8px rgba(30,132,73,.18),0 10px 0 #145A32,0 16px 28px rgba(0,0,0,.25);text-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform 60ms ease-out,box-shadow 60ms ease-out}
+.tapbtn:active{transform:translateY(8px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),inset 0 6px 0 rgba(255,255,255,.3),0 0 0 12px rgba(30,132,73,.22),0 2px 0 #145A32,0 4px 10px rgba(0,0,0,.25)}
+.tw .tbar{max-width:320px;margin-left:auto;margin-right:auto}
+
+/* ================= dark mode: the boards stay light materials but lose their glare ================= */
+@media (prefers-color-scheme:dark){
+ .lboard #lubg stop:nth-child(1){stop-color:#E6ECF2}.lboard #lubg stop:nth-child(2){stop-color:#D8E1EA}.lboard #lubg stop:nth-child(3){stop-color:#B9C6D4}
+ .lboard rect[fill="#fff"],.lboard circle[fill="#fff"]{fill:#EEF2F6}
+ .lboard,.jboard{box-shadow:0 5px 0 #0b1118,0 12px 26px rgba(0,0,0,.4)}
+ .mboard{box-shadow:0 5px 0 #0b1118,0 12px 26px rgba(0,0,0,.4)}
+ .mboard .mc{background:linear-gradient(180deg,#F1F4F0,#E4EAE4)}
+ .mboard{background:radial-gradient(90% 90% at 50% 45%,#D3E6D9,#AFCFBB)}
+ .tanks,.dwmap,.arena{box-shadow:0 5px 0 #0b1118,0 10px 20px rgba(0,0,0,.4)}
+ .arena{box-shadow:inset 0 0 0 5px #8A6440,inset 0 0 0 7px #6B4A2C,inset 0 10px 18px rgba(0,0,0,.28),0 5px 0 #0b1118}
+ .ytray,.ltable,.stray{box-shadow:inset 0 3px 10px rgba(0,0,0,.4),0 3px 0 #0b1118}
+ .lgrid{box-shadow:inset 0 3px 10px rgba(0,0,0,.35),0 4px 0 #0b1118}
+ .sbox{box-shadow:inset 0 0 0 3px #4A2A12,inset 0 6px 10px rgba(0,0,0,.35),0 5px 0 #0b1118}
+}
+/* farkle sizes its dice inline (50px die, 40px face) */
+.dice[style*="width:50px"]{padding:5px}
+/* small phones: five dice still fit in one row */
+@media (max-width:370px){.ytray{gap:6px;padding:12px 6px 14px}.ytray .dice{width:51px;height:51px;padding:7px}.lfaces{gap:5px}.lfaces .dice{width:43px;height:43px}}
+/* wide screens with a short window: the ludo board leaves room for its die */
+.lboard{max-width:min(500px,max(300px,calc(100vh - 380px)))}
+.lupanel{margin-top:12px}

@@ -20,6 +20,8 @@ function starGeo(A){if(GEO[A])return GEO[A];
   let m=0;for(const c of track)m=Math.max(m,Math.abs(c.x)+.7,Math.abs(c.y)+.7);for(const b of bases)m=Math.max(m,Math.abs(b.x)+2.25,Math.abs(b.y)+2.25);
   return GEO[A]={A,a0,th,track,homes,bases,slot,poly,fin,m:+(m+.2).toFixed(2)};}
 const f2=v=>+v.toFixed(2);
+// a five-point star (safe squares and the centre of the ludo board)
+const LSTAR=(()=>{let p='';for(let i=0;i<10;i++){const r=i%2?.13:.31,a=-Math.PI/2+i*Math.PI/5;p+=(i?'L':'M')+(+(r*Math.cos(a)).toFixed(3))+' '+(+(r*Math.sin(a)).toFixed(3));}return p+'Z';})();
 const tr=p=>`translate(${f2(p.x)}px,${f2(p.y)}px)`;
 function cellRect(c,fill,stroke,extra){return `<rect x="-.44" y="-.44" width=".88" height=".88" rx=".16" fill="${fill}" stroke="${stroke||'rgba(45,71,99,.25)'}" stroke-width=".05" transform="translate(${f2(c.x)} ${f2(c.y)}) rotate(${f2(c.rot)})" ${extra||''}/>`;}
 /* step animation for pieces drawn as <g> with a css transform */
@@ -33,7 +35,7 @@ function animPieces(items,caps,stepMs){
       setTimeout(()=>{caps.forEach(c=>c.el.classList.remove('zap'));S.holdRender=false;if(S.renderPending)render();},caps.length?560:60);return;}
     const it=items[n++];it.el.classList.add('hop');let i=0;
     const step=()=>{if(i<it.pts.length){set(it.el,it.pts[i++],it.ms||st-10);setTimeout(step,it.ms||st);return;}
-      set(it.el,it.fin,90);it.el.classList.remove('hop');sfx('pop');setTimeout(run,110);};
+      set(it.el,it.fin,90);it.el.classList.remove('hop');it.el.classList.add('land');setTimeout(()=>it.el.classList.remove('land'),340);sfx('pop');setTimeout(run,110);};
     step();};
   setTimeout(run,40);
 }
@@ -57,7 +59,7 @@ function luRoll(d,auto){const s=d.turn,r=1+rnd(6),six=r===6?d.six+1:0;const b={.
   if(auto||new Set(mv.map(k=>d.tk[s*d.T+k])).size===1)return luApply({...b,six},s,mv[0],r);
   return {...b,roll:r,six,last:`${nm(d,s)} جاب ${r}، يختار القطعة`};}
 function rollDie(after){S.rolling=true;render();S.holdRender=true;const iv=setInterval(()=>{const el=document.querySelector('.ldie');if(el)el.innerHTML=diceSVG(1+rnd(6));},70);
-  setTimeout(()=>{clearInterval(iv);S.holdRender=false;S.rolling=false;after();},620);}
+  setTimeout(()=>{clearInterval(iv);S.holdRender=false;S.rolling=false;after();},440);}
 function dieBox(d,my,label,can){const fresh=d.dsid&&once('die'+d.gid+'_'+d.dsid);
   return `<div class="lupanel">${tapDie(d.die||6,can&&!S.rolling,col(d,d.turn),'ldie '+(S.rolling?'spin':fresh?'land':''))}${label}</div>`;}
 GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
@@ -71,21 +73,30 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
     const mov=my&&d.roll!=null&&!S.rolling?new Set(luMovable(d,s0,d.roll)):new Set();
     const own=Array(A).fill(-1);for(let s=0;s<n;s++)own[armOf(n,s)]=s;
     const C=k=>own[k]>=0?col(d,own[k]):'#C5CFDA',Lc=k=>own[k]>=0?LIGHT[d.pl[own[k]]]:'#EEF2F6';
-    let v=`<svg viewBox="${-G.m} ${-G.m} ${2*G.m} ${2*G.m}" class="lboard">`;
-    v+=`<rect x="${-G.m}" y="${-G.m}" width="${2*G.m}" height="${2*G.m}" rx="1.2" fill="#FBFCFE"/>`;
-    for(let k=0;k<A;k++){if(own[k]<0)continue;const b=G.bases[k];v+=`<circle cx="${f2(b.x)}" cy="${f2(b.y)}" r="2.05" fill="${C(k)}"/><circle cx="${f2(b.x)}" cy="${f2(b.y)}" r="1.55" fill="#fff"/>`;
-      for(let i=0;i<d.T;i++){const q=G.slot(k,i);v+=`<circle cx="${f2(q.x)}" cy="${f2(q.y)}" r=".42" fill="${Lc(k)}" stroke="${C(k)}" stroke-width=".06"/>`;}
-      if(own[k]===s0&&d.win==null)v+=`<circle cx="${f2(b.x)}" cy="${f2(b.y)}" r="2.05" fill="none" stroke="${C(k)}" stroke-width=".18" class="ring"/>`;}
-    G.poly.forEach((p,k)=>{v+=`<path d="M0 0L${f2(p[0])} ${f2(p[1])}L${f2(p[2])} ${f2(p[3])}Z" fill="${C(k)}" stroke="#fff" stroke-width=".06"/>`;});
-    G.track.forEach(c=>{const st=c.j===8&&own[c.k]>=0;v+=cellRect(c,st?C(c.k):'#fff');
-      if(c.j===3||c.j===8)v+=`<text x="${f2(c.x)}" y="${f2(c.y+.22)}" font-size=".62" text-anchor="middle" fill="${st?'#fff':'#B8C4D0'}">★</text>`;});
-    G.homes.forEach((h,k)=>h.forEach(c=>{v+=cellRect(c,own[k]>=0?C(k):'#E3E9EF','rgba(255,255,255,.6)');}));
+    // board with depth: a soft vignette, yards with sunk slots, track cells that cast a little shadow, gold safe stars
+    let v=`<svg viewBox="${-G.m} ${-G.m} ${2*G.m} ${2*G.m}" class="lboard"><defs><radialGradient id="lubg" cx=".5" cy=".45" r=".75"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".7" stop-color="#F3F7FB"/><stop offset="1" stop-color="#DDE6F0"/></radialGradient>
+      <radialGradient id="lush" cx=".3" cy=".25" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></radialGradient>
+      <radialGradient id="luho" cx=".5" cy=".62" r=".6"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></radialGradient>
+      ${d.pl.map((r,s)=>{const c=col(d,s);return `<linearGradient id="lup${s}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${shade(c,.1)}"/><stop offset=".28" stop-color="${shade(c,.5)}"/><stop offset=".62" stop-color="${c}"/><stop offset="1" stop-color="${shade(c,-.38)}"/></linearGradient>`;}).join('')}</defs>`;
+    v+=`<rect x="${-G.m}" y="${-G.m}" width="${2*G.m}" height="${2*G.m}" rx="1.2" fill="url(#lubg)"/><rect x="${f2(-G.m+.12)}" y="${f2(-G.m+.12)}" width="${f2(2*G.m-.24)}" height="${f2(2*G.m-.24)}" rx="1.1" fill="none" stroke="rgba(45,71,99,.12)" stroke-width=".1"/>`;
+    for(let k=0;k<A;k++){if(own[k]<0)continue;const b=G.bases[k],bx=f2(b.x),by=f2(b.y);v+=`<circle cx="${bx}" cy="${f2(b.y+.12)}" r="2.05" fill="rgba(45,71,99,.18)"/><circle cx="${bx}" cy="${by}" r="2.05" fill="${C(k)}"/><circle cx="${bx}" cy="${by}" r="2.05" fill="url(#lush)"/><circle cx="${bx}" cy="${by}" r="1.55" fill="#fff"/><circle cx="${bx}" cy="${by}" r="1.55" fill="url(#luho)"/>`;
+      for(let i=0;i<d.T;i++){const q=G.slot(k,i);v+=`<circle cx="${f2(q.x)}" cy="${f2(q.y)}" r=".42" fill="${Lc(k)}"/><circle cx="${f2(q.x)}" cy="${f2(q.y)}" r=".42" fill="url(#luho)" stroke="${C(k)}" stroke-width=".05"/>`;}
+      if(own[k]===s0&&d.win==null)v+=`<circle cx="${bx}" cy="${by}" r="2.1" fill="none" stroke="${C(k)}" stroke-width=".18" class="ring"/>`;}
+    G.poly.forEach((p,k)=>{const dd=`M0 0L${f2(p[0])} ${f2(p[1])}L${f2(p[2])} ${f2(p[3])}Z`;v+=`<path d="${dd}" fill="${C(k)}" stroke="#fff" stroke-width=".07"/><path d="${dd}" fill="url(#lush)"/>`;});
+    v+=`<circle r="${f2(Math.min(.62,G.a0*.36))}" fill="#fff" stroke="rgba(45,71,99,.15)" stroke-width=".06"/><path d="${LSTAR}" transform="scale(${f2(Math.min(1.5,G.a0*.85))})" fill="#F0B429"/>`;
+    G.track.forEach(c=>{v+=cellRect({...c,y:c.y+.07},'rgba(45,71,99,.16)','none');});
+    G.track.forEach(c=>{const st=c.j===8&&own[c.k]>=0;v+=cellRect(c,st?C(c.k):'#fff',st?'rgba(0,0,0,.12)':'rgba(45,71,99,.2)');
+      if(c.j===3||c.j===8)v+=`<path d="${LSTAR}" transform="translate(${f2(c.x)} ${f2(c.y)}) rotate(${f2(c.rot)})" fill="${st?'#fff':'#F0B429'}" ${st?'':'opacity=".85"'}/>`;});
+    G.homes.forEach((h,k)=>h.forEach((c,i)=>{v+=cellRect(c,own[k]>=0?C(k):'#E3E9EF','rgba(255,255,255,.7)',own[k]>=0?`fill-opacity="${f2(.5+.12*i)}"`:'');}));
+    // the last move: a soft ring in the mover's colour where the piece landed
+    if(d.mv&&d.mv.to!=null&&d.mv.to>=0&&d.win==null){const m=d.mv,q=luXY(d,m.s,m.k,m.to);v+=`<circle cx="${f2(q.x)}" cy="${f2(q.y)}" r=".52" fill="${col(d,m.s)}" fill-opacity=".22" stroke="${col(d,m.s)}" stroke-width=".07" stroke-opacity=".6"/>`;}
     const pos={};const seq=[];
     for(let s=0;s<n;s++)for(let k=0;k<d.T;k++){const p=d.tk[s*d.T+k];const xy=luXY(d,s,k,p);const key=f2(xy.x)+','+f2(xy.y);(pos[key]=pos[key]||[]).push(1);seq.push({s,k,p,xy,key,i:pos[key].length-1});}
     seq.sort((a,b)=>(mov.has(a.k)&&a.s===s0)-(mov.has(b.k)&&b.s===s0));
     for(const t of seq){const m=pos[t.key].length;const off=m>1&&t.p>=0&&t.p<T+4?{x:t.xy.x+(t.i-(m-1)/2)*.22,y:t.xy.y-(t.i-(m-1)/2)*.12}:t.xy;const can=t.s===s0&&mov.has(t.k);const c=col(d,t.s);
-      v+=`<g id="lt${t.s}_${t.k}" class="pawn ${can?'can':''}" style="transform:${tr(off)}" ${can?`data-ga="tok" data-i="${t.k}"`:''}>${can?'<circle r=".95" fill="transparent"/><circle r=".6" class="halo" fill="none" stroke="#fff" stroke-width=".12"/>':''}
-        <ellipse cy=".3" rx=".36" ry=".13" fill="rgba(0,0,0,.22)"/><path d="M-.3 .25C-.3 -.05-.16-.12-.13-.22A.24 .24 0 1 1 .13 -.22C.16-.12 .3-.05 .3 .25Z" fill="${c}" stroke="#fff" stroke-width=".07"/><circle cy="-.38" r=".09" fill="rgba(255,255,255,.55)"/></g>`;}
+      // a glossy pawn: shadow, a base disc, a shaded body and a shine on the head; pawns you can move bob gently above a pulsing halo
+      v+=`<g id="lt${t.s}_${t.k}" class="pawn ${can?'can':''}" style="transform:${tr(off)}" ${can?`data-ga="tok" data-i="${t.k}"`:''}>${can?`<circle r=".95" fill="transparent"/><circle r=".5" class="halo" fill="${c}" fill-opacity=".25" stroke="${c}" stroke-width=".1"/>`:''}
+        <ellipse cy=".3" rx=".38" ry=".13" fill="rgba(0,0,0,.28)"/><g class="pb"><ellipse cy=".24" rx=".33" ry=".11" fill="${shade(c,-.42)}"/><path d="M-.3 .22C-.3 -.05-.16-.12-.13-.22A.24 .24 0 1 1 .13 -.22C.16-.12 .3-.05 .3 .22Q0 .34-.3 .22Z" fill="url(#lup${t.s})" stroke="${shade(c,-.45)}" stroke-width=".04"/><path d="M-.18 .14C-.18 0-.11-.08-.08-.14" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".05" stroke-linecap="round"/><ellipse cx="-.07" cy="-.43" rx=".08" ry=".06" fill="rgba(255,255,255,.85)"/></g></g>`;}
     v+='</svg>';
     let lab='';
     if(d.win==null){if(my&&d.roll==null)lab='';
@@ -203,11 +214,14 @@ GAMES.jakaro={name:'جكارو',cat:'board',lbc:'#7B4A2A',
     for(let k=0;k<A;k++){if(own[k]<0)continue;const b=G.bases[k];v+=`<circle cx="${f2(b.x)}" cy="${f2(b.y)}" r="1.85" fill="${C(own[k])}" opacity=".28"/><circle cx="${f2(b.x)}" cy="${f2(b.y)}" r="1.85" fill="none" stroke="${C(own[k])}" stroke-width=".1"/>`;
       for(let i=0;i<4;i++){const q=G.slot(k,i);v+=`<circle cx="${f2(q.x)}" cy="${f2(q.y)}" r=".36" fill="url(#jhole)"/>`;}
       if(own[k]===s0&&d.win==null)v+=`<circle cx="${f2(b.x)}" cy="${f2(b.y)}" r="2.05" fill="none" stroke="#FFE08A" stroke-width=".14" class="ring"/>`;}
-    G.track.forEach(c=>{const st=c.j===8&&own[c.k]>=0;v+=`<circle cx="${f2(c.x)}" cy="${f2(c.y)}" r=".34" fill="url(#jhole)" ${st?`stroke="${C(own[c.k])}" stroke-width=".14"`:''}/>`;});
+    // holes drilled in the wood: a light lip below each one, the start holes ringed in their colour
+    G.track.forEach(c=>{const st=c.j===8&&own[c.k]>=0;v+=`<circle cx="${f2(c.x)}" cy="${f2(c.y+.05)}" r=".37" fill="rgba(255,236,205,.32)"/><circle cx="${f2(c.x)}" cy="${f2(c.y)}" r=".34" fill="url(#jhole)" ${st?`stroke="${C(own[c.k])}" stroke-width=".14"`:''}/>`;});
     G.homes.forEach((h,k)=>{if(own[k]<0)return;h.slice(0,4).forEach(c=>{v+=`<circle cx="${f2(c.x)}" cy="${f2(c.y)}" r=".34" fill="url(#jhole)" stroke="${C(own[k])}" stroke-width=".1" stroke-dasharray=".2 .12"/>`;});});
+    // the last move: a soft ring in the mover's colour where each moved marble landed
+    if(d.mv&&d.win==null)for(const x of d.mv.moves||[]){if(x.to==null||x.to<0)continue;const q=jkXY(d,x.s,x.k,x.to);v+=`<circle cx="${f2(q.x)}" cy="${f2(q.y)}" r=".5" fill="${C(x.s)}" fill-opacity=".3" stroke="#FFE7B8" stroke-width=".06" stroke-opacity=".8"/>`;}
     const order=[];for(let s=0;s<n;s++)for(let k=0;k<4;k++)order.push([s,k]);order.sort((a,b)=>tap.has(a[0]*4+a[1])-tap.has(b[0]*4+b[1]));
     for(const [s,k] of order){const p=d.mb[s*4+k],xy=jkXY(d,s,k,p),gi=s*4+k,can=tap.has(gi),isSel=my&&sel.k!=null&&s===cs&&k===sel.k&&sel.ci!=null;
-      v+=`<g id="jm${s}_${k}" class="marble ${can?'can':''} ${isSel?'sel':''}" style="transform:${tr(xy)}" ${can?`data-ga="mb" data-i="${gi}"`:''}>${can?'<circle r=".9" fill="transparent"/><circle r=".52" class="halo" fill="none" stroke="#fff" stroke-width=".1"/>':''}${isSel?'<circle r=".55" fill="none" stroke="#FFE08A" stroke-width=".14"/>':''}<circle cy=".08" r=".36" fill="rgba(0,0,0,.3)"/><circle r=".34" fill="url(#jm${s})"/></g>`;}
+      v+=`<g id="jm${s}_${k}" class="marble ${can?'can':''} ${isSel?'sel':''}" style="transform:${tr(xy)}" ${can?`data-ga="mb" data-i="${gi}"`:''}>${can?'<circle r=".9" fill="transparent"/><circle r=".52" class="halo" fill="none" stroke="#fff" stroke-width=".1"/>':''}${isSel?'<circle r=".55" fill="none" stroke="#FFE08A" stroke-width=".14"/>':''}<circle cy=".08" r=".36" fill="rgba(0,0,0,.3)"/><g class="pb"><circle r=".34" fill="url(#jm${s})"/><ellipse cx="-.1" cy="-.13" rx=".1" ry=".07" fill="rgba(255,255,255,.75)"/></g></g>`;}
     v+='</svg>';
     let h=`<div class="jside">${d.top?`<div class="jtop"><small>آخر ورقة</small>${cardHTML(d.top)}</div>`:''}<div class="jdeck"><small>الورق</small><b>${Math.round(d.deck.length/2)}</b></div></div>`;
     if(d.win==null&&v0>=0){

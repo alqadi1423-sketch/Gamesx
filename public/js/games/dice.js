@@ -1,7 +1,8 @@
 'use strict';
 /* dice and luck: five dice, liar's dice, shut the box, camel race, lucky boxes */
 
-const dieBtn=(n,held,attrs)=>`<${attrs?'button':'div'} class="dice" style="width:54px;height:54px;${held?'box-shadow:0 0 0 4px #ffd84d':''}" ${attrs||''}>${n?diceSVG(n).replace('<svg ','<svg style="width:42px;height:42px" '):''}</${attrs?'button':'div'}>`;
+// one die: held dice lift with a gold ring, a die that was just rolled tumbles in (class roll), and an empty die is a ghost
+const dieBtn=(n,held,attrs,cls,id)=>`<${attrs?'button':'div'} ${id?`id="${id}"`:''} class="dice ${held?'held':''} ${n?'':'ghost'} ${cls||''}" ${attrs||''}>${diceSVG(n||5)}</${attrs?'button':'div'}>`;
 
 /* ---------- five dice ---------- */
 const YC=['الآحاد','الاثنينات','الثلاثات','الأربعات','الخمسات','الستات','ثلاثة متشابهة','أربعة متشابهة','فل هاوس','تسلسل صغير','تسلسل كبير','خمسة متشابهة','الحظ'];
@@ -31,13 +32,19 @@ GAMES.yatzy={name:'خمس زهرات',cat:'cards',lbc:'#B03A48',onTimeout:d=>{co
   init:n=>({dice:'00000',held:'00000',rolls:0,cards:Array(n).fill(0).map(()=>Array(13).fill(-1))}),
   points:d=>d.cards.map(yTotal),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra:d=>'المجموع: '+d.cards.map((c,s)=>`${nm(d,s)} ${yTotal(c)}`).join('، '),
-  render(d,ctx){const t=d.turn;const card=d.cards[t];const anim=S.rolled;S.rolled=false;
-    let s=`<div class="row ${anim?'':''}">${[...d.dice].map((x,i)=>dieBtn(+x,d.held[i]==='1',ctx.my&&d.rolls>0&&d.rolls<3?`data-ga="hold" data-i="${i}"`:'')).join('')}</div>`;
-    s+=`<div class="acts"><button class="btn" style="background:${col(d,t)}" data-ga="roll" ${ctx.my&&d.rolls<3?'':'disabled'}>ارمِ (${3-d.rolls} باقي)</button></div>`;
+  render(d,ctx){const t=d.turn;const card=d.cards[t];S.rolled=false;
+    // a roll is new the first time it is drawn (also for bots and online players): those dice tumble, held ones stay put
+    const filled=card.filter(v=>v>=0).length,fresh=d.rolls>0&&d.win==null&&once(`yz${d.gid}_${t}_${filled}_${d.rolls}_${d.dice}`);
+    let s=`<div class="ytray">${[...d.dice].map((x,i)=>dieBtn(d.rolls?+x:0,d.rolls>0&&d.held[i]==='1',ctx.my&&d.rolls>0&&d.rolls<3?`data-ga="hold" data-i="${i}"`:'',fresh&&d.held[i]!=='1'?'roll':'')).join('')}</div>`;
+    s+=`<div class="acts"><button class="btn yroll" style="background:${col(d,t)}" data-ga="roll" ${ctx.my&&d.rolls<3?'':'disabled'}>ارمِ (${3-d.rolls} باقي)<span class="yleft">${[0,1,2].map(k=>`<i class="${k<3-d.rolls?'on':''}"></i>`).join('')}</span></button></div>`;
     const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);const opts=d.rolls?yOpts(card,d.dice):[];
+    const best=opts.length?Math.max(...opts.map(o=>o[1])):0;
     if(d.rolls&&yIsY(d.dice)&&card[11]>=0)s+=`<p class="hint" style="text-align:center">خمسة متشابهة مرة ثانية!${card[11]===50?' +100 مكافأة،':''} وتنحسب جوكر</p>`;
-    s+=`<div class="ysheet">${YC.map((n,k)=>{const v=card[k];const op=opts.find(x=>x[0]===k);const pv=op?op[1]:0;
-      return v>=0?`<div class="yc done"><span>${n}</span><b>${v}</b></div>`:`<button class="yc" data-ga="score" data-i="${k}" ${ctx.my&&d.rolls&&op?'':'disabled'}><span>${n}</span><b class="${d.rolls&&pv?'pv':''}">${d.rolls?pv:'·'}</b></button>`;}).join('')}<div class="yc tot"><span>المكافأة ${up}/63</span><b>${up>=63?'+35':''}</b></div>${card[13]?`<div class="yc tot"><span>مكافأة الخمسة</span><b>+${card[13]*100}</b></div>`:''}<div class="yc tot"><span>المجموع</span><b>${yTotal(card)}</b></div></div>`;
+    const row=k=>{const n=YC[k],v=card[k];const op=opts.find(x=>x[0]===k);const pv=op?op[1]:0;const lab=`<span>${k<6?`<i class="yi">${diceSVG(k+1)}</i>`:''}${n}</span>`;
+      return v>=0?`<div class="yc done">${lab}<b>${v}</b></div>`:`<button class="yc ${d.rolls&&op?(pv?(pv===best?'pv top':'pv'):'zero'):''}" data-ga="score" data-i="${k}" ${ctx.my&&d.rolls&&op?'':'disabled'}>${lab}<b>${d.rolls?pv:''}</b></button>`;};
+    s+=`<div class="ysheet ycard" style="--c:${col(d,t)}"><div class="ycol">${[0,1,2,3,4,5].map(row).join('')}<div class="ybon ${up>=63?'got':''}"><span>المكافأة</span><div class="ybar"><i style="width:${Math.min(100,Math.round(up/63*100))}%"></i></div><b>${up>=63?'+35':up+'/63'}</b></div></div>
+      <div class="ycol">${[6,7,8,9,10,11,12].map(row).join('')}</div>
+      <div class="ytot">${card[13]?`<span class="yxb">مكافأة الخمسة <b>+${card[13]*100}</b></span>`:''}<span>المجموع</span><b>${yTotal(card)}</b></div></div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn;
@@ -64,11 +71,17 @@ GAMES.liar={name:'زهر الكذب',cat:'cards',lbc:'#4A3A6B',points:d=>d.n.map
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;
     let s='';
-    s+=d.bid?`<div class="qbox">المزايدة: ${d.bid.q} × ${diceSVG(d.bid.f).replace('<svg ','<svg style="width:34px;height:34px;vertical-align:middle;background:#fff;border-radius:6px" ')}<br><small style="font-size:14px">من ${nm(d,d.bid.s)}</small></div>`:'<div class="qbox">ما فيه مزايدة للحين</div>';
-    if(v<0)return s;const p=ctx.priv[d.pl[v]];
-    if(p&&p.r===d.r)s+=`<p class="lbl">زهراتك</p><div class="row">${[...p.dice].map(x=>dieBtn(+x)).join('')}</div>`;
+    // the bid on a little plaque: count × face, and who made it
+    s+=d.bid?`<div class="lbid" id="lb${d.r}_${d.bid.q}_${d.bid.f}" style="--c:${col(d,d.bid.s)}"><small>المزايدة</small><b>${d.bid.q}</b><em>×</em><span class="dice">${diceSVG(d.bid.f)}</span><i>من ${nm(d,d.bid.s)}</i></div>`:'<div class="lbid none"><small>ما فيه مزايدة للحين</small></div>';
+    // the table: everyone's cup with how many dice is still under it, then your own dice
+    const p=v>=0?ctx.priv[d.pl[v]]:null;
+    s+=`<div class="ltable"><div class="lcups">${d.pl.map((r,i)=>{const c=col(d,i),dead=d.out[i]==='1';
+      return `<div class="lcup ${dead?'out':''} ${d.turn===i&&d.win==null&&!dead?'on':''}" style="--c:${c}"><svg viewBox="0 0 60 58"><ellipse cx="30" cy="52" rx="25" ry="4.5" fill="rgba(0,0,0,.28)"/><path d="M9 47L15 8Q30 3 45 8L51 47Q30 54 9 47Z" fill="${c}"/><path d="M15 8Q30 3 45 8L44.3 14Q30 9 15.7 14Z" fill="${shade(c,-.3)}"/><path d="M9 47Q30 54 51 47L51.6 51Q30 58 8.4 51Z" fill="${shade(c,-.35)}"/><path d="M19.5 17L16 42" stroke="rgba(255,255,255,.5)" stroke-width="3.5" stroke-linecap="round"/><g transform="translate(22 20) scale(.4)">${SHP[r]('rgba(255,255,255,.92)')}</g></svg><span class="lcn">${'<i></i>'.repeat(Math.max(0,d.n[i]))}</span></div>`;}).join('')}</div>`;
+    if(p&&p.r===d.r)s+=`<p class="lbl">زهراتك</p><div class="ldice">${[...p.dice].map((x,i)=>dieBtn(+x,false,'','',`ld${d.r}_${i}`)).join('')}</div>`;
+    s+='</div>';
+    if(v<0)return s;
     if(ctx.my){const total=d.n.reduce((a,b,i)=>a+(d.out[i]==='1'?0:b),0);const minQ=d.bid?(d.bid.f===1?d.bid.q:Math.ceil(d.bid.q/2)):1;S.lq=Math.max(S.lq||minQ,minQ);S.lq=Math.min(S.lq,total);S.lf=S.lf||(d.bid?d.bid.f:2);
-      s+=`<div class="stepper"><span>العدد</span><button data-ga="qd">−</button><b>${S.lq}</b><button data-ga="qu">+</button></div><div class="row">${[1,2,3,4,5,6].map(f=>`<button class="dice" style="width:46px;height:46px;${S.lf===f?'box-shadow:0 0 0 4px #ffd84d':''}" data-ga="f" data-i="${f}">${diceSVG(f).replace('<svg ','<svg style="width:36px;height:36px" ')}</button>`).join('')}</div>
+      s+=`<div class="stepper"><span>العدد</span><button data-ga="qd">−</button><b>${S.lq}</b><button data-ga="qu">+</button></div><div class="row lfaces">${[1,2,3,4,5,6].map(f=>`<button class="dice ${S.lf===f?'sel':''}" data-ga="f" data-i="${f}">${diceSVG(f)}</button>`).join('')}</div>
       <div class="acts"><button class="btn blue" data-ga="bid">زايد</button>${d.bid?'<button class="btn red" data-ga="call">كذاب!</button><button class="btn navy" data-ga="calza">بالضبط!</button>':''}</div><p class="note">الواحد جوكر يحسب مع أي وجه</p>`;}
     return s;},
   click(a,i,d,ctx){
@@ -101,10 +114,13 @@ GAMES.shut={name:'أغلق الصندوق',cat:'cards',lbc:'#6B4226',onTimeout:d
   init:n=>({boxes:Array(n).fill('111111111'),done:'0'.repeat(n),roll:0,dice:'',last:''}),
   points:d=>d.boxes.map((b,s)=>d.done[s]==='1'?boxScore(b):'…'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>d.boxes.map((b,s)=>`${nm(d,s)} ${boxScore(b)}`).join('، '),
-  render(d,ctx){const t=d.turn,b=d.boxes[t];S.sel=S.sel||[];const sel=S.sel.reduce((a,x)=>a+x,0);const small=b.slice(6)==='000';const anim=S.rolled;S.rolled=false;
-    let s=`<p class="lbl" style="text-align:center">صندوق ${nameTag(d,t)}</p><div class="sbox">${[...b].map((c,k)=>c==='1'?`<button class="stile ${S.sel.includes(k+1)?'sel':''}" data-ga="tile" data-i="${k+1}" ${ctx.my&&d.roll?'':'disabled'}>${k+1}</button>`:`<div class="stile shut"></div>`).join('')}</div>`;
+  render(d,ctx){const t=d.turn,b=d.boxes[t];S.sel=S.sel||[];const sel=S.sel.reduce((a,x)=>a+x,0);const small=b.slice(6)==='000';S.rolled=false;
+    // tiles that were up the last time this box was drawn flip down now (remembered on this screen only, the state is not touched)
+    const pk=d.gid+'_'+t;S.shPrev=S.shPrev||{};const prev=S.shPrev[pk]||b;S.shPrev[pk]=b;
+    const anim=!!d.dice&&once(`sh${d.gid}_${t}_${b}_${d.dice}_${d.done}`);const live=ctx.my&&d.roll;
+    let s=`<p class="lbl" style="text-align:center">صندوق ${nameTag(d,t)}</p><div class="sbox ${live?'live':''}">${[...b].map((c,k)=>c==='1'?`<button class="stile ${S.sel.includes(k+1)?'sel':''}" data-ga="tile" data-i="${k+1}" ${live?'':'disabled'}>${k+1}</button>`:`<div class="stile shut ${prev[k]==='1'?'flip':''}"><span>${k+1}</span></div>`).join('')}</div>`;
     const dv=d.dice?[...d.dice].map(Number):[5,2];const canR=ctx.my&&!d.roll&&d.win==null;
-    s+=`<div class="row" style="align-items:center;gap:12px">${dv.map(x=>tapDie(x,canR,col(d,t),anim?'roll':'')).join('')}${d.roll?`<b class="rollsum">= ${d.roll}</b>`:''}</div>`;
+    s+=`<div class="stray">${dv.map(x=>tapDie(x,canR,col(d,t),anim?'roll':'')).join('')}${d.roll?`<b class="rollsum">= ${d.roll}</b>`:''}</div>`;
     if(ctx.my){if(!d.roll){if(small)s+=`<div class="acts"><button class="btn navy" data-ga="roll1">ارمِ زهرة وحدة بس</button></div>`;}
       else s+=`<div class="acts"><button class="btn blue" data-ga="ok" ${sel===d.roll?'':'disabled'}>اقفلها (${sel} من ${d.roll})</button></div>`;}
     return s;},
@@ -127,11 +143,13 @@ GAMES.camel={name:'سباق الهجن',cat:'cards',lbc:'#B8860B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8C16A"/><path d="M0 74Q25 64 50 74T100 74V100H0Z" fill="#D9A441"/><text x="50" y="66" font-size="44" text-anchor="middle">🐪</text></svg>`,
   init:n=>({pos:Array(n).fill(0),dice:0,last:''}),
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){const anim=S.rolled;S.rolled=false;
+  render(d,ctx){S.rolled=false;const anim=!!d.dice&&once('cm'+d.gid+'_'+d.pos.join('.'));
+    // the camel that moved since the last drawing hops along (remembered on this screen only)
+    const pk='cm'+d.gid;const prev=S.cmPrev&&S.cmPrev.k===pk?S.cmPrev.p:d.pos;S.cmPrev={k:pk,p:[...d.pos]};
     const mk=k=>BOOST[k]?'⚡':TRAP[k]?'🌵':'';
-    let s=`<div class="race">${d.pl.map((r,i)=>{const p=Math.min(d.pos[i],TRACK);const pct=p/TRACK*100;
-      return `<div class="lane ${d.turn===i&&d.win==null?'on':''}" style="--c:${col(d,i)};--l:${lit(d,i)}"><div class="lname"><i>${shapeW(d.pl[i])}</i><span>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}</span><b>${p}/${TRACK}</b></div>
-      <div class="track"><div class="fill" style="width:${pct}%"></div>${Array(TRACK).fill(0).map((_,k)=>mk(k+1)?`<span class="mk" style="inset-inline-start:${(k+1)/TRACK*100}%">${mk(k+1)}</span>`:'').join('')}<span class="camelp" style="inset-inline-start:${pct}%">🐪</span><span class="flag">🏁</span></div></div>`;}).join('')}</div>`;
+    let s=`<div class="race camel ${d.pl.length>4?'many':''}">${d.pl.map((r,i)=>{const p=Math.min(d.pos[i],TRACK);const pct=p/TRACK*100;const mv=prev[i]!==d.pos[i];
+      return `<div class="lane ${d.turn===i&&d.win==null?'on':''} ${d.win===i?'won':''}" style="--c:${col(d,i)};--l:${lit(d,i)}"><div class="lname"><i>${shapeW(d.pl[i])}</i><span>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}</span><b>${p}/${TRACK}</b></div>
+      <div class="track"><div class="fill" style="width:${pct}%"></div>${Array(TRACK).fill(0).map((_,k)=>mk(k+1)?`<span class="mk ${BOOST[k+1]?'up':'dn'}" style="inset-inline-start:${(k+1)/TRACK*100}%">${mk(k+1)}</span>`:'').join('')}<span class="flag"></span><span class="camelp ${mv?(d.pos[i]>prev[i]?'hop':'slip'):''}" style="inset-inline-start:${pct}%"><span>🐪</span></span></div></div>`;}).join('')}</div>`;
     s+=`<div class="row">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}</div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn,r=1+rnd(6);S.rolled=true;let p=d.pos[t]+r,msg=`طلع ${r}`;
@@ -147,9 +165,10 @@ GAMES.luck={name:'صناديق الحظ',cat:'cards',lbc:'#A5373F',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
   render(d,ctx){const k=d.box.length,c=k<=16?4:k<=20?5:6;
-    return `<div class="cellgrid" style="grid-template-columns:repeat(${c},minmax(0,1fr));background:#7A2B31">${[...d.box].map((v,i)=>{const o=d.op[i];
-      if(o==='.')return `<button class="cg" style="background:#F2C14E;font-size:24px" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>${d.win!=null&&v==='b'?'💣':'🎁'}</button>`;
-      return `<div class="cg" style="background:${lit(d,+o)};font-size:${v==='b'?24:22}px;box-shadow:inset 0 0 0 3px ${col(d,+o)}">${v==='b'?'💥':'<span class="ltr">+'+v+'</span>'}</div>`;}).join('')}</div>`;},
+    // closed boxes are wrapped gifts; an opened one shows its points in the opener's colour, or the bomb
+    return `<div class="lgrid ${ctx.my&&d.win==null?'live':''}" style="grid-template-columns:repeat(${c},minmax(0,1fr))">${[...d.box].map((v,i)=>{const o=d.op[i];
+      if(o==='.')return `<button class="gbox ${d.win!=null&&v==='b'?'bomb':''}" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'}>${d.win!=null&&v==='b'?'<span>💣</span>':''}</button>`;
+      return `<div class="gbox op ${v==='b'?'boom':''}" style="--c:${col(d,+o)};--l:${lit(d,+o)}">${v==='b'?'<span>💥</span>':'<b class="ltr">+'+v+'</b>'}</div>`;}).join('')}</div>`;},
   click(a,i,d,ctx){if(!ctx.my||d.op[i]!=='.')return;const t=d.turn,shut=[...d.op].filter(c=>c==='.').length;
     const v=d.nb==null?d.box[i]:rnd(shut)<d.nb?'b':String(1+rnd(5));let nb=d.nb==null?null:d.nb-(v==='b'?1:0),box=setAt(d.box,i,v);
     const op=setAt(d.op,i,String(t));let out=d.out,pts=[...d.pts],last;

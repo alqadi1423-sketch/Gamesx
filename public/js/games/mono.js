@@ -112,10 +112,12 @@ const MSIDE=i=>i%10===0?'k':i<10?'b':i<20?'l':i<30?'t':'r';
 const MICO={go:'⬅️',cc:'📦',ch:'❓',tax:'💸',rr:'🚆',jail:'🚔',fp:'☕',gtj:'👮'};
 const money=v=>`<span class="mny">${v}</span>`;
 function mCellHTML(d,i){const q=MP[i],t=q[0],side=MSIDE(i),[r,c]=MPOS(i),o=d.own[i],oc=o!=='.'?COLS[d.pl[+o]]:'';const h=+d.hs[i];
-  const toks=d.pl.map((rr,s)=>d.out[s]!=='1'&&d.pos[s]===i?`<i id="mt${s}" class="${d.jail[s]&&i===10?'jl':''} ${s===d.turn?'cur':''}" style="background:${col(d,s)}"></i>`:'').join('');
+  const toks=d.pl.map((rr,s)=>d.out[s]!=='1'&&d.pos[s]===i?`<i id="mt${s}" class="${d.jail[s]&&i===10?'jl':''} ${s===d.turn?'cur':''}" style="--c:${col(d,s)}"></i>`:'').join('');
+  // a bought place shows its owner (colour and shape) where the price was
+  const pr=o!=='.'?`<span class="pr ow" style="--o:${oc}"><svg viewBox="0 0 40 40">${SHP[d.pl[+o]]('#fff')}</svg></span>`:`<span class="pr">${q[2]}</span>`;
   let inner='';
-  if(t==='p')inner=`<b class="bar" style="background:${MGC[q[3]]}">${h===5?'<u class="ho"></u>':'<u class="hs"></u>'.repeat(h)}</b><span class="nm">${q[1]}</span><span class="pr">${q[2]}</span>`;
-  else if(t==='rr'||t==='ut')inner=`<span class="ic">${t==='rr'?'🚆':i===12?'⚡':'💧'}</span><span class="nm">${t==='rr'?q[1].replace('محطة ',''):q[1]}</span><span class="pr">${q[2]}</span>`;
+  if(t==='p')inner=`<b class="bar" style="background:${MGC[q[3]]}">${h===5?'<u class="ho"></u>':'<u class="hs"></u>'.repeat(h)}</b><span class="nm">${q[1]}</span>${pr}`;
+  else if(t==='rr'||t==='ut')inner=`<span class="ic">${t==='rr'?'🚆':i===12?'⚡':'💧'}</span><span class="nm">${t==='rr'?q[1].replace('محطة ',''):q[1]}</span>${pr}`;
   else if(t==='tax')inner=`<span class="ic">💸</span><span class="nm">ضريبة</span><span class="pr">${q[2]}</span>`;
   else inner=`<span class="ic">${MICO[t]}</span><span class="nm">${q[1]}</span>`;
   return `<button class="mc ms${side} mt-${t} ${o!=='.'?'own':''} ${d.mg[i]==='1'?'mort':''} ${S.mcell===i?'pick':''}" data-ga="cell" data-i="${i}" data-c="${i}" style="grid-row:${r};grid-column:${c};${oc?`--o:${oc}`:''}">${inner}<span class="tks">${toks}</span></button>`;}
@@ -194,7 +196,7 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     if(!ctx.my)return;const s=d.turn;
     if(a==='roll'&&d.ph==='roll'&&!S.rolling){const g=d.gid,t=d.turn,r=d.rid;S.mcell=null;S.rolling=true;render();S.holdRender=true;
       const iv=setInterval(()=>{document.querySelectorAll('.mdice .dice').forEach(el=>{el.innerHTML=diceSVG(1+rnd(6));});},70);
-      setTimeout(()=>{clearInterval(iv);S.holdRender=false;S.rolling=false;const nd=S.st.d;if(!nd||nd.gid!==g||nd.turn!==t||nd.rid!==r||nd.ph!=='roll'){render();return;}act(mRoll(nd));},600);return;}
+      setTimeout(()=>{clearInterval(iv);S.holdRender=false;S.rolling=false;const nd=S.st.d;if(!nd||nd.gid!==g||nd.turn!==t||nd.rid!==r||nd.ph!=='roll'){render();return;}act(mRoll(nd));},440);return;}
     if(a==='bail'&&d.ph==='roll'&&d.jail[s]&&d.cash[s]>=50){const cash=[...d.cash];cash[s]-=50;const jail=[...d.jail];jail[s]=0;act({...d,cash,jail,last:`${nm(d,s)} دفع 50 وطلع من السجن`});return;}
     if(a==='free'&&d.ph==='roll'&&d.jail[s]&&d.free[s]){const free=[...d.free];free[s]--;const jail=[...d.jail];jail[s]=0;const fr={...(d.fr||{})};if(fr.ch===s)fr.ch=-1;else if(fr.cc===s)fr.cc=-1;act({...d,free,jail,fr,last:`${nm(d,s)} استخدم بطاقة الخروج 🎫`});return;}
     if(a==='buy'&&d.ph==='buy'){act(mBuy(d));return;}
@@ -214,7 +216,7 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     if(a==='unm'&&mCanUnm(d,s,i)){const cash=[...d.cash];cash[s]-=mUnmCost(i);act({...d,cash,mg:setAt(d.mg,i,'0'),last:`${nm(d,s)} فك رهن ${MP[i][1]}`});}},
   after(d){const m=d.mv;if(!m||!once('mo'+d.gid+'_'+m.sid))return;const bd=document.getElementById('mboard'),tok=document.getElementById('mt'+m.s);if(!bd||!tok)return;
     S.holdRender=true;const br=bd.getBoundingClientRect();const cell=i=>bd.querySelector(`[data-c="${i}"]`).getBoundingClientRect();
-    tok.style.visibility='hidden';const f=document.createElement('div');f.className='mfly';f.style.background=col(d,m.s);bd.appendChild(f);
+    tok.style.visibility='hidden';const f=document.createElement('div');f.className='mfly';f.style.setProperty('--c',col(d,m.s));bd.appendChild(f);
     const place=(i,ms)=>{const r=cell(i);f.style.transition=ms?`transform ${ms}ms cubic-bezier(.3,.7,.4,1)`:'none';f.style.transform=`translate(${r.left-br.left+r.width/2-9}px,${r.top-br.top+r.height/2-9}px)`;};
     const st=Math.max(60,Math.min(150,2400/m.path.length));place(m.path[0],0);void f.offsetWidth;let k=1;
     const step=()=>{if(k<m.path.length){const prev=m.path[k-1],nx=m.path[k++];place(nx,(nx-prev+40)%40>1?450:st-10);setTimeout(step,(nx-prev+40)%40>1?460:st);}else setTimeout(()=>{f.remove();tok.style.visibility='';sfx('pop');S.holdRender=false;if(S.renderPending)render();},120);};

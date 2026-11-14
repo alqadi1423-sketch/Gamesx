@@ -33,11 +33,12 @@ GAMES.arena={name:'حلبة القتال',cat:'fight',lbc:'#922B21',
   status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${d.rd+1} من ${d.maxRd}</small><br>`),
   winExtra:d=>d.res,
   render(d,ctx){const v=ctx.v;const fresh=d.anim&&once('ar'+d.gid+d.rd);const choosing=ctx.my&&S.arA&&(S.arA==='atk'||S.arA==='spc');
-    let s=`<div class="arena">${d.pl.map((r,i)=>{const a=d.anim&&d.anim[i];const dead=d.out[i]==='1';const pose=dead?'dead':a?a.a:'';
+    const n=d.pl.length,cols=n<=3?n:n===4?2:n<=6?3:4;
+    let s=`<div class="arena" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${d.pl.map((r,i)=>{const a=d.anim&&d.anim[i];const dead=d.out[i]==='1';const pose=dead?'dead':a?a.a:'';
       const tg=choosing&&!dead&&i!==v;
       return `<${tg?'button':'div'} class="fcard ${dead?'dead':''} ${tg?'tgt':''} ${fresh&&a&&a.dmg?'hit':''}" ${tg?`data-ga="tgt" data-i="${i}"`:''} style="--c:${col(d,i)}">
         ${fighterSVG(col(d,i),pose)}${fresh&&a&&(a.dmg||a.heal)?`<span class="dmg ${a.heal&&!a.dmg?'heal':''}">${a.dmg?'-'+a.dmg:'+'+a.heal}</span>`:''}
-        <b>${!ctx.local&&i===v?'أنت':nm(d,i)}</b><div class="hpb"><i style="width:${Math.max(0,d.hp[i])}%;background:${d.hp[i]>50?'#3FAE5C':d.hp[i]>25?'#F0B429':'#E5483F'}"></i></div>
+        <b>${!ctx.local&&i===v?'أنت':nm(d,i)}</b><div class="hpb ${d.hp[i]<=25?'low':''}"><i style="width:${Math.max(0,d.hp[i])}%;background:${d.hp[i]>50?'#3FAE5C':d.hp[i]>25?'#F0B429':'#E5483F'}"></i><em>${Math.max(0,d.hp[i])}</em></div>
         <div class="enp">${[0,1,2].map(k=>`<i class="${k<d.en[i]?'on':''}"></i>`).join('')}</div></${tg?'button':'div'}>`;}).join('')}</div>`;
     if(d.win!=null)return s;
     if(ctx.my){if(choosing)s+=`<p class="hint" style="text-align:center">اختار مين تهاجم</p><div class="acts"><button class="btn navy" data-ga="cancel">رجوع</button></div>`;
@@ -90,7 +91,8 @@ function tankSVG(d,i,ang,on){const x=d.tx[i],y=60-tkY(d,i),c=col(d,i),a=ang*Math
     <path d="M-1.5 -2.5A1.5 1.5 0 0 1 1.5 -2.5Z" fill="${c}" stroke="#1F2A36" stroke-width=".2"/>
     <path d="M-2.8 -1.2H2.8L2.1 -2.6H-2.1Z" fill="${c}" stroke="#1F2A36" stroke-width=".2"/><path d="M-2 -2.3H2" stroke="${shade(c,.4)}" stroke-width=".25"/>
     <rect x="-3.1" y="-1.3" width="6.2" height="1.4" rx=".7" fill="${dk}" stroke="#1F2A36" stroke-width=".2"/>${[-2.2,-.75,.75,2.2].map(w=>`<circle cx="${w}" cy="-.6" r=".42" fill="#B7C2CC"/>`).join('')}
-    <rect x="-3" y="-5.4" width="6" height=".9" rx=".45" fill="rgba(0,0,0,.3)"/><rect x="-3" y="-5.4" width="${(6*d.hp[i]/100).toFixed(2)}" height=".9" rx=".45" fill="${d.hp[i]>50?'#2ECC71':d.hp[i]>25?'#F4D03F':'#E74C3C'}"/></g>`;}
+    <path d="M-1.05 -2.75A1.15 1.15 0 0 1 .35 -3.8" stroke="rgba(255,255,255,.6)" stroke-width=".28" fill="none" stroke-linecap="round"/><path d="M-2.6 -1.45H2.6" stroke="rgba(0,0,0,.2)" stroke-width=".22"/>
+    <rect x="-3.1" y="-5.5" width="6.2" height="1.1" rx=".55" fill="rgba(20,30,40,.55)" stroke="#fff" stroke-width=".18"/><rect x="-3" y="-5.4" width="${(6*d.hp[i]/100).toFixed(2)}" height=".9" rx=".45" fill="${d.hp[i]>50?'#2ECC71':d.hp[i]>25?'#F4D03F':'#E74C3C'}"/>${on?'<path class="tkon" d="M-1.05 -8.7H1.05L0 -7.1Z" fill="#FFD84D" stroke="#1F2A36" stroke-width=".18" stroke-linejoin="round"/>':''}</g>`;}
 GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
   icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="tks" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#85C1E9"/><stop offset="1" stop-color="#D6EAF8"/></linearGradient></defs><rect width="100" height="100" fill="url(#tks)"/><path d="M0 76Q25 60 50 72T100 66V100H0Z" fill="#58D68D"/><path d="M0 84Q30 76 60 84T100 80V100H0Z" fill="#45B39D"/><rect x="18" y="60" width="20" height="9" rx="3" fill="#EC6158"/><path d="M28 62L40 52" stroke="#2D4763" stroke-width="3"/><path d="M42 50Q60 20 74 52" stroke="#2D4763" stroke-width="2" stroke-dasharray="3 3" fill="none"/><circle cx="76" cy="58" r="6" fill="#F5B041"/></svg>`,
   init:n=>{const ph=[Math.random()*6,Math.random()*6,Math.random()*6];const h=[];for(let x=0;x<=100;x++)h.push(+Math.max(6,Math.min(36,20+7*Math.sin(x/9+ph[0])+5*Math.sin(x/4.3+ph[1])+3*Math.sin(x/2.1+ph[2]))).toFixed(1));
@@ -160,10 +162,10 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
     for(let i=0;i<d.own.length;i++){const o=d.own[i];if(o==='.')continue;const rr=Math.floor(i/DW_W),cc=i%DW_W;const cx=w/2+cc*w+(rr%2?w/2:0),cy=r+rr*1.5*r;const n=+d.dice[i];
       const mine=o===ts,can=my&&((mine&&n>1)||targets.has(i));const cls=`${sel===i?'sel':''} ${targets.has(i)?'tg':''} ${d.last&&(d.last.a===i||d.last.b===i)&&once('dw'+d.gid+d.sid+'_'+i)?'flash':''}`;
       s+=`<g class="hx ${cls}" ${can?`data-ga="cell" data-i="${i}"`:''}><polygon points="${hex(cx,cy)}" fill="${sel===i?COLS[d.pl[+o]]:LIGHT[d.pl[+o]]}" stroke="${COLS[d.pl[+o]]}" stroke-width="${sel===i||targets.has(i)?1.1:.5}"/>
-        <rect x="${cx-2.4}" y="${cy-2.6}" width="4.8" height="4.8" rx="1" fill="#fff" stroke="#2D4763" stroke-width=".25"/><text x="${cx}" y="${cy+1.2}" text-anchor="middle" font-size="3.6" font-weight="800" fill="#2D4763">${n}</text></g>`;}
+        ${n>=4?`<rect x="${(cx-1.6).toFixed(2)}" y="${(cy-3.6).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#E3E9F0" stroke="#2D4763" stroke-width=".22"/>`:''}<rect x="${(cx-2.4).toFixed(2)}" y="${(cy-2.05).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#9FB0C2"/><rect x="${(cx-2.4).toFixed(2)}" y="${(cy-2.6).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#fff" stroke="#2D4763" stroke-width=".22"/><text x="${cx.toFixed(2)}" y="${(cy+1.2).toFixed(2)}" text-anchor="middle" font-size="3.6" font-weight="800" fill="#2D4763">${n}</text></g>`;}
     s+='</svg>';
     if(d.last&&d.last.ra){const L=d.last;const sa=L.ra.reduce((a,b)=>a+b,0),sb=L.rb.reduce((a,b)=>a+b,0);const fresh=once('dwr'+d.gid+d.sid);
-      s+=`<div class="dwroll ${fresh?'shake':''}"><div style="--c:${col(d,L.sa)}"><b>${nm(d,L.sa)}</b><span>${L.ra.map(x=>`<i>${x}</i>`).join('')}</span><em>${sa}</em></div><strong>${L.win?'🏆':'🛡️'}</strong><div style="--c:${col(d,L.sb)}"><b>${nm(d,L.sb)}</b><span>${L.rb.map(x=>`<i>${x}</i>`).join('')}</span><em>${sb}</em></div></div>`;}
+      s+=`<div class="dwroll ${fresh?'shake':''}"><div class="${L.win?'w':''}" style="--c:${col(d,L.sa)}"><b>${nm(d,L.sa)}</b><span>${L.ra.map(x=>`<i class="dice">${diceSVG(x)}</i>`).join('')}</span><em>${sa}</em></div><strong>${L.win?'🏆':'🛡️'}</strong><div class="${L.win?'':'w'}" style="--c:${col(d,L.sb)}"><b>${nm(d,L.sb)}</b><span>${L.rb.map(x=>`<i class="dice">${diceSVG(x)}</i>`).join('')}</span><em>${sb}</em></div></div>`;}
     if(my)s+=`<div class="acts">${sel!=null?'<button class="btn navy" data-ga="unsel">إلغاء</button>':''}<button class="btn blue" data-ga="end">إنهاء الدور ⏭</button></div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn,ts=String(t);
@@ -182,10 +184,10 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
 
 /* ---------- sword duel (quick draw) ---------- */
 GAMES.duel=spdBase({name:'مبارزة السيوف',lbc:'#17202A',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1B2631"/><circle cx="70" cy="28" r="14" fill="#F9E79F"/><path d="M0 78H100V100H0Z" fill="#273746"/><path d="M22 80l10-30 6 30M70 80l-8-30-8 30" fill="#0B0F14"/><path d="M34 52l20-24M60 52l-18-22" stroke="#D5DBDB" stroke-width="3" stroke-linecap="round"/></svg>`,
-  art:'<div class="duel prev"><span class="moon"></span><span class="sam l"></span><span class="sam r"></span></div>',
+  art:'<div class="duel prev"><span class="stars"></span><span class="moon"></span><span class="hills"></span><span class="sam l"></span><span class="sam r"></span></div>',
   title:'المبارزة تبدأ بصمت. لما تطلع «!» اسحب سيفك بأسرع ما يمكن، واللي يسحب قبلها يخسر الجولة',
   start(d,st){st.phase='wait';const wait=1800+Math.random()*3000;st.timer=setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},wait);},
-  view(d,ctx,st){if(st.phase==='wait'||st.phase==='go')return `<button class="duel ${st.phase}" data-ga="tap"><span class="moon"></span><span class="sam l"></span><span class="sam r"></span><b>${st.phase==='go'?'!':''}</b></button>`;return waitCard();},
+  view(d,ctx,st){if(st.phase==='wait'||st.phase==='go')return `<button class="duel ${st.phase}" data-ga="tap"><span class="stars"></span><span class="moon"></span><span class="hills"></span><span class="sam l"></span><span class="sam r"></span><b>${st.phase==='go'?'!':''}</b></button>`;return waitCard();},
   click(a,i,d,ctx,st){if(a!=='tap')return;if(st.phase==='wait'){clearTimeout(st.timer);st.t0=performance.now();toast('سحبت بدري! خسرت الجولة');spdSubmit(d,ctx,false);return;}if(st.phase==='go'){sfx('pop');spdSubmit(d,ctx,true);}}});
 GAMES.duel.cat='fight';
 
@@ -193,7 +195,7 @@ GAMES.duel.cat='fight';
 GAMES.tapwar={...spdBase({name:'معركة الضغط',lbc:'#1E8449',icon:iconE('#27AE60','👊'),art:'<div class="tapbtn prev">👊</div>',title:'عندك 5 ثواني. اضغط الزر بأسرع وأكثر ما تقدر',
   start(d,st){st.phase='go';st.n=0;st.t0=performance.now();const v=+st.key.split(':').pop();st.timer=setTimeout(()=>{if(S.sp!==st)return;// left the game or round meanwhile: the hold and the pick belong to something else now
     S.holdRender=false;st.phase='sent';const nd=S.st.d;if(nd&&nd.gid===d.gid&&nd.rd===d.rd)simulPick(d,v,{ok:true,ms:st.n});else render();},5000);},
-  view(d,ctx,st){return `<div class="spd"><div class="memnum" id="tapn">${st.n||0}</div><button class="tapbtn" data-ga="tap">👊 اضغط!</button><div class="tbar" style="margin-top:12px"><i id="tapt" style="width:100%"></i></div></div>`;},
+  view(d,ctx,st){return `<div class="spd tw"><div class="memnum" id="tapn">${st.n||0}</div><button class="tapbtn" data-ga="tap">👊 اضغط!</button><div class="tbar" style="margin-top:12px"><i id="tapt" style="width:100%"></i></div></div>`;},
   click(a,i,d,ctx,st){if(a!=='tap'||st.phase!=='go')return;st.n++;const el=document.getElementById('tapn');if(el){el.textContent=st.n;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}}}),
   cat:'fight',
   resolve(d,picks){const pts=[...d.pts];const v=picks.map(p=>p&&p.ok?p.ms:-1);const mx=Math.max(...v);const top=v.map((x,s)=>x===mx&&x>0?s:-1).filter(s=>s>=0);if(top.length===1)pts[top[0]]++;
