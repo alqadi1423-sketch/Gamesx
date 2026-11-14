@@ -125,7 +125,7 @@ button.k2pile .k2t{box-shadow:0 0 0 3px var(--sel);border-radius:6px}
 /* ---------- الأحمق ---------- */
 .k2dutop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .k2trump{position:relative;display:flex;align-items:center;gap:8px;--cw:44px;--cwb:48px;padding-bottom:18px}
-.k2tc{display:block;transform:rotate(90deg) translate(6px,-14px);margin:0 -12px 0 6px}
+.k2tc{display:block;transform:rotate(90deg);margin:0 8px}
 .k2trump em{font-style:normal;font-size:13px;font-weight:700}
 .k2trump em b{font-size:20px;color:#fff}.k2trump em b.rs{color:#FFB3AD}
 .k2dc{font-size:12px;font-weight:700;background:rgba(0,0,0,.25);border-radius:99px;padding:1px 10px}
@@ -157,3 +157,54 @@ button.k2pile .k2t{box-shadow:0 0 0 3px var(--sel);border-radius:6px}
 .k2gfp.on{box-shadow:0 0 0 2px var(--c)}
 .k2gfp small{font-size:11px;font-weight:800;max-width:80px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .k2golf .k2gf:not(.mini){margin:6px 0 4px}
+
+/* ---------- slap pads (one per player on one phone) ---------- */
+.k2pads{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:10px 0}
+.k2pad{min-height:76px;border-radius:var(--r-l);background:var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 5px 0 rgba(0,0,0,.25);transition:transform var(--t1) var(--ease),opacity var(--t2)}
+.k2pad b{font-size:22px;font-weight:900}.k2pad small{font-size:13px;opacity:.9}
+.k2pad:active:not(:disabled){transform:translateY(4px) scale(.97);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.k2pad.off{opacity:.55;box-shadow:none}
+.k2flip{min-width:200px}
+.k2res{margin:4px 0}
+
+/* ---------- اللقطة: every player's stack and face-up pile ---------- */
+.k2snt{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;--cw:44px}
+.k2snp{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;border-radius:12px;background:rgba(0,0,0,.16);transition:transform var(--t2) var(--ease)}
+.k2snp.on{box-shadow:0 0 0 2.5px var(--c);background:rgba(255,255,255,.12)}
+.k2snp.won{transform:scale(1.05)}
+.k2snp.done{opacity:.4}
+.k2snn{font-size:12px;font-weight:800;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-bottom:2px solid var(--c)}
+.k2snn i{font-style:normal;background:var(--c);border-radius:99px;padding:0 6px;margin-right:2px}
+.k2snc{display:flex;gap:6px;align-items:center}
+.k2snb .card{box-shadow:2px 2px 0 #DCE3EC,3px 3px 0 rgba(0,0,0,.25)}
+.k2snu{display:block;animation:k2flipin var(--t3) var(--ease)}
+@keyframes k2flipin{from{opacity:0;transform:translateX(-18px) rotate(-8deg)}}
+
+/* ---------- الحرب الكبرى: the pile fanned, the challenge, the slap rules ---------- */
+.k2erpot{display:flex;justify-content:center;align-items:center;min-height:120px;--cwb:70px}
+.k2erc{display:block;margin:0 -16px;transform:rotate(calc(var(--j)*9deg)) translateY(calc(var(--j)*-3px));animation:k2flipin var(--t3) var(--ease)}
+.k2erinf{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:13px;font-weight:700;margin-top:6px}
+.k2erinf span{background:rgba(0,0,0,.25);border-radius:99px;padding:1px 10px}
+.k2erinf .k2ch{background:#F0B429;color:#4A3000}
+.k2rules{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.k2rules span{font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:0 8px}
+
+/* ---------- السرعة: middle piles, one hand row per player ---------- */
+.k2spm{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;--cwb:62px}
+.k2spp{display:flex;flex-direction:column;align-items:center;gap:2px}
+.k2spp small{font-size:11px;opacity:.85}
+.k2spc{display:block;border-radius:8px}
+.k2spc.lp{animation:k2flipin var(--t3) var(--ease)}
+.k2spc.lp .card{box-shadow:0 0 0 3px var(--c),0 4px 10px rgba(0,0,0,.3)}
+.k2spr{display:block;text-align:center;font-size:12px;font-weight:700;margin-top:6px;opacity:.9}
+.k2sph{background:var(--surface);border-radius:var(--r-l);padding:6px 8px 8px;margin:6px 0;box-shadow:var(--e1),inset 0 0 0 2px var(--c)}
+.k2sph.done{opacity:.7}
+.k2sphn{display:flex;gap:8px;align-items:center;font-size:13px}
+.k2sphn small{color:var(--mut)}.k2sphn em{font-style:normal;color:var(--ok);font-weight:800;margin-right:auto}
+.k2sphc{display:flex;justify-content:center;gap:4px;direction:ltr;--cw:min(56px,15vw);padding-top:8px}
+.k2sphc .bcard{padding:0;background:none;position:relative;display:block}
+.k2sphc button.bcard .card{transform:translateY(-6px);box-shadow:0 0 0 2.5px var(--sel),0 6px 10px rgba(0,0,0,.2)}
+.k2sphc .bcard.sel .card{transform:translateY(-12px);box-shadow:var(--ring),0 8px 12px rgba(0,0,0,.25)}
+.k2sphc .bcard.dim .card::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(18,30,48,.24)}
+.k2spto{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+.k2spto .btn{min-height:40px;font-size:15px;padding:0 14px}
