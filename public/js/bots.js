@@ -216,14 +216,18 @@ GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'
 // each bot remembers the cards it has seen turned over; easy bots forget most of them
 const memOf=(d,s)=>{if(!S.botMem||S.botMem.g!==d.gid)S.botMem={g:d.gid,m:{}};return S.botMem.m[s]||(S.botMem.m[s]={});};
 GAMES.memory.botSee=nd=>{for(const i of nd.open||[])nd.pl.forEach((_,s)=>{if(isBot(nd,s)&&Math.random()<[0,.35,.7,.95][botLv(nd,s)])memOf(nd,s)[i]=nd.dk[i];});};
-GAMES.memory.bot=(d,s,lv)=>{const K=memOf(d,s);const op=(d.open||[]).length===2?[]:(d.open||[]);
-  const free=[...d.own].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);const known=free.filter(i=>i in K),unknown=free.filter(i=>!(i in K)&&!op.includes(i));
-  if(op.length===1){const f=op[0],e=d.dk[f];const m=known.find(i=>i!==f&&K[i]===e);return botDo(d,s,'m',m!=null?m:unknown.length?pickR(unknown):pickR(free.filter(i=>i!==f)));}
-  for(const i of known)for(const j of known)if(i<j&&K[i]===K[j])return botDo(d,s,'m',i);
+// pairs or threes (d.g): finish what is open from memory, else turn a whole set it remembers, else try a card it has not seen
+GAMES.memory.bot=(d,s,lv)=>{const K=memOf(d,s),G=d.g===3?3:2;let op=d.open||[];if(op.length>=G||op.length>=2&&op.some(x=>d.dk[x]!==d.dk[op[0]]))op=[];
+  const free=[...d.own].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);const known=free.filter(i=>i in K&&!op.includes(i)),unknown=free.filter(i=>!(i in K)&&!op.includes(i));
+  if(op.length){const e=d.dk[op[0]];const m=known.find(i=>K[i]===e);return botDo(d,s,'m',m!=null?m:unknown.length?pickR(unknown):pickR(free.filter(i=>!op.includes(i))));}
+  const by={};for(const i of known)(by[K[i]]=by[K[i]]||[]).push(i);const full=Object.values(by).find(a=>a.length>=G);if(full)return botDo(d,s,'m',full[0]);
   return botDo(d,s,'m',unknown.length?pickR(unknown):pickR(free));};
-GAMES.simon.bot=(d,s,lv)=>{const n=d.seq.length;const okP=Math.pow([0,.9,.96,.99][lv],n);
-  if(Math.random()<okP)return {...d,seq:d.seq+rnd(4),turn:nextSeat(d,s),last:`${nm(d,s)} كرر ${n} وزاد لون`};
-  const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);return {...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,s,out),last:`${nm(d,s)} غلط وطلع`};};
+// a bot keeps each colour with a chance by level (lower backwards, a bit lower with six colours). A better memory gains from
+// longer chains, so the hard bot adds two colours (🔥) once the chain is going, the medium one now and then
+GAMES.simon.bot=(d,s,lv)=>{const n=d.seq.length;const per=[0,.9,.96,.99][lv]-(d.vr===2?[0,.05,.025,.01][lv]:0)-(d.vr===1?[0,.02,.01,.004][lv]:0);
+  if(Math.random()<Math.pow(per,n)){const N=d.vr===1?6:4,two=n>=2&&(lv===3?n>=3:lv===2?Math.random()<.25:Math.random()<.05);
+    const add=String(rnd(N))+(two?rnd(N):'');return {...d,seq:d.seq+add,turn:nextSeat(d,s),last:`${nm(d,s)} كرر ${n} وزاد ${two?'لونين 🔥':'لون'}`};}
+  const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);return {...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,s,out),last:`❌ ${nm(d,s)} غلط وطلع`};};
 // tanks: aim toward the foes only, coarse first, then fine around the nearest miss; stop after ~120 ms so the page never freezes.
 // Medium and hard load the heavy shell for a shot that lands (hard: when a normal one would not finish the foe, or for a near miss
 // its wider blast still catches); with no shot anywhere near, medium and hard drive closer instead of wasting the turn
@@ -276,6 +280,8 @@ GAMES.arena.botPick=(d,s,lv)=>{const foes=foesOf(d,s);const weak=foes.sort((a,b)
 /* ---------- party and word games ---------- */
 GAMES.wasla.botPick=(d,s,lv)=>{const mine=(d.gs||[])[s]||[];const ans=WNORM(WASLA[d.ans]);
   let c=WASLA.map(WNORM).filter(w=>mine.every(g=>wScore(g,w).join()===wScore(g,ans).join()));
+  // the hint (one per player, it costs a try): an easy bot grabs it when stuck, a medium one when many words still fit
+  if((d.hu||'')[s]!=='1'&&mine.length<5&&(lv===1&&mine.length>=2&&Math.random()<.3||lv===2&&mine.length>=3&&c.length>4))return '*';
   if(lvRand(lv)||!c.length||(lv===2&&Math.random()<.3))return WNORM(pickR(WASLA));return pickR(c);};
 // برة السالفة: a bot in the loop checks the other bots' answers against the word; the one out of the loop blames someone
 GAMES.bara.botPick=(d,s,lv)=>{if(d.ph==='see')return 1;const o=d.pl.map((_,x)=>x).filter(x=>x!==s&&d.out[x]!=='1');if(!o.length)return -1;
@@ -289,7 +295,11 @@ GAMES.bara.bot=(d,s,lv)=>{if(d.ph==='cat')return baraStart(d,rnd(BARA.length));i
   if(d.ph==='guess'){const hs=(d.hn||[]).filter(h=>h[0]!==d.bo);const fit=d.opts.filter(i=>hs.every(h=>bOk(d,h,BARA[d.cat][1][i])));
     const i=lv===3&&fit.length?pickR(fit):lv===2&&fit.length&&Math.random()<.7?pickR(fit):pickR(d.opts);return baraGuess(d,i);}
   return GAMES.bara.onTimeout(d);};
-GAMES.close.botPick=(d,s,lv)=>{const Q=GAMES.close.q(d,d.rd);const a=Q[1];const err=[0,.45,.22,.08][lv];return Math.max(0,Math.round(a*(1+(Math.random()*2-1)*err)));};
+// a bot knows how sure it is: the hard one spends a ×2 chip on a guess it knows is close (or on the last questions), the others guess when
+GAMES.close.botPick=(d,s,lv)=>{const Q=GAMES.close.q(d,d.rd);const a=Q[1];const e=(Math.random()*2-1)*[0,.45,.22,.08][lv];const v=Math.max(0,Math.round(a*(1+e)));
+  const x=d.x2?d.x2[s]:0,left=(d.rounds||8)-d.rd;let dbl=false;
+  if(x>0){if(lv===3)dbl=Math.abs(e)<.035||left<=x&&Math.abs(e)<.07;else if(lv===2)dbl=Math.random()<.18;else dbl=Math.random()<.12;}
+  return dbl?{v,x:1}:v;};
 
 /* ---------- race games ---------- */
 // rolling returns with roll set when there is a real choice; the bot picks its piece on the next tick
@@ -390,8 +400,10 @@ GAMES.bingo.bot=(d,s,lv)=>{const open=[];for(let n=1;n<=25;n++)if(d.called[n-1]=
   return botDo(d,s,'m',open.sort((a,b)=>val(b)-val(a))[0]);};
 
 /* ---------- number party games ---------- */
-// لو خيروك: the cleverer bots vote as one block (the same side for this question), so together they are the majority more often
-GAMES.major.botPick=(d,s,lv)=>{const bloc=Math.floor(srng(d,'mjb'+d.rd)()*2);return lv===3?bloc:lv===2&&Math.random()<.75?bloc:rnd(2);};
+// لو خيروك: every question has a side most people lean to (drawn per question). A bot of any level votes its own taste, which
+// follows that lean; the hard bot reads the lean well and goes with the crowd, or against it in a «جولة الأقلية»
+GAMES.major.botPick=(d,s,lv)=>{const lean=.2+.6*srng(d,'mjl'+d.rd)(),pop=lean>=.5?0:1,taste=Math.random()<lean?0:1,mi=majMin(d,d.rd);
+  if(lv===3)return mi?1-pop:pop;if(lv===2&&Math.random()<.6)return mi?(Math.random()<.5?1-pop:pop):pop;return taste;};
 
 /* ---------- sea battle: hunt with a pattern, then finish the ship that was hit ---------- */
 function seaAim(d,s,o,lv,avoid){const sh=d.sh[o],f=seaFleet(d,o)||'.'.repeat(64),sunk=seaSunk(f,sh);
@@ -451,8 +463,20 @@ GAMES.luck.bot=(d,s,lv)=>{const {safe,bomb}=luckLeft(d);const p=bomb/(safe+bomb)
   const closed=[...d.op].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);return botDo(d,s,'m',pickR(closed));};
 
 /* ---------- bomb wires: cut what you know is safe, pass when the odds turn bad ---------- */
-GAMES.wires.bot=(d,s,lv)=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const known=(d.kn[s]||[]).filter(i=>left.includes(i));
-  if(known.length&&(lv>1||Math.random()<.5))return botDo(d,s,'cut',pickR(known));
-  if(d.ps[s]!=='1'&&lv>1&&1/left.length>(lv===3?.25:.4))return botDo(d,s,'pass',0);
-  // wires that other players are known to know about are not marked, so guess among the rest
-  return botDo(d,s,'cut',pickR(left));};
+// cut what you know is safe first (a scan that found the bomb makes every other wire safe). Once the known wires are gone and
+// the odds turn bad, spend the one move of the bomb: the hard bot throws the bomb at whoever has no move left to throw it back,
+// or, with many wires still in, scans one in secret and cuts a sure one
+GAMES.wires.bot=(d,s,lv)=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i)),mine=d.kn[s]||[];
+  const bad=mine.filter(i=>i<-0.5).map(i=>-i-1).find(i=>left.includes(i));const known=bad!=null?left.filter(i=>i!==bad):mine.filter(i=>i>=0&&left.includes(i));
+  const unk=left.filter(i=>!known.includes(i)),risk=unk.length?1/unk.length:1,al=aliveSeats(d).filter(x=>x!==s),canPass=d.ps[s]!=='1';
+  const cut=l=>botDo(d,s,'cut',pickR(l));
+  // with teams the bomb goes to a player of another team
+  const pass=()=>{const fo=al.filter(x=>!sameTeam(d,x,s)),pool=fo.length?fo:al;let to=fo.includes(nextSeat(d,s))||!fo.length?nextSeat(d,s):pickR(fo);
+    if(lv===3){const np=pool.filter(x=>d.ps[x]==='1');to=np.length?pickR(np):(pool.find(x=>!isBot(d,x))??to);}else if(lv===2&&Math.random()<.5)to=pickR(pool);return botDo(d,s,'pass',to);};
+  if(lv===1){if(known.length&&Math.random()<.5)return cut(known);if(canPass&&Math.random()<.12)return Math.random()<.5?pass():botDo(d,s,'scan',pickR(left));return cut(left);}
+  if(known.length)return cut(known);
+  if(canPass&&risk>(lv===3?.25:.4)){
+    // a scan keeps the bomb with the others and may find it; the pass is better when only two or three wires are left
+    if(lv===3&&(unk.length>3||al.every(x=>d.ps[x]!=='1'))||lv===2&&Math.random()<.3)return botDo(d,s,'scan',pickR(unk));
+    return pass();}
+  return cut(unk.length?unk:left);};
