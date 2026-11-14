@@ -127,10 +127,10 @@ function b2goOk(d){const s=d.sd;if(!d.ok)return b2Pass(d,s,{ok:1,last:`${tmName(
 function b2goResume(d){return {...d,ph:'play',dead:null,ok:0,ps:0,rz:(d.rz||0)+1,mvn:(d.mvn||0)+1,last:`${tmName(d,d.sd)} يبي يكمّل اللعب`};}
 // the bot: flat Monte Carlo with all-moves-as-first (AMAF) statistics, a fixed number of playouts per level
 function b2goThink(d,lv){const s=d.sd,me=s+1,b=d.b;const cands=b2goLegal(b,s,d.ko).filter(i=>{for(const q of B2GNB[i])if(b[q]!==String(s))return true;return false;});
-  if(!cands.length)return {pass:1};const N=[0,120,400,1100][lv]||400,M=b2goMC();
+  if(!cands.length)return {pass:1};const N=[0,60,120,260][lv]||120,M=b2goMC(),tEnd=performance.now()+B2MS;
   const K=cands.length,W=new Float32Array(K),V=new Float32Array(K),AW=new Float32Array(81),AV=new Float32Array(81),idx=new Int16Array(81).fill(-1);cands.forEach((i,k)=>{idx[i]=k;});
   let total=0;const win=()=>{const o=M.owner();let sc=0;for(let i=0;i<81;i++)if(o[i]===1)sc++;else if(o[i]===2)sc--;sc-=B2GK;return me===1?sc>0:sc<0;};
-  for(let n=0;n<N;n++){let k;if(n<K)k=n;else{let bv=-1;for(let j=0;j<K;j++){const v=W[j]/V[j]+.6*Math.sqrt(Math.log(total)/V[j]);if(v>bv){bv=v;k=j;}}}
+  for(let n=0;n<N;n++){if(n>=K&&!(n&15)&&performance.now()>tEnd)break;let k;if(n<K)k=n;else{let bv=-1;for(let j=0;j<K;j++){const v=W[j]/V[j]+.6*Math.sqrt(Math.log(total)/V[j]);if(v>bv){bv=v;k=j;}}}
     const seq=M.run(b,me,d.ko,cands[k],140);total++;if(!seq){V[k]++;continue;}const w=win()?1:0;V[k]++;W[k]+=w;
     const seen=new Uint8Array(81);for(let j=1;j<seq.length;j++){const x=seq[j],i=x>>2,c=x&3;if(c!==me||seen[i])continue;seen[i]=1;if(idx[i]>=0){AV[i]++;AW[i]+=w;}}}
   let best=0,bv=-1,top=0;for(let k=0;k<K;k++){const i=cands[k],bt=Math.sqrt(300/(3*V[k]+300));const mc=W[k]/V[k],am=AV[i]?AW[i]/AV[i]:mc;const v=(1-bt)*mc+bt*am+(lv===1?Math.random()*.25:0);if(v>bv){bv=v;best=k;}if(mc>top)top=mc;}
@@ -209,15 +209,15 @@ function b2xqScore(B){let v=0;for(let i=0;i<90;i++){const p=B[i];if(p==='.')cont
     else if(t==='c'&&c===4)x+=15;else if(t==='r'){const adv=s?r:9-r;if(adv>=5)x+=15;}
     v+=s?-x:x;}return v;}
 function b2xqThink(d,lv){const B=[...d.b];let side=d.sd,nodes=0,lim=Infinity;const STOP={},Ks=[B.indexOf('K'),B.indexOf('k')];
-  const cap=[0,2500,15000,45000][lv],maxD=[0,1,3,6][lv],ns=[0,160,30,4][lv],qsOn=lv>1;
+  const cap=[0,2500,5000,9000][lv],maxD=[0,1,3,6][lv],tEnd=performance.now()+B2MS,ns=[0,160,30,4][lv],qsOn=lv>1;
   const make=m=>{const f=(m/90)|0,t=m%90,u={f,t,c:B[t]};B[t]=B[f];B[f]='.';if(B[t]==='K')Ks[0]=t;else if(B[t]==='k')Ks[1]=t;side=1-side;return u;};
   const undo=u=>{side=1-side;B[u.f]=B[u.t];B[u.t]=u.c;if(B[u.f]==='K')Ks[0]=u.f;else if(B[u.f]==='k')Ks[1]=u.f;};
   const bad=()=>b2xqAtt(B,Ks[1-side],side);// the side that just moved left its general attacked
   const sorted=ms=>{const a=ms.map(m=>{const t=m%90,v=B[t];return {m,o:v==='.'?0:B2XQV[v.toLowerCase()]*10-B2XQV[B[(m/90)|0].toLowerCase()]/10+1};});a.sort((x,y)=>y.o-x.o);return a;};
   const ev=()=>{const v=b2xqScore(B);return side?-v:v;};
-  function qs(a,b,ply){if(++nodes>lim)throw STOP;const st=ev();if(!qsOn||st>=b||ply>16)return st;if(st>a)a=st;
+  function qs(a,b,ply){if(++nodes>lim||!(nodes&127)&&lim!==Infinity&&performance.now()>tEnd)throw STOP;const st=ev();if(!qsOn||st>=b||ply>16)return st;if(st>a)a=st;
     for(const {m,o} of sorted(b2xqPseudo(B,side))){if(o<=0)break;const u=make(m);if(bad()){undo(u);continue;}const v=-qs(-b,-a,ply+1);undo(u);if(v>=b)return v;if(v>a)a=v;}return a;}
-  function nega(dep,a,b,ply){if(++nodes>lim)throw STOP;const inC=b2xqAtt(B,Ks[side],1-side);if(inC&&ply<8)dep++;if(dep<=0)return qs(a,b,ply);
+  function nega(dep,a,b,ply){if(++nodes>lim||!(nodes&127)&&lim!==Infinity&&performance.now()>tEnd)throw STOP;const inC=b2xqAtt(B,Ks[side],1-side);if(inC&&ply<8)dep++;if(dep<=0)return qs(a,b,ply);
     let any=false,best=-Infinity;for(const {m} of sorted(b2xqPseudo(B,side))){const u=make(m);if(bad()){undo(u);continue;}any=true;const v=-nega(dep-1,-b,-a,ply+1);undo(u);
       if(v>best)best=v;if(v>a)a=v;if(a>=b)break;}
     return any?best:-(B2W-ply);}// no move at all loses, in check or not
@@ -408,7 +408,7 @@ function b2mbPlans(d,s){const out=new Map();const rec=(t,dice,first,dep)=>{const
   rec(b2mbT(d),d.mv,null,0);return [...out.values()].filter(x=>x.first);}
 // (the same number of answers for every roll and every plan, so no plan looks better only because fewer answers were seen)
 function b2mbReply(t,o,lv){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];let bo=-1e9;
-    for(const x of b2mbPlans({...t,mv},o).slice(0,25)){const v=x.t.off[o]===15?1e5:b2mbJudge(x.t,o,lv);if(v>bo)bo=v;}if(bo===-1e9)bo=b2mbJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
+    for(const x of b2mbPlans({...t,mv},o).slice(0,16)){const v=x.t.off[o]===15?1e5:b2mbJudge(x.t,o,lv);if(v>bo)bo=v;}if(bo===-1e9)bo=b2mbJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
 // where the j-th checker of a stack on point p (1..24 as side 0 counts, 25 borne off) sits, in board units
 const B2MB={W:340,H:280,PW:24,L:6,BAR:20,OFF:26,TOP:8,CR:10.5};
 function b2mbXY(flip,p,side,j){const {H,PW,L,BAR,OFF,TOP,CR}=B2MB,offX=L+12*PW+BAR+8;j=Math.max(0,j);
@@ -476,7 +476,7 @@ GAMES.b_mahbusa={...B2TEAM,name:'المحبوسة',cat:'board',lbc:'#7A2B26',
     if(lv===1&&Math.random()<.35)return b2mbPlay(d,b2Rnd(al));
     const k=d.gid+':'+b2mbKey(d,d.mv);const P=S.b2mbPlan;if(P&&P.k===k){const m=al.find(x=>x.from===P.m.from&&x.to===P.m.to&&x.die===P.m.die);if(m)return b2mbPlay(d,m);}
     const ns=[0,8,3,.5][lv];let best=null,bv=-1e9;const all=b2mbPlans(d,side);for(const x of all){x.v=b2mbJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
-    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;for(const x of all.slice(0,3)){const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
+    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;const tEnd=performance.now()+B2MS/2;for(const x of all.slice(0,2)){if(bv>-1e9&&performance.now()>tEnd)break;const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
     if(!best)return b2mbPlay(d,al[0]);const nd=b2mbPlay(d,best.first);S.b2mbPlan=null;
     if(nd.ph==='move'&&nd.sd===side){const rest=b2mbPlans(nd,side).find(x=>b2mbKey(x.t,[])===b2mbKey(best.t,[])&&x.t.off+''===best.t.off+'');if(rest)S.b2mbPlan={k:nd.gid+':'+b2mbKey(nd,nd.mv),m:rest.first};}
     return nd;},

@@ -50,8 +50,10 @@ const b2Line=(a,b,c)=>`<path d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"${c?` class="${
    alone). P.moves(p), P.play(p,m) -> position, P.ev(p) for the side to move p.sd, P.end(p,ply) null or a final value.
    A move after which the same side moves again keeps the window. Each level has its own depth, budget and noise */
 const B2STOP={};
-function b2Think(p0,P,lv,cfg){const cap=cfg.cap[lv],maxD=cfg.dep[lv],ns=cfg.ns[lv];let nodes=0,lim=Infinity;
-  function nega(p,dep,a,b,ply){if(++nodes>lim)throw B2STOP;const e=P.end(p,ply);if(e!=null)return e;if(dep<=0)return P.ev(p);
+// a slow phone stops thinking after this long (the node caps keep a desktop well under it)
+const B2MS=350;
+function b2Think(p0,P,lv,cfg){const cap=cfg.cap[lv],maxD=cfg.dep[lv],ns=cfg.ns[lv];let nodes=0,lim=Infinity;const tEnd=performance.now()+B2MS;
+  function nega(p,dep,a,b,ply){if(++nodes>lim||!(nodes&127)&&lim!==Infinity&&performance.now()>tEnd)throw B2STOP;const e=P.end(p,ply);if(e!=null)return e;if(dep<=0)return P.ev(p);
     let ms=P.moves(p);if(!ms.length)return P.stuck?P.stuck(p,ply):-(B2W-ply);if(P.order)ms=P.order(p,ms);
     let best=-Infinity;for(const m of ms){const q=P.play(p,m);const v=q.sd===p.sd?nega(q,dep-1,a,b,ply+1):-nega(q,dep-1,-b,-a,ply+1);
       if(v>best)best=v;if(v>a)a=v;if(a>=b)break;}return best;}
@@ -108,7 +110,7 @@ GAMES.b_mancala={...B2TEAM,name:'المنقلة',cat:'board',lbc:'#8A5A2B',
     return `<div class="b2ow bd-b2"><div class="owbd">${tray(flip?0:1)}<div class="owrw">${top.map(pit).join('')}${bot.map(pit).join('')}</div>${tray(flip?1:0)}</div></div>`;},
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='pit'&&b2owLegal(d.p,d.sd).includes(i))act(b2owDo(d,i));},
   bot(d,s,lv){const ms=b2owLegal(d.p,d.sd);if(lv===1&&Math.random()<.3)return b2owDo(d,b2Rnd(ms));
-    const m=b2Think({p:d.p,kp:d.kp,sd:d.sd,w:null},B2OWP,lv,{dep:[0,2,5,12],cap:[0,2000,20000,90000],ns:[0,14,4,.5]});return b2owDo(d,m!=null?m:b2Rnd(ms));},
+    const m=b2Think({p:d.p,kp:d.kp,sd:d.sd,w:null},B2OWP,lv,{dep:[0,2,5,12],cap:[0,2000,20000,35000],ns:[0,14,4,.5]});return b2owDo(d,m!=null?m:b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_mancala='المنقلة على قواعد «الأوارِه» المشهورة: لوحة صفين، كل صف 6 حفر وفي كل حفرة 4 حبات. صفك هو اللي قدامك. في دورك اختار حفرة من صفك فيها حب، وتوزع حبها حبة حبة على الحفر اللي بعدها عكس عقارب الساعة (وإذا كانت 12 حبة أو أكثر تتخطى الحفرة اللي بديت منها). إذا آخر حبة نزلت في صف الخصم وصار فيها 2 أو 3 تاخذها، وتاخذ معها اللي قبلها في صف الخصم إذا فيها 2 أو 3 بعد. ما يجوز تاخذ كل حب الخصم مرة وحدة: الحركة تنلعب بدون أخذ. وإذا صف الخصم فاضي لازم تلعب حركة توصّل له حب، وإذا ما تقدر تخلص اللعبة وتاخذ الحب اللي في جهتك. أول واحد يجمع أكثر من 24 حبة يفوز، و24 و24 تعادل. إذا صار اللعب يدور بدون أخذ، كل واحد ياخذ اللي في جهته والأكثر يفوز. إذا أكثر من لاعبين: فريقين (تحت وفوق) وأعضاء الفريق يتناوبون على الحركات.';
 
@@ -170,9 +172,9 @@ GAMES.b_morris9={...B2TEAM,name:'التسعة',cat:'board',lbc:'#6B4E2E',
     if(d.hand[s]>0){if(st.some(x=>x[1]===i)){S.b2=null;act(b2m9Step(d,-1,i));}return;}
     if(P&&st.some(x=>x[0]===P.f&&x[1]===i)){S.b2=null;act(b2m9Step(d,P.f,i));return;}
     b2Pick(d,st.some(x=>x[0]===i)&&(!P||P.f!==i)?{f:i}:null);},
-  bot(d,s,lv){if(d.rm){const r=b2m9Rm(d.b,1-d.sd);const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,rm:1,w:null},B2M9P,lv,{dep:[0,1,2,4],cap:[0,500,6000,30000],ns:[0,60,10,1]});return b2m9Take(d,m?m.x:b2Rnd(r));}
+  bot(d,s,lv){if(d.rm){const r=b2m9Rm(d.b,1-d.sd);const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,rm:1,w:null},B2M9P,lv,{dep:[0,1,2,4],cap:[0,500,2500,6000],ns:[0,60,10,1]});return b2m9Take(d,m?m.x:b2Rnd(r));}
     const ms=b2m9Moves(d.b,d.sd,d.hand);if(lv===1&&Math.random()<.25)return b2m9Do(d,b2Rnd(ms));
-    const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,w:null},B2M9P,lv,{dep:[0,1,3,6],cap:[0,1500,10000,25000],ns:[0,70,12,1]});return b2m9Do(d,m||b2Rnd(ms));},
+    const m=b2Think({b:d.b,hand:d.hand,sd:d.sd,w:null},B2M9P,lv,{dep:[0,1,3,6],cap:[0,1500,4000,6000],ns:[0,70,12,1]});return b2m9Do(d,m||b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_morris9='التسعة (الطاحونة): كل واحد عنده 9 حجار. أول شي تتناوبون تحطون الحجار على النقاط الفاضية. إذا سويت 3 حجار على خط واحد (طاحونة) تشيل حجر من الخصم، بس مو من طاحونة إلا إذا كل حجاره في طواحين. بعد ما تخلص الحجار تحرّك حجر لنقطة جارة فاضية على الخطوط، وكل طاحونة جديدة تشيل فيها حجر. إذا بقى عندك 3 حجار بس تقدر تطير بحجرك لأي نقطة فاضية. يخسر اللي يبقى عنده حجرين أو ما عنده حركة. تعادل إذا مرت 50 حركة لكل واحد بدون شيل، أو تكرر نفس الوضع 3 مرات. الأبيض يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -211,7 +213,7 @@ GAMES.b_morris3={...B2TEAM,name:'الثلاثة',cat:'board',lbc:'#3F6E8C',
     if(P&&st.some(x=>x[0]===P.f&&x[1]===i)){S.b2=null;act(b2m3Do(d,P.f,i));return;}
     b2Pick(d,st.some(x=>x[0]===i)&&(!P||P.f!==i)?{f:i}:null);},
   bot(d,s,lv){const st=b2m3Steps(d.b,d.sd);if(lv===1&&Math.random()<.35){const m=b2Rnd(st);return b2m3Do(d,m[0],m[1]);}
-    const m=b2Think({b:d.b,sd:d.sd,w:null},B2M3P,lv,{dep:[0,1,3,10],cap:[0,300,4000,60000],ns:[0,12,5,.5]})||b2Rnd(st);return b2m3Do(d,m[0],m[1]);},
+    const m=b2Think({b:d.b,sd:d.sd,w:null},B2M3P,lv,{dep:[0,1,3,10],cap:[0,300,4000,35000],ns:[0,12,5,.5]})||b2Rnd(st);return b2m3Do(d,m[0],m[1]);},
   botDelay:()=>450+rnd(350)};
 HELP.b_morris3='الثلاثة: لوحة 3×3 بخطوطها (الصفوف والأعمدة والقطرين). كل واحد عنده 3 حجار، تتناوبون تحطونها على النقاط الفاضية (أول حجر في اللعبة ما ينحط بالوسط). بعد ما تنحط كلها، في دورك تحرّك حجر واحد لنقطة جارة فاضية على خط. أول واحد يسوي 3 حجار على خط واحد يفوز. إذا الخصم ما عنده حركة تفوز، وإذا اللعب تكرر وطال تعادل. الأحمر يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -272,7 +274,7 @@ GAMES.b_alquerq={...B2TEAM,name:'القِرْق',cat:'board',lbc:'#A0522D',
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a==='undo'){b2Pick(d,null);return;}if(a!=='pt')return;
     const m=b2Chain(d,b2aqMoves(d.b,d.sd),i);if(m)act(b2aqDo(d,m));},
   bot(d,s,lv){const ms=b2aqMoves(d.b,d.sd);if(lv===1&&Math.random()<.3)return b2aqDo(d,b2Rnd(ms));
-    return b2aqDo(d,b2Think({b:d.b,sd:d.sd,w:null},B2AQP,lv,{dep:[0,1,3,7],cap:[0,800,10000,50000],ns:[0,80,15,1]})||b2Rnd(ms));},
+    return b2aqDo(d,b2Think({b:d.b,sd:d.sd,w:null},B2AQP,lv,{dep:[0,1,3,7],cap:[0,800,4000,8000],ns:[0,80,15,1]})||b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_alquerq='القِرْق (القرقة): لوحة 5×5 نقاط بخطوطها، وكل واحد عنده 12 حجر والنقطة اللي بالوسط فاضية. في دورك تحرّك حجر لنقطة جارة فاضية على خط، لقدام أو يمين أو يسار (ما ترجع لورا). الأكل بالقفز فوق حجر الخصم لنقطة فاضية وراه على نفس الخط، بأي اتجاه، وتكمل القفز إذا تقدر. الأكل إجباري. يفوز اللي ياكل كل حجار الخصم أو يخليه بدون حركة. إذا مرت 30 حركة لكل واحد بدون أكل يفوز اللي حجاره أكثر، وإذا متساوية تعادل. الأبيض يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -404,7 +406,7 @@ GAMES.b_fanoron={...B2TEAM,name:'فانورونا',cat:'board',lbc:'#4E7A3A',
     if(!d.ch)b2Pick(d,ms.some(x=>x.f===i)&&f!==i?{f:i}:null);},
   bot(d,s,lv){const ms=b2fnMoves(d.b,d.sd,d.ch);if(!ms.length)return b2fnDo(d,{stop:1});
     if(lv===1&&Math.random()<.3)return b2fnDo(d,b2Rnd(d.ch?[...ms,{stop:1}]:ms));
-    const m=b2Think({b:d.b,sd:d.sd,ch:d.ch,nt:d.nt||0,w:null},B2FNP,lv,{dep:[0,1,3,6],cap:[0,800,8000,40000],ns:[0,90,20,1]});return b2fnDo(d,m||ms[0]);},
+    const m=b2Think({b:d.b,sd:d.sd,ch:d.ch,nt:d.nt||0,w:null},B2FNP,lv,{dep:[0,1,3,6],cap:[0,800,4000,10000],ns:[0,90,20,1]});return b2fnDo(d,m||ms[0]);},
   botDelay:()=>450+rnd(400)};
 HELP.b_fanoron='فانورونا (لعبة من مدغشقر): لوحة 9×5 نقاط بخطوطها، وكل واحد عنده 22 حجر والنقطة اللي بالوسط فاضية. الحجر يمشي لنقطة جارة فاضية على خط. الأكل بطريقتين: تتقدّم باتجاه حجر للخصم (يكون في النقطة اللي بعد نقطة وصولك على نفس الخط)، أو تبتعد عن حجر للخصم لاصق فيك من الجهة الثانية. وتاكل الحجر هذا وكل حجار الخصم اللي وراه على نفس الخط بدون فراغ. إذا الحركة تقدر تاكل بالطريقتين تختار وحدة. الأكل إجباري. بعد ما تاكل تقدر تكمّل بنفس الحجر أكلة ثانية، بس مو بنفس الاتجاه اللي قبلها ولا لنقطة مريت عليها في نفس الدور، وتقدر توقف متى ما تبي (أول دور في اللعبة أكلة وحدة بس). يفوز اللي ياكل كل حجار الخصم أو يخليه بدون حركة. إذا مرت 30 حركة لكل واحد بدون أكل يفوز صاحب الحجار الأكثر، وإذا متساوية تعادل. الأبيض يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون.';
 
@@ -472,7 +474,7 @@ GAMES.b_tablut={...B2TEAM,name:'حصار الملك',cat:'board',lbc:'#5C4A8A',
     if(P){const m=ms.find(x=>x.f===P.f&&x.t===i);if(m){S.b2=null;act(b2tbDo(d,m));return;}}b2Pick(d,ms.some(x=>x.f===i)&&(!P||P.f!==i)?{f:i}:null);},
   bot(d,s,lv){const ms=b2tbMoves(d.b,d.sd);if(lv===1&&Math.random()<.25)return b2tbDo(d,b2Rnd(ms));
     // a king that can reach the edge always goes, and an attacker always blocks the last open line it can
-    const m=b2Think({b:d.b,sd:d.sd,w:null},B2TBP,lv,{dep:[0,1,2,4],cap:[0,1500,8000,22000],ns:[0,140,30,2]});return b2tbDo(d,m||b2Rnd(ms));},
+    const m=b2Think({b:d.b,sd:d.sd,w:null},B2TBP,lv,{dep:[0,1,2,4],cap:[0,1500,3000,9000],ns:[0,140,30,2]});return b2tbDo(d,m||b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_tablut='حصار الملك (تابلوت، من ألعاب الشمال القديمة): لوحة 9×9. المهاجمين (16 حجر أسود) يحاصرون، والمدافعين (8 حجار بيض) يحمون الملك اللي بالوسط على العرش. المهاجمين يبدأون. كل حجر يمشي أي عدد من المربعات بخط مستقيم مثل القلعة في الشطرنج، بدون ما يقفز. العرش (المربع اللي بالوسط) للملك بس، وما أحد يعدّي من فوقه. تاكل حجر الخصم إذا حطيته بين حجرك وحجر ثاني لك على نفس الخط (والعرش الفاضي يحسب كأنه حجر ضده)، والملك يشارك في الأكل. يفوز المدافعين إذا وصل الملك لأي مربع على طرف اللوحة. يفوز المهاجمين إذا حاصروا الملك: من الجهات الأربع وهو على العرش، ومن الثلاث جهات الباقية إذا كان جنب العرش، وبين حجرين إذا كان بعيد. اللي ما عنده حركة يخسر. تعادل إذا تكرر نفس الوضع 3 مرات أو طالت اللعبة 200 حركة. إذا أكثر من لاعبين: فريقين يتناوبون.';
 
@@ -507,13 +509,14 @@ function b2azDo(d,m){const s=d.sd,c=String(s),n=d.n,b=b2azApply(d.b,m,c);
   const ar=b2azSplit(b,n);if(ar){const w=ar[0]===ar[1]?s:ar[0]>ar[1]?0:1;return {...nd,...tmWin(d,w),end:'area',area:ar};}
   return nd;}
 function b2azThink(d,lv){const n=d.n,s=d.sd,c=String(s);let ms=b2azMoves(d.b,n,s);if(!ms.length)return null;
-  const cap=[0,90,600,2200][lv]||600;if(ms.length>cap){for(let i=ms.length-1;i>0;i--){const j=rnd(i+1);[ms[i],ms[j]]=[ms[j],ms[i]];}ms=ms.slice(0,cap);}
+  const cap=[0,90,250,500][lv]||250,tEnd=performance.now()+B2MS;if(ms.length>cap){for(let i=ms.length-1;i>0;i--){const j=rnd(i+1);[ms[i],ms[j]]=[ms[j],ms[i]];}ms=ms.slice(0,cap);}
   const ns=[0,25,6,.5][lv];for(const m of ms){const b=b2azApply(d.b,m,c);m.v=b2azCan(b,n,1-s)?-b2azEv(b,n,1-s)+Math.random()*ns:1e6;}
   ms.sort((x,y)=>y.v-x.v);if(lv<3||ms[0].v>=1e6)return ms[0];
   // hard: the best few, each against the strongest of a sample of the other side's answers
-  let best=ms[0],bv=-Infinity;for(const m of ms.slice(0,6)){const b=b2azApply(d.b,m,c);let rs=b2azMoves(b,n,1-s);
-    if(rs.length>220){for(let i=rs.length-1;i>0;i--){const j=rnd(i+1);[rs[i],rs[j]]=[rs[j],rs[i]];}rs=rs.slice(0,220);}
-    let worst=Infinity;for(const r of rs){const b2=b2azApply(b,r,String(1-s));const v=b2azCan(b2,n,s)?b2azEv(b2,n,s):-1e6;if(v<worst)worst=v;}
+  let best=ms[0],bv=-Infinity;for(const m of ms.slice(0,6)){if(bv>-Infinity&&performance.now()>tEnd)break;const b=b2azApply(d.b,m,c);let rs=b2azMoves(b,n,1-s);
+    if(rs.length>150){for(let i=rs.length-1;i>0;i--){const j=rnd(i+1);[rs[i],rs[j]]=[rs[j],rs[i]];}rs=rs.slice(0,150);}
+    // an answer that already makes this move no better than the best so far ends its check
+    let worst=Infinity;for(const r of rs){const b2=b2azApply(b,r,String(1-s));const v=b2azCan(b2,n,s)?b2azEv(b2,n,s):-1e6;if(v<worst){worst=v;if(worst<=bv)break;}}
     if(worst>bv){bv=worst;best=m;}}return best;}
 const b2azXY=n=>[...Array(n*n)].map((_,i)=>[5+(i%n)*10,5+(i/n|0)*10]);
 const b2azBG=n=>{let g='';for(let i=0;i<n*n;i++)if(((i/n|0)+i%n)%2)g+=`<rect x="${(i%n)*10}" y="${(i/n|0)*10}" width="10" height="10"/>`;return `<svg viewBox="0 0 ${n*10} ${n*10}" aria-hidden="true"><g class="b2dk">${g}</g></svg>`;};

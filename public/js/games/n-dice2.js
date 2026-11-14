@@ -229,6 +229,8 @@ const DPC={};
 function dpV(key,left,v0){const k=key+'|'+left;if(DPC[k])return DPC[k];const T=YB();let V;
   if(!left)V=T.str.map(x=>v0([...x].map(Number)));else{const P=dpV(key,left-1,v0);V=T.keeps.map(ks=>{let b=-Infinity;for(const K of ks){let v=0;for(const [j,p] of K.t)v+=p*P[j];if(v>b)b=v;}return b;});}
   const ks=Object.keys(DPC);if(ks.length>40)for(const q of ks)delete DPC[q];return DPC[k]=V;}
+// the odds table takes a while to build the first time: build it while the players look at a fresh board, not inside a bot's turn
+function dpWarm(){if(dpWarm.k||typeof hasBots!=='function'||!hasBots())return;dpWarm.k=1;(window.requestIdleCallback||(f=>setTimeout(f,400)))(()=>{try{YB();}catch(e){}},{timeout:1500});}
 // which dice to keep (1 = keep) for the best value after the throws left; all kept means stop
 function dpKeep(key,dv,left,v0){const T=YB(),c=[0,0,0,0,0,0];for(const x of dv)c[x-1]++;const P=dpV(key,left-1,v0);let best=null;
   for(const K of T.keeps[T.id.get(c.join(''))]){let v=0;for(const [j,p] of K.t)v+=p*P[j];if(!best||v>best.v+1e-9)best={v,k:K.k};}
@@ -272,7 +274,7 @@ GAMES.d_balut={name:'بالوت النرد',cat:'dice',lbc:'#6E2C6B',net:{host:[
     let b=-1,bv=-1;for(let k=0;k<7;k++)if(blBox(card,k).includes(-1)){const v=blScore(k,d.dv);if(v>bv){bv=v;b=k;}}return blPut(d,b);},
   onSkip(nd,d){let x=nd.turn!==d.turn?{...nd,dv:[0,0,0,0,0],hd:'00000',rl:0}:nd;if(x.win!=null)return x;const w=blWin(x,x.cards);if(w!=null)return {...x,win:w};
     if(blFull(x.cards[x.turn]))x={...x,turn:blNext(x,x.cards,x.turn)};return x;},
-  render(d,ctx){const t=d.turn,card=d.cards[t],my=ctx.my&&d.win==null,fr=d.rl>0&&once(`bl${d.gid}_${d.rc}`);
+  render(d,ctx){dpWarm();const t=d.turn,card=d.cards[t],my=ctx.my&&d.win==null,fr=d.rl>0&&once(`bl${d.gid}_${d.rc}`);
     let s=trayHold(d,ctx,my&&d.rl>0&&d.rl<3,fr);
     s+=`<div class="acts"><button class="btn yroll" style="background:${col(d,t)}" data-ga="roll" ${my&&d.rl<3?'':'disabled'}>🎲 ارمِ ${rollsLeft(3,d.rl)}</button></div>`;
     const pp=blPts(card),filled=card.filter(v=>v>=0).length;
@@ -424,7 +426,7 @@ GAMES.d_poker={name:'بوكر النرد',cat:'dice',lbc:'#1F6B4A',net:{host:['r
   points:d=>d.tot,status:lastSt,
   winExtra:d=>'الجولات: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.tot[s]}`).join('، '),
   onTimeout:d=>d.rl?pkEnd(d,d.turn):pkEnd({...d,dv:rollN(5),rl:1,rc:d.rc+1},d.turn),onSkip:(nd,d)=>rgSkip(nd,d,PK),
-  render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,cap=t===d.ld?3:d.cap,fr=d.rl>0&&once(`pk${d.gid}_${d.rc}`);
+  render(d,ctx){dpWarm();const t=d.turn,my=ctx.my&&d.win==null,cap=t===d.ld?3:d.cap,fr=d.rl>0&&once(`pk${d.gid}_${d.rc}`);
     let s=rgHead(d,PK_R,`<span>${t===d.ld?'يبدأ ويحدد عدد الرميات':`الحد: <b>${cap}</b> ${cap===1?'رمية':'رميات'}`}</span>`);
     s+=trayHold(d,ctx,my&&d.rl>0&&d.rl<cap,fr);
     if(d.rl)s+=`<p class="d2-hand">${PKN[pkCat(pkEval(d.dv))]}</p>`;

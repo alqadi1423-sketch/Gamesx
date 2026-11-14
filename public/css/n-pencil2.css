@@ -33,7 +33,7 @@
 .pnsh{stroke:transparent;stroke-width:9;stroke-linecap:round;cursor:pointer}
 .pnsd{fill:#2D3B4C;stroke:#FBF7EE;stroke-width:1.4}
 .pnsd.tr{stroke:#F0B429;stroke-width:2}
-.pnstri{opacity:.3;animation:pnwin 1.1s ease-in-out 2}
+.pnstri{opacity:.3;animation:pnwin .55s ease-in-out 4}
 .pnstri.s0{fill:#D9433A}.pnstri.s1{fill:#2F74D0}
 
 /* ---------- domineering: a wooden tray with red (up and down) and blue (across) tiles ---------- */

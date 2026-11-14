@@ -32,8 +32,10 @@ const pnOpts=(d,ctx,ga,list,cur)=>pnFresh(d)&&!ctx.bot?`<div class="segs pnopt">
    alone). P.moves(p), P.play(p,m) -> position, P.ev(p) for the side to move p.sd, P.end(p,ply) null or a final value.
    A position with no move is lost for the side to move unless P.stuck says otherwise */
 const PNSTOP={};
-function pnThink(p0,P,lv,cfg){const cap=cfg.cap[lv],maxD=cfg.dep[lv],ns=cfg.ns[lv];let nodes=0,lim=Infinity;
-  function nega(p,dep,a,b,ply){if(++nodes>lim)throw PNSTOP;const e=P.end(p,ply);if(e!=null)return e;if(dep<=0)return P.ev(p);
+// a slow phone stops thinking after this long (the node caps keep a desktop well under it)
+const PNMS=350;
+function pnThink(p0,P,lv,cfg){const cap=cfg.cap[lv],maxD=cfg.dep[lv],ns=cfg.ns[lv];let nodes=0,lim=Infinity;const tEnd=performance.now()+PNMS;
+  function nega(p,dep,a,b,ply){if(++nodes>lim||!(nodes&127)&&lim!==Infinity&&performance.now()>tEnd)throw PNSTOP;const e=P.end(p,ply);if(e!=null)return e;if(dep<=0)return P.ev(p);
     let ms=P.moves(p);if(!ms.length)return P.stuck?P.stuck(p,ply):-(PNW-ply);if(P.order)ms=P.order(p,ms);
     let best=-Infinity;for(const m of ms){const q=P.play(p,m);const v=q.sd===p.sd?nega(q,dep-1,a,b,ply+1):-nega(q,dep-1,-b,-a,ply+1);
       if(v>best)best=v;if(v>a)a=v;if(a>=b)break;}return best;}
@@ -91,7 +93,7 @@ GAMES.g_sim={...PNTEAM,name:'المثلثات',cat:'mind',lbc:'#B23A48',
     S.pn=null;act(pnsDo(d,i));},
   bot(d,s,lv){const c=String(d.sd),ms=PNSP.moves(d),ok=ms.filter(e=>!pnsTri(d.b,e,c));
     if(lv===1)return pnsDo(d,pnRnd(ok.length&&Math.random()<.9?ok:ms));
-    const m=pnThink({b:d.b,sd:d.sd,w:null},PNSP,lv,{dep:[0,2,4,15],cap:[0,0,2500,60000],ns:[0,0,6,.5]});return pnsDo(d,m!=null?m:pnRnd(ok.length?ok:ms));},
+    const m=pnThink({b:d.b,sd:d.sd,w:null},PNSP,lv,{dep:[0,2,4,15],cap:[0,0,2500,10000],ns:[0,0,6,.5]});return pnsDo(d,m!=null?m:pnRnd(ok.length?ok:ms));},
   botDelay:()=>500+rnd(400)};
 HELP.g_sim='المثلثات (لعبة «سِم»): ست نقاط على شكل دائرة، وبينها 15 خط. فريق أحمر وفريق أزرق. كل دور تلوّن خط واحد فاضي بلونك. اللي يسكّر مثلث كامل بلونه (ثلاث نقاط كل الخطوط بينها بلونه) يخسر، ومثلثات الخصم ما تضرك. ما فيه تعادل: لازم أحد يسكّر مثلث قبل ما تخلص الخطوط. الخطوط الخطرة عليك (تسكّر مثلث بلونك) تبان منقطة، ولو ضغطتها يطلب منك تأكيد. الفريق اللي يبدأ يتبدل كل جولة. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -137,7 +139,7 @@ GAMES.g_domin={...PNTEAM,name:'الدومينو المتقاطع',cat:'board',lb
     if(!c.length){pnPick(d,null);return;}if(c.length===1){S.pn=null;act(pndDo(d,c[0]));return;}
     pnPick(d,{i,c});},
   bot(d,s,lv){const ms=pndMoves(d.b,d.z,d.sd);if(lv===1&&Math.random()<.35||lv===2&&Math.random()<.2)return pndDo(d,pnRnd(ms));
-    const m=pnThink({b:d.b,z:d.z,sd:d.sd,w:null},PNDP,lv,{dep:[0,1,2,14],cap:[0,400,3000,25000],ns:[0,10,5,.5]});return pndDo(d,m!=null?m:pnRnd(ms));},
+    const m=pnThink({b:d.b,z:d.z,sd:d.sd,w:null},PNDP,lv,{dep:[0,1,2,14],cap:[0,400,2000,6000],ns:[0,10,5,.5]});return pndDo(d,m!=null?m:pnRnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.g_domin='الدومينو المتقاطع: لوحة مربعات فاضية. فريق يحط قطعه بالطول (تغطي مربعين فوق بعض) وفريق يحط بالعرض (مربعين جنب بعض). كل دور تحط قطعة وحدة على مربعين فاضيين. اللي يجي دوره وما يلقى مكان لقطعته يخسر. اضغط على أي مربع ينفع لقطعة: إذا فيه طريقة وحدة تنحط على طول، وإذا فيه طريقتين يبين لك المربعين واختار. قبل أول حركة تختارون حجم اللوحة. الفريق اللي يبدأ يتبدل كل جولة. إذا أكثر من لاعبين: فريقين يتناوبون على الحركات.';
 
@@ -299,7 +301,7 @@ const PNNP={moves:p=>pnnJumps(p.b,p.kn,p.kn[p.sd],p.z),
   ev(p){const s=p.sd,o=1-s,z=p.z;const m=pnnJumps(p.b,p.kn,p.kn[s],z),e=pnnJumps(p.b,p.kn,p.kn[o],z);let v=(m.length-1.6*e.length)*10;
     for(const x of m)v+=pnnJumps(p.b,p.kn,x,z).length;for(const x of e)v-=pnnJumps(p.b,p.kn,x,z).length;return v;},end:pnEnd,
   order(p,ms){return ms.map(t=>[pnnJumps(p.b,p.kn,t,p.z).length,t]).sort((a,b)=>b[0]-a[0]).map(x=>x[1]);}};
-const PNNTH=(p,lv)=>pnThink(p,PNNP,lv,{dep:[0,1,3,14],cap:[0,300,3000,30000],ns:[0,8,4,.5]});
+const PNNTH=(p,lv)=>pnThink(p,PNNP,lv,{dep:[0,1,3,14],cap:[0,300,2000,7000],ns:[0,8,4,.5]});
 function pnnBot(d,s,lv){const z=d.z,ms=pnnJumps(d.b,d.kn,d.kn[s],z);if(ms.length===1)return ms[0];
   if(lv===1&&Math.random()<.4)return pnRnd(ms);const al=aliveSeats(d);
   if(al.length===2&&lv>1){const o=al.find(x=>x!==s);const m=PNNTH({b:d.b,kn:[d.kn[s],d.kn[o]],z,sd:0,w:null},lv);if(m!=null)return m;}
@@ -381,7 +383,7 @@ const PNRP={moves(p){const s=p.sd,o=1-s,z=p.z,ms=[];const i=p.kg[s],r=i/z|0,c=i%
   ev(p){const s=p.sd,o=1-s;const a=pnrDist(p.b,p.z,p.e[s],p.kg[s]),b=pnrDist(p.b,p.z,p.e[o],p.kg[o]);return (b-a)*10+5+(p.wl[s]-p.wl[o])*3;},
   end:pnEnd,order:(p,ms)=>ms};
 function pnrBot(d,s,lv){const z=d.z,al=aliveSeats(d),e=s%4;const dist=(b,k)=>pnrDist(b,z,k%4,d.kg[k]);
-  if(lv===3&&al.length===2){const o=al.find(x=>x!==s);const m=pnThink({b:d.b,z,kg:[d.kg[s],d.kg[o]],e:[e,o%4],wl:[d.wl[s],d.wl[o]],sd:0,w:null},PNRP,3,{dep:[0,0,0,5],cap:[0,0,0,8000],ns:[0,0,0,1]});
+  if(lv===3&&al.length===2){const o=al.find(x=>x!==s);const m=pnThink({b:d.b,z,kg:[d.kg[s],d.kg[o]],e:[e,o%4],wl:[d.wl[s],d.wl[o]],sd:0,w:null},PNRP,3,{dep:[0,0,0,5],cap:[0,0,0,1200],ns:[0,0,0,1]});
     if(m)return m[0]===0?['m',m[1]]:['b',m[1],m[2]];}
   const st=pnrSteps(d,s);const myD=dist(d.b,s);
   const bestStep=()=>{let bs=null,bv=99;for(const x of st){const kg=[...d.kg];kg[s]=x;const v=pnrGoal(e,x,z)?-1:pnrDist(d.b,z,e,x);if(v>=0&&(v<bv||v===bv&&Math.random()<.5)){bv=v;bs=x;}}return bs;};
@@ -633,10 +635,10 @@ function pnlDo(d,k){const s=d.sd,T=pnlTab(d.R,d.C),e=setAt(d.e,k,String(s));cons
   if(!pnlMoves(e,T).length)return pnWon(d,s,'last',x);return pnPass(d,s,x);}
 // who wins from here, with a memory kept between turns (the lines' owners do not matter) and a node budget
 const PNLM=new Map();
-function pnlWin(e,T,bud){const k=e.replace(/[01]/g,'x');const m=PNLM.get(k);if(m!=null)return m;if(--bud.n<0)throw PNSTOP;
+function pnlWin(e,T,bud){const k=e.replace(/[01]/g,'x');const m=PNLM.get(k);if(m!=null)return m;if(--bud.n<0||!(bud.n&127)&&performance.now()>bud.t)throw PNSTOP;
   let w=false;for(const i of pnlMoves(e,T)){if(!pnlWin(setAt(e,i,'x'),T,bud)){w=true;break;}}if(PNLM.size>400000)PNLM.clear();PNLM.set(k,w);return w;}
 function pnlBot(d,lv){const T=pnlTab(d.R,d.C),ms=pnlMoves(d.e,T);if(lv===1&&Math.random()<.6)return pnRnd(ms);
-  const bud={n:lv===3?30000:lv===2?4000:600};const good=[];
+  const bud={n:lv===3?9000:lv===2?2500:600,t:performance.now()+PNMS};const good=[];
   try{for(const i of pnShuf(ms)){if(!pnlWin(setAt(d.e,i,'x'),T,bud)){good.push(i);break;}}}catch(x){if(x!==PNSTOP)throw x;}
   if(good.length)return good[0];
   // not worked out: keep the dots with many lines left (the game stays open), a little at random
@@ -724,7 +726,7 @@ const pnxMask=(b,k)=>{let m=0;for(let i=0;i<9;i++)if(b[k*9+i]!=='.')m|=1<<i;retu
 const pnxDead=(b,k)=>!!pnxLine(pnxMask(b,k));
 const PNXM=new Map();
 // boards as sorted canonical masks of the live ones; true when the side to move can win
-function pnxWin(ms,bud){const key=ms.join(',');const v=PNXM.get(key);if(v!=null)return v;if(--bud.n<0)throw PNSTOP;let w=false;
+function pnxWin(ms,bud){const key=ms.join(',');const v=PNXM.get(key);if(v!=null)return v;if(--bud.n<0||!(bud.n&127)&&performance.now()>bud.t)throw PNSTOP;let w=false;
   const seen=new Set();out:for(let j=0;j<ms.length;j++){if(seen.has(ms[j]))continue;seen.add(ms[j]);const m=ms[j];const tried=new Set();
     for(let i=0;i<9;i++){if(m>>i&1)continue;const nm=m|1<<i;const c=pnxCan(nm);if(tried.has(c))continue;tried.add(c);
       const rest=ms.filter((_,q)=>q!==j);if(pnxLine(nm)){if(!rest.length)continue;if(!pnxWin(rest,bud)){w=true;break out;}}
@@ -736,7 +738,7 @@ function pnxDo(d,i){const s=d.sd,b=setAt(d.b,i,String(s)),k=i/9|0;const L=pnxLin
 function pnxBot(d,lv){const K=d.K,b=d.b,ms=pnxMoves(b,K);const kills=i=>!!pnxLine(pnxMask(setAt(b,i,'x'),i/9|0));
   const left=[...Array(K)].filter((_,k)=>!pnxDead(b,k)).length;const safe=ms.filter(i=>!(left===1&&kills(i)));
   if(lv===1||lv===2&&Math.random()<.35){return pnRnd(safe.length&&Math.random()<.85?safe:ms);}
-  const bud={n:lv===3?250000:4000};
+  const bud={n:lv===3?80000:4000,t:performance.now()+PNMS};
   try{for(const i of pnShuf(ms)){const nb=setAt(b,i,'x');const live=[...Array(K)].map((_,k)=>k).filter(k=>!pnxDead(nb,k)).map(k=>pnxCan(pnxMask(nb,k))).sort((a,c)=>a-c);
       if(!live.length)continue;if(!pnxWin(live,bud))return i;}}catch(x){if(x!==PNSTOP)throw x;}
   // not worked out: the centre of a fresh board, else a mark that finishes nothing
@@ -783,7 +785,7 @@ function pngKeep(N,E,m){const seen=new Set();const q=[];N.forEach((n,i)=>{if(png
   for(let qi=0;qi<q.length;qi++){const a=q[qi];E.forEach(([x,y],k)=>{if(!(m>>k&1))return;if(x!==a&&y!==a)return;keep|=1<<k;const o=x===a?y:x;if(!seen.has(o)){seen.add(o);q.push(o);}});}return keep;}
 const PNGM=new Map();
 // side to move s (0 red, 1 blue) wins from mask m?
-function pngWin(N,E,m,s,bud,key){const k=key+':'+m+':'+s;const v=PNGM.get(k);if(v!=null)return v;if(--bud.n<0)throw PNSTOP;let w=false;
+function pngWin(N,E,m,s,bud,key){const k=key+':'+m+':'+s;const v=PNGM.get(k);if(v!=null)return v;if(--bud.n<0||!(bud.n&127)&&performance.now()>bud.t)throw PNSTOP;let w=false;
   for(let j=0;j<E.length;j++){if(!(m>>j&1)||E[j][2]!==s)continue;if(!pngWin(N,E,pngKeep(N,E,m&~(1<<j)),1-s,bud,key)){w=true;break;}}
   if(PNGM.size>400000)PNGM.clear();PNGM.set(k,w);return w;}
 const pngKey=E=>E.map(e=>e.join('.')).join('|');
@@ -795,7 +797,7 @@ function pngBot(d,lv){const s=d.sd,ms=pngMine(d,s),m=parseInt(d.m,36),key=pngKey
   // height of a stick: how many sticks hang above it (cutting low loses them all)
   const above=j=>{const after=pngKeep(d.N,d.E,m&~(1<<j));let n=0;for(let k=0;k<d.E.length;k++)if((m>>k&1)&&!(after>>k&1)&&k!==j)n+=d.E[k][2]===s?1:-1;return n;};
   if(lv===1&&Math.random()<.65||lv===2&&Math.random()<.25)return pnRnd(ms);
-  const bud={n:lv===3?300000:lv===2?3000:0};
+  const bud={n:lv===3?60000:lv===2?3000:0,t:performance.now()+PNMS};
   try{for(const j of pnShuf(ms))if(!pngWin(d.N,d.E,pngKeep(d.N,d.E,m&~(1<<j)),1-s,bud,key))return j;}catch(x){if(x!==PNSTOP)throw x;}
   // not worked out (or lost anyway): cut the stick that drops the fewest of my own and the most of the other side's
   let best=ms[0],bv=Infinity;for(const j of ms){const v=above(j)+Math.random()*.5;if(v<bv){bv=v;best=j;}}return best;}
