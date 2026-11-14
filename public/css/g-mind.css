@@ -351,14 +351,6 @@
 .gm-war .whand.hand>.card.wc{width:calc((100% - 24px) / 7);max-width:54px;height:auto;aspect-ratio:5/7;transform:none}
 
 /* ================= development pass: new parts of the mind games ================= */
-/* score strips (guess the word, lowest unique, two thirds): one chip per player in the player's colour */
-.gm-word .wpts,.gm-lowu .lsc,.gm-two3 .t3sc{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;width:100%;max-width:440px}
-.gm-word .wpts span,.gm-lowu .lsc span,.gm-two3 .t3sc span{display:flex;align-items:center;gap:5px;min-width:0;max-width:46%;padding:2px 4px 2px 10px;border-radius:99px;font-size:13px;
- background:var(--surface);box-shadow:inset 3px 0 0 var(--c),var(--e1);transition:transform var(--t2)}
-.gm-word .wpts b,.gm-lowu .lsc b,.gm-two3 .t3sc b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
-.gm-word .wpts em,.gm-lowu .lsc em,.gm-two3 .t3sc em{font-style:normal;font-weight:800;min-width:22px;text-align:center;padding:0 6px;border-radius:99px;background:var(--c);color:#fff}
-.gm-word .wpts span.on{transform:translateY(-2px);box-shadow:inset 3px 0 0 var(--c),0 0 0 2px var(--c),var(--e1)}
-
 /* guess the word: the length, a solved word in gold, and the box to type the whole word */
 .gm-word .wcat .wlen{font-style:normal;font-size:12px;font-weight:700;color:var(--mut)}
 .gm-word .wordbox .wl.sol{background:linear-gradient(#F6CD4F,#E9A92A);color:#5A3B00;box-shadow:0 3px 0 #B9801A;animation:mi-flip var(--t3) var(--ease)}
@@ -383,7 +375,6 @@
 .gm-war .wfoes span{display:flex;align-items:center;gap:3px;min-width:0;padding:3px 6px;border-radius:var(--r-m);background:var(--surface);box-shadow:inset 3px 0 0 var(--c),var(--e1)}
 .gm-war .wfoes b{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
 .gm-war .wfoes i{background:var(--bg,#EEF2F6);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
-.gm-war .wfoes em{font-style:normal;font-weight:800;min-width:24px;text-align:center;padding:0 6px;border-radius:99px;background:var(--c);color:#fff}
 .gm-war .whand .card.wc.sel{transform:translateY(-8px);box-shadow:0 0 0 3px var(--gold),var(--e2)}
 .gm-war .wmine{margin:0;font-size:13px;font-weight:700;color:var(--mut)}
 .gm-war .wmine b{color:var(--ink);font-size:16px}
@@ -404,11 +395,11 @@
 .gm-two3 .t3goal b{font-size:21px}
 .gm-two3 .t3line{width:100%;max-width:420px;display:flex;flex-direction:column;gap:6px}
 .gm-two3 .t3line p{margin:0;font-size:12px;line-height:1.5;color:var(--mut);text-align:center}
-.gm-two3 .t3bar{position:relative;height:30px;margin:14px 12px 0;direction:ltr;border-bottom:3px solid var(--line)}
-.gm-two3 .t3bar i{position:absolute;bottom:-9px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface);animation:mi-pop var(--t2) var(--spring) both;animation-delay:calc(var(--j,0) * 50ms)}
-.gm-two3 .t3bar i.win{width:20px;height:20px;margin-left:-10px;bottom:-11px;box-shadow:0 0 0 3px var(--gold)}
-.gm-two3 .t3bar .t3tg{width:2px;height:34px;margin-left:-1px;bottom:-3px;border-radius:0;background:var(--gold);box-shadow:none;z-index:1}
-.gm-two3 .t3bar .t3tg b{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);padding:0 6px;border-radius:99px;font-size:12px;background:var(--gold);color:#5A3B00;white-space:nowrap}
+.gm-two3 .t3bar{position:relative;height:30px;margin:14px 12px 0;border-bottom:3px solid var(--line)}
+.gm-two3 .t3bar i{position:absolute;bottom:-9px;width:16px;height:16px;margin-right:-8px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface);animation:mi-pop var(--t2) var(--spring) both;animation-delay:calc(var(--j,0) * 50ms)}
+.gm-two3 .t3bar i.win{width:20px;height:20px;margin-right:-10px;bottom:-11px;box-shadow:0 0 0 3px var(--gold)}
+.gm-two3 .t3bar .t3tg{width:2px;height:34px;margin-right:-1px;bottom:-3px;border-radius:0;background:var(--gold);box-shadow:none;z-index:1}
+.gm-two3 .t3bar .t3tg b{position:absolute;bottom:100%;right:50%;transform:translateX(50%);padding:0 6px;border-radius:99px;font-size:12px;background:var(--gold);color:#5A3B00;white-space:nowrap}
 
 /* 99: the card just played lands on the pile; the players with their lives; two ways to play an ace or a 10 */
 .gm-n99 .n9pile{width:44px;height:62px;display:grid;place-items:center;border-radius:8px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.2)}

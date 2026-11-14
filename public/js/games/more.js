@@ -25,7 +25,7 @@ GAMES.war={name:'حرب الأوراق',cat:'cards',lbc:'#3A5F8F',
     let s=`<div class="gm gm-war"><div class="mtab wtab"><div class="wprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${d.prize+pot}</b>${pot?`<em>${d.prize} + ${pot} من التعادل</em>`:''}</div>
     <div class="wrds"><span class="wrd">${[0,1,2,3,4,5,6].map(k=>`<i class="${k<d.rd?'done':k===d.rd?'on':''}"></i>`).join('')}</span><small>جولة ${d.rd+1} من 7</small>
     ${d.left.length?`<span class="wnext"><small>الجوائز الجاية</small>${[...d.left].sort((a,b)=>b-a).map(x=>`<i>${x}</i>`).join('')}</span>`:''}</div></div>${warLast(d)}`;
-    s+=`<div class="wfoes">${d.pl.map((_,o)=>o===v||d.out[o]==='1'?'':`<span style="--c:${col(d,o)}"><b>${nm(d,o)}</b>${warFree(d,o).map(c=>`<i>${c}</i>`).join('')}<em class="ltr">${d.pts[o]}</em></span>`).join('')}</div>`;
+    s+=`<div class="wfoes">${d.pl.map((_,o)=>o===v||d.out[o]==='1'?'':`<span style="--c:${col(d,o)}"><b>${nm(d,o)}</b>${warFree(d,o).map(c=>`<i>${c}</i>`).join('')}</span>`).join('')}</div>`;
     s+=`<div class="hand whand">${[1,2,3,4,5,6,7].map(c=>!free.includes(c)?`<div class="card big wc dim">${c}</div>`:c===mp?`<div class="card big wc sel">${c}</div>`:`<button class="card ${ctx.my?'pick':''} big wc" data-ga="m" data-i="${c}" ${ctx.my?'':'disabled'}>${c}</button>`).join('')}</div>`;
     return s+(me?`<p class="wmine">نقاطك <b class="ltr">${d.pts[v]}</b></p>`:'')+'</div>';},
   click(a,c,d,ctx){if(!ctx.my||!warFree(d,ctx.v).includes(c))return;simulPick(d,ctx.v,c);},
@@ -66,8 +66,7 @@ GAMES.lowu={name:'أصغر رقم فريد',cat:'quiz',lbc:'#2E6F73',
     const last=Array.isArray(d.lp)?`<div class="llast" data-k="l${d.rd}">${d.pl.map((_,s)=>d.lp[s]>0?`<span class="${s===d.lw?'win':''}" style="--c:${col(d,s)};--j:${s}"><b class="ltr">${d.lp[s]}</b><small>${nm(d,s)}</small></span>`:'').join('')}</div>`:'';
     if(d.win!=null)return `<div class="gm gm-lowu">${last}</div>`;
     return `<div class="gm gm-lowu"><div class="lhead"><div class="lprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${val}</b>${d.pot?`<em>+${d.pot} من قبل</em>`:''}</div>
-      <div class="lrds">${Array(d.rounds).fill(0).map((_,k)=>`<i class="${k<d.rd?'done':k===d.rd?'on':''}"></i>`).join('')}</div>
-      <div class="lsc">${d.pl.map((_,s)=>`<span style="--c:${col(d,s)}"><b>${nm(d,s)}</b><em class="ltr">${d.pts[s]}</em></span>`).join('')}</div></div>${last}
+      <div class="lrds">${Array(d.rounds).fill(0).map((_,k)=>`<i class="${k<d.rd?'done':k===d.rd?'on':''}"></i>`).join('')}</div></div>${last}
       <div class="lgrid">${Array(d.max).fill(0).map((_,k)=>{const n=k+1,u=me&&!free.includes(n);return `<button class="lnum ${u?'used':''} ${mp===n?'sel':''}" data-ga="m" data-i="${n}" ${ctx.my&&!u?'':'disabled'}>${n}</button>`;}).join('')}</div>
       ${me?`<p class="lleft">باقي معك ${free.length} أرقام و${d.rounds-d.rd} جولات</p>`:''}</div>`;},
   click(a,k,d,ctx){if(!ctx.my||!luFree(d,ctx.v).includes(k))return;simulPick(d,ctx.v,k);},
@@ -101,10 +100,9 @@ GAMES.two3={name:'ثلثين المتوسط',cat:'quiz',lbc:'#5D4E9E',
   winExtra:d=>d.res,
   // last round on a 0 to 100 line: every pick as a dot in the player's colour, and the target as a gold flag (a new node each round)
   render(d,ctx){const v=+((S.draft||{}).t23??50),f=d.fr||[2,3];
-    const line=Array.isArray(d.lp)?`<div class="t3line" data-k="l${d.rd}"><div class="t3bar">${d.tg!=null?`<i class="t3tg" style="left:${d.tg}%"><b class="ltr">${d.tg}</b></i>`:''}${d.pl.map((_,s)=>d.lp[s]>=0?`<i class="t3p ${(d.lw||[]).includes(s)?'win':''}" style="left:${d.lp[s]}%;--c:${col(d,s)};--j:${s}"></i>`:'').join('')}</div><p>${d.res||''}</p></div>`:'';
+    const line=Array.isArray(d.lp)?`<div class="t3line" data-k="l${d.rd}"><div class="t3bar">${d.tg!=null?`<i class="t3tg" style="right:${d.tg}%"><b class="ltr">${d.tg}</b></i>`:''}${d.pl.map((_,s)=>d.lp[s]>=0?`<i class="t3p ${(d.lw||[]).includes(s)?'win':''}" style="right:${d.lp[s]}%;--c:${col(d,s)};--j:${s}"></i>`:'').join('')}</div><p>${d.res||''}</p></div>`:'';
     if(d.win!=null)return `<div class="gm gm-two3">${line}</div>`;
-    return `<div class="gm gm-two3"><div class="t3goal" data-k="g${d.rd}"><small>جولة ${d.rd+1} من ${d.rounds}، الهدف</small><b>${t3Txt(f)}</b></div>${line}${ctx.my?`<div class="t3card"><span class="big-num ltr">${v}</span></div><div class="t3rng"><input type="range" class="t3r" min="0" max="100" value="${v}" data-draft="t23" style="--v:${v}"><div class="t3tk"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div><button class="btn red wide" data-ga="go">ثبّت رقمي</button>`:''}
-    <div class="t3sc">${d.pl.map((_,s)=>`<span style="--c:${col(d,s)}"><b>${nm(d,s)}</b><em class="ltr">${d.pts[s]}</em></span>`).join('')}</div></div>`;},
+    return `<div class="gm gm-two3"><div class="t3goal" data-k="g${d.rd}"><small>جولة ${d.rd+1} من ${d.rounds}، الهدف</small><b>${t3Txt(f)}</b></div>${line}${ctx.my?`<div class="t3card"><span class="big-num ltr">${v}</span></div><div class="t3rng"><input type="range" class="t3r" min="0" max="100" value="${v}" data-draft="t23" style="--v:${v}"><div class="t3tk"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div><button class="btn red wide" data-ga="go">ثبّت رقمي</button>`:''}</div>`;},
   // the slider's filled part follows the thumb (core only updates the number)
   after(){const r=app.querySelector('.gm-two3 .t3r');if(r&&!r._t3){r._t3=1;r.addEventListener('input',()=>r.style.setProperty('--v',r.value));}},
   click(a,i,d,ctx){if(!ctx.my)return;const v=Math.max(0,Math.min(100,Math.round(+((S.draft||{}).t23??50))));if(S.draft)delete S.draft.t23;simulPick(d,ctx.v,v);},

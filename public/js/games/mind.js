@@ -35,7 +35,6 @@ GAMES.word={name:'خمّن الكلمة',cat:'mind',lbc:'#3E7C59',
   render(d,ctx){const end=d.win!=null,W=[...d.w],sol=d.sol!=null&&d.sol>=0;
     const hid=W.filter(ch=>!d.g.includes(ch)).length;
     let s=`<div class="gm gm-word"><p class="wcat"><span>التصنيف</span><b>${d.cat}</b><em class="wlen">${W.length===2?'حرفين':W.length<=10?W.length+' حروف':W.length+' حرف'}</em></p><div class="wordbox" style="--n:${W.length}">${W.map(ch=>{const o=d.g.includes(ch),sh=o||end;return `<div class="wl ${o?'on':sh?(sol?'sol':'miss'):''}" data-k="${sh?'o':''}">${sh?ch:''}</div>`;}).join('')}</div>
-    <div class="wpts">${d.pl.map((_,s)=>`<span class="${s===d.turn&&!end?'on':''}" style="--c:${col(d,s)}"><b>${nm(d,s)}</b><em class="ltr">${d.pts[s]}</em></span>`).join('')}</div>
     <div class="kb">${[...ALPHA].map((ch,i)=>{const u=d.g.includes(ch);return `<button class="key ${u?(d.w.includes(ch)?'hit':'miss'):''}" data-ga="k" data-i="${i}" ${ctx.my&&!u?'':'disabled'}>${ch}</button>`;}).join('')}</div>`;
     // solving: type the whole word. Right gives a point for every hidden letter plus 3 and ends the round, wrong costs 2 and the turn
     if(ctx.my&&!end&&hid>1)s+=`<div class="wsolve"><input class="field" data-draft="wsol" data-enter="sol" maxlength="16" value="${escH((S.draft||{}).wsol||'')}" placeholder="تعرف الكلمة؟ اكتبها" autocomplete="off" enterkeyhint="done"><button class="btn red" data-ga="sol">حلّها (+${hid+3})</button></div>`;
