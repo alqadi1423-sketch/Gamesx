@@ -425,7 +425,8 @@ function k2duBoutEnd(d){const took=d.ph==='take';let nd={...d};const all=d.tb.fl
   if(took){const hands=[...d.hands];hands[d.def]+=all.join('');nd.hands=hands;nd.last=`${nameTag(d,d.def)} أخذ ${all.length} ورقة`;}
   else nd.last=`${nameTag(d,d.def)} صدّ الهجوم كله`;
   nd.dc=(d.dc||0)+(took?0:all.length);nd.lt=d.tb;nd.tb=[];
-  nd=k2duRefill(nd,[...k2duThr(d),d.def]);
+  // refill: the attacker, the others round the table, the defender last (an empty hand too)
+  {const n=d.pl.length,ord=[d.att];for(let k=1;k<n;k++){const s=(d.def+k)%n;if(s!==d.att&&s!==d.def)ord.push(s);}nd=k2duRefill(nd,[...ord,d.def].filter(s=>d.out[s]!=='1'));}
   // out of the game: no cards and no stock
   let out=nd.out,fo=[...(d.fo||[])];if(!nd.dk)nd.pl.forEach((_,s)=>{if(out[s]!=='1'&&!nd.hands[s]){out=setAt(out,s,'1');fo.push(s);}});nd={...nd,out,fo};
   const al=aliveSeats(nd);if(al.length<=1){const fool=al.length?al[0]:-1;const ws=nd.pl.map((_,s)=>s).filter(s=>s!==fool);
