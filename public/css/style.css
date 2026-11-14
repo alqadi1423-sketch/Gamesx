@@ -1203,3 +1203,6 @@ html.lite .floatrx{will-change:auto}
 .status .sm.go{min-height:40px}
 /* a phone on its side has little height: the status card keeps one line so the board and its controls fit */
 @media (orientation:landscape) and (max-height:500px){.status .st-sub{display:none}}
+/* a long game name fits the top bar in a smaller size instead of being cut */
+.top h1.long{font-size:17px}
+.status .sm{min-height:36px}

@@ -146,10 +146,10 @@ function mTradePanel(d,s){const T=S.mtr;const others=aliveSeats(d).filter(x=>x!=
   <p class="lbl">الفلوس ${T.cash>0?`(تدفع له ${T.cash})`:T.cash<0?`(يدفع لك ${-T.cash})`:''}</p><div class="mbid"><button class="sm" data-ga="tcash" data-i="-100">−100</button><button class="sm" data-ga="tcash" data-i="-10">−10</button><b>${T.cash}</b><button class="sm" data-ga="tcash" data-i="10">+10</button><button class="sm" data-ga="tcash" data-i="100">+100</button></div>
   <p class="note">العقار المرهون ينتقل مرهون، واللي ياخذه يدفع 10٪ فايدة</p>
   <button class="btn red wide" data-ga="tsend">أرسل العرض</button></div>`;}
-GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
+GAMES.mono={name:'عقارات الحارة',cat:'board',lbc:'#C0392B',noTimer:false,
   // online the dice (and the cards they lead to) are drawn on the host's phone, so nobody picks their own throw
   net:{host:['roll']},redeal:d=>d,
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#CDE8D6"/><rect x="18" y="18" width="64" height="64" fill="#E8F4EC" stroke="#2D4763" stroke-width="1.5"/>${[0,1,2,3,4].map(k=>`<rect x="${18+k*12.8}" y="8" width="12.8" height="10" fill="${MGC[[4,4,5,5,6][k]]}" stroke="#2D4763" stroke-width="1"/><rect x="82" y="${18+k*12.8}" width="10" height="12.8" fill="${MGC[[6,6,7,7,7][k]]}" stroke="#2D4763" stroke-width="1"/>`).join('')}<rect x="22" y="40" width="56" height="20" rx="3" fill="#E5483F" transform="rotate(-20 50 50)"/><text x="50" y="55" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" transform="rotate(-20 50 50)">مونوبولي</text><circle cx="30" cy="72" r="5" fill="#4AB1E8"/><circle cx="42" cy="72" r="5" fill="#F0B429"/></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#CDE8D6"/><rect x="18" y="18" width="64" height="64" fill="#E8F4EC" stroke="#2D4763" stroke-width="1.5"/>${[0,1,2,3,4].map(k=>`<rect x="${18+k*12.8}" y="8" width="12.8" height="10" fill="${MGC[[4,4,5,5,6][k]]}" stroke="#2D4763" stroke-width="1"/><rect x="82" y="${18+k*12.8}" width="10" height="12.8" fill="${MGC[[6,6,7,7,7][k]]}" stroke="#2D4763" stroke-width="1"/>`).join('')}<rect x="22" y="40" width="56" height="20" rx="3" fill="#E5483F" transform="rotate(-20 50 50)"/><text x="50" y="55" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" transform="rotate(-20 50 50)">عقارات</text><circle cx="30" cy="72" r="5" fill="#4AB1E8"/><circle cx="42" cy="72" r="5" fill="#F0B429"/></svg>`,
   init:n=>({pos:Array(n).fill(0),cash:Array(n).fill(1500),jail:Array(n).fill(0),free:Array(n).fill(0),fr:{ch:-1,cc:-1},dk:mDecks(),auc:null,offer:null,rd:0,own:'.'.repeat(40),hs:'0'.repeat(40),mg:'0'.repeat(40),ph:'roll',dice:[0,0],rid:0,dbl:0,again:false,card:null,turns:0,mv:null,last:''}),
   points:d=>d.cash.map(c=>'💰'+c),
   simulNow:d=>d.ph==='auc',
@@ -164,7 +164,7 @@ GAMES.mono={name:'مونوبولي',cat:'board',lbc:'#C0392B',noTimer:false,
     let c='';
     if(S.mcell!=null)c=mDetail(d,S.mcell);
     else{const fresh=d.rid&&once('md'+d.gid+'_'+d.rid);
-      c=`<div class="mlogo">مونوبولي</div>`;
+      c=`<div class="mlogo">عقارات الحارة</div>`;
       if(d.card)c+=`<div class="mcard ${fresh?'in':''}">🃏 ${d.card}</div>`;
       const canR=d.win==null&&my&&d.ph==='roll';if(fresh)S.moDieAt=Date.now();
       if(d.ph!=='auc')c+=`<${canR?'button data-ga="roll" aria-label="ارمِ"':'div'} class="mdice ${canR?'can':''}">${(d.dice[0]?d.dice:[6,6]).map(x=>`<span class="dice ${fresh?'land':''}">${diceSVG(x)}</span>`).join('')}</${canR?'button':'div'}>`;

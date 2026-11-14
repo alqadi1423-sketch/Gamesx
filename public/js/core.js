@@ -462,7 +462,7 @@ function render(){
   noteHere();
 }
 function topBar(title,back,extra){
-  return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button></div>`;
+  return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1${String(title).replace(/<[^>]*>/g,'').length>15?' class="long"':''}>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button></div>`;
 }
 const CHEV='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const MODEI={
