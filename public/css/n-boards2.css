@@ -1,0 +1,135 @@
+/* ===== boards2: traditional board games (n-boards2.js). Wood boards, stone and ivory pieces, lines drawn in svg ===== */
+@keyframes b2gone{0%{opacity:.85;transform:none}100%{opacity:0;transform:scale(.5)}}
+@keyframes b2pop{0%{transform:scale(1)}45%{transform:scale(1.35)}100%{transform:none}}
+@keyframes b2in{0%{transform:scale(.4);opacity:0}100%{transform:none;opacity:1}}
+
+/* the point board */
+.b2bd{position:relative;width:min(100%,400px);margin:6px auto 2px;direction:ltr;border-radius:12px;
+ background:linear-gradient(135deg,#EBCB94,#DDB474 55%,#D2A764);box-shadow:0 0 0 2px #6E4520,0 0 0 7px #8E5E30,0 0 0 8px #5A3818,0 10px 0 5px rgba(0,0,0,.14),0 14px 24px 5px rgba(0,0,0,.16)}
+.b2bd>svg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.b2wd{fill:none;stroke:rgba(90,56,24,.25);stroke-width:.6}
+.b2ln{stroke:#5E3B1A;stroke-width:.85;fill:none;stroke-linecap:round}
+.b2pt{position:absolute;width:var(--pw);height:var(--ph);display:grid;place-items:center;padding:0;border-radius:50%;background:none;z-index:1}
+.b2pt.bd-fly{z-index:3}
+button.b2pt{cursor:pointer}
+.b2pt.to::after{content:'';position:absolute;width:36%;height:36%;border-radius:50%;background:rgba(40,25,8,.34);box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.b2pt.lm::before,.b2pt.lmf::before{content:'';position:absolute;inset:4%;border-radius:50%;box-shadow:0 0 0 2.5px rgba(240,180,41,.95)}
+.b2pt.lmf::before{inset:24%;box-shadow:none;background:rgba(240,180,41,.55)}
+/* pieces: a shaded stone with a lip; states add a ring through --rg */
+.b2s{position:relative;display:block;width:86%;height:86%;border-radius:50%;--rg:0 0 0 0 transparent;transition:transform var(--t1) var(--ease)}
+.b2s.s0{background:radial-gradient(circle at 36% 30%,#FFFFFF,#F1EADB 48%,#CDBD9E);box-shadow:var(--rg),inset 0 0 0 1px rgba(110,90,62,.5),0 2px 0 #9C8460,0 3px 4px rgba(50,25,0,.28)}
+.b2s.s1{background:radial-gradient(circle at 36% 30%,#6E839D,#2F4157 50%,#141C27);box-shadow:var(--rg),inset 0 0 0 1px rgba(0,0,0,.6),0 2px 0 #0A1017,0 3px 4px rgba(0,0,0,.3)}
+.b2s.red.s0{background:radial-gradient(circle at 36% 30%,#FF8A7E,#D8473C 52%,#9C2A22);box-shadow:var(--rg),inset 0 0 0 1px rgba(90,10,0,.5),0 2px 0 #7A1E18,0 3px 4px rgba(50,0,0,.3)}
+.b2s::after{content:'';position:absolute;inset:22%;border-radius:50%;box-shadow:0 0 0 1.2px rgba(110,90,62,.28)}
+.b2s.s1::after{box-shadow:0 0 0 1.2px rgba(255,255,255,.13)}
+.b2pt.mv .b2s{--rg:0 0 0 2.5px rgba(240,180,41,.95)}
+.b2pt.sel .b2s{--rg:0 0 0 3px #FFD84D;transform:scale(1.1) translateY(-2px)}
+.b2pt.cap .b2s{--rg:0 0 0 3px #E5534B}
+.b2pt.gone .b2s{opacity:.3;transform:scale(.85)}
+.b2pt.lmt .b2s{animation:bd-land var(--t2) var(--ease)}
+.b2pt.won .b2s{--rg:0 0 0 3px var(--gold);animation:bd-win .45s ease-in-out 2}
+.b2bd.my button.b2pt:active .b2s{transform:scale(.92)}
+.b2s.b2gh{opacity:0;animation:b2gone .4s ease-out;pointer-events:none}
+.b2s.inm{--rg:0 0 0 1.5px rgba(240,180,41,.55)}
+.b2hand{display:flex;justify-content:center;gap:22px;margin:10px 0 0}
+.b2hand span{display:flex;align-items:center;gap:6px;font-weight:800;opacity:.55;font-size:18px}
+.b2hand span.on{opacity:1}
+.b2hand .b2s{width:22px;height:22px}
+
+/* mancala: a carved board with deep pits and coloured seeds */
+.b2ow{width:min(100%,430px);margin:4px auto}
+.b2ow .owbd{display:flex;align-items:stretch;gap:6px;padding:10px 8px;border-radius:36px;direction:ltr;
+ background:linear-gradient(160deg,#C18A50,#A46C36 55%,#8E5A2A);box-shadow:inset 0 2px 0 rgba(255,255,255,.25),0 0 0 2px #5A3818,0 7px 0 #5A3818,0 12px 22px rgba(0,0,0,.22)}
+.b2ow .owrw{flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px 5px}
+.b2ow .owp{position:relative;aspect-ratio:1;padding:0;border-radius:50%;background:radial-gradient(circle at 50% 38%,#4E2C12,#6B3F1C 62%,#83532A);box-shadow:inset 0 4px 7px rgba(0,0,0,.5),0 1.5px 0 rgba(255,255,255,.28)}
+.b2ow .owp.can{box-shadow:inset 0 4px 7px rgba(0,0,0,.5),0 0 0 3px rgba(255,216,77,.95)}
+.b2ow .owp.lmf{box-shadow:inset 0 4px 7px rgba(0,0,0,.5),0 0 0 2.5px rgba(240,180,41,.6)}
+.b2ow .owp.cpt{box-shadow:inset 0 4px 7px rgba(0,0,0,.5),0 0 0 2.5px #E5534B}
+.b2ow .owp:not(:disabled):active{transform:scale(.94)}
+.b2ow .sd{position:absolute;width:21%;height:21%;margin:-10.5% 0 0 -10.5%;border-radius:50%;box-shadow:inset -1px -1.5px 0 rgba(0,0,0,.25),0 1px 1px rgba(0,0,0,.35)}
+.b2ow .sd.c0{background:#F3E8CC}.b2ow .sd.c1{background:#E7C46A}.b2ow .sd.c2{background:#C9DCEB}.b2ow .sd.c3{background:#E9A58C}
+.b2ow .owp b{position:absolute;bottom:-4px;right:-4px;min-width:19px;height:19px;padding:0 4px;border-radius:10px;background:#FBF4E4;color:#4A2C14;font-size:12.5px;line-height:19px;font-weight:900;box-shadow:0 1px 0 rgba(0,0,0,.3)}
+.b2ow .owp b.got{animation:b2pop .22s ease-out both;animation-delay:var(--dl,0ms);background:#FFE58A}
+.b2ow .owt{width:44px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#4E2C12,#6B3F1C 70%);box-shadow:inset 0 4px 8px rgba(0,0,0,.5);color:#FBEFD2}
+.b2ow .owt b{font-size:22px;font-weight:900;line-height:1}.b2ow .owt small{font-size:11px;opacity:.8}
+.b2dt{fill:#5E3B1A}
+
+/* seega: square board, the centre square crossed */
+.b2sg .b2ln{stroke-width:.7}
+.b2mid{stroke:#A0462E;stroke-width:1.6;stroke-linecap:round}
+.b2sg .b2s{width:80%;height:80%}
+/* fanorona: a long board */
+.b2bd.b2fn{width:min(100%,430px)}
+.b2fn .b2s{width:90%;height:90%}
+.b2fn .b2pt.vis::before{content:'';position:absolute;inset:34%;border-radius:50%;background:rgba(229,83,75,.55)}
+/* tablut: squares, the edge where the king escapes, the throne */
+.b2edge{fill:rgba(90,150,70,.16)}
+.b2thr{fill:rgba(160,110,40,.35)}
+.b2thx{stroke:rgba(120,70,20,.55);stroke-width:1;stroke-linecap:round}
+.b2tb .b2ln{stroke-width:.45;stroke:#7A522A}
+.b2tb .b2s{width:80%;height:80%}
+.b2s.kg{display:grid;place-items:center;--rg:0 0 0 2px #E8B83A}
+.b2s .b2cr{position:relative;z-index:1;width:72%;height:72%}
+.b2pt.mv .b2s.kg{--rg:0 0 0 2.5px rgba(240,180,41,.95)}
+/* amazons: a chequered board, queens, burnt arrow squares */
+.b2dk rect{fill:rgba(140,92,45,.42)}
+.b2az .b2pt{border-radius:0}
+.b2az .b2s.b2q{width:96%;height:96%;background:none!important;box-shadow:var(--rg)!important;border-radius:50%}
+.b2az .b2s.b2q::after{display:none}
+.b2az .b2q .chp{width:100%;height:100%}
+.b2ar{display:block;width:72%;height:72%;border-radius:22%;background:radial-gradient(circle at 40% 35%,#8C4A2C,#5A2A16 70%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),0 1.5px 0 rgba(0,0,0,.3)}
+.b2ar::after{content:'';display:block;width:100%;height:100%;background:linear-gradient(45deg,transparent 46%,rgba(255,220,180,.55) 46%,rgba(255,220,180,.55) 54%,transparent 54%)}
+.b2az .b2pt.arl .b2ar{box-shadow:0 0 0 2.5px rgba(240,180,41,.95);animation:b2in var(--t3) var(--ease)}
+.b2az .b2pt.shoot::after{background:rgba(229,83,75,.55)}
+.b2az .b2pt.lm::before{inset:2%;border-radius:12%}
+
+/* hex: pale hexagons, red and blue edges, glassy stones */
+.b2bd.b2hx{width:min(100%,420px);background:linear-gradient(135deg,#F4E6C8,#E9D3A8);box-shadow:0 0 0 2px #8E6A3A,0 8px 0 3px rgba(0,0,0,.12),0 12px 22px rgba(0,0,0,.14)}
+.b2hc polygon{fill:#F7EBD2;stroke:#B08A55;stroke-width:.55}
+.b2hr{stroke:#D8473C;stroke-width:3.2;stroke-linecap:round;fill:none}
+.b2hb{stroke:#2F7DB3;stroke-width:3.2;stroke-linecap:round;fill:none}
+.b2hx .b2s{width:84%;height:84%}
+.b2s.hx0{background:radial-gradient(circle at 36% 30%,#FF9A8E,#D8473C 55%,#9C2A22);box-shadow:var(--rg),inset 0 0 0 1px rgba(90,10,0,.45),0 1.5px 0 #7A1E18}
+.b2s.hx1{background:radial-gradient(circle at 36% 30%,#9AD0F2,#2F7DB3 55%,#1C4F75);box-shadow:var(--rg),inset 0 0 0 1px rgba(0,30,60,.45),0 1.5px 0 #163E5C}
+.b2s.hx0::after,.b2s.hx1::after{display:none}
+.b2hx button.b2pt:hover::after{content:'';position:absolute;inset:30%;border-radius:50%;background:rgba(60,40,10,.18)}
+.chside.hx0{background:#D8473C;color:#fff;box-shadow:none}.chside.hx1{background:#2F7DB3;color:#fff;box-shadow:none}
+/* go: a light kaya board, slate and shell stones, territory marks while counting */
+.b2bd.b2go{background:linear-gradient(135deg,#ECC987,#DFB46C 60%,#D6A95E)}
+.b2go .b2ln{stroke:#4A3214;stroke-width:.45}
+.b2go .b2dt{fill:#4A3214}
+.b2s.go{width:94%;height:94%}
+.b2s.go::after{display:none}
+.b2s.go.s1{background:radial-gradient(circle at 36% 30%,#5C636D,#22272E 55%,#0B0D10);box-shadow:var(--rg),0 1.5px 1.5px rgba(0,0,0,.45)}
+.b2s.go.s0{background:radial-gradient(circle at 36% 30%,#FFFFFF,#F2F0EA 55%,#C9C4B6);box-shadow:var(--rg),0 1.5px 1.5px rgba(0,0,0,.35)}
+.b2go .b2pt.lm::before{inset:34%;box-shadow:none;background:none;border-radius:50%;border:2px solid #E5534B;z-index:2}
+.b2go .b2pt.ko::after{content:'';position:absolute;inset:32%;border:1.5px solid rgba(229,83,75,.8)}
+.b2s.go.dead{opacity:.4;transform:scale(.8)}
+.b2tr{position:absolute;width:32%;height:32%;border-radius:2px;z-index:2}
+.b2tr.t0{background:#1C2026;box-shadow:0 0 0 1px rgba(255,255,255,.4)}.b2tr.t1{background:#FBFAF5;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+
+/* xiangqi: lines, palaces and the river; round wooden pieces with the red or black character */
+.b2bd.b2xq{background:linear-gradient(135deg,#F0D29C,#E2B978 60%,#D9AE6A)}
+.b2xq .b2ln{stroke:#6A3F1A;stroke-width:.5}
+.b2rv{font-size:4.6px;fill:rgba(106,63,26,.75);text-anchor:middle;font-weight:800}
+.b2s.xq{width:94%;height:94%;display:grid;place-items:center;background:radial-gradient(circle at 40% 32%,#FFF8EA,#F3E3C2 60%,#DCC394);box-shadow:var(--rg),inset 0 0 0 1.5px currentColor,inset 0 0 0 3px #F6EAD0,inset 0 0 0 4px currentColor,0 2px 0 #A88A5A,0 3px 4px rgba(60,30,0,.25)}
+.b2s.xq::after{display:none}
+.b2s.xq.s0{color:#B0342B}.b2s.xq.s1{color:#22303F}
+.b2s.xq b{font-size:clamp(13px,4.6vw,21px);line-height:1;font-weight:700;font-family:'Noto Serif SC','Songti SC','SimSun',serif}
+.b2xq .b2pt.kc .b2s{--rg:0 0 0 3px #E5534B}
+.b2xq .b2pt.cap .b2s{--rg:0 0 0 3px #E5534B}
+.b2xql{font-size:12.5px;line-height:1.6;margin:6px 4px 0}
+/* star halma: a wooden star, tinted points, glass marbles in the players' colours */
+.b2bd.b2hm{width:min(100%,380px);background:none;box-shadow:none}
+.b2hst{fill:#E2BE84;stroke:#8E5E30;stroke-width:1.2;stroke-linejoin:round}
+.b2hh circle{fill:rgba(80,48,18,.5)}
+.b2s.hm{width:100%;height:100%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.9) 0,rgba(255,255,255,.25) 22%,rgba(255,255,255,0) 45%),var(--c);box-shadow:var(--rg),inset 0 -3px 4px rgba(0,0,0,.28),0 1.5px 1.5px rgba(0,0,0,.35)}
+.b2s.hm::after{display:none}
+.b2hm .b2pt.to::after{width:50%;height:50%}
+.b2hm .b2pt.lmf::before{inset:30%}
+.b2hmc{display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--c);vertical-align:-3px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+/* mahbusa: the backgammon board in walnut, a lock on pinned checkers */
+.bd-tv.b2mb .tvk.pnd circle:nth-child(2){stroke:#E0A42A;stroke-width:1.6}
+.bd-tv.b2mb .tvk.fresh{transform-box:fill-box;transform-origin:center;animation:b2pop .3s ease-out}
+.chside.mbr{background:#7A2B26;color:#fff;box-shadow:none}
+.b2bd+.note,.b2bd+p.note{margin-top:18px}

@@ -198,15 +198,15 @@ function dtPlan(r){if(r===50)return 80;if(r<=40&&r%2===0)return DT_N.indexOf(r/2
   if(r<=60){for(const dd of [40,32,36,24,16]){const x=r-dd;if(x>=1&&x<=20)return DT_N.indexOf(x)*4+2;}}
   if(r<=100&&r-60>=2&&r-60<=40&&(r-60)%2===0)return 1;if(r<=100&&r-57>=2&&r-57<=40&&(r-57)%2===0)return DT_N.indexOf(19)*4+1;
   return 1;}
-let DT_SVG=null;
-function dtBoard(){if(DT_SVG)return DT_SVG;const P=(r0,r1,a0,a1)=>{const c=Math.cos,s=Math.sin,f=x=>x.toFixed(1);a0*=Math.PI/180;a1*=Math.PI/180;
+let R2_DT_SVG=null;
+function r2DtBoard(){if(R2_DT_SVG)return R2_DT_SVG;const P=(r0,r1,a0,a1)=>{const c=Math.cos,s=Math.sin,f=x=>x.toFixed(1);a0*=Math.PI/180;a1*=Math.PI/180;
     return `M${f(r0*c(a0))} ${f(r0*s(a0))}L${f(r1*c(a0))} ${f(r1*s(a0))}A${r1} ${r1} 0 0 1 ${f(r1*c(a1))} ${f(r1*s(a1))}L${f(r0*c(a1))} ${f(r0*s(a1))}A${r0} ${r0} 0 0 0 ${f(r0*c(a0))} ${f(r0*s(a0))}Z`;};
   const RG=[[15.9,99],[99,107],[107,162],[162,170]];let s='';
   for(let k=0;k<20;k++){const a0=-99+18*k,a1=a0+18,dk=k%2===0;
     RG.forEach(([r0,r1],g)=>{const c=g%2?(dk?'#D64541':'#2E9A62'):(dk?'#1E2328':'#F3E6C8');s+=`<path class="dt-s" d="${P(r0,r1,a0,a1)}" fill="${c}" data-ga="aim" data-i="${k*4+g}"/>`;});
     const t=(-90+18*k)*Math.PI/180;s+=`<text x="${(188*Math.cos(t)).toFixed(1)}" y="${(188*Math.sin(t)+6).toFixed(1)}" text-anchor="middle" class="dt-n">${DT_N[k]}</text>`;}
   s+=`<circle r="15.9" fill="#2E9A62" data-ga="aim" data-i="80" class="dt-s"/><circle r="6.35" fill="#D64541" data-ga="aim" data-i="80" class="dt-s"/>`;
-  return DT_SVG=s;}
+  return R2_DT_SVG=s;}
 GAMES.r_darts={name:'السهام',cat:'sport',lbc:'#8E3B2F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3B2A22"/><circle cx="50" cy="52" r="38" fill="#1E2328"/>${[...Array(20)].map((_,k)=>{const a=(k*18-99)*Math.PI/180,b=a+18*Math.PI/180,c=k%2?'#F3E6C8':'#1E2328',r=33;return `<path d="M50 52L${(50+r*Math.cos(a)).toFixed(1)} ${(52+r*Math.sin(a)).toFixed(1)}A${r} ${r} 0 0 1 ${(50+r*Math.cos(b)).toFixed(1)} ${(52+r*Math.sin(b)).toFixed(1)}Z" fill="${c}"/>`;}).join('')}<circle cx="50" cy="52" r="33" fill="none" stroke="#D64541" stroke-width="4" stroke-dasharray="10.4 10.4"/><circle cx="50" cy="52" r="20" fill="none" stroke="#2E9A62" stroke-width="3.5" stroke-dasharray="6.3 6.3"/><circle cx="50" cy="52" r="5" fill="#D64541"/><path d="M53 49L82 16" stroke="#F0B429" stroke-width="3" stroke-linecap="round"/><path d="M80 13l9-2-3 8z" fill="#4AB1E8"/><path d="M78 19l10-1-6 7z" fill="#EC6158"/></svg>`,
   init:n=>({rem:Array(n).fill(301),ts:301,dar:[],rn:0,RN:15,sid:0,last:''}),
@@ -218,7 +218,7 @@ GAMES.r_darts={name:'السهام',cat:'sport',lbc:'#8E3B2F',
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,a=r2Dr('da',0,80,1),key=d.gid+':'+(d.sid||0),sv=r2Stopped(key);
     const [ax,ay]=dtAimPt(a),r=d.rem[t],plan=r<=170?dtPlan(r):null;
     let s=`<div class="r2 r2dt"><div class="dt-top"><div class="dt-big" style="--c:${col(d,t)}"><small>باقي ${nm(d,t)}</small><b>${r}</b></div><div class="dt-turn">${[0,1,2].map(k=>{const x=d.dar[k];return `<span class="${x?'on':''}">${x?x[3]:'—'}</span>`;}).join('')}</div></div>`;
-    s+=`<svg class="dt-svg ${my?'can':''}" viewBox="-205 -205 410 410" data-k="dts"><circle r="204" fill="#3B2A22"/><circle r="200" fill="#1E2328"/>${dtBoard()}
+    s+=`<svg class="dt-svg ${my?'can':''}" viewBox="-205 -205 410 410" data-k="dts"><circle r="204" fill="#3B2A22"/><circle r="200" fill="#1E2328"/>${r2DtBoard()}
       ${d.dar.map((x,k)=>`<g class="dt-dart ${k===d.dar.length-1?'last':''}" data-k="dd${d.sid}-${k}" style="transform:translate(${x[0]}px,${x[1]}px)"><circle r="5" fill="#fff" stroke="#111" stroke-width="2"/><path d="M0 0l22-22" stroke="#F0B429" stroke-width="4"/><path d="M18-26l12-4-4 12z" fill="${col(d,t)}"/></g>`).join('')}
       ${my?`<g class="dt-aim" style="transform:translate(${ax.toFixed(1)}px,${ay.toFixed(1)}px)"><circle r="13" fill="none" stroke="#FFD84D" stroke-width="3"/><path d="M-20 0h12M8 0h12M0-20v12M0 8v12" stroke="#FFD84D" stroke-width="3"/></g>`:''}</svg>`;
     if(my){const m=r2mPar(key,1150);
