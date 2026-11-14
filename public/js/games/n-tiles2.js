@@ -256,7 +256,7 @@ GAMES.k_fives={name:'الدومينو الخمسات',cat:'cards',lbc:'#6B4F3A',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7E5D44"/><circle cx="50" cy="50" r="40" fill="#2E9A62"/><g transform="translate(50 50)">${[0,90].map(r=>`<g transform="rotate(${r})"><rect x="-32" y="-8" width="64" height="16" rx="4" fill="#FFFDF7" stroke="#2D4763" stroke-width="1.5"/></g>`).join('')}<rect x="-9" y="-9" width="18" height="18" rx="3" fill="#F0B429"/></g><text x="50" y="57" font-size="18" font-weight="900" text-anchor="middle" fill="#5A3B00">5</text>${[[25,50],[75,50],[50,25],[50,75]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3" fill="#2D4763"/>`).join('')}</svg>`,
   init:n=>({pairs:n===4,hands:Array(n).fill(''),bone:'',L:'',U:'',D:'',si:-1,ps:0,lp:null,dt:'',sc:[],lead:-1,ph:'play',sum:null,last:''}),
   start:d=>{const x={...d,pairs:!d.tm&&d.pl.length===4};return k2fDeal({...x,sc:k2fSides(x).map(()=>0)});},
-  mask:(d,v)=>d.win!=null||d.ph==='sum'?d:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),bone:k2Hide(d.bone),dt:d.turn===v?d.dt:''},
+  mask:(d,v)=>d.win!=null?d:d.ph==='sum'?{...d,bone:k2Hide(d.bone)}:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),bone:k2Hide(d.bone),dt:d.turn===v?d.dt:''},
   redeal:d=>d.win!=null?d:{...k2fDeal(d),last:'انعادت الجولة من جديد'},
   net:{local:['tile']},
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
@@ -341,7 +341,7 @@ function k2tRow(d,k,v,can){const A=cardsOf(k==='m'?d.mx:d.tr[k]),open=k==='m'||d
 GAMES.k_train={name:'قطار الدومينو',cat:'cards',lbc:'#8E3B2E',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#A9483A"/><g fill="#FFFDF7" stroke="#2D4763" stroke-width="1.5">${[0,72,144,216,288].map(r=>`<rect x="-6" y="-44" width="12" height="24" rx="3" transform="translate(50 50) rotate(${r})"/>`).join('')}</g><g>${[0,72,144,216,288].map((r,i)=>`<circle cx="0" cy="-38" r="2.2" fill="${K2PC[8+i%5]}" transform="translate(50 50) rotate(${r})"/><circle cx="0" cy="-26" r="2.2" fill="${K2PC[8+(i+2)%5]}" transform="translate(50 50) rotate(${r})"/>`).join('')}</g><circle cx="50" cy="50" r="14" fill="#F0B429" stroke="#9A6A00" stroke-width="2"/><path d="M42 54h16v-6h-4v-5h-5v5h-7z" fill="#5A3B00"/><circle cx="45" cy="56" r="2" fill="#5A3B00"/><circle cx="55" cy="56" r="2" fill="#5A3B00"/></svg>`,
   init:n=>({dl:0,rd:0,nr:4,eng:12,hands:Array(n).fill(''),bone:'',tr:Array(n).fill(''),mx:'',mk:'0'.repeat(n),dbl:null,ps:0,drew:0,dt:'',lp:null,sc:Array(n).fill(0),ph:'opt',sum:null,last:''}),
-  mask:(d,v)=>d.win!=null||d.ph==='sum'?d:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),bone:k2Hide(d.bone),dt:d.turn===v?d.dt:''},
+  mask:(d,v)=>d.win!=null?d:d.ph==='sum'?{...d,bone:k2Hide(d.bone)}:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),bone:k2Hide(d.bone),dt:d.turn===v?d.dt:''},
   redeal:d=>d.win!=null||d.ph==='opt'?d:{...k2tDeal(d),last:'انعادت الجولة من جديد'},
   net:{local:['tile']},
   viewer:d=>d.win!=null||d.ph==='opt'?null:d.turn,coverMsg:d=>d.last||'',
@@ -540,7 +540,7 @@ GAMES.k_gin={name:'جن رمي',cat:'cards',lbc:'#2B5E8C',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2F6CA3"/><circle cx="50" cy="50" r="40" fill="#3A80BE"/>${[0,1,2].map(k=>`<g transform="translate(${18+k*13} ${24+k*3}) rotate(${-10+k*10})"><rect width="28" height="40" rx="4" fill="#fff" stroke="#DCE3EC"/><text x="8" y="16" font-size="13" font-weight="900" fill="#D43C33">${7+k}</text><path d="M14 22c-3 3.5-5 5-5 7.2a2.6 2.6 0 0 0 5 .8 2.6 2.6 0 0 0 5-.8c0-2.2-2-3.7-5-7.2z" fill="#D43C33"/></g>`).join('')}<rect x="20" y="72" width="60" height="14" rx="7" fill="#F0B429"/><text x="50" y="83" font-size="11" font-weight="900" text-anchor="middle" fill="#2D4763">GIN</text></svg>`,
   init:n=>({pr:[0,1],q:[...Array(n).keys()].slice(2),dl:0,hands:Array(n).fill(''),dk:'',disc:'',ph:'up1',sc:Array(n).fill(0),box:Array(n).fill(0),tk:'',dn:'',lk:null,last:''}),
   start:d=>{const al=aliveSeats(d);return k2gDeal({...d,pr:[al[0],al[1]],q:al.slice(2),dl:al[1]});},
-  mask:(d,v)=>d.win!=null||d.ph==='sum'?d:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),dk:k2Hide(d.dk),dn:d.turn===v?d.dn:''},
+  mask:(d,v)=>d.win!=null?d:d.ph==='sum'?{...d,dk:k2Hide(d.dk)}:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),dk:k2Hide(d.dk),dn:d.turn===v?d.dn:''},
   redeal:d=>d.win!=null?d:{...k2gDeal(d),last:'انعادت الجولة من جديد'},
   net:{local:['card']},
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
@@ -609,7 +609,7 @@ const k2gfShown=(d,s)=>{const cs=cardsOf(d.hands[s]);let t=0;for(let k=0;k<3;k++
 function k2gfDeal(d){const n=d.pl.length,dk=shuffle(deck52(n>4?2:1)),hands=Array(n).fill('');for(let s=0;s<n;s++)if(d.out[s]!=='1')hands[s]=dk.splice(0,6).join('');
   const disc=dk.shift(),s0=nextSeat(d,(d.dl+d.ho)%n),st=d.out[s0]==='1'?nextSeat(d,s0):s0;return {...d,hands,up:Array(n).fill('000000'),dk:dk.join(''),disc,dc:'',fd:0,ph:'flip',turn:st,st0:st,lm:null,sum:null};}
 function k2gfAfter(d,s){if(d.up[s]==='111111'){const rs=d.pl.map((_,k)=>d.out[k]==='1'?0:k2gfScore(cardsOf(d.hands[k])));const sc=d.sc.map((x,k)=>x+rs[k]);
-    const nd={...d,sc,rs,ph:'sum',sum:{s},up:d.up.map(()=>'111111'),last:`${nameTag(d,s)} كشف كل أوراقه`};if(d.ho+1>=d.nh)return k2Win(nd,k2Best(nd,sc,false));return nd;}
+    const nd={...d,sc,rs,dc:'',fd:0,ph:'sum',sum:{s},up:d.up.map(()=>'111111'),last:`${nameTag(d,s)} كشف كل أوراقه`};if(d.ho+1>=d.nh)return k2Win(nd,k2Best(nd,sc,false));return nd;}
   return {...d,turn:nextSeat(d,s),dc:'',fd:0};}
 function k2gfPut(d,p){const s=d.turn,cs=cardsOf(d.hands[s]),old=cs[p];cs[p]=d.dc;const hands=[...d.hands];hands[s]=cs.join('');
   const nd={...d,hands,up:d.up.map((u,k)=>k===s?setAt(u,p,'1'):u),disc:d.disc+old,lm:{s,p},last:`${nameTag(d,s)} حط ${k2Lab(d.dc)} ورمى ${k2Lab(old)}`};return k2gfAfter(nd,s);}
@@ -625,7 +625,7 @@ function k2gfGrid(d,s,can,mini){const cs=cardsOf(d.hands[s]),u=d.up[s],lm=d.lm&&
 GAMES.k_golf={name:'غولف الورق',cat:'cards',lbc:'#2E7D4F',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3C9A5F"/><path d="M0 74q50-20 100 0v26H0z" fill="#2E7D4F"/><ellipse cx="66" cy="78" rx="10" ry="3.5" fill="#1C4D31"/><path d="M66 78V30" stroke="#fff" stroke-width="2.5"/><path d="M66 30l18 7-18 7z" fill="#EC6158"/>${[0,1,2].map(k=>`<rect x="${10+k*14}" y="${30+(k%2)*4}" width="12" height="17" rx="2" fill="#fff" stroke="#DCE3EC"/><rect x="${10+k*14}" y="${50+(k%2)*4}" width="12" height="17" rx="2" fill="#2D4763" stroke="#fff" stroke-width="1"/>`).join('')}<circle cx="44" cy="80" r="4" fill="#fff"/></svg>`,
   init:n=>({dl:0,ho:0,nh:9,hands:Array(n).fill(''),up:Array(n).fill('000000'),dk:'',disc:'',dc:'',fd:0,sc:Array(n).fill(0),rs:null,ph:'opt',st0:0,lm:null,sum:null,last:''}),
-  mask:(d,v)=>d.win!=null||d.ph==='sum'?d:{...d,hands:d.hands.map((h,s)=>cardsOf(h).map((c,p)=>d.up[s][p]==='1'?c:'??').join('')),dk:k2Hide(d.dk),dc:d.turn===v||d.fd?d.dc:k2Hide(d.dc)},
+  mask:(d,v)=>d.win!=null?d:d.ph==='sum'?{...d,dk:k2Hide(d.dk)}:{...d,hands:d.hands.map((h,s)=>cardsOf(h).map((c,p)=>d.up[s][p]==='1'?c:'??').join('')),dk:k2Hide(d.dk),dc:d.turn===v||d.fd?d.dc:k2Hide(d.dc)},
   redeal:d=>d.win!=null||d.ph==='opt'?d:{...k2gfDeal(d),last:'انعادت الجولة من جديد'},
   viewer:d=>d.win!=null||d.ph==='opt'?null:d.turn,coverMsg:d=>d.last||'',
   points:d=>d.sc.slice(),
