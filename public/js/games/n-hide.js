@@ -212,7 +212,7 @@ function hdBadgeAt(p){if(!HD_BADGE){const box=(q)=>{const t=q===16?'البيت':
     const ok=C.find(([bx,by])=>{const b=[bx-23,by-11,bx+23,by+11];return !L.some(l=>hit(l,b))&&!taken.some(t=>hit(t,b));})||C[0];HD_BADGE[q]=ok;taken.push([ok[0]-23,ok[1]-11,ok[0]+23,ok[1]+11]);}}
   return HD_BADGE[p];}
 function hdHintBadge(x,y,c){const m={1:['حار','#E5484D'],2:['دافي','#F28C38'],3:['بارد','#3D8FD1'],[-2]:['أبو سعد','#8A5A2B']}[c];if(!m)return '';
-  return `<g class="hd-hb" transform="translate(${x} ${y})"><rect x="-22" y="-10" width="44" height="20" rx="10" fill="${m[1]}" stroke="#fff" stroke-width="2"/><text y="4.6" font-size="12.5">${m[0]}</text></g>`;}
+  const w=c===-2?64:44;return `<g class="hd-hb" transform="translate(${x} ${y})"><rect x="${-w/2}" y="-10" width="${w}" height="20" rx="10" fill="${m[1]}" stroke="#fff" stroke-width="2"/><text y="4.6" font-size="12.5">${m[0]}</text></g>`;}
 // one character, positioned with a CSS transform so it can walk (KH.walk) along the footpaths
 const hdCh=(k,node,x,y,inner,o={})=>`<g class="kh-ch ${o.cls||''}" data-k="${k}" data-n="${node}"${o.from!=null?` data-f="${o.from}"`:''} data-ox="${KH.f(x-HDP[node][0])}" data-oy="${KH.f(y-HDP[node][1])}" style="transform:translate(${KH.f(x)}px,${KH.f(y)}px)">${inner}</g>`;
 const BANTER={found:['ياخي لقيتني!','حظي زفت!','كان بغيت أركض!'],safe:['أمان! أمان!','وصلت البيت!','ما لحقتني!'],hot:['قرّب منا… اسكت!','لا تتنفس!','وش ذا القرب!'],cold:['بعيد عنا، ارتاح','هو ضايع!','ما يدري وينّا'],guard:['ما أحد ركض؟','حارس البيت يطالع…'],bark:['اششش يا الكلب!','الكلب بيفضحنا!'],meow:['القطوة فضحتنا!','بس يا قطوة!'],steps:['سمعت خطوات!','فيه أحد يتحرك…'],grocer:['أبو سعد ستر عليه!','أبو سعد: ما عندي أحد'],torch:['نوّر الكشاف!','وش هالضو!']};
