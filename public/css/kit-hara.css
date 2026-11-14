@@ -1,0 +1,14 @@
+/* «عدّة الحارة» (js/kit-hara.js): shared pieces for the real-life street games. Transform/opacity only, finite. */
+.kh{--kh-night:#16223A;--kh-ink:#F4F6FA;--kh-pill:rgba(12,19,33,.9);--kh-gold:#F0B429}
+.kh-banner,.kh-card{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:16px;font-weight:800;line-height:1.25;box-shadow:0 3px 0 rgba(0,0,0,.25);animation:kh-in .32s var(--spring,cubic-bezier(.34,1.56,.64,1)) both}
+.kh-banner{background:#2D4763;color:#fff;font-size:15px}
+.kh-banner>i,.kh-card>i{font-style:normal;font-size:20px;flex:none;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.14)}
+.kh-card{background:#FFF4D6;color:#17233A;font-size:14px;box-shadow:0 3px 0 rgba(0,0,0,.28),0 0 0 2px #17233A}
+.kh-card>i{background:#F0B429}
+.kh-card span{min-width:0}
+.kh-card b{display:block;font-size:14.5px}
+.kh-card small{display:block;font-size:12.5px;font-weight:600;color:#5F7590}
+@keyframes kh-in{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:none}}
+.kh-ch{will-change:transform}
+html.lite .kh-banner,html.lite .kh-card{animation:none}
+@media (prefers-reduced-motion:reduce){.kh-banner,.kh-card{animation:none}}
