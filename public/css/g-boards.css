@@ -267,3 +267,21 @@ svg.bd-tv{border-radius:12px;box-shadow:0 6px 0 #3E220F,0 12px 24px rgba(0,0,0,.
 .bd-tr.radar .sand:not(:disabled){box-shadow:inset 0 0 0 2px #2F80ED}
 .bd-tr .sand.sy{box-shadow:inset 0 0 0 2px rgba(46,160,90,.85)}
 .bd-tr .sand.sn{opacity:.55}
+/* four in a row, pulling from below: the pull buttons under the columns, and the pulled column sliding down one hole */
+.c4pull{display:grid;padding:4px 8px 0;margin-top:-2px}
+.c4pull .c4p{aspect-ratio:1.4;border-radius:0 0 12px 12px;background:var(--c);color:#fff;font-weight:900;font-size:14px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22);padding:0;transition:transform var(--t1)}
+.c4pull .c4p:active{transform:translateY(2px)}
+.bd-c4 .dk.pp{animation:c4-slide .3s cubic-bezier(.4,0,.6,1) both}
+@keyframes c4-slide{0%{transform:translateY(-112%)}80%{transform:translateY(4%)}100%{transform:none}}
+/* five in a row with captures: each player's taken pairs, and the stones just taken fading off the board */
+.gmcap{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;margin:0 auto 8px;font-weight:900;font-size:14px;letter-spacing:1px}
+.gmcap span{display:inline-flex;align-items:center;gap:4px;color:var(--c)}
+.gmcap i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.gmcap small{color:var(--mut);font-size:13px}
+.bd-gm .st.gone{animation:bd-gone .42s ease-in both}
+/* colour war: the dots a bursting cell throws to its neighbours, and (chain reaction) a cell one dot from bursting */
+.bd-cw .cwo{position:absolute;inset:0;pointer-events:none;opacity:0;animation:cw-fly .38s cubic-bezier(.3,.7,.4,1) both}
+.bd-cw .cwo::after{content:'';position:absolute;left:50%;top:50%;width:22%;height:22%;margin:-11% 0 0 -11%;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff}
+@keyframes cw-fly{0%{transform:none;opacity:1}85%{opacity:1}100%{transform:translate(var(--x),var(--y));opacity:0}}
+.bd-cw.cr .cc.hot{box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),inset 0 -3px 0 rgba(0,0,0,.1)}
+.bd-cw.cr .cc.hot.can{box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),0 0 0 2.5px rgba(255,216,77,.9)}

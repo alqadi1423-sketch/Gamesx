@@ -72,14 +72,16 @@ GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout
 };
 
 /* ---------- higher or lower ---------- */
+const hiloSw=d=>d.win==null&&d.sw?d.sw[d.turn]||0:0;
 const hiloLeft=d=>{const a=deck52(d.pl.length>4?2:1);for(const c of cardsOf(d.dk.slice(0,d.p*2+2)))a.splice(a.indexOf(c),1);return a;};
 GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4F78B5"/><rect x="18" y="20" width="36" height="52" rx="6" fill="#fff" transform="rotate(-8 36 46)"/><rect x="44" y="24" width="36" height="52" rx="6" fill="#fff" transform="rotate(8 62 50)"/><text x="60" y="58" font-size="22" font-weight="800" fill="#D43C33" text-anchor="middle">K</text><path d="M28 34l6-8 6 8M28 58l6 8 6-8" stroke="#2D4763" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`,
   /* push your luck: keep guessing to build a streak, bank it whenever you like, a wrong guess (or the same card) loses it.
      dk holds only the cards turned over so far (the current one last): the next card is drawn from the rest when it is turned */
-  init:n=>{const a=deck52(n>4?2:1);return {dk:a[rnd(a.length)],p:0,pts:Array(n).fill(0),stk:0,last:'',goal:12};},
+  // sw: swaps each player has left: turn a fresh card over the current one without guessing (a middle card is a bad bet)
+  init:n=>{const a=deck52(n>4?2:1);return {dk:a[rnd(a.length)],p:0,pts:Array(n).fill(0),stk:0,last:'',goal:12,sw:Array(n).fill(2)};},
   // online the next card is turned on the host's phone, so no player can pick it
-  net:{host:['hi','lo','bank']},
+  net:{host:['hi','lo','bank','sw']},
   points:d=>d.pts,
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>أول واحد يوصل ${d.goal} يفوز</small>`,
   winExtra:d=>d.last,
@@ -88,14 +90,15 @@ GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
     return `<div class="hilo"><div class="hl-cur">${prev.length?`<div class="hl-prev">${prev.map(x=>cardHTML(x)).join('')}</div>`:''}<span class="hl-top" data-k="h${d.p}">${cardHTML(c,true)}</span></div><div class="hl-next">${cardHTML('??',true)}<small>باقي ${hiloLeft(d).length}</small></div></div>
       <div class="hstreak ${d.stk?'on':''}"><small>السلسلة</small><b data-k="s${d.stk}">${d.stk} 🔥</b><span class="hs-goal">${d.win==null?`${escH(d.pts[d.turn])} + ${d.stk} من ${d.goal}`:''}</span></div>
       <div class="acts"><button class="btn blue" data-ga="hi" ${my?'':'disabled'}>أعلى ⬆</button><button class="btn red" data-ga="lo" ${my?'':'disabled'}>أقل ⬇</button></div>
-      ${my&&d.stk?`<div class="acts"><button class="btn green" data-ga="bank">💰 ثبّت ${d.stk} نقاط</button></div>`:''}`;},
+      ${my&&(d.stk||hiloSw(d))?`<div class="acts">${d.stk?`<button class="btn green" data-ga="bank">💰 ثبّت ${d.stk} نقاط</button>`:''}${hiloSw(d)?`<button class="btn navy" data-ga="sw">🔄 بدّل الورقة <small>(باقي ${hiloSw(d)})</small></button>`:''}</div>`:''}`;},
   click(a,i,d,ctx){
     if(!ctx.my||d.win!=null)return;const t=d.turn;
     if(a==='bank'){if(!d.stk)return;const pts=[...d.pts];pts[t]+=d.stk;act({...d,pts,stk:0,win:pts[t]>=d.goal?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} ثبّت ${d.stk} نقاط 💰`});return;}
-    if(a!=='hi'&&a!=='lo')return;
+    if(a!=='hi'&&a!=='lo'&&a!=='sw')return;if(a==='sw'&&!hiloSw(d))return;
     // every card was turned: a fresh deck under the current card
     let dk=d.dk,p=d.p,left=hiloLeft(d);if(!left.length){dk=dk.slice(p*2,p*2+2);p=0;left=hiloLeft({...d,dk,p});}
-    const c=dk.slice(p*2,p*2+2),nx=left[rnd(left.length)];const ok=a==='hi'?rv(nx)>rv(c):rv(nx)<rv(c);const shown=`${nx[0]==='T'?'10':nx[0]}${SUITCH[nx[1]]}`;
+    const c=dk.slice(p*2,p*2+2),nx=left[rnd(left.length)];
+    if(a==='sw'){const sw=[...d.sw];sw[t]--;act({...d,dk:dk.slice(0,p*2+2)+nx,p:p+1,sw,last:`${nm(d,t)} بدّل الورقة 🔄`});return;}const ok=a==='hi'?rv(nx)>rv(c):rv(nx)<rv(c);const shown=`${nx[0]==='T'?'10':nx[0]}${SUITCH[nx[1]]}`;
     dk=dk.slice(0,p*2+2)+nx;
     if(!ok){act({...d,dk,p:p+1,stk:0,turn:nextSeat(d,t),last:`${nm(d,t)} قال ${a==='hi'?'أعلى':'أقل'} وطلعت ${shown}، خطأ ✗${d.stk?` وضاعت سلسلة ${d.stk}`:''}`});return;}
     const stk=d.stk+1;const pts=[...d.pts];
@@ -105,7 +108,7 @@ GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
   onTimeout:d=>{const pts=[...d.pts];pts[d.turn]+=d.stk;return {...d,pts,stk:0,win:pts[d.turn]>=d.goal?d.turn:null,turn:nextSeat(d,d.turn)};}
 };
 
-/* ---------- blackjack: chips and bets, five rounds; naturals pay 3 to 2, double, split, dealer peeks and stands on 17 ---------- */
+/* ---------- blackjack: chips and bets, five rounds; naturals pay 3 to 2, double, split, surrender, dealer peeks and stands on 17 ---------- */
 const bjVal=h=>{let s=0,a=0;for(const c of cardsOf(h)){const r=rv(c);s+=r>10?10:r===1?11:r;if(r===1)a++;}while(s>21&&a){s-=10;a--;}return s;};
 const bjNat=(h,split)=>!split&&h.length===4&&bjVal(h)===21;
 const BJR=5,BJ0=1000;
@@ -129,10 +132,10 @@ function bjDeal(d){let dk=deck52(d.pl.length>4?2:1).join('');const take=()=>{con
 function bjNextSeat(d,from){for(let s=from+1;s<d.pl.length;s++){if(d.out[s]==='1')continue;if((d.hs[s]||[]).some(h=>!h.st))return s;}return -1;}
 function bjSettle(d){let dk=d.dk,dl=d.dl;const take=h=>{const [c,r]=bjTake(dk,h?dl:null,h);dk=r;return c;};
   if(dl.length===2)dl+=take(1);
-  const live=d.hs.some(hs=>hs.some(h=>bjVal(h.c)<=21&&!bjNat(h.c,h.sp)));
+  const live=d.hs.some(hs=>hs.some(h=>!h.sur&&bjVal(h.c)<=21&&!bjNat(h.c,h.sp)));
   if(!d.peek&&live)while(bjVal(dl)<17){const c=take(0);if(!c)break;dl+=c;}
   const dv=bjVal(dl),dn=bjNat(dl);const chips=[...d.chips];const res=d.hs.map((hs,s)=>hs.map(h=>{const v=bjVal(h.c),n=bjNat(h.c,h.sp);let w;
-      if(v>21)w=-h.b;else if(dn)w=n?0:-h.b;else if(n)w=Math.floor(h.b*1.5);else if(dv>21||v>dv)w=h.b;else if(v===dv)w=0;else w=-h.b;chips[s]+=w;return w;}));
+      if(h.sur)w=-Math.floor(h.b/2);else if(v>21)w=-h.b;else if(dn)w=n?0:-h.b;else if(n)w=Math.floor(h.b*1.5);else if(dv>21||v>dv)w=h.b;else if(v===dv)w=0;else w=-h.b;chips[s]+=w;return w;}));
   return {...d,dk,dl,chips,res,ph:'done'};}
 function bjNewRound(d){const r=d.r+1;const out=d.out.split('').map((c,s)=>c==='1'||d.chips[s]<10?'1':'0').join('');
   // a seat that was out before this round (left the room, or went broke earlier) cannot win on chips; one that just went broke still counts
@@ -143,6 +146,8 @@ const bjGo=d=>{const nx=bjNextSeat(d,-1);return nx<0?bjSettle(d):{...d,turn:nx};
 function bjAct(d,a){const t=d.turn,hs=d.hs.map(x=>x.map(h=>({...h})));const k=d.hi[t];const h=hs[t][k];if(!h)return bjGo(d);let dk=d.dk;const take=()=>{const [c,r]=bjTake(dk,d.dl.length===2?d.dl:null);dk=r;return c;};const chips=[...d.chips];
   if(a==='hit'){h.c+=take();if(bjVal(h.c)>=21)h.st=1;}
   else if(a==='stand')h.st=1;
+  // late surrender: on the first two cards of an unsplit hand, give up half the bet and keep the other half
+  else if(a==='sur'){if(hs[t].length!==1||h.c.length!==4)return d;h.sur=1;h.st=1;}
   else if(a==='dbl'){if(h.c.length!==4||chips[t]<bjCommitted(hs[t])+h.b)return d;h.b*=2;h.dbl=1;h.c+=take();h.st=1;}
   else if(a==='split'){if(hs[t].length!==1||h.c.length!==4||bj10(h.c)!==bj10(h.c.slice(2))||chips[t]<bjCommitted(hs[t])+h.b)return d;
     const c1=h.c.slice(0,2),c2=h.c.slice(2);const aces=rv(c1)===1;const h1={c:c1+take(),b:h.b,st:aces?1:0,dbl:0,sp:1},h2={c:c2+take(),b:h.b,st:aces?1:0,dbl:0,sp:1};
@@ -173,18 +178,19 @@ GAMES.bj={name:'بلاك جاك 21',cat:'cards',lbc:'#1E6B45',
     let s=`<div class="bjt"><div class="bjd"><b>الديلر ${done?`<em>${bjVal(d.dl)}</em>`:''}</b><div class="hand" data-k="r${d.rd}">${dc.map(c=>`<span class="bjc" data-k="${c}">${cardHTML(c)}</span>`).join('')}</div></div>`;
     const nh=d.pl.reduce((x,_,i)=>x+(d.out[i]==='1'?0:(d.hs[i]||[]).length),0);
     s+=`<div class="bjp" style="grid-template-columns:repeat(${nh>4?3:nh===1?1:2},minmax(0,1fr))">${d.pl.map((r,i)=>{if(d.out[i]==='1'||!(d.hs[i]||[]).length)return '';return (d.hs[i]).map((h,k)=>{const v=bjVal(h.c),act=!done&&d.turn===i&&d.hi[i]===k;const w=done&&d.res?d.res[i][k]:null;
-      const st=v>21?'تعدّى':bjNat(h.c,h.sp)?'بلاك جاك!':h.dbl?'دبل':h.st&&!done?'وقف':'';
+      const st=h.sur?'سلّم 🏳️':v>21?'تعدّى':bjNat(h.c,h.sp)?'بلاك جاك!':h.dbl?'دبل':h.st&&!done?'وقف':'';
       return `<div class="bjh ${act?'on':''} ${v>21?'bust':''}" style="--c:${col(d,i)}"><b>${!ctx.local&&i===ctx.v?'أنت':nm(d,i)}${d.hs[i].length>1?` ${k+1}`:''}<em>${v}</em></b><div class="hand" data-k="r${d.rd}">${cardsOf(h.c).map(c=>cardHTML(c)).join('')}</div><small>🪙 ${h.b}${st?' • '+st:''}${w!=null?` • ${w>0?'+':''}${w}`:''}</small></div>`;}).join('');}).join('')}</div></div>`;
     if(ctx.my&&d.ph==='play'){const t=d.turn,h=d.hs[t][d.hi[t]];const free=d.chips[t]-bjCommitted(d.hs[t]);
       const canD=h&&h.c.length===4&&free>=h.b,canS=h&&d.hs[t].length===1&&h.c.length===4&&bj10(h.c)===bj10(h.c.slice(2))&&free>=h.b;
-      s+=`<div class="acts"><button class="btn blue" data-ga="hit">اسحب</button><button class="btn navy" data-ga="stand">اكتفيت</button>${canD?'<button class="btn red" data-ga="dbl">دبل</button>':''}${canS?'<button class="btn green" data-ga="split">قسّم</button>':''}</div>`;}
+      const canR=h&&d.hs[t].length===1&&h.c.length===4;
+      s+=`<div class="acts"><button class="btn blue" data-ga="hit">اسحب</button><button class="btn navy" data-ga="stand">اكتفيت</button>${canD?'<button class="btn red" data-ga="dbl">دبل</button>':''}${canS?'<button class="btn green" data-ga="split">قسّم</button>':''}${canR?`<button class="btn bjsur" data-ga="sur">🏳️ سلّم <small>(ترجع ${Math.ceil(h.b/2)})</small></button>`:''}</div>`;}
     if(done&&d.win==null&&(ctx.local||ctx.v===d.turn||ctx.v===aliveSeats(d)[0]))s+=`<button class="big green" data-ga="next">${d.r>=BJR?'شوف النتيجة':'الجولة التالية'}</button>`;
     return s;},
   click(a,i,d,ctx){
     if(a==='bp'||a==='bm'){S.draft.bet=String(Math.max(10,(+(S.draft.bet||50))+(a==='bp'?i:-i)));render();return;}
     if(d.ph==='bet'&&ctx.my&&(a==='bet'||a==='allin')){const v=ctx.v;const b=a==='allin'?d.chips[v]:Math.max(10,Math.min(+(S.draft.bet||50),d.chips[v]));S.draft.bet=null;simulPick(d,v,b);return;}
     if(a==='next'&&d.ph==='done'&&(ctx.local||ctx.v===d.turn||ctx.v===aliveSeats(d)[0])){act(bjNewRound(d));return;}
-    if(!ctx.my||d.ph!=='play')return;if(['hit','stand','dbl','split'].includes(a))act(bjAct(d,a));}
+    if(!ctx.my||d.ph!=='play')return;if(['hit','stand','dbl','split','sur'].includes(a))act(bjAct(d,a));}
 };
 
 /* ---------- colours and numbers (shedding card game) ---------- */
@@ -386,23 +392,39 @@ const domHas=(ch,t)=>{const r=t[1]+t[0];for(let k=0;k<ch.length;k+=2){const x=ch
 /* ---------- bingo ---------- */
 function seedOf(str){let h=2166136261;for(const ch of String(str)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
 // each seat's card comes from its own random seed (d.bs), hidden online; old states without bs fall back to gid and role
-function bingoCard(d,s){const R=mulberry(seedOf(d.bs?d.bs[s]:d.gid+':'+d.pl[s]));const a=[...Array(25).keys()].map(x=>x+1);for(let i=24;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+// sw[s]: the two places a seat swapped on its card (its one swap of the game), hidden with the card
+function bingoCard(d,s){const R=mulberry(seedOf(d.bs?d.bs[s]:d.gid+':'+d.pl[s]));const a=[...Array(25).keys()].map(x=>x+1);for(let i=24;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  const w=d.sw&&d.sw[s];if(Array.isArray(w)&&w.length===2&&w[0]>=0&&w[1]>=0&&w[0]<25&&w[1]<25)[a[w[0]],a[w[1]]]=[a[w[1]],a[w[0]]];return a;}
+const bgSwapped=(d,s)=>!!(d.sw&&Array.isArray(d.sw[s])&&d.sw[s].length);
 const BLINES=(()=>{const L=[];for(let k=0;k<5;k++){L.push([0,1,2,3,4].map(c=>k*5+c));L.push([0,1,2,3,4].map(r=>r*5+k));}L.push([0,6,12,18,24]);L.push([4,8,12,16,20]);return L;})();
 const bingoLines=(card,called)=>BLINES.filter(L=>L.every(i=>called[card[i]-1]==='1')).length;
-GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:nextSeat(d,d.turn)}),hide:{seat:['bs']},
+GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:nextSeat(d,d.turn)}),hide:{seat:['bs','sw']},
+  // the swap mode and the first place picked belong to the phone; the swap itself carries both places in its number
+  net:{local:['bwm','bs']},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D45D87"/>${[0,1,2,3,4].map(r=>[0,1,2,3,4].map(c=>`<rect x="${12+c*16}" y="${12+r*16}" width="14" height="14" rx="3" fill="${(r===c)?'#ffd84d':'#fff'}"/>`).join('')).join('')}<path d="M14 14L86 86" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
   // ln: lines each seat has made, kept in the state so the scores show without the hidden cards
-  init:n=>({called:'0'.repeat(25),bs:Array(n).fill(0).map(()=>rid()+rid()),ln:Array(n).fill(0),lc:0,last:''}),
+  // once a game each player may, instead of calling, swap two places on their own card (to finish a line with a number already called)
+  init:n=>({called:'0'.repeat(25),bs:Array(n).fill(0).map(()=>rid()+rid()),sw:Array(n).fill(0).map(()=>[]),ln:Array(n).fill(0),lc:0,last:''}),
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   points:d=>d.pl.map((r,s)=>(d.ln?d.ln[s]:bingoLines(bingoCard(d,s),d.called))+'/5'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;if(v<0)return '';
     const card=bingoCard(d,v);const lines=BLINES.filter(L=>L.every(i=>d.called[card[i]-1]==='1')).flat();
-    const ln=bingoLines(card,d.called);return `<div class="bingo" style="--c:${col(d,v)};--l:${lit(d,v)}"><div class="bprog">${d.lc?`<span class="bball" data-k="b${d.lc}"><small>آخر رقم</small>${d.lc}</span>`:''}<div><i style="width:${ln*20}%"></i></div><b>${'بنقو'.split('').map((ch,k)=>`<span class="${k<Math.min(ln,4)||ln>=5?'on':''}">${ch}</span>`).join('')}</b></div>
+    const ln=bingoLines(card,d.called),wm=ctx.my&&!bgSwapped(d,v)&&S.bgW===d.gid+':'+d.turn,f=wm&&S.bgF!=null?S.bgF:-1;
+    const canW=ctx.my&&!bgSwapped(d,v)&&d.win==null;return `<div class="bingo ${wm?'bswap':''}" style="--c:${col(d,v)};--l:${lit(d,v)}"><div class="bprog">${d.lc?`<span class="bball" data-k="b${d.lc}"><small>آخر رقم</small>${d.lc}</span>`:''}<div><i style="width:${ln*20}%"></i></div><b>${'بنقو'.split('').map((ch,k)=>`<span class="${k<Math.min(ln,4)||ln>=5?'on':''}">${ch}</span>`).join('')}</b></div>
     <div class="cellgrid bgrid" style="grid-template-columns:repeat(5,minmax(0,1fr))">${card.map((n,i)=>{const c=d.called[n-1]==='1';
-      return c?`<div class="cg bc ${lines.includes(i)?'ln':''}"><span>${n}</span></div>`:`<button class="cg" data-ga="m" data-i="${n}" ${ctx.my?'':'disabled'}>${n}</button>`;}).join('')}</div></div>`;},
+      const ga=wm?(f<0||f===i?`data-ga="bs" data-i="${i}"`:`data-ga="bw" data-i="${f*25+i}"`):c?'':`data-ga="m" data-i="${n}"`;
+      return `<button class="cg ${c?'bc':''} ${c&&lines.includes(i)?'ln':''} ${i===f?'bsel':''}" ${ga} ${ga&&ctx.my?'':'disabled'}>${c?`<span>${n}</span>`:n}</button>`;}).join('')}</div></div>
+    ${canW?`<div class="acts"><button class="btn ${wm?'red':'navy'}" data-ga="bwm">${wm?(f<0?'اختر أول خانة… (إلغاء)':'اختر الخانة الثانية… (إلغاء)'):'🔁 بدّل خانتين (مرة بالجولة)'}</button></div>`:''}`;},
   click(a,n,d,ctx){
-    if(!ctx.my||!(n>=1&&n<=25)||d.called[n-1]==='1')return;const t=d.turn;const called=setAt(d.called,n-1,'1');
+    if(!ctx.my)return;const t=d.turn;
+    if(a==='bwm'){if(bgSwapped(d,t))return;const k=d.gid+':'+t;S.bgW=S.bgW===k?null:k;S.bgF=null;render();return;}
+    if(a==='bs'){if(!(n>=0&&n<25))return;S.bgF=S.bgF===n?null:n;render();return;}
+    if(a==='bw'){const x=Math.floor(n/25),y=n%25;if(bgSwapped(d,t)||!(x>=0&&x<25&&y>=0&&y<25)||x===y)return;S.bgW=null;S.bgF=null;
+      const sw=d.pl.map((_,s)=>d.sw&&Array.isArray(d.sw[s])?[...d.sw[s]]:[]);sw[t]=[x,y];const nd={...d,sw};
+      const ln=d.pl.map((r,s)=>bingoLines(bingoCard(nd,s),d.called));const got=ln[t]>(d.ln?d.ln[t]:0);
+      act({...nd,ln,win:d.out[t]!=='1'&&ln[t]>=5?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} بدّل خانتين في ورقته 🔁`+(got?` وكمّل خط ${ln[t]>=5?'🎉':'✓'}`:'')});return;}
+    if(a!=='m'||!(n>=1&&n<=25)||d.called[n-1]==='1')return;const called=setAt(d.called,n-1,'1');
     const ln=d.pl.map((r,s)=>bingoLines(bingoCard(d,s),called));
     const done=d.pl.map((r,s)=>d.out[s]!=='1'&&ln[s]>=5?s:-1).filter(s=>s>=0);
     let win=null;if(done.length)win=done.includes(t)?t:done.length===1?done[0]:'d';
@@ -411,23 +433,33 @@ GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:
 };
 
 /* ---------- risky dice ---------- */
-GAMES.pig={points:d=>d.sc,name:'زهر المخاطرة',cat:'cards',lbc:'#A0522D',onTimeout:d=>({...d,tot:0,dice:0,turn:nextSeat(d,d.turn)}),
+/* vr 1 (two dice): a single 1 loses the turn total, two 1s wipe the whole score; any other throw adds both dice.
+   Online every throw is made on the host's phone (rs counts the throws, so every phone tumbles the dice once) */
+let PGV=0;// the last choice on this phone, kept for the next rounds
+const pigNew=(d,k)=>{const T=S.pgT;if(!T||T.k!==k){S.pgT={k,t:Date.now()};return true;}return Date.now()-T.t<450;};
+GAMES.pig={points:d=>d.sc,name:'زهر المخاطرة',cat:'cards',lbc:'#A0522D',onTimeout:d=>({...d,tot:0,dice:0,d2:0,turn:nextSeat(d,d.turn)}),
   // the turn total of a player who leaves goes with them
-  onSkip:(nd,d)=>nd.turn!==d.turn?{...nd,tot:0,dice:0}:nd,
+  onSkip:(nd,d)=>nd.turn!==d.turn?{...nd,tot:0,dice:0,d2:0}:nd,
+  net:{host:['roll','hold','vr']},redeal:d=>d,
   icon:iconE('#D7774A','🎲'),
-  init:n=>({sc:Array(n).fill(0),tot:0,dice:0,goal:100,last:''}),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){const anim=S.rolled;S.rolled=false;
-    const sc=d.sc[d.turn]||0,g=d.goal||100;
-    return `<div class="pigp ${d.dice===1&&!d.tot?'bust':''}" style="--c:${col(d,d.turn)}"><div class="row" style="align-items:center;gap:22px;margin:0">${tapDie(d.dice,ctx.my&&d.win==null,col(d,d.turn),anim?'roll':'')}<div class="pigpot"><div class="lbl" style="margin:0">جمع الدور</div><div class="big-num" data-k="t${d.tot}">${d.tot}</div></div></div>
+  init:n=>({sc:Array(n).fill(0),tot:0,dice:0,d2:0,goal:100,last:'',vr:PGV,rs:0}),
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.vr&&d.win==null?'<br><small>زهرتين: وحدة 1 تضيّع جمع الدور، و1 مع 1 تصفّر نقاطك كلها</small>':''),
+  render(d,ctx){const anim=d.rs&&pigNew('pig'+d.gid+':'+d.rs),fresh=!ctx.bot&&!d.rs&&d.sc.every(x=>!x)&&d.win==null;
+    const sc=d.sc[d.turn]||0,g=d.goal||100,can=ctx.my&&d.win==null,c=col(d,d.turn),bust=(d.dice===1||d.d2===1)&&!d.tot;
+    const dice=d.vr?`<span class="pig2">${tapDie(d.dice,can,c,anim?'roll':'')}${tapDie(d.d2,can,c,anim?'roll r2':'')}</span>`:tapDie(d.dice,can,c,anim?'roll':'');
+    return `${fresh?`<div class="segs tttv">${[['0','زهرة وحدة'],['1','زهرتين']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:''}
+    <div class="pigp ${bust?'bust':''} ${d.wipe&&d.wipe===d.rs?'wipe':''}" style="--c:${c}"><div class="row" style="align-items:center;gap:22px;margin:0">${dice}<div class="pigpot"><div class="lbl" style="margin:0">جمع الدور</div><div class="big-num" data-k="t${d.tot}">${d.tot}</div></div></div>
     <div class="pigbar" aria-hidden="true"><i style="width:${Math.min(100,sc/g*100)}%"></i><u style="left:${Math.min(100,sc/g*100)}%;width:${Math.max(0,Math.min(100,(sc+d.tot)/g*100)-Math.min(100,sc/g*100))}%"></u><span>${sc}${d.tot?` + ${d.tot}`:''} / ${g}</span></div></div>
     <div class="acts"><button class="btn navy" data-ga="hold" ${ctx.my&&d.tot>0?'':'disabled'}>احفظ النقاط${d.tot?` (${d.tot})`:''}</button></div>`;},
   click(a,i,d,ctx){
-    if(!ctx.my)return;const t=d.turn;
-    if(a==='roll'){const r=1+rnd(6);S.rolled=true;
-      if(r===1){act({...d,dice:1,tot:0,turn:nextSeat(d,t),last:`${nm(d,t)} طلع له 1 وراح جمع الدور`});return;}
-      act({...d,dice:r,tot:d.tot+r,last:''});return;}
+    if(!ctx.my||d.win!=null)return;const t=d.turn,rs=(d.rs||0)+1;
+    if(a==='vr'){if(d.rs||d.sc.some(x=>x))return;PGV=i?1:0;act({...d,vr:PGV});return;}
+    if(a==='roll'){const r=1+rnd(6),r2=d.vr?1+rnd(6):0;
+      if(d.vr&&r===1&&r2===1){const sc=[...d.sc];const lost=sc[t];sc[t]=0;act({...d,sc,dice:1,d2:1,tot:0,rs,wipe:rs,turn:nextSeat(d,t),last:`${nm(d,t)} طلع له 1 و1 وراحت نقاطه كلها (${lost}) 💀`});return;}
+      if(r===1||r2===1){act({...d,dice:r,d2:r2,tot:0,rs,turn:nextSeat(d,t),last:`${nm(d,t)} طلع له 1 وراح جمع الدور`});return;}
+      act({...d,dice:r,d2:r2,tot:d.tot+r+r2,rs,last:''});return;}
+    if(a!=='hold'&&a!=='bank')return;
     if(d.tot<=0)return;const sc=[...d.sc];sc[t]+=d.tot;
-    act({...d,sc,tot:0,dice:0,win:sc[t]>=d.goal?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} حفظ ${d.tot}`});
+    act({...d,sc,tot:0,dice:0,d2:0,win:sc[t]>=d.goal?t:null,turn:nextSeat(d,t),last:`${nm(d,t)} حفظ ${d.tot}`});
   }
 };
