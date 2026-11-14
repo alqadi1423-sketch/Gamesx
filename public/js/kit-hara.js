@@ -14,9 +14,15 @@
      KH.art.defs()               the gradients/symbols the art needs (put once at the top of an art SVG)
      KH.bg(id,w,h,inner)         turns a finished art SVG into a CSS background (class "kh-bg-<id>"), made once a page:
                                  the static map costs no DOM nodes and is never diffed by the engine's morph
-   Characters (one <use> each; colours by CSS variables --kc shirt/cap, --ks skin):
-     KH.sprite(pose,x,y,o)       pose: stand | walk | peek | cheer | caught | torch | count | sil | mom | cat | dog | grocer
-                                 o.c colour, o.skin, o.flip (face left), o.s scale, o.cls, o.k (data-k for morph identity)
+   The cast (app-wide characters, one kid per player colour, core.js COLS order):
+     KH.CAST[i]                  {n name, g 'b'|'g', c colour, skin, m default mouth, t personality}: 0 حمود (cap), 1 سعود (ghutra),
+                                 2 نورة (hijab), 3 سارة (glasses, braid), 4 ريم (pigtails), 5 بدر (taqiyah), 6 لولوة (hijab, flower), 7 ناصر (shemagh)
+     KH.kid({who|seat|c,pose,mood,outfit,acc,s,flip,x,y})  one kid, a <g> of 3–6 <use>s (~300 bytes) for inside an <svg>:
+                                 pose stand | walk | peek | cheer | caught | sad | think | count | torch;
+                                 mood s | g | o | sad | k | hm; outfit apron | sport | dealer | thobe; acc glove | ball | cards | chefhat
+     KH.face({who,size,ring,mood}) a standalone round avatar <svg> (player strip, lobby, results)
+     KH.sprite(pose,x,y,o)       the same kids by pose, plus the other figures: sil | mom | cat | dog | grocer
+     Templates are injected once into the page (KH.ensureDefs); a game adds a theme by adding an OUTFIT/ACC entry
      KH.beam(x,y,ang,len)        the seeker's torch light
      KH.say(x,y,text,o)          a speech bubble (SVG), tail at x,y; o.fill/o.col/o.fs/o.dx
      KH.burst(x,y,text,o)        a star burst («لقيتك!»)
@@ -24,7 +30,7 @@
      KH.graph({pos,edges})       pos=[[x,y]..]; edges=[[a,b,[[x,y]..waypoints]]..] -> {pos,adj,D,path(a,b),pts(a,b),edge(a,b)}
                                  D[a][b] = number of footpath steps between nodes (BFS)
      KH.walk(el,pts,o)           moves an element along points with transform only (150–250 ms a segment, ≤1.2 s);
-                                 o.step() is called at every node (for footsteps); skipped in lite / reduced motion
+                                 o.step() is called at every node (for footsteps); ≤450 ms in lite mode, none with reduced motion
    UI:
      KH.banner(text,o) KH.card(icon,title,text,o)   HTML pieces (styles in css/kit-hara.css)
    Sound (Web Audio, tiny synths, silent when muted):
@@ -166,7 +172,7 @@ const KH=(()=>{
   let defsDone=false;
   function ensureDefs(){if(typeof document==='undefined'||!document.body||(defsDone&&document.getElementById('kh-h0')))return;defsDone=true;try{const d=document.createElement('div');d.setAttribute('aria-hidden','true');d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';
     const g=(id,c)=>`<g id="kh-${id}">${c}</g>`;
-    d.innerHTML=`<svg width="0" height="0"><defs><linearGradient id="kh-beam"><stop offset="0" stop-color="#FFF1B8" stop-opacity=".85"/><stop offset="1" stop-color="#FFE38A" stop-opacity="0"/></linearGradient>`+
+    d.innerHTML=`<svg width="0" height="0"><defs><linearGradient id="kh-beam"><stop offset="0" stop-color="#FFF1B8" stop-opacity=".85"/><stop offset="1" stop-color="#FFE38A" stop-opacity="0"/></linearGradient><radialGradient id="kh-glow"><stop offset="0" stop-color="#FFE7A0" stop-opacity=".75"/><stop offset="1" stop-color="#FFC24A" stop-opacity="0"/></radialGradient>`+
       HEADS.map((h,i)=>g('h'+i,h)).join('')+Object.keys(MOUTH).map(k=>g('m-'+k,MOUTH[k])).join('')+Object.keys(BODY).map(k=>g('b-'+k,BODY[k])).join('')+
       Object.keys(OUTFIT).map(k=>g('o-'+k,OUTFIT[k])).join('')+Object.keys(ACC).map(k=>g('a-'+k,ACC[k])).join('')+Object.keys(OTHERS).map(k=>g(k,OTHERS[k])).join('')+`</defs></svg>`;document.body.appendChild(d);}catch(e){}}
   const castOf=o=>{const w=o.who!=null?o.who:o.seat!=null?o.seat:o.c?Math.max(0,CAST.findIndex(x=>x.c.toLowerCase()===String(o.c).toLowerCase())):0;return ((w%8)+8)%8;};
@@ -204,9 +210,11 @@ const KH=(()=>{
     const pts=(a,b)=>{const nodes=path(a,b);const out=[g.pos[nodes[0]]];for(let i=1;i<nodes.length;i++)out.push(...edge(nodes[i-1],nodes[i]).slice(1));return out;};
     return {pos:g.pos,adj,D,path,pts,edge};}
   // walk an element along points with transform only; each point is [x,y] in the element's user units
-  function walk(el,pts,o={}){if(!el||!pts||pts.length<2||lite()||!el.animate)return null;
+  function walk(el,pts,o={}){let rm=false;try{rm=matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}if(!el||!pts||pts.length<2||rm||!el.animate)return null;
+    // lite mode: the same walk, shorter (one quick move instead of a stroll)
+    if(lite())o={...o,max:Math.min(o.max||1200,450),step:null};
     const seg=[];let tot=0;for(let i=1;i<pts.length;i++){const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(l);tot+=l;}if(!(tot>0))return null;
-    const per=Math.max(150,Math.min(250,(o.max||1200)/seg.length)),dur=Math.min(o.max||1200,per*seg.length);
+    const per=Math.max(Math.min(150,(o.max||1200)/seg.length),Math.min(250,(o.max||1200)/seg.length)),dur=Math.min(o.max||1200,per*seg.length);
     let acc=0;const kf=[{transform:`translate(${pts[0][0]}px,${pts[0][1]}px)`,offset:0}];
     for(let i=1;i<pts.length;i++){acc+=seg[i-1];kf.push({transform:`translate(${pts[i][0]}px,${pts[i][1]}px)`,offset:Math.min(1,acc/tot)});}
     try{el.classList.add('walking');const an=el.animate(kf,{duration:dur,easing:'linear',delay:o.delay||0});

@@ -124,3 +124,8 @@ html.lite .hd-role.beat{animation:none}
 .hd-map.m-lsn .hd-pl:not(.zone),.hd-map.m-torch .hd-pl:not(.zone){opacity:.55}
 .hd-zl{cursor:pointer}.hd-pl.zone rect{fill:#2D4763;stroke:#7FD3FF;stroke-width:2}.hd-map.m-torch .hd-pl.zone rect{stroke:#FFE38A}
 .hd-pl.zone.sel rect{fill:#F0B429;stroke:#fff}
+/* the flickering street lamp: one glow, once per reveal */
+.hd-flick{opacity:0;pointer-events:none;animation:hd-flick 1.6s linear 1}
+@keyframes hd-flick{0%{opacity:.9}12%{opacity:.15}22%{opacity:.85}34%{opacity:.05}46%{opacity:.8}70%{opacity:.5}100%{opacity:0}}
+html.lite .hd-flick{animation:none}
+@media (prefers-reduced-motion:reduce){.hd-flick{animation:none}}

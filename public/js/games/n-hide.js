@@ -204,6 +204,13 @@ const hdBg=()=>HD_BG||(HD_BG=KH.bg('hide',HDW,HDHt,hdArt()));
 // a name on a solid pill (13 px or more on a phone); o.sel bigger and gold
 function hdPill(x,y,t,o={}){const fs=o.fs||14,w=KH.tw(t,fs)+14,h=fs+10;const c=o.cls||'';x=Math.max(w/2*(o.sel?1.2:1)+3,Math.min(HDW-3-w/2*(o.sel?1.2:1),x));
   return `<g class="hd-pl ${c}" transform="translate(${x} ${y})${o.sel?' scale(1.2)':''}"><rect x="${KH.f(-w/2)}" y="${-h/2}" width="${KH.f(w)}" height="${h}" rx="${h/2}"/><text y="${KH.f(fs*.36)}" font-size="${fs}">${t}</text></g>`;}
+// where a place's hot/cold badge goes: next to the spot, clear of every name (worked out once)
+let HD_BADGE=null;
+function hdBadgeAt(p){if(!HD_BADGE){const box=(q)=>{const t=q===16?'البيت':HDN[q],fs=q===16?15:14,w=Math.max(KH.tw(t,fs),[...t].length*fs*.42+4)+14,h=fs+10;const x=Math.max(w/2+3,Math.min(HDW-3-w/2,HDLB[q][0]));return [x-w/2,HDLB[q][1]-h/2,x+w/2,HDLB[q][1]+h/2];};
+  const L=[...Array(17).keys()].map(box),hit=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3],taken=[];HD_BADGE=[];
+  for(let q=0;q<16;q++){const [x,y]=HDP[q];const C=[[20,-20],[-20,-20],[20,18],[-20,18],[0,-26],[0,26],[34,0],[-34,0],[44,10],[-44,10],[44,-12],[-44,-12],[0,-40]].map(([dx,dy])=>[Math.max(24,Math.min(HDW-24,x+dx)),Math.max(12,y+dy)]);
+    const ok=C.find(([bx,by])=>{const b=[bx-23,by-11,bx+23,by+11];return !L.some(l=>hit(l,b))&&!taken.some(t=>hit(t,b));})||C[0];HD_BADGE[q]=ok;taken.push([ok[0]-23,ok[1]-11,ok[0]+23,ok[1]+11]);}}
+  return HD_BADGE[p];}
 function hdHintBadge(x,y,c){const m={1:['حار','#E5484D'],2:['دافي','#F28C38'],3:['بارد','#3D8FD1'],[-2]:['أبو سعد','#8A5A2B']}[c];if(!m)return '';
   return `<g class="hd-hb" transform="translate(${x} ${y})"><rect x="-22" y="-10" width="44" height="20" rx="10" fill="${m[1]}" stroke="#fff" stroke-width="2"/><text y="4.6" font-size="12.5">${m[0]}</text></g>`;}
 // one character, positioned with a CSS transform so it can walk (KH.walk) along the footpaths
@@ -228,7 +235,9 @@ function hdMapSVG(d,ctx,o){const me=o.me,fin=d.win!=null,e=d.ev,n=d.pl.length,P=
   if(fin)d.pl.forEach((_,sx)=>{const h=d.hp[sx];if(sx===d.sk||!h||h.length<2)return;const pts=[];for(let i=1;i<h.length;i++)pts.push(...HG.pts(h[i-1],h[i]).slice(i>1?1:0));s+=line(pts,'trail',col(d,sx));});
   // searched spots and their hints (the last search of each place)
   const last={};d.lg.forEach(([p,c])=>{last[p]=c;});
-  for(const p in last){const [x,y]=P[p];const c=last[p];s+=`<g class="hd-dust" transform="translate(${x} ${y+8})"><path d="M-12 4c-2-4 2-7 5-5 1-4 7-5 9-1 3-2 8 0 7 4 3 0 4 3 2 4z"/></g>`;if(c!==0)s+=hdHintBadge(x+(x>300?-18:18),y-18,c);}
+  for(const p in last){const [x,y]=P[p];const c=last[p];s+=`<g class="hd-dust" transform="translate(${x} ${y+8})"><path d="M-12 4c-2-4 2-7 5-5 1-4 7-5 9-1 3-2 8 0 7 4 3 0 4 3 2 4z"/></g>`;if(c!==0){const [bx,by]=hdBadgeAt(+p);s+=hdHintBadge(bx,by,c);}}
+  // the street lamp by the car flickers once at every reveal
+  if(!fin)s+=`<circle class="hd-flick" data-k="fl${d.ek}" cx="330" cy="206" r="46" fill="url(#kh-glow)"/>`;
   // the cat, the dog, the grocer
   if(d.ct>=0){const [x,y]=P[d.ct];s+=KH.sprite('cat',x+22,y+10,{s:.75});}
   if(d.dg>=0){const [x,y]=P[d.dg];s+=KH.sprite('dog',x-22,y+14,{s:.7,flip:x>180});}
@@ -245,9 +254,10 @@ function hdMapSVG(d,ctx,o){const me=o.me,fin=d.win!=null,e=d.ev,n=d.pl.length,P=
   if(d.sil>=0&&!fin){const [x,y]=P[d.sil];s+=`<g class="hd-sil" data-k="sil${d.ek}">${KH.sprite('sil',x,y,{s:1.1})}<text x="${x}" y="${y-18}">؟</text></g>`;}
   s+=kids.join('');
   // the seeker: counting at the house, walking with the torch, guarding the door
+  let top='';
   {const c=col(d,d.sk),sp=d.ph==='hide'?HD_HOME:d.sp;const [x,y]=P[sp];const ox=sp===HD_HOME?0:16,oy=sp===HD_HOME?-2:16;const flip=x>200;
     let inner;
-    if(d.ph==='hide'&&!fin)inner=KH.sprite('count',0,0,{who:d.pl[d.sk],c,s:.85})+`<g class="hd-cnt">${KH.say(8,-52,'واحد…',{fs:14,w:104,dx:44})}</g>`;
+    if(d.ph==='hide'&&!fin){inner=KH.sprite('count',0,0,{who:d.pl[d.sk],c,s:.85});top+=`<g class="hd-cnt">${KH.say(x+10,y-48,'واحد…',{fs:15,w:112,dx:30})}</g>`;}
     else inner=(fin?'':KH.beam(flip?-14:14,-24*.8,flip?200:-20,80,26))+KH.sprite(fin?'stand':'torch',0,0,{who:d.pl[d.sk],c,s:.8,flip});
     s+=hdCh('chsk',sp,x+ox,y+oy,inner,{cls:'sk'});}
   if(d.mo&&!fin)s+=KH.sprite('mom',P[16][0]+38,P[16][1]+30,{s:.75})+`<g class="hd-mom" data-k="mom">${KH.say(P[16][0]+48,P[16][1]-2,'العشا جاهز!',{fs:13,dx:-10})}</g>`;
@@ -262,7 +272,7 @@ function hdMapSVG(d,ctx,o){const me=o.me,fin=d.win!=null,e=d.ev,n=d.pl.length,P=
     if(e.ft==='cat'&&d.ct>=0)s+=`<g class="hd-fx" data-k="mw${e.k}">${KH.say(P[d.ct][0]+22,P[d.ct][1]-6,'مياو!',{fs:12})}</g>`;
     if(e.gr)s+=`<g class="hd-fx" data-k="gr${e.k}">${KH.say(P[4][0]-20,P[4][1]-26,'ما عندي أحد!',{fs:12,dx:16})}</g>`;}
   if(d.bk>=0&&d.dg>=0&&!fin)s+=`<g class="hd-fx" data-k="bk${d.rd}">${KH.say(P[d.dg][0]-20,P[d.dg][1]-6,'هاو هاو!',{fs:12})}</g>`;
-  s+=znames;
+  s+=znames+top;
   // tap areas: 48×48 around each selectable place and on its name
   for(let p=0;p<=16;p++){if(!o.pick(p))continue;const [x,y]=P[p],[lx,ly]=HDLB[p];
     s+=`<g class="hd-tap" data-ga="sel" data-i="${p}"><rect x="${x-24}" y="${y-24}" width="48" height="48"/><rect x="${lx-30}" y="${ly-14}" width="60" height="28"/></g>`;}
@@ -432,4 +442,4 @@ setInterval(()=>{if(S.st.g!=='hide')return;const d=S.st.d;if(!d||d.win!=null||!G
   if(!isEnforcer()||S.holdRender||(S.mode!=='local'&&S.mode!=='online'))return;
   try{hdTick(d,now);}catch(e){console.error('hide tick',e);}},500);
 
-HELP.hide='غميضة الحارة بالليل: واحد «الغمّاض» والباقين يتخبّون، وكل جولة يصير الغمّاض اللي بعده. 1) العدّ: الغمّاض يغمّض ويعدّ للعشرة، وكل متخبّي يختار مخباه بالسر من 16 مكان بالخريطة (مكان لكل واحد) ويمشي له. «البيت» هو المكان الآمن. 2) التفتيش: عند الغمّاض فتشات بعدد 6 + عدد المتخبّين (أقصاها 12). كل دور يختار بالسر: يفتّش مكان 🔦، أو يحرس البيت 🛡، أو مرة وحدة يشغّل «الكشاف» على جهة ويبين ظل واحد متخبّي فيها (ياخذ فتشة). 3) بعدها كل متخبّي يقرر بالسر: يبقى 🤫، أو يتسلّل 👣 لمكان جنبه على الممرات، أو يركض للبيت 🏃. الركض والبيت محروس = تنمسك، والبيت مو محروس = توصل بأمان. التسلّل يسوي صوت: أحيانا يسمع الغمّاض خطوات بالجهة، والقطوة اللي بالخريطة إذا مريت جنبها تموء وتفضحك. 4) المكان الفاضي يعطي الكل تلميح عن أقرب متخبّي بعدد خطوات الممرات: 🔥 حار خطوة، 🌤 دافي خطوتين، ❄️ بارد أبعد. 5) «اسمع 👂» مرة وحدة: يختار جهة من 5 جهات (بيت الجيران، جهة البقالة، الشارع العام، جهة المزارع، جهة الخزان) ويعرف فيها أحد ولا لا، والكل يشوف الجواب. 6) مفاجآت: الكلب ينبح إذا الغمّاض اختار مكان قريب منه (تحذير للمتخبّين)، وأبو سعد صاحب البقالة يستر على اللي عنده أول مرة تنفتّش. آخر 40 ثانية تنادي الأم «العشا جاهز!» والوقت يقصر. كل خطوة 15 ثانية واللعبة 3 دقايق؛ إذا خلص الوقت وفيه أحد ما انمسك يفوزون المتخبّين. النقاط: يلقى الغمّاض واحد = +15 له و−15 على اللي انمسك (ما تنزل تحت الصفر)، توصل البيت = +20، تصمد للآخر = +15، يلقاهم كلهم = +10 زيادة للغمّاض. من 4 لاعبين وفوق المتخبّين فريق: يفوزون سوا ويشوف كل واحد أماكن ربعه. على جوال واحد مرّروا الجوال وغطّوا الشاشة. من 3 لاعبين وفوق.';
+HELP.hide='غميضة الحارة بالليل: واحد «الغمّاض» يدوّر والباقين يتخبّون، وكل جولة يصير الغمّاض اللي بعده. العدّ: الغمّاض يغمّض ويعدّ للعشرة، وكل متخبّي يختار مخباه بالسر من 16 مكان على الخريطة (مكان لكل واحد) ويمشي له. «البيت» هو المكان الآمن. عند الغمّاض فتشات بعدد 6 + عدد المتخبّين (أقصاها 12). كل دور يختار الغمّاض بالسر: يفتّش مكان 🔦، أو يحرس البيت 🛡، أو مرة وحدة يشغّل «الكشاف» على جهة ويبين ظل واحد متخبّي فيها (ياخذ فتشة). بعدها كل متخبّي يقرر بالسر: يبقى 🤫، أو يتسلّل 👣 لمكان فاضي جنبه على الممرات، أو يركض للبيت 🏃. إذا ركضت والبيت محروس تنمسك، وإذا مو محروس توصل بأمان. التسلّل يسوي صوت: أحيانا يسمع الغمّاض خطوات بالجهة، والقطوة اللي بالخريطة إذا مريت جنبها تموء وتفضحك. المكان الفاضي يعطي الكل تلميح عن أقرب متخبّي بعدد خطوات الممرات: 🔥 حار خطوة، 🌤 دافي خطوتين، ❄️ بارد أبعد. «اسمع 👂» مرة وحدة: يختار الغمّاض جهة من 5 (بيت الجيران، جهة البقالة، الشارع العام، جهة المزارع، جهة الخزان) ويعرف فيها أحد ولا لا، والكل يشوف الجواب. الكلب ينبح إذا الغمّاض اختار مكان قريب منه، وهذا تحذير للمتخبّين. أبو سعد صاحب البقالة يستر على اللي عنده أول مرة تنفتّش. آخر 40 ثانية تنادي الأم «العشا جاهز!» والخطوات تصير 10 ثواني. كل خطوة 15 ثانية واللعبة 3 دقايق، وإذا خلص الوقت وفيه أحد ما انمسك يفوزون المتخبّين. النقاط: يلقى الغمّاض واحد = +15 له و−15 على اللي انمسك (ما تنزل تحت الصفر)، توصل البيت = +20، تصمد للآخر = +15، يلقاهم كلهم = +10 زيادة للغمّاض. من 4 لاعبين وفوق المتخبّين فريق واحد: يفوزون سوا ويشوف كل واحد أماكن ربعه. على جوال واحد مرّروا الجوال وغطّوا الشاشة. من 3 لاعبين وفوق.';
