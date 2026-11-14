@@ -11,7 +11,7 @@ const HOSTK=['h','g','s','d','sc','cfg','ids','pp','vw','bk','ack'];
 const FPRE=/^[\w-]{12}$/;
 const isFp=x=>typeof x==='string'&&FPRE.test(x);
 function validIds(a){if(!Array.isArray(a)||a.length!==MAXP||!a.every(x=>x===null||isFp(x)))return null;const f=a.filter(Boolean);return new Set(f).size===f.length?a.slice():null;}
-function netReset(){clearTimeout(S.takeT);clearTimeout(S.pubT);
+function netReset(){S.seenHost=false;clearTimeout(S.takeT);clearTimeout(S.pubT);
   Object.assign(S,{ids:Array(MAXP).fill(null),epoch:0,hostFp:null,hostK:null,hst:null,pp:{},outQ:[],pend:false,lastN:{},rejN:{},ack:{},lastAck:{},bk:null,bkC:null,
     needUpd:false,hostGoneAt:null,vgen:0,peersByFp:{},qByFp:{},lostAt:Date.now(),hostSince:0,badC:new Set(),oldSeen:false,ackN:0,sentN:0,hostKeyC:null,vwC:{},bkCache:null,seatGone:{},
     restore:null,takeT:null,pubT:null,pubBusy:false,pubAgain:false,pubRx:null,procBusy:false,procAgain:false,sendTimes:[],bigWarn:false,
@@ -144,7 +144,7 @@ function demote(){S.hostFp=null;S.hostK=null;S.hostKeyC=null;S.vwC={};S.bkCache=
 function followHost(fp){
   const V=S.vh[fp],pr=V.pr,ids=validIds(pr.ids),v=V.v;if(!ids)return;
   const newHost=S.hostFp!==fp||S.hostK!==pr.k;
-  S.hostFp=fp;S.hostK=pr.k;S.hostGoneAt=null;S.epoch=pr.h;clearTimeout(S.takeT);S.restore=null;
+  S.seenHost=true;S.hostFp=fp;S.hostK=pr.k;S.hostGoneAt=null;S.epoch=pr.h;clearTimeout(S.takeT);S.restore=null;
   S.ids=ids;const me=ids.indexOf(SEAL.fp);S.me=me<0?null:me;if(S.me!=null||Date.now()-(S.joinT||0)>JOIN_WAIT)S.pending=false;
   const c=cleanCfg(pr.cfg);
   if((c.kick||[]).includes(SEAL.fp)){try{localStorage.removeItem(LSK.room);}catch(e){}leaveRoom('صاحب الغرفة طلّعك منها');return;}
@@ -196,6 +196,8 @@ function applyHost(pr,cf,view,P){
 /* ---------- when the host is gone ---------- */
 function maybeTakeOver(){
   if(S.mode!=='online'||amHost()||S.offline||S.needUpd)return;
+  // only a phone that has been in this room can carry it on: a code nobody opened (a typo, a random guess) never becomes a room
+  if(!S.seenHost&&!S.hst&&!(S.restore&&S.restore.host))return;
   const now=Date.now();if(!S.hostGoneAt)S.hostGoneAt=S.hostFp?now:(S.joinT||now);
   // who takes over, in order: the seated phones by role, else (nobody seated here) any phone. Only phones that are awake count, and
   // never the key of the host that is gone (a copy of it, or the host's own page stuck, cannot take over). If the first one has

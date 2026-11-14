@@ -263,8 +263,11 @@ async function enterRoom(code,host,restore,given){
   else S.st={g:null,s:host?1:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}};
   if(host&&!restore){S.me=0;S.pending=false;S.ids[0]=SEAL.fp;S.epoch=1;S.hostFp=SEAL.fp;S.hostK=SEAL.k;S.hostSince=Date.now();S.lostAt=0;S.modal='settings';}
   else{S.me=null;S.pending=true;
-    // a mistyped code opens a new empty room: say so instead of waiting there for nobody
-    setTimeout(()=>{if(S.nr===nr&&!lastPeers.some(p=>!p.sameTab)){S.roomEmpty=true;render();}},3500);}
+    // a code nobody opened (a typo, a random guess) is not a room: back to the lobby with a clear message.
+    // Checked when nobody is there at all, and again later when only other newcomers are (nobody of them can open it either)
+    const noRoom=late=>{if(S.nr!==nr||S.seenHost||S.hst||restore)return;if(!late&&lastPeers.some(p=>!p.sameTab))return;
+      leaveRoom();S.mode='lobby';S.roomErr='ما فيه غرفة بهالرمز. تأكد من الرمز، أو أنشئ غرفة جديدة.';render();};
+    setTimeout(()=>noRoom(false),3500);setTimeout(()=>noRoom(true),9000);}
   S.unsub=nr.onPeers(onPeers,st=>{if(S.nr===nr)netState(st);});
   setTimeout(()=>{if(S.nr===nr)render();},GRACE+200);
   afterChange();
