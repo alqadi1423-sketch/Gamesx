@@ -48,25 +48,39 @@ const MEMT=[['فواكه',['🍎','🍌','🍇','🍉','🍓','🍒','🍍','�
   ['أكل',['☕','🍵','🍞','🧀','🍕','🍔','🌮','🍩','🍪','🎂','🍿','🥛','🍯','🥚','🍗','🍚']],
   ['أشياء',['🎈','🎁','🔑','📚','✏️','⏰','📷','🎨','🧸','🪁','🎒','💡','🧭','🔭','⚓','🎲']]];
 const memE=(d,e)=>{const k=e.charCodeAt(0)-97;const T=MEMT[d.th];return T&&typeof d.em==='string'?T[1][d.em.charCodeAt(k)-97]:EMO[k];};
+// «ثلاثيات» (d.g 3): every picture is there three times and you turn up to three cards; the turn ends at the first one that differs
+let MEMV=2;const MEM3={2:6,3:8,4:8,5:8,6:10,7:10,8:10};
+const memG=d=>d.g===3?3:2;
+function memDeal(n,g){const p=g===3?(MEM3[n]||10):(MEMP[n]||15),th=rnd(MEMT.length);
+  return {p,g,th,em:shuffle([...Array(MEMT[th][1].length).keys()]).slice(0,p).map(k=>String.fromCharCode(97+k)).join(''),dk:'?'.repeat(p*g),own:'.'.repeat(p*g),open:[]};}
+const memCols=d=>d.g===3?6:MEMC[d.p];
 GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout:d=>({...d,open:[],turn:nextSeat(d,d.turn)}),
   // a player who leaves mid-turn takes their open card with them
   onSkip:(nd,d)=>nd.turn!==d.turn?{...nd,open:[]}:nd,
   icon:iconE('#4FB09B','🃏'),
   // '?' is a card nobody has turned over yet: its face is drawn when it is first turned (see click), so the layout is not in the shared state
-  init:n=>{const p=MEMP[n]||15,th=rnd(MEMT.length);return {p,th,em:shuffle([...Array(MEMT[th][1].length).keys()]).slice(0,p).map(k=>String.fromCharCode(97+k)).join(''),dk:'?'.repeat(p*2),own:'.'.repeat(p*2),open:[]};},
-  points:d=>cntSeat(d.own,d.pl.length).map(x=>x/2),status:(d,ctx)=>turnTxt(d,ctx)+(MEMT[d.th]?`<br><small>صور ${MEMT[d.th][0]} • باقي ${[...d.own].filter(c=>c==='.').length/2} أزواج</small>`:''),
-  winExtra(d){const c=cntSeat(d.own,d.pl.length);return 'الأزواج: '+c.map((x,s)=>`${nm(d,s)} ${x/2}`).join('، ');},
-  render(d,ctx){const op=d.open||[];const miss=op.length===2&&d.dk[op[0]]!==d.dk[op[1]];
-    return `<div class="cellgrid memg c${MEMC[d.p]}" style="grid-template-columns:repeat(${MEMC[d.p]},minmax(0,1fr))">${[...d.dk].map((e,i)=>{
-      const own=d.own[i];if(own!=='.')return `<div class="cg mm own" style="--c:${col(d,+own)};--l:${lit(d,+own)}"><span>${memE(d,e)}</span></div>`;
-      if(op.includes(i))return `<div class="cg mm up ${miss?'miss':''}"><span>${memE(d,e)}</span></div>`;
+  init:n=>memDeal(n,MEMV),
+  points:d=>cntSeat(d.own,d.pl.length).map(x=>x/memG(d)),status:(d,ctx)=>turnTxt(d,ctx)+(MEMT[d.th]?`<br><small>صور ${MEMT[d.th][0]} • باقي ${[...d.own].filter(c=>c==='.').length/memG(d)} ${d.g===3?'ثلاثيات':'أزواج'}${d.lm?` • آخر ${d.g===3?'ثلاثية':'زوج'}: ${nm(d,d.lm[0])}`:''}</small>`:''),
+  winExtra(d){const c=cntSeat(d.own,d.pl.length);return (d.g===3?'الثلاثيات: ':'الأزواج: ')+c.map((x,s)=>`${nm(d,s)} ${x/memG(d)}`).join('، ');},
+  // a set just taken (d.lm: who, which cards) pops in the taker's colour; a miss shakes the cards that differ
+  render(d,ctx){const op=d.open||[],G=memG(d),C=memCols(d);const miss=op.length>=2&&op.some(i=>d.dk[i]!==d.dk[op[0]]);const fresh=!/[a-z]/.test(d.dk)&&!/\d/.test(d.own);
+    const lm=d.lm&&d.lm[1]||[];
+    const segs=fresh?`<div class="segs memv">${[[2,'🃏 أزواج'],[3,'🎴 ثلاثيات']].map(([v,t])=>`<button class="seg ${v===G?'on':''}" data-ga="g" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:'';
+    return `${segs}<div class="cellgrid memg c${C} ${G===3?'g3':''}" style="grid-template-columns:repeat(${C},minmax(0,1fr))">${[...d.dk].map((e,i)=>{
+      const own=d.own[i];if(own!=='.')return `<div class="cg mm own ${lm.includes(i)?'lm':''}" style="--c:${col(d,+own)};--l:${lit(d,+own)}"><span>${memE(d,e)}</span></div>`;
+      if(op.includes(i))return `<div class="cg mm up ${miss&&op.length===op.indexOf(i)+1?'miss':''} ${miss?'mx':''}"><span>${memE(d,e)}</span></div>`;
       return `<button class="cg mm dn" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'} aria-label="ورقة مقلوبة"></button>`;}).join('')}</div>`;},
   click(a,i,d,ctx){
-    if(!ctx.my||d.own[i]!=='.')return;let op=d.open||[];if(op.length===2)op=[];if(op.includes(i))return;op=[...op,i];
-    let dk=d.dk;if(dk[i]==='?'){const left=[];for(let k=0;k<d.p;k++){const e=String.fromCharCode(97+k);for(let m=dk.split(e).length-1;m<2;m++)left.push(e);}dk=setAt(dk,i,left[rnd(left.length)]);}
-    if(op.length<2){act({...d,dk,open:op});return;}
-    const t=d.turn;if(dk[op[0]]===dk[op[1]]){let own=setAt(setAt(d.own,op[0],String(t)),op[1],String(t));let win=null;
-      if(!own.includes('.'))win=mostPts(cntSeat(own,d.pl.length).map((x,s)=>d.out[s]==='1'?-1:x));act({...d,dk,own,open:[],win});}
+    if(!ctx.my)return;const G=memG(d);
+    if(a==='g'){if(/[a-z]/.test(d.dk)||/\d/.test(d.own)||(i!==2&&i!==3))return;MEMV=i;act({...d,...memDeal(d.pl.length,i)});return;}
+    if(!Number.isInteger(i)||i<0||i>=d.own.length||d.own[i]!=='.')return;let op=d.open||[];
+    // the cards left up after a miss go down when the next player turns one
+    if(op.length>=G||op.length>=2&&op.some(x=>d.dk[x]!==d.dk[op[0]]))op=[];if(op.includes(i))return;op=[...op,i];
+    let dk=d.dk;if(dk[i]==='?'){const left=[];for(let k=0;k<d.p;k++){const e=String.fromCharCode(97+k);for(let m=dk.split(e).length-1;m<G;m++)left.push(e);}dk=setAt(dk,i,left[rnd(left.length)]);}
+    const t=d.turn,same=op.every(x=>dk[x]===dk[op[0]]);
+    if(same&&op.length<G){act({...d,dk,open:op});return;}
+    if(same){let own=d.own;for(const x of op)own=setAt(own,x,String(t));let win=null;
+      if(!own.includes('.'))win=mostPts(cntSeat(own,d.pl.length).map((x,s)=>d.out[s]==='1'?-1:x));act({...d,dk,own,open:[],lm:[t,op],win});}
     else act({...d,dk,open:op,turn:nextSeat(d,t)});
   }
 };

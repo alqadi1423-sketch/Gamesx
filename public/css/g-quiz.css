@@ -360,3 +360,13 @@ button.opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 va
  .su-lv span,.rps-hr,.fk-bk{background:var(--surface)}
  .qz-g{background:#2a3a4b}.qz-g b{color:#6fd08b}.qz-g.dn b{color:#f08a83}
 }
+
+/* polish B: count the shapes (two pictures in one question) and the odd one out (letters, turned pictures) */
+.cnt-q b{color:var(--red,#C0392B)}
+.cnt-q .cnt-e{font-size:32px;margin:0 2px}
+.oc-k{display:block;margin-top:2px;font-size:13px;font-weight:700;color:var(--mut)}
+.ocg.oc-sym .cg{background:var(--surface-2);color:var(--ink);display:grid;place-items:center;padding:0;line-height:1;aspect-ratio:1}
+.ocg .cg.oc-l{font-size:clamp(22px,7vw,32px);font-weight:800}
+.ocg .cg.oc-f{font-size:clamp(20px,6.4vw,28px)}
+.ocg .cg.oc-f i{display:block;font-style:normal}
+.ocg .cg.oc-f i.fl{transform:scaleX(-1)}

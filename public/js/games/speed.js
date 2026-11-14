@@ -67,22 +67,59 @@ GAMES.nmem=spdBase({name:'تذكّر الرقم',lbc:'#2C6E8F',icon:iconE('#3A8D
 
 /* ---------- count the shapes ---------- */
 const CNTE=['🍎','🍋','⭐','🐟','🎈','🌙'];
-GAMES.cnt=spdBase({name:'عدّ الأشكال',lbc:'#7D5BA6',icon:iconE('#9B7BC7','🔍'),title:'تطلع أشكال لثواني، وبعدها نسألك كم واحد منها',rank:true,
-  bot:(d,s,lv)=>({ok:Math.random()<[0,.55,.72,.9][lv]-d.rd*.03,ms:[0,2300,1600,1050][lv]+rnd([0,2200,1500,900][lv])}),
-  q(d){const R=srng(d,'ct'+d.rd);const n=16+d.rd*4;const a=[];for(let k=0;k<n;k++)a.push(Math.floor(R()*4));const t=Math.floor(R()*4);const c=a.filter(x=>x===t).length;
-    const off=[0,1,-1,2].map(x=>c+x).filter(x=>x>=0);while(off.length<4)off.push(c+off.length);const o=withOptions(R,String(c),off.slice(1,4).map(String));return {arr:a,t,c,...o,em:CNTE.slice(0,4).map((e,k)=>CNTE[(k+d.rd)%6])};},
-  start(d,st){st.phase='show';setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},2600);},
-  view(d,ctx,st){const Q=GAMES.cnt.q(d);if(st.phase==='show')return `<div class="spd"><div class="cgrid">${Q.arr.map((x,k)=>`<span style="--k:${k%9}">${Q.em[x]}</span>`).join('')}</div>${drainBar(2600)}</div>`;
-    return `<div class="spd"><div class="qbox cnt-q">كم <span class="cnt-e">${Q.em[Q.t]}</span> كان فيه؟</div><div class="opts g2 qz-opts">${Q.o.map((t,k)=>qzOpt(t,k,'','')).join('')}</div></div>`;},
+// picture sets for the counting rounds: each round draws one set and four of its pictures (look-alikes in a set make it harder)
+const CNTS=[['🍎','🍋','🍇','🍉','🍓','🍌','🍊','🍒'],['🐟','🐠','🐙','🦀','🐬','🐳','🦑','🐚'],['⭐','🌙','☀️','☁️','⚡','❄️','🌈','☄️'],
+  ['🚗','🚕','🚌','🚑','🚒','🚓','🚲','✈️'],['⚽','🏀','🎾','🏐','🏈','⚾','🎱','🏓'],['🐱','🐶','🐭','🐰','🦊','🐻','🐼','🐯'],
+  ['🍩','🍪','🎂','🍰','🍫','🍬','🍭','🧁'],['🔴','🟠','🟡','🟢','🔵','🟣','🟤','⚫'],['🎈','🎁','🎉','🎀','🧸','🪁','🎲','🪀'],
+  ['🌹','🌻','🌷','🌼','🌸','🌺','🌵','🌴'],['🐪','🐎','🐑','🐐','🐄','🐓','🦆','🦅'],['☕','🍵','🥛','🧃','🥤','🍹','🧋','🍶']];
+const CNTA=[0,.6,.76,.91];
+const cntShow=d=>2600+d.rd*150;
+// a shuffle drawn from a seeded generator, so every phone lays out the same board
+const shuffleR=(R,a)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+// five kinds of question: how many of one picture (0), which picture was most (1), how many of two pictures together (2),
+// how many more of one than another (3), and, on later rounds, which picture was least (4)
+GAMES.cnt=spdBase({name:'عدّ الأشكال',lbc:'#7D5BA6',icon:iconE('#9B7BC7','🔍'),title:'تطلع أشكال لثواني، وبعدها نسألك عنها: كم واحد؟ أي واحد أكثر؟',rank:true,
+  bot:(d,s,lv)=>{const Q=GAMES.cnt.q(d);const hard=[0,0,.12,.18,.06][Q.ty]||0;return {ok:Math.random()<CNTA[lv]-d.rd*.03-hard,ms:[0,2300,1600,1050][lv]+(Q.ty>=2?600:0)+rnd([0,2200,1500,900][lv])};},
+  q(d){const R=srng(d,'ct'+d.rd),I=k=>Math.floor(R()*k);const n=16+d.rd*4;
+    const set=CNTS[I(CNTS.length)],em=shuffleR(R,[...set]).slice(0,4);
+    const r4=Math.min(d.rd,4),ty=r4===0?0:[[0,1],[1,2],[2,3,0],[3,4,2]][r4-1][I(r4<=2?2:3)];
+    // counts made on purpose (no tie for «most» or «least»), then the pictures laid out in a random order
+    let c;for(let g=0;g<30;g++){c=[1,1,1,1];for(let k=4;k<n;k++)c[I(4)]++;const s=[...c].sort((a,b)=>b-a);if(s[0]!==s[1]&&s[2]!==s[3])break;}
+    const arr=shuffleR(R,c.flatMap((x,k)=>Array(x).fill(k)));
+    const t=I(4);let u=I(3);if(u>=t)u++;const num=(v,dl)=>{const off=new Set();for(const x of dl){const y=v+x;if(y>=0&&y!==v)off.add(y);}let k=3;while(off.size<3)off.add(v+k++);return withOptions(R,String(v),[...off].slice(0,3).map(String));};
+    let txt,o;
+    if(ty===1||ty===4){const want=ty===1?Math.max(...c):Math.min(...c),w=c.indexOf(want);o=withOptions(R,em[w],em.filter((_,k)=>k!==w));txt=ty===1?'أي شكل كان <b>أكثر</b>؟':'أي شكل كان <b>أقل</b>؟';}
+    else if(ty===2){txt=`كم <span class="cnt-e">${em[t]}</span> و <span class="cnt-e">${em[u]}</span> مع بعض؟`;o=num(c[t]+c[u],[1,-1,2,-2]);}
+    else if(ty===3){const [hi,lo]=c[t]>=c[u]?[t,u]:[u,t];txt=`كم <span class="cnt-e">${em[hi]}</span> زيادة عن <span class="cnt-e">${em[lo]}</span>؟`;o=num(c[hi]-c[lo],[1,-1,2,3]);}
+    else{txt=`كم <span class="cnt-e">${em[t]}</span> كان فيه؟`;o=num(c[t],[1,-1,2,-2]);}
+    return {arr,t,c,ty,txt,em,...o};},
+  start(d,st){st.phase='show';setTimeout(()=>{if(S.sp===st){st.phase='go';st.t0=performance.now();render();}},cntShow(d));},
+  view(d,ctx,st){const Q=GAMES.cnt.q(d),ms=cntShow(d);if(st.phase==='show')return `<div class="spd"><div class="cgrid">${Q.arr.map((x,k)=>`<span style="--k:${k%9}">${Q.em[x]}</span>`).join('')}</div>${drainBar(ms)}</div>`;
+    const emo=Q.ty===1||Q.ty===4;
+    return `<div class="spd"><div class="qbox cnt-q">${Q.txt}</div><div class="opts g2 qz-opts ${emo?'emo':''}">${Q.o.map((t,k)=>qzOpt(t,k,'','')).join('')}</div></div>`;},
   click(a,k,d,ctx,st){if(a==='m'&&st.phase==='go')spdSubmit(d,ctx,k===GAMES.cnt.q(d).a);}});
 
-/* ---------- odd colour ---------- */
-GAMES.oddc=spdBase({name:'اللون المختلف',lbc:'#16816D',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E9E86"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${12+c*27}" y="${12+r*27}" width="23" height="23" rx="5" fill="${r===1&&c===2?'#5fd0bb':'#47c4ad'}"/>`).join('')).join('')}</svg>`,title:'لوح ألوان، فيه مربع لونه يختلف شوي. لقه بأسرع وقت',rank:true,
-  // the board grows and the colours get closer every round
-  bot:(d,s,lv)=>({ok:Math.random()<[0,.86,.93,.98][lv]-d.rd*.02,ms:[0,2100,1500,950][lv]+d.rd*[0,350,250,150][lv]+rnd([0,2000,1300,700][lv])}),
-  q(d){const R=srng(d,'oc'+d.rd);const z=4+Math.min(d.rd,2);const h=Math.floor(R()*360),l=50;const dl=Math.max(5,16-d.rd*3);return {z,odd:Math.floor(R()*z*z),c:`hsl(${h} 65% ${l}%)`,o:`hsl(${h} 65% ${l+dl}%)`};},
+/* ---------- odd one out on a board: a colour a shade lighter, a colour a touch off in hue, a letter with its dots moved,
+   or a picture turned the other way. The kind of round changes from game to game, the board grows every round ---------- */
+const OCL=[['ب','ت'],['ت','ث'],['ج','خ'],['ح','ج'],['س','ش'],['ص','ض'],['ط','ظ'],['ع','غ'],['ف','ق'],['د','ذ'],['ر','ز'],['ة','ه'],['ك','ل']];
+const OCF=['🐟','🐠','🐬','🚗','🚲','🐌','🦒','🐘','🐫','🚜','🦆','🐎','🚚','🛵','🐊','🦔'];
+GAMES.oddc=spdBase({name:'اللون المختلف',lbc:'#16816D',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1E9E86"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${12+c*27}" y="${12+r*27}" width="23" height="23" rx="5" fill="${r===1&&c===2?'#5fd0bb':'#47c4ad'}"/>`).join('')).join('')}</svg>`,title:'لوح فيه شي واحد يختلف شوي: لون، حرف، أو صورة مقلوبة. لقه بأسرع وقت',rank:true,
+  // the board grows and the odd one gets closer every round; letters and turned pictures take a little longer to spot
+  bot:(d,s,lv)=>{const Q=GAMES.oddc.q(d),slow=Q.ty===1||Q.ty===3?[0,700,450,250][lv]:0;return {ok:Math.random()<[0,.86,.93,.98][lv]-d.rd*.02-(Q.ty===1?.04:0),ms:[0,2100,1500,950][lv]+slow+d.rd*[0,350,250,150][lv]+rnd([0,2000,1300,700][lv])};},
+  // ty 0 lighter colour, 1 letter, 2 hue, 3 turned picture
+  q(d){const R=srng(d,'oc'+d.rd),I=k=>Math.floor(R()*k);const z=4+Math.min(d.rd,2);const odd=I(z*z);
+    const kinds=shuffleR(srng(d,'ock'),[1,2,3]);const ty=d.rd===0?0:d.rd===4?(I(2)?0:2):kinds[(d.rd-1)%3];
+    if(ty===1){const p=OCL[I(OCL.length)],sw=I(2);return {ty,z,odd,c:p[sw],o:p[1-sw]};}
+    if(ty===3)return {ty,z,odd,c:OCF[I(OCF.length)]};
+    const h=I(360),l=50;
+    if(ty===2){const dh=Math.max(9,22-d.rd*3)*(I(2)?1:-1);return {ty,z,odd,c:`hsl(${h} 65% ${l}%)`,o:`hsl(${(h+dh+360)%360} 65% ${l}%)`};}
+    const dl=Math.max(5,16-d.rd*3);return {ty,z,odd,c:`hsl(${h} 65% ${l}%)`,o:`hsl(${h} 65% ${l+dl}%)`};},
   start(d,st){st.phase='go';st.t0=performance.now();},
-  view(d,ctx,st){const Q=GAMES.oddc.q(d);return `<div class="spd"><div class="spdt oc-t">وين المربع المختلف؟</div><div class="cellgrid ocg" style="grid-template-columns:repeat(${Q.z},minmax(0,1fr))">${Array(Q.z*Q.z).fill(0).map((_,i)=>`<button class="cg" style="background:${i===Q.odd?Q.o:Q.c};--k:${(i%Q.z)+Math.floor(i/Q.z)}" data-ga="m" data-i="${i}"></button>`).join('')}</div></div>`;},
+  view(d,ctx,st){const Q=GAMES.oddc.q(d);const cell=i=>{const k=`--k:${(i%Q.z)+Math.floor(i/Q.z)}`;
+      if(Q.ty===1)return `<button class="cg oc-l" style="${k}" data-ga="m" data-i="${i}">${i===Q.odd?Q.o:Q.c}</button>`;
+      if(Q.ty===3)return `<button class="cg oc-f" style="${k}" data-ga="m" data-i="${i}"><i class="${i===Q.odd?'fl':''}">${Q.c}</i></button>`;
+      return `<button class="cg" style="background:${i===Q.odd?Q.o:Q.c};${k}" data-ga="m" data-i="${i}"></button>`;};
+    return `<div class="spd"><div class="spdt oc-t">وين ${Q.ty===1?'الحرف':Q.ty===3?'الصورة':'المربع'} المختلف؟ <small class="oc-k">${['🎨 درجة اللون','🔤 الحرف','🌈 لون قريب','🔄 صورة مقلوبة'][Q.ty]}</small></div><div class="cellgrid ocg ${Q.ty===1||Q.ty===3?'oc-sym':''}" style="grid-template-columns:repeat(${Q.z},minmax(0,1fr))">${Array(Q.z*Q.z).fill(0).map((_,i)=>cell(i)).join('')}</div></div>`;},
   click(a,i,d,ctx,st){if(a==='m'&&st.phase==='go')spdSubmit(d,ctx,i===GAMES.oddc.q(d).odd);}});
 
 /* ---------- quick sudoku: five puzzles that grow from an easy 4×4 to a hard 6×6, each with one solution ---------- */
