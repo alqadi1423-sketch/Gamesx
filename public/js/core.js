@@ -473,22 +473,22 @@ function renderNear(){
   <div class="panel">${pTitle('add','red','أنشئ غرفة قريبة')}<p>أصحابك اللي جنبك يشوفون غرفتك عندهم ويدخلون بضغطة، بدون إنترنت</p><button class="big red" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
   <div class="panel">${pTitle('near','green','الغرف القريبة')}${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><span>${f.code}</span><i>ادخل</i></button>`).join('')}</div>`:S.nearScan?`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`:'<p class="note">البحث متوقف</p>'}</div>
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}
-  ${NEARROOM.log.length?`<details class="nlog"><summary>تفاصيل الاتصال</summary><pre>${escH(NEARROOM.log.join('\n'))}</pre></details>`:''}`;
+  ${NEARROOM.debug&&NEARROOM.log.length?`<details class="nlog"><summary>تفاصيل الاتصال</summary><pre>${escH(NEARROOM.log.join('\n'))}</pre></details>`:''}`;
 }
-// turns a native error into a short Arabic hint, with the raw code kept for us
-function nearErr(m){m=String(m||'');const raw=m&&m!=='perm'&&m!=='timeout'?`<small class="ltr nraw">${escH(m.slice(0,90))}</small>`:'';
+// turns a native error into a short Arabic hint (the raw code stays in NEARROOM.log, never on screen)
+function nearErr(m){m=String(m||'');
   let t='ما قدرت أشغّل الغرف القريبة.';
   if(m==='perm'||/PERMISSION/i.test(m))t='الجوال ما أعطى التطبيق صلاحية الأجهزة القريبة أو الموقع.';
   else if(m==='timeout')t='ما رد صاحب الغرفة. قرّبوا من بعض وجرّب مرة ثانية.';
   else if(/LOCATION/i.test(m))t='شغّل الموقع في الجوال.';
   else if(/BLUETOOTH|RADIO/i.test(m))t='شغّل البلوتوث وجرّب مرة ثانية.';
   else if(/API_UNAVAILABLE|SERVICE_MISSING|not implemented/i.test(m))t='هذا الجوال ما فيه خدمات Google اللي يحتاجها اللعب القريب.';
-  return t+raw;}
+  return t;}
 async function nearCheck(){
   const st=await NEARROOM.status(),D=[];
   if(st.fail)D.push({t:nearErr(st.fail)});
   else{
-    if(st.gmsOk===false)D.push({t:'هذا الجوال ما فيه خدمات Google أو تحتاج تحديث، واللعب القريب يحتاجها.'});
+    if(st.gmsOk===false)D.push({t:'هذا الجوال ما فيه خدمات Google أو تحتاج تحديث، واللعب القريب يحتاجها.',...(st.gmsFix?{a:'gms',b:'حدّث خدمات Google'}:{})});
     if(st.hasBt===false)D.push({t:'هذا الجوال ما فيه بلوتوث.'});
     else if(st.bt===false)D.push({t:'البلوتوث مقفل.',a:'bt',b:'افتح البلوتوث'});
     if(st.locNeeded&&st.loc===false)D.push({t:'الموقع مقفل، والجوال يحتاجه عشان يلقى الأجهزة القريبة.',a:'loc',b:'افتح الموقع'});
@@ -503,7 +503,7 @@ async function startNear(){
   if(S.mode!=='near')return;
   if(!r.ok){
     if(r.why==='perm')D.push({t:'وافق على صلاحية الأجهزة القريبة والموقع عشان تشوف الغرف.',a:'app',b:'افتح صلاحيات التطبيق'});
-    else{const m=r.msg||'';D.push({t:nearErr(m),...(/PERMISSION/i.test(m)?{a:'app',b:'افتح صلاحيات التطبيق'}:/LOCATION/i.test(m)?{a:'loc',b:'افتح الموقع'}:/BLUETOOTH/i.test(m)?{a:'bt',b:'افتح البلوتوث'}:{})});}
+    else{const m=r.msg||'';D.push({t:nearErr(m),...(/PERMISSION/i.test(m)?{a:'app',b:'افتح صلاحيات التطبيق'}:/LOCATION/i.test(m)?{a:'loc',b:'افتح الموقع'}:/BLUETOOTH|RADIO/i.test(m)?{a:'bt',b:'افتح البلوتوث'}:{})});}
   }
   S.nearScan=r.ok;S.nearDiag=D;render();}
 function renderLobby(){
