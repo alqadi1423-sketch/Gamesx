@@ -274,6 +274,8 @@ function netState(st){
 function netDown(){if(S.mode!=='online'||!S.offline)return false;if(Date.now()-(S.offT||0)>1500){S.offT=Date.now();toast('انقطع الاتصال، استنى لين يرجع');}return true;}
 // a player who dropped out gets GRACE ms before the others can skip them, so a short network cut does not cost the game
 const GRACE=15000;
+// online: a player whose phone has been out of the room for longer than GRACE (a short drop does not count)
+const goneLong=r=>S.mode==='online'&&!S.roles.has(r)&&Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE;
 // the roles in the room: seats whose device key is here
 // (a phone whose page is frozen or asleep, net.js freshFp, counts as gone for the round; it keeps its seat for HOLD)
 function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(let r=0;r<MAXP;r++)if(S.ids[r]&&S.peersByFp[S.ids[r]]&&freshFp(S.ids[r]))s.add(r);

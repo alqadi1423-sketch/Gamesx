@@ -980,9 +980,9 @@ input.code::placeholder{color:var(--mut);opacity:.6}
 .tlist .tmc{width:30px;height:30px;font-size:15px;border-radius:10px}
 .pt i .tmb{position:absolute;bottom:-5px;right:-7px;width:18px;height:18px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-size:11px;line-height:1;text-decoration:none;box-shadow:0 0 0 2px var(--tc,var(--edge))}
 .players.teams .pt{border-bottom:3px solid var(--tc)}
-/* the compact tiles place the avatar's badges on the tile itself: the team badge goes to the top corner, the picked mark next to it */
+/* the compact tiles place the avatar's badges on the tile itself: the team badge goes to the top corner, the picked mark under it */
 .players.four .pt i .tmb,.players.many .pt i .tmb{top:4px;left:4px;bottom:auto;right:auto;width:17px;height:17px;font-size:10px}
-.players.teams.four .pt .pk,.players.teams.many .pt .pk{left:24px}
+.players.teams.four .pt .pk,.players.teams.many .pt .pk{top:24px;left:4px}
 .tstrip{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:0 0 8px}
 .tstrip span{display:inline-flex;align-items:center;gap:6px;padding:3px 12px 3px 4px;border-radius:99px;background:var(--surface);color:var(--ink);font-weight:800;font-size:13.5px;box-shadow:inset 0 0 0 2px var(--c),var(--e1)}
 .tstrip span i{width:22px;height:22px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-style:normal;font-size:13px}

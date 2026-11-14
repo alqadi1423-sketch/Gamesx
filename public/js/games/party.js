@@ -133,7 +133,7 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',noTim
       if(d.seq){if(now>=x.t0+x.T*1000+800){const done=[...x.done,x.wr];const hs=cHumans(x).filter(s=>!done.includes(s));return hs.length?{...x,done,wr:hs[0],turn:hs[0],t0:now}:cCollect({...x,done});}return x===d?null:x;}
       if(now>=end)return cCollect(x);
       // everyone finished early: no need to wait for the clock
-      const allIn=d.pl.every((_,s)=>isBot(d,s)?(d.bt[s]&&now>=d.bt[s].at):(()=>{const p=S.priv[d.pl[s]];return S.mode==='online'&&!S.roles.has(d.pl[s])||!!(p&&p.ca&&p.ca.k===cKey(d)&&p.ca.stop);})());
+      const allIn=d.pl.every((_,s)=>isBot(d,s)?(d.bt[s]&&now>=d.bt[s].at):(()=>{const p=S.priv[d.pl[s]];return goneLong(d.pl[s])||!!(p&&p.ca&&p.ca.k===cKey(d)&&p.ca.stop);})());
       if(allIn&&!x.stop)return cCollect(x);
       return x===d?null:x;}
     if(d.ph==='review'&&!d.seq&&S.mode==='online'){const hs=cHumans(d).filter(s=>S.roles.has(d.pl[s]));const ok=hs.every(s=>{const p=S.priv[d.pl[s]];return p&&p.ob&&p.ob.k===cKey(d)&&p.ob.ok;});

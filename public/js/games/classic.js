@@ -205,7 +205,9 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   simulNow:d=>seaSalvo(d)&&allReady(d,S.priv),
   /* online, the others see a fleet only as «ready» plus the ships already sunk and how many still float (all of it once its owner is out
      or the game ends); a salvo stays secret until the round lands (only «picked»). Shots are checked on the host */
-  privShow:(d,seat,role,p,own)=>{const s=d.pl.indexOf(role);if(own||d.win!=null||s<0||d.out[s]==='1'||typeof p.f!=='string')return p;
+  privShow:(d,seat,role,p,own)=>{const s=d.pl.indexOf(role);if(own||d.win!=null)return p;
+    // a fleet that is all gone is shown whole; a salvo of this round never is
+    if(s<0||d.out[s]==='1'||typeof p.f!=='string')return p.pick!=null&&p.rd===d.rd?{...p,pick:1}:p;
     const sh=d.sh[s]||'',f=[...p.f],sunk=L=>f.every((c,k)=>c!==L||sh[k]==='o');
     return {gid:p.gid,ready:!!p.ready,f:f.map(c=>c!=='.'&&sunk(c)?c:'.').join(''),af:seaAfloat(p.f,sh),...(p.rd!=null?{rd:p.rd}:{}),...(p.pick!=null?{pick:1}:{})};},
   // a fleet is five whole ships, and it stays as it was once its owner said ready; a salvo is a short list of cells

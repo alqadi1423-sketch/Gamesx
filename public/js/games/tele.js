@@ -144,7 +144,8 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
       setPriv(r,{...p,gid:d.gid,gq:{k,n:n2,l:[...gq.l,[n2,txt]].slice(-3)}});}},
   // one device runs the clock, reads the typed guesses and plays the bots
   host(d){const now=Date.now(),dr=pDrawer(d);
-    if(d.ph==='pick'){if(S.mode==='online'&&!S.roles.has(d.pl[dr]))return pNext(d);
+    // a drawer who left the room (not just a short drop) loses the turn
+    if(d.ph==='pick'){if(goneLong(d.pl[dr]))return pNext(d);
       if(now-d.ts>(isBot(d,dr)?1800:30000))return pStart(d,d.ch[rnd(d.ch.length)]);return null;}
     if(d.ph==='show')return now-d.ts>6000?pNext(d):null;
     if(d.ph!=='draw')return null;

@@ -68,6 +68,8 @@ GAMES.hilo={name:'أعلى أو أقل',cat:'cards',lbc:'#3B5B8C',
   /* push your luck: keep guessing to build a streak, bank it whenever you like, a wrong guess (or the same card) loses it.
      dk holds only the cards turned over so far (the current one last): the next card is drawn from the rest when it is turned */
   init:n=>{const a=deck52(n>4?2:1);return {dk:a[rnd(a.length)],p:0,pts:Array(n).fill(0),stk:0,last:'',goal:12};},
+  // online the next card is turned on the host's phone, so no player can pick it
+  net:{host:['hi','lo','bank']},
   points:d=>d.pts,
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>أول واحد يوصل ${d.goal} يفوز</small>`,
   winExtra:d=>d.last,

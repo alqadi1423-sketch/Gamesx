@@ -150,7 +150,8 @@ GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
     if(a==='pass'){if(d.ps[t]==='1')return;act({...d,ps:setAt(d.ps,t,'1'),turn:nextSeat(d,t),last:`${nm(d,t)} مرّر دوره ⏭`});return;}
     if(a==='cut'&&Number.isInteger(i)&&i>=0&&i<d.k&&!d.cut.includes(i))act(wCut(d,i));},
-  onTimeout:d=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const safe=left.filter(i=>i!==d.bomb);return wCut(d,safe.length?safe[rnd(safe.length)]:d.bomb);}
+  // time ran out: a random wire is cut for you (never a safe one on purpose, or waiting out the clock would be the best move)
+  onTimeout:d=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));return wCut(d,left[rnd(left.length)]);}
 };
 
 /* ---------- go fish ---------- */

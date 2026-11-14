@@ -158,6 +158,8 @@ GAMES.camel={name:'سباق الهجن',cat:'cards',lbc:'#B8860B',
   init:n=>{let cam=[0,1,2,3,4].map(()=>[0,0]);const ord=shuffle([0,1,2,3,4]);for(const c of ord){const p=rnd(3);const h=cam.filter((x,k)=>k!==c&&ord.indexOf(k)<ord.indexOf(c)&&x[0]===p).length;cam[c]=[p,h];}
     return {cam,co:Array(n).fill(3),...cNewLeg({}),ld:null,last:''};},
   points:d=>d.co,
+  // online the pyramid is shaken on the host's phone, so no player can choose the camel or the steps
+  net:{host:['roll','bet']},
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+(d.win==null?`<small>الشوط ${d.lg}</small> • `:'')+turnTxt(d,ctx),
   winExtra:d=>'الفلوس: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.co[s]} 🪙`).join('، '),
   render(d,ctx){const my=ctx.my&&d.win==null;const rk=cRank(d.cam);
@@ -199,6 +201,8 @@ function luckBank(d){const t=d.turn,pts=[...d.pts];pts[t]+=d.bag;return luckEnd(
 GAMES.luck={name:'صناديق الحظ',cat:'cards',lbc:'#A5373F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C9464F"/>${[[14,20],[54,20],[14,58],[54,58]].map(([x,y],k)=>`<rect x="${x}" y="${y}" width="32" height="26" rx="4" fill="${k===3?'#2D4763':'#F2C14E'}"/><rect x="${x+13}" y="${y}" width="6" height="26" fill="${k===3?'#1d2f44':'#D9A441'}"/>`).join('')}<text x="70" y="78" font-size="16" text-anchor="middle">💣</text></svg>`,
   init:n=>{const k=16+2*n;return {box:'?'.repeat(k),nb:3+Math.floor(n/2),nx:2,op:'.'.repeat(k),pts:Array(n).fill(0),bag:0,last:''};},
+  // online a box is opened on the host's phone, so no player can choose what is inside
+  net:{host:['m','bank']},
   points:d=>d.pts,
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
