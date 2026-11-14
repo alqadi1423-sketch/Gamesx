@@ -646,7 +646,9 @@ svg.tvb{width:min(100%,460px);display:block;border-radius:12px;box-shadow:0 6px 
 /* ===================== shell: every screen around the game boards (one definition per selector) =====================
    home, game list, local setup, lobby and nearby rooms, room bar, top bar, players strip, status card, timer,
    pass-the-phone cover, result sheet, modals, toasts, turn banner and floating buttons. Game boards live above and in g-*.css */
-body{background:radial-gradient(1200px 520px at 50% -220px,var(--glow) 0,var(--bg) 62%) fixed}
+/* the glow sits on its own fixed layer: a fixed body background repaints the whole page on every scroll frame */
+body{background:var(--bg)}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(1200px 520px at 50% -220px,var(--glow) 0,var(--bg) 62%);transform:translateZ(0)}
 #app{max-width:540px;margin:0 auto;padding:12px 14px 100px;min-height:100vh}
 /* a new screen slides in once (core.js render adds .scr-in for a moment); the board has its own entrance */
 #app.scr-in>:not(.sheet-bg):not(.board):not(.rx){animation:sh-in var(--t3) var(--ease) both}

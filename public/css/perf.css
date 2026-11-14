@@ -1,0 +1,35 @@
+/* performance: loaded after every other stylesheet.
+   1) Loops that repaint a whole SVG (or a filtered element) every frame play a few times and stop; the hint they
+      carry stays as a still ring, glow or colour. Loops on plain HTML elements that only move (transform) are cheap and stay.
+   2) html.lite (core.js: on by itself on phones with little memory or few cores, or from settings) keeps the look
+      but drops the costly parts: enter and pop animations, blurred shadows, drop-shadow filters and the page glow. */
+.lg-d,.lg-s{animation-iteration-count:2!important}
+.hx.tg polygon{animation-iteration-count:3!important}
+.pawn .halo,.marble .halo,.ring,.pawn.can .pb,.marble.can .pb,.tanks .tkon{animation-iteration-count:4!important}
+.clouds.r>g,.clouds.l>g{animation-iteration-count:2!important}
+.fcard.tgt,.gw.gm .pc.pick{animation-iteration-count:4!important}
+.bd-sea .sc .fire{animation-iteration-count:1,6!important}
+.bd-sea .sc .smk::before,.bd-sea .sc .smk::after{animation-iteration-count:3!important}
+
+/* motion stays short so a move never feels slow */
+:root{--t2:.18s;--t3:.26s}
+#app.scr-in>:nth-child(2),#app.scr-in>:nth-child(3),#app.scr-in>:nth-child(n+4){animation-delay:0s}
+
+/* ---------- light mode ---------- */
+html.lite{--e1:0 1px 0 var(--line);--e2:0 2px 0 var(--line);--e3:0 6px 0 rgba(15,30,50,.18);--t1:.08s;--t2:.12s;--t3:.16s}
+html.lite *,html.lite *::before,html.lite *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
+/* what carries a message still shows for its time, by fading only */
+html.lite .floatrx,html.lite .ytb,html.lite .dmg,html.lite .toast{animation-name:rmfade!important;animation-timing-function:linear!important}
+html.lite .floatrx{animation-duration:2.2s!important}html.lite .ytb{animation-duration:1.7s!important}html.lite .toast{animation-duration:2s!important}html.lite .dmg{animation-duration:1.3s!important;transform:translate(-50%,-20px)}
+/* waiting spinners keep turning (a plain rotation of a small element) */
+html.lite .status.pend::after,html.lite .scan i{animation-duration:.9s!important;animation-iteration-count:infinite!important}
+/* the turn timer and progress bars keep sliding smoothly */
+html.lite .tbar i{transition-duration:.4s!important}
+html.lite .cupb{transition-duration:400ms!important}
+/* press feedback stays: it is a transform only */
+html.lite button:active:not(:disabled){transition-duration:0s!important}
+/* drop-shadow filters render each element on its own surface */
+html.lite .camelp,html.lite .tank.on,html.lite .trophy svg,html.lite .gm-uxo .ubw,html.lite .gm-wires .bsvg,html.lite .lcup.on svg,
+html.lite .mboard .mc .hs,html.lite .mboard .mc.msk .ic,html.lite .bd-sea .sc .fire,html.lite .bd-ch .chp,html.lite .chpro button .chp,html.lite .bd-ch .dmp .crw{filter:none!important}
+html.lite body::before{display:none}
+html.lite .confetti{display:none}

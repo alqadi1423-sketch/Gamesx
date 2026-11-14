@@ -14,9 +14,15 @@ const onceSet=new Set();const once=k=>{if(onceSet.has(k))return false;onceSet.ad
 const escH=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BACK='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const PERSON='<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="5" fill="#fff"/><path d="M3 23c0-6 4-9 9-9s9 3 9 9z" fill="#fff"/></svg>';
-const LSK={room:'alaabna.v4',name:'alaabna.name',mute:'alaabna.mute',local:'alaabna.local',lgame:'alaabna.lgame',recent:'alaabna.recent'};
+const LSK={room:'alaabna.v4',name:'alaabna.name',mute:'alaabna.mute',local:'alaabna.local',lgame:'alaabna.lgame',recent:'alaabna.recent',lite:'alaabna.lite'};
 const lsGet=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
+// light motion (css/perf.css html.lite): fewer animations and lighter shadows. On by itself on phones with little memory or
+// few cores; the settings sheet switches it for this phone
+const LITE_AUTO=(()=>{try{const m=navigator.deviceMemory,c=navigator.hardwareConcurrency;return !!((m&&m<=4)||(c&&c<=4));}catch(e){return false;}})();
+function liteOn(){const v=lsGet(LSK.lite);return v==='1'?true:v==='0'?false:LITE_AUTO;}
+function applyLite(){try{document.documentElement.classList.toggle('lite',liteOn());}catch(e){}}
+applyLite();
 // the last games picked on this phone, newest first (home and game list show them)
 function recentGames(){try{const a=JSON.parse(lsGet(LSK.recent)||'[]');return Array.isArray(a)?a.filter(g=>typeof g==='string'&&Object.prototype.hasOwnProperty.call(GAMES,g)).slice(0,8):[];}catch(e){return [];}}
 function noteRecent(g){try{lsSet(LSK.recent,JSON.stringify([g,...recentGames().filter(x=>x!==g)].slice(0,8)));}catch(e){}}
@@ -49,6 +55,8 @@ const CFG0={pick:'host',timer:0,target:0,lock:false,kick:[],members:[],teams:0,t
 const S={draft:{},sel:[],mode:null,localN:2,localNames:[],myName:lsGet(LSK.name)||'',names:{},mute:lsGet(LSK.mute)==='1',
   st:{g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0}},me:null,myPeer:null,code:null,nr:null,roles:new Set(),priv:Array(MAXP).fill(null),
   chat:{},myChat:[],chatSeen:Date.now(),seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false,browse:false,modal:null,showResult:false,winKey:null,wasMy:false,rxSeen:{}};
+// while a game animates the screen by hand (holdRender), the next real render repaints it in full even if its HTML is unchanged
+{let hr=!!S.holdRender;Object.defineProperty(S,'holdRender',{get:()=>hr,set:v=>{hr=v;S.lastHtml=null;},enumerable:true,configurable:true});}
 try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){S.localN=l.n||2;S.localNames=l.names||[];S.bots=l.bots||{};}}catch(e){}
 // the teams last chosen on this phone (local play keeps them between games)
 function localTeams(){try{const l=JSON.parse(lsGet(LSK.local)||'null');const o={};if(l&&CFGOK.teams(l.teams))o.teams=l.teams;if(l&&tmOk(l.tm))o.tm={...l.tm};return o;}catch(e){return {};}}
@@ -215,6 +223,7 @@ function sfx(kind){
 }
 function buzz(){try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}}
 function confetti(){
+  if(liteOn())return;
   const c=document.createElement('canvas');c.className='confetti';document.body.appendChild(c);const x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
   const P=Array(120).fill(0).map(()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.5,vx:(Math.random()-.5)*3,vy:2+Math.random()*3,r:Math.random()*6,c:COLS[rnd(8)],a:Math.random()*6}));
   let f=0;const step=()=>{x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=.1;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillRect(-4,-2,8,5);x.restore();});if(++f<160)requestAnimationFrame(step);else c.remove();};step();
@@ -414,8 +423,9 @@ function render(){
   // the screen is patched in place: only what changed is touched, so the page does not jump and typing is not lost
   const screen=S.mode+'|'+(S.mode==='online'||S.mode==='local'?(S.st.g&&!S.browse&&S.st.d?'g:'+S.st.g:'grid'):'');
   // a new screen slides in once (style.css #app.scr-in); later patches of the same screen do not animate
-  if(screen!==S.lastScreen){S.lastScreen=screen;app.innerHTML='';window.scrollTo(0,0);app.classList.add('scr-in');clearTimeout(S.scrT);S.scrT=setTimeout(()=>app.classList.remove('scr-in'),450);}
-  morph(app,OUT+(S.modal?modalHTML():''));
+  if(screen!==S.lastScreen){S.lastScreen=screen;app.innerHTML='';S.lastHtml=null;window.scrollTo(0,0);app.classList.add('scr-in');clearTimeout(S.scrT);S.scrT=setTimeout(()=>app.classList.remove('scr-in'),450);}
+  // nothing changed on screen (a heartbeat, another player's message that does not show here): the page is left alone
+  const html=OUT+(S.modal?modalHTML():'');if(html!==S.lastHtml||app.childNodes.length!==S.lastKids){morph(app,html);S.lastHtml=html;S.lastKids=app.childNodes.length;}
   const nm_=chatList().length;app.querySelectorAll('.msgs').forEach(b=>{if(b._n!==nm_||!b._s){b.scrollTop=b.scrollHeight;b._n=nm_;b._s=1;}});
   if(fid&&document.activeElement!==app.querySelector(`[data-draft="${fid}"]`)){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(cs,cs);}catch(e){}}}
   const strip=app.querySelector('.players');if(strip&&strip.scrollWidth>strip.clientWidth+2){const on=strip.querySelector('.pt.on');const k=S.st.g+':'+(S.st.d&&S.st.d.turn);if(on&&S.stripKey!==k){S.stripKey=k;const c=strip.getBoundingClientRect(),e=on.getBoundingClientRect();strip.scrollBy({left:(e.left+e.width/2)-(c.left+c.width/2),behavior:'smooth'});}}
@@ -629,6 +639,7 @@ function modalHTML(){
     ${S.mode==='online'&&!h?'<p class="note">القواعد يحددها صاحب الغرفة 👑</p>':''}
     ${S.mode==='online'?`<label class="lab">مين يختار اللعبة</label><div class="segs">${opt('pick','host','صاحب الغرفة')}${opt('pick','all','الكل')}</div>`:''}
     ${S.mode==='online'&&players().length>=4?`${teamSegs()}${teamK()?`<div class="tlist">${players().map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} ${teamChip(r)}</span>`).join('')}</div>`:''}`:''}
+    <label class="lab">الحركات على هذا الجوال</label><div class="segs"><button class="seg ${liteOn()?'':'on'}" data-a="lite" data-v="0">كاملة</button><button class="seg ${liteOn()?'on':''}" data-a="lite" data-v="1">خفيفة وأسرع</button></div>
     <label class="lab">وقت كل دور</label><div class="segs">${opt('timer',0,'بدون')}${opt('timer',15,'15 ث')}${opt('timer',30,'30 ث')}${opt('timer',60,'دقيقة')}</div>
     <label class="lab">المباراة تنتهي عند</label><div class="segs">${opt('target',0,'مفتوحة')}${opt('target',3,'3 انتصارات')}${opt('target',5,'5')}${opt('target',10,'10')}</div>
     ${S.mode==='online'?`<label class="lab">قفل الغرفة</label><div class="segs">${opt('lock',false,'مفتوحة')}${opt('lock',true,'مقفلة على اللي فيها')}</div>
@@ -709,6 +720,7 @@ app.addEventListener('click',e=>{
     case 'copy':try{navigator.clipboard.writeText(S.code).then(()=>toast('انسخ الرمز: '+S.code)).catch(()=>toast('الرمز: '+S.code));}catch(err){toast('الرمز: '+S.code);}break;
     case 'mute':S.mute=!S.mute;lsSet(LSK.mute,S.mute?'1':'0');if(!S.mute)sfx('pop');render();break;
     case 'm-settings':S.modal='settings';render();break;
+    case 'lite':lsSet(LSK.lite,t.dataset.v==='1'?'1':'0');applyLite();render();break;
     case 'm-help':S.modal='help';render();break;
     case 'm-react':S.modal='react';render();break;
     case 'm-chat':S.modal='chat';S.chatSeen=Date.now();render();setTimeout(()=>{const b=document.querySelector('.msgs');if(b)b.scrollTop=b.scrollHeight;},0);break;

@@ -289,7 +289,8 @@ function handleIntent(fp,r,m){
    reset, which move s but not the board */
 function dSeq(){if(S.st.d!==S.dRef){S.dRef=S.st.d;S.dS=S.st.s;}return S.dS;}
 const baseOk=b=>Number.isInteger(b)&&b>=dSeq()&&b<=S.st.s;
-function schedulePublish(rx){dSeq();if(rx)S.pubRx=rx;if(S.pubT)return;S.pubT=setTimeout(runPublish,PUB_MS);}
+// sent at once when nothing went out in the last PUB_MS (a move never waits); quick bursts (typing, drawing) still go out as one message
+function schedulePublish(rx){dSeq();if(rx)S.pubRx=rx;if(S.pubT)return;S.pubT=setTimeout(runPublish,Math.max(0,PUB_MS-(Date.now()-(S.lastPubAt||0))));}
 async function runPublish(){S.pubT=null;if(S.pubBusy){S.pubAgain=true;return;}S.pubBusy=true;
   try{await doPublish();}catch(e){console.warn('publish',e);}finally{S.pubBusy=false;if(S.pubAgain){S.pubAgain=false;schedulePublish();}}}
 const RATE_N=100,RATE_W=10000;
@@ -311,19 +312,20 @@ async function doPublish(){
     const pub={h:S.epoch,g:S.st.g,s:S.st.s,d:pubD,sc:S.st.sc,cfg:S.st.cfg,ids:S.ids.slice(),pp,ack,hb};
     const aad=hostAad(pub);if(!aad)return;
     // every phone here gets a view sealed to it, bound to all the public fields above (even when it holds nothing more than them)
-    const vw={},sig=Object.keys(S.peersByFp).map(fp=>fp+':'+S.peersByFp[fp].pr.k).sort().join();
+    const vw={},sig=Object.keys(S.peersByFp).map(fp=>fp+':'+S.peersByFp[fp].pr.k).sort().join();const jobs=[];
     for(const fp of Object.keys(S.peersByFp)){const r=roleOfFp(fp),pk=S.peersByFp[fp].pr.k,seat=d&&r>=0?d.pl.indexOf(r):-1;
       let dp={};if(d&&seat>=0)dp=dPatch(pubD,viewOf(G,d,seat));const pv={};
       if(d&&seat>=0)for(let q=0;q<MAXP;q++){const p=S.priv[q];if(!p||p.gid!==d.gid)continue;const x=privFor(G,d,seat,q,p);if(!jsEq(x,pubX[q]))pv[q]=x;}
       const view={s:S.st.s};if(Object.keys(dp).length)view.dp=dp;if(Object.keys(pv).length)view.pv=pv;
-      // one peer that cannot be sealed to never stops the others getting theirs
-      let ct=null;try{ct=await SEAL.seal(pk,view,aad);}catch(e){console.warn('seal view',e);}
-      if(S.nr!==nr||!amHost())return;if(ct)vw[fp]=ct;}
-    S.vwSig=sig;
-    // a sealed copy of the whole game for the player who takes over if this phone leaves
+      // all views are sealed at the same time; one peer that cannot be sealed to never stops the others getting theirs
+      jobs.push(SEAL.seal(pk,view,aad).then(ct=>{vw[fp]=ct;},e=>console.warn('seal view',e)));}
+    // a sealed copy of the whole game for the player who takes over if this phone leaves (sealed alongside the views)
     let bk=null;const succ=Object.keys(S.peersByFp).filter(fp=>roleOfFp(fp)>=0&&freshFp(fp)).sort((a,b)=>roleOfFp(a)-roleOfFp(b))[0];
     if(succ&&d){const plain=JSON.stringify({ep:S.epoch,s:S.st.s,g:S.st.g,d:isSecretG(G)?d:null,priv:S.priv,lastN:S.lastN}),pk=S.peersByFp[succ].pr.k,bc=S.bkCache;
-      if(bc&&bc.plain===plain&&bc.pk===pk)bk=bc.bk;else{let c=null;try{c=await SEAL.seal(pk,JSON.parse(plain),'b'+S.code);}catch(e){console.warn('seal backup',e);}if(S.nr!==nr||!amHost())return;if(c){bk={to:succ,c};S.bkCache={plain,pk,bk};}}}
+      if(bc&&bc.plain===plain&&bc.pk===pk)bk=bc.bk;
+      else jobs.push(SEAL.seal(pk,JSON.parse(plain),'b'+S.code).then(c=>{bk={to:succ,c};S.bkCache={plain,pk,bk};},e=>console.warn('seal backup',e)));}
+    await Promise.all(jobs);if(S.nr!==nr||!amHost())return;
+    S.vwSig=sig;
     Object.assign(o,{q:null,...pub,vw,bk});}
   else{for(const k of HOSTK)o[k]=null;o.q=S.outQ.filter(x=>x.c&&x.k===S.hostK).map(x=>({n:x.m.n,c:x.c}));
     const G=GAMES[S.st.g],d=S.st.d;o.pp=G&&G.selfPub&&d&&S.me!=null&&S.priv[S.me]?privFor(G,d,-1,S.me,S.priv[S.me]):null;S.selfPubLast=o.pp;}
