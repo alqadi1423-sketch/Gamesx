@@ -266,3 +266,5 @@ button.k2rmdc:active{transform:translateY(-3px)}
 .k2pomine .k2poc{--cw:56px}.k2pomine .k2poc>span{margin-left:-18px}
 .k2pomine .k2poh small{font-size:14px;color:var(--ink)}
 .k2pomine .k2poh.on .k2poc{outline:3px solid var(--sel);outline-offset:4px;border-radius:6px}
+.k2rm .k2hand{margin-top:14px}
+.k2sphn em.no{color:var(--mut)}

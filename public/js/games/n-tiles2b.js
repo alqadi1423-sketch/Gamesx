@@ -32,7 +32,7 @@ function k2snFlip(d){const s=d.turn;let st=d.sk[s],up=d.up[s];if(!st){st=up;up='
   return nd;}
 GAMES.k_snap={name:'اللقطة',cat:'cards',lbc:'#D9582B',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8693A"/><g transform="rotate(-12 34 50)"><rect x="16" y="28" width="34" height="48" rx="5" fill="#fff"/><text x="33" y="62" font-size="24" font-weight="900" text-anchor="middle" fill="#2D4763">Q</text></g><g transform="rotate(10 66 50)"><rect x="50" y="26" width="34" height="48" rx="5" fill="#fff"/><text x="67" y="60" font-size="24" font-weight="900" text-anchor="middle" fill="#D43C33">Q</text></g><path d="M38 16l6 10M50 12v12M62 16l-6 10" stroke="#FFE07A" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="84" r="9" fill="#FFE07A"/><text x="50" y="89" font-size="12" text-anchor="middle">✋</text></svg>`,
-  init:n=>{const dk=shuffle(deck52(n>4?2:1)),st=Array(n).fill('');dk.forEach((c,i)=>st[i%n]+=c);return {sk:st,up:Array(n).fill(''),ph:'play',rd:0,t0:0,lc:null,res:'',last:''};},
+  init:n=>{const dk=shuffle(deck52(n>4?2:1)),st=Array(n).fill('');dk.forEach((c,i)=>st[i%n]+=c);return {sk:st,up:Array(n).fill(''),ph:'play',rd:0,t0:0,lc:null,rt:'',last:''};},
   hide:{all:['sk']},privOk:(d,r,o,p)=>k2PickOk(p),
   simulNow:d=>d.ph==='slap',
   points:d=>d.pl.map((_,s)=>d.out[s]==='1'?'—':k2Cnt(d,s)),
@@ -45,7 +45,7 @@ GAMES.k_snap={name:'اللقطة',cat:'cards',lbc:'#D9582B',teams:'none',
     if(m&&sl.length){ws=sl[0].s;let got='';for(const s of m){got+=up[s];up[s]='';}st[ws]=st[ws]+got;msg=`لقطة! ${nameTag(d,ws)} أخذ ${got.length/2} ورقة`;}
     else if(sl.length){for(const x of sl){for(const o of aliveSeats(d)){if(o===x.s)continue;let src=st[x.s]?'st':'up';const pile=src==='st'?st[x.s]:up[x.s];if(!pile)break;const c=pile.slice(0,2);
         if(src==='st')st[x.s]=st[x.s].slice(2);else up[x.s]=up[x.s].slice(2);st[o]+=c;}}msg=`${sl.map(x=>nameTag(d,x.s)).join(' و')} لقط غلط ودفع لكل واحد ورقة`;}
-    const nd={...d,sk:st,up,ph:'play',res:sl.length?sl.map(x=>`${nm(d,x.s)} ${(x.ms/1000).toFixed(2)}ث`).join('، '):'',lw:ws,last:msg};
+    const nd={...d,sk:st,up,ph:'play',rt:sl.length?sl.map(x=>`${nm(d,x.s)} ${(x.ms/1000).toFixed(2)}ث`).join('، '):'',lw:ws,last:msg};
     const x=k2snOut(nd);if(x.win!=null)return x;let t=d.turn;t=nextSeat(x,t);return {...x,turn:t};},
   botDelay:(d,s,lv)=>d.ph!=='slap'?700+rnd(500):k2snMatch(d)?k2BotMs(d,s,...[[0,0],[700,1300],[500,950],[380,700]][lv]):250+rnd(300),
   botPick(d,s,lv){const m=k2snMatch(d);if(m)return Math.random()<[0,.75,.9,.97][lv]?{ms:k2BotMs(d,s,...[[0,0],[700,1300],[500,950],[380,700]][lv])}:null;
@@ -59,7 +59,7 @@ GAMES.k_snap={name:'اللقطة',cat:'cards',lbc:'#D9582B',teams:'none',
     if(d.win!=null)return h+'</div>';
     if(d.ph==='slap'){const T=k2Tappers(d,ctx);h+=`<div class="k2pads">${T.map(s=>k2Pad(d,s,!hasPicked(d,s),hasPicked(d,s)?'✓':'لقطة! ✋')).join('')}</div>`;}
     else{const me=ctx.local?!isBot(d,d.turn):ctx.v===d.turn;h+=me&&ctx.my?`<div class="row"><button class="btn red k2flip" data-ga="flip">اقلب ورقتك 🂠</button></div>`:`<p class="note">${nm(d,d.turn)} يقلب…</p>`;}
-    if(d.res)h+=`<p class="note k2res">${d.res}</p>`;return h+'</div>';},
+    if(d.rt)h+=`<p class="note k2res">${d.rt}</p>`;return h+'</div>';},
   click(a,i,d,ctx){if(d.win!=null)return;
     if(a==='flip'){if(!ctx.my||d.ph!=='play')return;act(k2snFlip(d));return;}
     if(a==='slap'){if(d.ph!=='slap')return;const s=k2TapSeat(d,ctx,i);if(s<0||d.out[s]==='1'||hasPicked(d,s))return;simulPick(d,s,{ms:k2Ms(d)});render();}}};
@@ -99,7 +99,7 @@ function k2erOn(d){const s=d.lc?d.lc.s:d.turn;
   return {...d,turn:t};}
 GAMES.k_ers={name:'الحرب الكبرى',cat:'cards',lbc:'#7B2D26',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8E342C"/><circle cx="50" cy="52" r="38" fill="#A8453B"/>${[-18,-6,6].map((r,i)=>`<g transform="rotate(${r} 50 60)"><rect x="34" y="${30-i*2}" width="32" height="44" rx="5" fill="#fff" stroke="#DCE3EC"/></g>`).join('')}<text x="52" y="62" font-size="22" font-weight="900" text-anchor="middle" fill="#2D4763" transform="rotate(6 50 60)">K</text><path d="M58 8c8 0 12 6 12 12v14l-8 6-6-6V22c0-3-2-4-4-4" fill="#FFD6A5" stroke="#8E342C" stroke-width="2"/><path d="M74 34l6-6M80 40l7-3M76 46l7 1" stroke="#FFE07A" stroke-width="3.5" stroke-linecap="round"/></svg>`,
-  init:n=>{const dk=shuffle(deck52(n>4?2:1)),st=Array(n).fill('');dk.forEach((c,i)=>st[i%n]+=c);return {sk:st,pot:'',ch:null,ph:'play',rd:0,t0:0,lc:null,res:'',lw:-1,last:''};},
+  init:n=>{const dk=shuffle(deck52(n>4?2:1)),st=Array(n).fill('');dk.forEach((c,i)=>st[i%n]+=c);return {sk:st,pot:'',ch:null,ph:'play',rd:0,t0:0,lc:null,rt:'',lw:-1,last:''};},
   hide:{all:['sk']},privOk:(d,r,o,p)=>k2PickOk(p),
   simulNow:d=>d.ph==='slap',
   points:d=>d.pl.map((_,s)=>d.out[s]==='1'?'—':d.sk[s].length/2),
@@ -108,7 +108,7 @@ GAMES.k_ers={name:'الحرب الكبرى',cat:'cards',lbc:'#7B2D26',teams:'non
   onSkip(nd,d){if(nd.win!=null)return nd;return nd.ph==='play'&&!k2erHas(nd,nd.turn)?{...nd,turn:k2erNextP(nd,nd.turn)}:nd;},
   host(d){if(d.ph!=='slap')return null;if(Date.now()-d.t0<K2ERW)return null;return GAMES.k_ers.resolve(d,simulPicks(d).map(x=>x===undefined?null:x));},
   resolve(d,picks){const rule=k2erRule(d.pot),sl=picks.map((p,s)=>p&&typeof p==='object'&&d.out[s]!=='1'?{s,ms:p.ms}:null).filter(Boolean).sort((a,b)=>a.ms-b.ms);
-    const res=sl.length?sl.map(x=>`${nm(d,x.s)} ${(x.ms/1000).toFixed(2)}ث`).join('، '):'';let nd={...d,ph:'play',res,lw:-1};
+    const res=sl.length?sl.map(x=>`${nm(d,x.s)} ${(x.ms/1000).toFixed(2)}ث`).join('، '):'';let nd={...d,ph:'play',rt:res,lw:-1};
     if(rule&&sl.length){const w=sl[0].s,n=d.pot.length/2;nd={...nd,sk:d.sk.map((x,k)=>k===w?x+d.pot:x),pot:'',ch:null,lw:w,last:`${rule}! ${nameTag(d,w)} ضرب أول وأخذ ${n} ورقة`};
       const e=k2erEnd(nd);if(e)return e;return {...nd,turn:w};}
     if(sl.length){let st=[...nd.sk],pot=nd.pot,out=nd.out;const bad=[];
@@ -130,7 +130,7 @@ GAMES.k_ers={name:'الحرب الكبرى',cat:'cards',lbc:'#7B2D26',teams:'non
     if(d.win!=null)return h+'</div>';
     if(d.ph==='slap'){const T=k2Tappers(d,ctx);h+=`<div class="k2pads">${T.map(s=>k2Pad(d,s,!hasPicked(d,s),hasPicked(d,s)?'✓':'اضرب! ✋')).join('')}</div>`;}
     else{const me=ctx.local?!isBot(d,d.turn):ctx.v===d.turn;h+=me&&ctx.my?`<div class="row"><button class="btn red k2flip" data-ga="flip">نزّل ورقة</button></div>`:`<p class="note">${nm(d,d.turn)} ينزّل…</p>`;}
-    if(d.res)h+=`<p class="note k2res">${d.res}</p>`;return h+'</div>';},
+    if(d.rt)h+=`<p class="note k2res">${d.rt}</p>`;return h+'</div>';},
   click(a,i,d,ctx){if(d.win!=null)return;
     if(a==='flip'){if(!ctx.my||d.ph!=='play'||!d.sk[d.turn])return;act(k2erPlay(d));return;}
     if(a==='slap'){if(d.ph!=='slap')return;const s=k2TapSeat(d,ctx,i);if(s<0||d.out[s]==='1'||hasPicked(d,s))return;simulPick(d,s,{ms:k2Ms(d)});render();}}};
@@ -188,7 +188,7 @@ GAMES.k_speed={name:'السرعة',cat:'cards',lbc:'#1F6FB2',teams:'none',
       <span class="k2spr">الاحتياط ${d.res.length/2}</span></div>`;
     if(d.win!=null)return h+'</div>';
     for(const s of T){const H=cardsOf(d.hands[s]),pk=hasPicked(d,s),sel=Array.isArray(S.k2sps)&&S.k2sps[0]===d.gid+':'+d.rd+':'+s?S.k2sps[1]:-1;
-      h+=`<div class="k2sph ${pk?'done':''}" style="--c:${col(d,s)}"><div class="k2sphn"><b>${nm(d,s)}</b><small>بكومتك ${d.dk[s].length/2}</small>${pk?'<em>✓ لعبت</em>':''}</div><div class="k2sphc">${H.map((c,i)=>{const fit=d.mid.some(p=>k2spAdj(c,p.slice(-2)));
+      h+=`<div class="k2sph ${pk?'done':''}" style="--c:${col(d,s)}"><div class="k2sphn"><b>${nm(d,s)}</b><small>بكومتك ${d.dk[s].length/2}</small>${pk?'<em>✓ لعبت</em>':!H.some(c=>d.mid.some(p=>k2spAdj(c,p.slice(-2))))?'<em class="no">ما عندك لعب، انتظر</em>':''}</div><div class="k2sphc">${H.map((c,i)=>{const fit=d.mid.some(p=>k2spAdj(c,p.slice(-2)));
         return !pk&&fit?`<button class="bcard ${sel===i?'sel':''}" data-ga="card" data-i="${s*10+i}">${cardHTML(c)}</button>`:`<span class="bcard ${pk?'':'dim'}">${cardHTML(c)}</span>`;}).join('')}</div>
         ${sel>=0&&!pk?`<div class="k2spto">${d.mid.map((p,j)=>k2spAdj(H[sel],p.slice(-2))?`<button class="btn navy" data-ga="to" data-i="${s*10+j}">على ${k2Lab(p.slice(-2))}</button>`:'').join('')}</div>`:''}</div>`;}
     if(!T.length)h+='<p class="note">تتفرج</p>';return h+'</div>';},
@@ -238,13 +238,13 @@ const k2kStuck=p=>p.cy>p.sk.length/2+p.w.length/2+1;
 function k2kResult(d,picks){const hs=d.pl.map((r,s)=>{const p=S.priv[r];const x=picks&&picks[s]&&typeof picks[s]==='object'?picks[s]:null;return {h:p&&p.gid===d.gid?p.h:x?x.h:0,mv:p&&p.gid===d.gid?p.mv:x?x.mv:999,ms:x&&x.ms||K2KL};});
   const al=aliveSeats(d);const best=al.slice().sort((a,b)=>hs[b].h-hs[a].h||hs[a].ms-hs[b].ms||hs[a].mv-hs[b].mv)[0];
   const ws=al.filter(s=>hs[s].h===hs[best].h&&hs[s].ms===hs[best].ms&&hs[s].mv===hs[best].mv);
-  return {...k2Win(d,ws),res:al.map(s=>`${nm(d,s)} ${hs[s].h}`).join('، ')};}
+  return {...k2Win(d,ws),rt:al.map(s=>`${nm(d,s)} ${hs[s].h}`).join('، ')};}
 const k2kMine=(d,v,ctx)=>{const r=d.pl[v];const p=(S.mode==='local'?S.priv:ctx.priv||S.priv)[r];return p&&p.gid===d.gid&&p.t?p:null;};
 const k2kMulti=d=>S.mode==='local'&&humanSeats(d).length>1;
 function k2kDone(d,s,p){return {...p,pick:{h:p.h,mv:p.mv,ms:Math.max(1,Date.now()-(p.st||d.t0))}};}
 GAMES.k_soli={name:'سوليتير السباق',cat:'cards',lbc:'#1E7A52',teams:'none',noTimer:true,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#22885B"/>${[0,1,2,3].map(k=>`<rect x="${10+k*21}" y="10" width="17" height="24" rx="3" fill="${k===0?'#fff':'rgba(255,255,255,.25)'}"/>`).join('')}<text x="18.5" y="27" font-size="12" font-weight="900" text-anchor="middle" fill="#D43C33">A</text>${[0,1,2].map(c=>[0,1,2].map(r=>r<=c?`<rect x="${14+c*26}" y="${44+r*12}" width="20" height="28" rx="3" fill="${r===c?'#fff':'#2D4763'}" stroke="#fff" stroke-width="1"/>`:'').join('')).join('')}<path d="M70 82h22M82 74l10 8-10 8" stroke="#FFE07A" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  init:n=>({dk:shuffle(deck52()).join(''),rd:0,t0:0,res:''}),start:d=>({...d,t0:Date.now()}),
+  init:n=>({dk:shuffle(deck52()).join(''),rd:0,t0:0,rt:''}),start:d=>({...d,t0:Date.now()}),
   hide:{all:['dk']},
   privInit:d=>({...k2kNew(d.dk),rd:d.rd}),
   privOk:()=>false,
@@ -253,23 +253,25 @@ GAMES.k_soli={name:'سوليتير السباق',cat:'cards',lbc:'#1E7A52',teams
   net:{local:['c'],host:['to','auto','stk','done']},
   viewer:d=>simulViewer(d),coverMsg:()=>'نفس التوزيعة للكل، جاهز؟',
   points:d=>d.pl.map((r)=>{const p=S.priv[r];return p&&p.gid===d.gid&&p.h!=null?p.h+' 🏠':'—';}),
-  winText:d=>`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')}!`,winExtra:d=>d.res?'بالبيوت: '+d.res:'',
+  winText:d=>`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')}!`,winExtra:d=>d.rt?'بالبيوت: '+d.rt:'',
   // the host ends the race: a full board (unless the players share one phone), or time
   host(d){const multi=k2kMulti(d);
     if(!multi&&d.pl.some(r=>S.priv[r]&&S.priv[r].gid===d.gid&&S.priv[r].h===52))return k2kResult(d,simulPicks(d));
     if(!multi&&Date.now()-d.t0>K2KL)return k2kResult(d,simulPicks(d));
     // bots on this phone move at their own pace
-    if(S.mode==='local'){S.k2kb=S.k2kb||{};for(const s of aliveSeats(d)){if(!isBot(d,s)||hasPicked(d,s))continue;const r=d.pl[s],p=S.priv[r];if(!p||p.gid!==d.gid)continue;const lv=botLv(d,s),k=d.gid+s;
+    if(S.mode==='local'){S.k2kb=S.k2kb||{};let moved=0;for(const s of aliveSeats(d)){if(!isBot(d,s)||hasPicked(d,s))continue;const r=d.pl[s],p=S.priv[r];if(!p||p.gid!==d.gid)continue;const lv=botLv(d,s),k=d.gid+s;
       if(!S.k2kb[k])S.k2kb[k]=Date.now()+1500;if(Date.now()<S.k2kb[k])continue;S.k2kb[k]=Date.now()+[0,1500,1000,700][lv]+rnd(300);
       const m=k2kHint(p,lv);let q=m?k2kMove(p,m[0],m[1]):null;if(!q){q=k2kStuck(p)?null:k2kStock(p);}
-      if(!q||q.h===52)q=k2kDone(d,s,q||p);setPriv(r,{...q,gid:d.gid,rd:d.rd});}}
+      if(!q||q.h===52)q=k2kDone(d,s,q||p);S.priv[r]={...q,gid:d.gid,rd:d.rd};moved=1;}
+      // on one phone a bot's move is a new state too (the bots' boards live in their private parts)
+      if(moved)return {...d,bm:(d.bm||0)+1};}
     return null;},
   resolve:(d,picks)=>k2kResult(d,picks),
   botPick:()=>undefined,botDelay:()=>1e9,
   status(d,ctx){if(d.win!=null)return '';const v=ctx.v,p=v>=0?k2kMine(d,v,ctx):null;const left=Math.max(0,K2KL-(Date.now()-d.t0));
     const others=d.pl.map((r,s)=>{const q=(ctx.priv||S.priv)[r];return s===v?'':`${nm(d,s)} ${q&&q.h!=null?q.h:0}${hasPicked(d,s)?'✓':''}`;}).filter(Boolean).join('، ');
     return `<small>${others}</small><br>`+(p?(hasPicked(d,v)?'<b>خلّصت، ننتظر الباقين</b>':`<b class="yt">بيوتك ${p.h} من 52</b>`):'تتفرج')+(k2kMulti(d)?'':` • <span data-until="${Date.now()+left}">${Math.ceil(left/1000)}</span> ث`);},
-  render(d,ctx){const v=ctx.v;if(d.win!=null||v<0)return `<div class="k2 k2kl"><p class="note">${d.res?'بالبيوت: '+d.res:'تتفرج على السباق'}</p></div>`;
+  render(d,ctx){const v=ctx.v;if(d.win!=null||v<0)return `<div class="k2 k2kl"><p class="note">${d.rt?'بالبيوت: '+d.rt:'تتفرج على السباق'}</p></div>`;
     const p=k2kMine(d,v,ctx);if(!p)return '<div class="k2 k2kl"><p class="note">نجهز التوزيعة…</p></div>';const my=ctx.my&&!hasPicked(d,v);
     const sel=Array.isArray(S.sel)&&S.sel[0]===d.gid+':kl'?S.sel[1]:null,cs=sel!=null?k2kSrc(p,sel):null;const src=cs?sel:null;
     const can=dst=>src!=null&&k2kCan(p,src,dst);
@@ -342,7 +344,7 @@ GAMES.k_pishti={name:'بشتي',cat:'cards',lbc:'#B03A48',
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';return s+k2Who(d,ctx)+` • الهدف ${K2PV}`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph==='play';const P=cardsOf(d.pot),show=P.slice(-4);
     let h=`<div class="k2 k2pi">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.sc[k2Si(d,s)]}</em>${d.pairs&&!d.tm?`<u>${s%2?'🔷':'🔶'}</u>`:''}`,s=>d.turn===s&&d.ph==='play'&&d.win==null)}
-      <div class="k2felt k2pit"><div class="k2mid">${k2Stock(d.dk.length/2,false)}<div class="k2pipot">${show.length?show.map((c,j)=>`<span class="k2pic" style="--j:${j-show.length+1}" data-k="p${P.length-show.length+j}${c}">${cardHTML(c,true)}</span>`).join(''):'<p class="note">فاضي</p>'}<small>بالوسط ${P.length}</small></div></div>
+      <div class="k2felt k2pit"><div class="k2mid">${k2Stock(d.dk.length/2,false)}<div class="k2pipot">${show.length?show.map((c,j)=>{const at=P.length-show.length+j;return `<span class="k2pic" style="--j:${j-show.length+1}" data-k="p${at}${at<d.hid?"b":c}">${cardHTML(at<d.hid?"??":c,true)}</span>`;}).join(''):'<p class="note">فاضي</p>'}<small>بالوسط ${P.length}</small></div></div>
       ${d.lm&&d.lm.p?`<div class="k2piw" data-k="w${d.lm.c}${d.lm.n}"><b>بشتي! +${d.lm.p}</b></div>`:''}
       <div class="k2tot">${k2Sides(d).map((t,i)=>{const ss=d.pl.map((_,s)=>s).filter(s=>k2Side(d,s)===t);return `<span style="--c:${col(d,ss[0])}">${ss.map(s=>nm(d,s)).join(' و')}: ${d.caps[i].length/2} ورقة${d.pis[i]?` • بشتي ${d.pis[i]}`:''}</span>`;}).join('')}</div></div>`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel k2sum"><h3>نتيجة الجولة</h3>${k2Sides(d).map((t,i)=>{const ss=d.pl.map((_,s)=>s).filter(s=>k2Side(d,s)===t);return `<div class="bsr"><span>${ss.map(s=>nameTag(d,s)).join(' و')}</span><em>${r.cnt[i]} ورقة${r.top===i?' (الأكثر +3)':''} • +${r.add[i]}</em><b>${d.sc[i]}</b></div>`;}).join('')}${ctx.my?k2Next(d):''}</div>`;return h+'</div>';}
