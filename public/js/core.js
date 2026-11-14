@@ -798,7 +798,7 @@ function backAction(exit){
   if(b)b.click();else{S.mode=null;render();}}
 // in a browser one history step stands for "inside the app": back pops it (popstate), and it is pushed again while still inside
 function navInit(){try{window.addEventListener('popstate',()=>{if(isApp()||S.mode===null&&!S.modal)return;backAction(null);navSync();});}catch(e){}}
-function navSync(){if(isApp())return;try{const deep=S.mode!==null||!!S.modal,on=!!(history.state&&history.state.alb);if(deep&&!on)history.pushState({alb:1},'');else if(!deep&&on)history.back();}catch(e){}}
+function navSync(){if(isApp())return;try{const deep=S.mode!==null||!!S.modal,on=!!(history.state&&history.state.alb);if(deep&&!on)history.pushState({alb:1},'');else if(!deep&&on)history.replaceState(null,'');}catch(e){}}
 // the result sheet suggests what to play next: a favourite or recent game for this many players, else a random one
 function suggestNext(){const d=S.st.d,g=S.st.g;if(S.nextG&&S.nextG.gid===(d&&d.gid))return S.nextG.g;const n=d?d.pl.length:hereN();
   const ok=k=>k!==g&&GAMES[k]&&fitN(k,n);let pool=[...favGames(),...recentGames()].filter(ok);if(!pool.length)pool=Object.keys(GAMES).filter(ok);
@@ -971,7 +971,7 @@ function saveMeta(){try{const ids=[...recentGames(),...favGames(),...NEWG];const
   const m={n:Object.keys(GAMES).length,g};lsSet(LSK.meta,JSON.stringify(m));Object.assign(GMETA,m);}catch(e){}}
 // where this tab is (home, lobby, the game list, a game, a room), kept for this tab only, so reloading the page comes back to it
 const HEREK='alaabna.here';
-function noteHere(){try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);}}catch(e){}}
+function noteHere(){if(S.hereWait)return;try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);}}catch(e){}}
 function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)||'null');}catch(e){}if(!h||typeof h!=='object')return false;
   if(h.m==='local'){const l=h.g&&loadLocal();if(l){localResume();if(h.b){S.browse=true;render();}return true;}if(h.g)return false;
     S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0,...localTeams()}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();return true;}
@@ -983,8 +983,10 @@ function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)
 function hereSaved(){try{const h=JSON.parse(sessionStorage.getItem(HEREK)||'null');return !!h&&['local','online','lobby','stats'].includes(h.m);}catch(e){return false;}}
 function boot(){if(/[?&]info\b/.test(location.search)){infoScreen();return;}
   if(document.getElementById('later-js'))GREADY=false;
+  // a screen to come back to after a reload waits for the games; meanwhile this tab keeps it noted
+  const back=hereSaved();if(back)S.hereWait=true;
   navInit();render();
   // the games load once the home screen is painted (a frame, then a task; a second later at most, for a page opened in the
   // background). Under automation (navigator.webdriver) they load at once, so the page's load event still means every game is there
   if(navigator.webdriver)loadGames();else{requestAnimationFrame(()=>setTimeout(loadGames,0));setTimeout(loadGames,1500);}
-  if(hereSaved())whenGames(()=>{if(!restoreHere())render();});if(isApp())appSetup();}
+  if(back)whenGames(()=>{S.hereWait=false;if(!restoreHere())render();});if(isApp())appSetup();}
