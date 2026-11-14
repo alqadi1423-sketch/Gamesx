@@ -1,0 +1,97 @@
+/* n-tiles2: أوكي، الدومينو الخمسات، قطار الدومينو، الأحمق، جن رمي، غولف الورق، السرعة، اللقطة، الحرب الكبرى، سوليتير السباق،
+   بشتي، الأزواج الصاعدة، ورق الحظ. Tokens from the top of style.css, cards from g-cards.css, domino tiles as in cards.js. */
+
+/* ---------- shared: the seat strip, the felt, buttons ---------- */
+.k2{width:min(100%,470px);margin:0 auto}
+.k2seats{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:2px 0 8px}
+.k2seat{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 4px;border-radius:99px;background:var(--surface);box-shadow:var(--e1),inset 0 0 0 1.5px var(--c);font-size:13px;line-height:1.4;transition:transform var(--t2) var(--ease)}
+.k2seat b{color:var(--ink);max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k2seat i{font-style:normal;min-width:22px;text-align:center;border-radius:99px;background:var(--c);color:#fff;font-weight:800;padding:0 5px;order:-1}
+.k2seat em{font-style:normal;font-weight:800;color:var(--mut)}
+.k2seat u{text-decoration:none;font-size:12px}
+.k2seat.on{background:var(--c);transform:scale(1.06);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--c),var(--e2)}
+.k2seat.on b,.k2seat.on em{color:#fff}
+.k2seat.on i{background:#fff;color:var(--c)}
+.k2seat.done{opacity:.5}
+.k2felt{position:relative;border-radius:var(--r-xl);padding:12px 10px;margin:0 0 8px;color:#fff;
+  background:radial-gradient(90% 80% at 50% 30%,rgba(255,255,255,.12),transparent 70%) padding-box,radial-gradient(130% 110% at 50% 35%,var(--felt-1),var(--felt-2) 75%,#11432A) padding-box,linear-gradient(160deg,#A8743F,#6E4522 45%,#8A5A2B 70%,#5C391B) border-box;
+  border:6px solid transparent;box-shadow:inset 0 0 30px rgba(0,0,0,.35),0 6px 14px rgba(14,28,46,.2)}
+.k2acts{margin:8px 0}
+.k2acts .btn{min-height:46px;padding:0 16px;font-size:16px}
+.btn.green,.k2go{background:var(--ok)}
+.k2go{margin:12px 0 2px}
+.k2hint{text-align:center;color:var(--ink)}
+.k2sum h3{text-align:center}
+.k2sum>p{text-align:center}
+.k2tot{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.k2tot span{padding:2px 10px;border-radius:99px;background:var(--surface-2);box-shadow:inset 0 0 0 1.5px var(--c);font-size:14px}
+.k2tot b{color:var(--ink)}
+.k2lab{font-weight:800;color:#1F3249;unicode-bidi:isolate;direction:ltr}
+.k2lab.rs{color:#CC2F2A}
+@media (prefers-color-scheme:dark){.k2lab{color:#E7EEF6}.k2lab.rs{color:#FF8A80}}
+.k2emp{display:inline-block;width:26px;height:36px;border-radius:5px;border:2px dashed rgba(255,255,255,.35)}
+
+/* ---------- أوكي: plastic tiles, a wooden rack ---------- */
+.k2t{--tw:30px;width:var(--tw);height:calc(var(--tw)*1.4);padding:0;flex:none;border-radius:5px;background:none;position:relative;transition:transform var(--t2) var(--ease)}
+.k2t .k2tf{display:block;width:100%;height:100%}
+.k2tf .fc{fill:#FFF9EA;stroke:#D8C59C;stroke-width:1}
+.k2tf .bk{fill:#2F6E57;stroke:#1E4A3A;stroke-width:1}.k2tf .bk2{fill:none;stroke:#8CC5AE;stroke-width:1.2}
+.k2tf text{font-family:'Baloo Bhaijaan 2',system-ui,sans-serif;direction:ltr;unicode-bidi:bidi-override}
+.k2t::after{content:'';position:absolute;left:1px;right:1px;bottom:-3px;height:5px;border-radius:0 0 5px 5px;background:#D2BE92;z-index:-1}
+.k2t.sm{--tw:24px}
+.k2rack .k2t{--tw:min(40px,calc((100vw - 60px)/10))}
+.k2rack button.k2t{cursor:pointer}
+.k2rack .k2t.sel{transform:translateY(-10px)}
+.k2rack .k2t.sel .fc{stroke:var(--sel);stroke-width:2.6}
+.k2rack .k2t.new .fc{fill:#FFF2C4}
+.k2rack>.k2t[id]{animation:k2in var(--t3) var(--ease) backwards}
+@keyframes k2in{from{opacity:0;transform:translateY(-14px)}}
+.k2rack{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:7px 3px;padding:14px 8px 12px;border-radius:12px;direction:ltr;
+  background:linear-gradient(180deg,#B9834A,#8A5A2B 60%,#6E4522);box-shadow:inset 0 2px 0 rgba(255,255,255,.25),inset 0 -5px 0 rgba(0,0,0,.25),0 4px 10px rgba(0,0,0,.25)}
+.k2gap{width:7px}
+.k2sorts{display:flex;gap:6px;justify-content:center;margin:8px 0 0}
+.k2sorts .sm{font-size:13px;padding:4px 12px}
+.k2okc{display:flex;justify-content:center;gap:18px;align-items:flex-end}
+.k2stk{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;font-weight:700}
+.k2stk span{opacity:.9}
+.k2pile{position:relative;background:none;padding:0}
+.k2pile small{position:absolute;inset:auto 0 3px 0;text-align:center;font-weight:800;color:#fff;font-size:12px}
+button.k2pile .k2t{box-shadow:0 0 0 3px var(--sel);border-radius:6px}
+.k2stk .k2t{--tw:34px}
+.k2okd{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 10px;margin-top:12px}
+.k2dsc{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:50px}
+.k2dsc small{font-size:11px;font-weight:700;max-width:64px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-bottom:2px solid var(--c)}
+.k2dt{background:none;padding:0;animation:k2in var(--t3) var(--ease)}
+.k2dsc.can .k2t{box-shadow:0 0 0 3px var(--sel);border-radius:6px}
+.k2melds{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0;direction:ltr}
+.k2meld{display:inline-flex;gap:2px;padding:4px;border-radius:8px;background:var(--surface-2)}
+
+/* ---------- dominoes: fives (a line with a spinner and two arms), train (rows of trains from the station) ---------- */
+.k2dtab{padding-bottom:40px}
+.k2dtab .chain{display:flex;flex-wrap:wrap;justify-content:center;align-items:center}
+.k2dtab .dom.spin{box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,0 0 0 2.5px #F0B429,0 2px 6px rgba(0,0,0,.35)}
+.k2dtab .dom.lp,.k2tline .dom.lp{box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,0 0 0 2.5px var(--sel),0 2px 8px rgba(0,0,0,.35);animation:k2in var(--t3) var(--ease)}
+.k2arm{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:8px}
+.k2arm small{color:#fff;font-weight:700;font-size:12px;opacity:.9;white-space:nowrap}
+.k2ends{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.k2ends span{color:#fff}
+.k2sum5{background:rgba(0,0,0,.35)!important}
+.k2sum5.ok{background:#F0B429!important;color:#4A3000!important}
+.k2dh .dom.sel{transform:translateY(-14px);box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,var(--ring),0 8px 12px rgba(0,0,0,.25)}
+.k2dbk{width:28px;height:58px;background:linear-gradient(160deg,#5B4636,#3E2E22)!important}
+.k2tfelt{padding:10px 8px 8px}
+.k2hub{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:6px}
+.k2hub small{font-weight:800}
+.k2hub .bone{position:static}
+.k2hub .eng{transform:rotate(90deg);margin:-10px 6px}
+.k2trow{display:flex;align-items:center;gap:6px;padding:4px 6px;margin:4px 0;border-radius:12px;background:rgba(0,0,0,.18);box-shadow:inset 3px 0 0 var(--c)}
+.k2trow.on{background:rgba(255,255,255,.14)}
+.k2trow.need{box-shadow:inset 3px 0 0 var(--c),0 0 0 2px #F0B429}
+.k2tlab{flex:0 0 74px;font-size:12px;font-weight:800;line-height:1.2;overflow:hidden;text-overflow:ellipsis}
+.k2tline{flex:1;display:flex;align-items:center;gap:2px;direction:ltr;min-height:30px;overflow:hidden}
+.k2tline .dom{flex:none}
+.k2tline .dom svg{width:38px}.k2tline .dom.dbl svg{width:auto;height:38px}
+.k2tline em{font-style:normal;font-size:11px;opacity:.85}
+.k2tend{min-width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#F7F1E3;color:#2D4763;font-weight:900;font-size:13px;margin-left:2px}
+.btn.k2here{min-height:34px;padding:0 12px;font-size:14px;background:#F0B429;color:#4A3000;box-shadow:0 3px 0 #B07E10}
+.k2opt{text-align:center}
