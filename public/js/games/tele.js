@@ -64,18 +64,27 @@ function pPub(d){const dr=pDrawer(d),r=d.pl[dr];const p=S.priv[r];S.priv[r]={...
 // what a guesser may see of the word while it is being drawn: its category, its length and the letters given as hints
 function pPat(d){const w=PW[d.w].w;return {c:PW[d.w].cat,s:[...w].map((c,i)=>c===' '?' ':d.hl.includes(i)?c:'_').join('')};}
 const pWord=d=>Number.isInteger(d.w)&&d.w>=0&&PW[d.w]?PW[d.w]:null;
+// how hard a word is to draw: 0 easy (a short animal, food, thing in nature…), 2 hard (people, sport, places, long words, two words), 1 the rest.
+// The three words offered are one of each: a harder word is worth more for the drawer and for whoever gets it
+const PTIER=e=>{const n=[...e.w.replace(/ /g,'')].length;if(e.w.includes(' ')||n>=7||e.cat==='شخصيات'||e.cat==='رياضة'||e.cat==='أماكن')return 2;
+  if(n<=4&&['حيوانات','أكل','طبيعة','مواصلات','جسم','أشياء'].includes(e.cat))return 0;return 1;};
+const PTM=[100,150,200],PTN=['سهلة','متوسطة','صعبة'];
+const pTier=i=>PW[i]?PTIER(PW[i]):1;
 function pwPick(used,k){const ok=PW.map((_,i)=>i).filter(i=>!used.includes(i));const out=[],cats=new Set();
+  for(let t=0;t<Math.min(k,3);t++){const pool=ok.filter(i=>pTier(i)===t&&!out.includes(i));if(!pool.length)continue;
+    let i=pool[rnd(pool.length)];for(let g=0;g<30&&cats.has(PW[i].cat);g++)i=pool[rnd(pool.length)];out.push(i);cats.add(PW[i].cat);}
   for(let g=0;out.length<k&&g<400;g++){const i=ok[rnd(ok.length)];if(out.includes(i)||(cats.has(PW[i].cat)&&g<200))continue;out.push(i);cats.add(PW[i].cat);}return out;}
 const pGuessers=d=>d.pl.map((_,s)=>s).filter(s=>s!==pDrawer(d));
 const pLeft=d=>Math.max(0,Math.ceil(d.T-(Date.now()-d.t0)/1000));
-function pStart(d,wi){const now=Date.now();const x={...d,ph:'draw',w:wi,t0:now,ts:now,used:[...d.used,wi].slice(-80),got:[],feed:[],gn:{},hl:[],last:`${nm(d,pDrawer(d))} بدأ يرسم ✏️`};
-  // bots guess on their own clock: quicker when they are harder
-  const bt={};for(const s of pGuessers(d))if(isBot(d,s)){const lv=botLv(d,s);const [a,b]=[0,[28,78],[18,52],[9,34]][lv];
-    bt[s]=[Math.random()<[0,.22,.08,.02][lv]?-1:now+(a+rnd(b-a))*1000,now+4000+rnd(7000)];}
+function pStart(d,wi){const now=Date.now(),tier=pTier(wi);const x={...d,ph:'draw',w:wi,wm:PTM[tier],t0:now,ts:now,used:[...d.used,wi].slice(-80),got:[],feed:[],gn:{},hl:[],last:`${nm(d,pDrawer(d))} بدأ يرسم ✏️ كلمة ${PTN[tier]}`};
+  // bots guess on their own clock: quicker when they are harder, slower and more often lost on a hard word
+  const bt={};for(const s of pGuessers(d))if(isBot(d,s)){const lv=botLv(d,s);const [a,b]=[0,[28,78],[18,52],[9,34]][lv],f=1+tier*.22;
+    bt[s]=[Math.random()<[0,.22,.08,.02][lv]+tier*[0,.08,.05,.02][lv]?-1:now+Math.round((a+rnd(b-a))*f*1000),now+4000+rnd(7000)];}
   if(Object.keys(bt).length)x.bt=bt;else delete x.bt;return x;}
-function pGot(d,s,now){if(d.got.some(g=>g[0]===s))return d;const el=(now-d.t0)/1000;const pts=4+Math.ceil(6*Math.max(0,d.T-el)/d.T)+(d.got.length?0:2);
+const pMul=(d,p)=>Math.round(p*((d.wm||100)/100));
+function pGot(d,s,now){if(d.got.some(g=>g[0]===s))return d;const el=(now-d.t0)/1000;const pts=pMul(d,4+Math.ceil(6*Math.max(0,d.T-el)/d.T)+(d.got.length?0:2));
   const P=[...d.pts];P[s]+=pts;return {...d,pts:P,got:[...d.got,[s,pts]],feed:[...d.feed,[s,'',1]].slice(-7)};}
-function pShow(d,why){const c=d.got.length,all=pGuessers(d).length;const dp=c?Math.min(12,3*c+(c===all?2:0)):0;const P=[...d.pts];P[pDrawer(d)]+=dp;
+function pShow(d,why){const c=d.got.length,all=pGuessers(d).length;const dp=c?pMul(d,Math.min(12,3*c+(c===all?2:0))):0;const P=[...d.pts];P[pDrawer(d)]+=dp;
   return {...d,ph:'show',ts:Date.now(),dp,why,pts:P,last:''};}
 function pNext(d){const q=d.q+1,n=d.pl.length;if(q>=n*d.R)return {...d,ph:'end',win:mostPts(d.pts)};
   const x={...d,q,ph:'pick',ch:pwPick(d.used,3),w:null,ts:Date.now(),got:[],feed:[],gn:{},hl:[],dp:0,turn:(d.st+q)%n,last:''};delete x.bt;return x;}
@@ -112,10 +121,10 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
   render(d,ctx){return `<div class="pdraw">${GAMES.tele.view(d,ctx)}</div>`;},
   view(d,ctx){const dr=pDrawer(d),v=ctx.v,E=pWord(d);const iDraw=v===dr&&!isBot(d,dr);
     if(d.ph==='pick'){
-      if(iDraw)return `<div class="ppick">${d.ch.map((i,k)=>`<button class="pwc" data-ga="pw" data-i="${k}"><span>${PW[i].em}</span><b>${PW[i].w}</b><small>${PW[i].cat}</small></button>`).join('')}</div><p class="note" style="text-align:center">تقدر ترسم أي شي يوضحها، بس بدون كتابة حروف</p>`;
+      if(iDraw)return `<div class="ppick">${d.ch.map((i,k)=>{const t=pTier(i);return `<button class="pwc t${t}" data-ga="pw" data-i="${k}" style="--k:${k}"><span>${PW[i].em}</span><b>${PW[i].w}</b><small>${PW[i].cat}</small><em class="ptier">${PTN[t]}${t?` ×${PTM[t]/100}`:''}</em></button>`;}).join('')}</div><p class="note" style="text-align:center">الكلمة الأصعب نقاطها أكثر لك وللي يعرفها. ارسم أي شي يوضحها، بس بدون كتابة حروف</p>`;
       return `<div class="pwait"><div class="pen">✏️</div><p>${nameTag(d,dr)} يختار كلمة</p></div>`;}
     if(d.ph==='show'||d.win!=null){const st=pStrokes(d,ctx);if(!E)return '';
-      return `<div class="pshow"><div class="pem">${E.em}</div><h3>${E.w}</h3>
+      return `<div class="pshow"><div class="pem">${E.em}</div><h3>${E.w}${d.wm>100?` <small class="ptier t${d.wm>150?2:1}">×${d.wm/100}</small>`:''}</h3>
         <div class="pres">${d.got.length?d.got.map(([s,p])=>`<span style="--c:${col(d,s)}">${nm(d,s)} <b>+${p}</b></span>`).join(''):'<span class="none">ما أحد عرفها</span>'}${d.dp?`<span class="dr" style="--c:${col(d,dr)}">✏️ ${nm(d,dr)} <b>+${d.dp}</b></span>`:''}</div>
         ${st.length?`<div class="polar"><svg viewBox="0 0 63 63" class="drw small">${st.map(pdSVG).join('')}</svg></div>`:''}${d.win==null?'<div class="pnext"><i></i></div>':''}</div>`;}
     // drawing
@@ -123,7 +132,7 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     let top=`<div class="ptop"><span class="ptime"><b>${pLeft(d)}</b>⏱</span>`;
     if(iDraw)top+=d.tap?`<button class="ppeek" data-ga="peek">${peek?`${E.em} ${E.w}`:'👁 شوف الكلمة'}</button>`:`<span class="pword">${E.em} ${E.w}</span>`;
     else top+=gotMe&&E?`<span class="pword ok">✓ ${E.w}</span>`:pSlots(d);
-    top+=`<span class="pcat">${E?E.cat:escH(d.wp&&d.wp.c||'')}</span></div>`;
+    top+=`<span class="pcat">${E?E.cat:escH(d.wp&&d.wp.c||'')}${d.wm>100?` <b class="ptier t${d.wm>150?2:1}">×${d.wm/100}</b>`:''}</span></div>`;
     let pad;
     if(isBot(d,dr)&&E){const ord=pTileOrder(d),k=pShown(d);pad=`<div class="preveal" data-k="${k}"><span>${E.em}</span><div class="ptiles">${[...Array(PBOT_TILES).keys()].map(i=>`<i class="${ord.indexOf(i)<k?'off':''}"></i>`).join('')}</div></div>`;}
     else{const st=pStrokes(d,ctx);pad=`<div class="easel ${iDraw?'live':''}"><svg viewBox="0 0 63 63" class="drw ${iDraw?'pad':''}" ${iDraw?'id="pad"':''}>${st.map(pdSVG).join('')}</svg></div>`;}
@@ -158,7 +167,9 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
   host(d){const now=Date.now(),dr=pDrawer(d);
     // a drawer who left the room (not just a short drop) loses the turn
     if(d.ph==='pick'){if(goneLong(d.pl[dr]))return pNext(d);
-      if(now-d.ts>(isBot(d,dr)?1800:30000))return pStart(d,d.ch[rnd(d.ch.length)]);return null;}
+      // a bot drawer: the hard one takes the hardest word (worth double), the medium one a middle or hard one
+      if(now-d.ts>(isBot(d,dr)?1800:30000)){let i=d.ch[rnd(d.ch.length)];if(isBot(d,dr)){const lv=botLv(d,dr),by=t=>d.ch.find(x=>pTier(x)===t);
+        if(lv===3)i=by(2)??i;else if(lv===2)i=(Math.random()<.5?by(1):by(2))??i;}return pStart(d,i);}return null;}
     if(d.ph==='show')return now-d.ts>6000?pNext(d):null;
     if(d.ph!=='draw')return null;
     let x=d;const key=pKey(d),W=PW[d.w];
@@ -194,25 +205,42 @@ setInterval(()=>{if(S.st.g!=='tele')return;const d=S.st.d;if(!d||d.win!=null)ret
     const rv=document.querySelector('.preveal');if(rv){const k=pShown(d);if(+rv.dataset.k!==k){rv.dataset.k=k;const ord=pTileOrder(d);rv.querySelectorAll('.ptiles i').forEach((e,i)=>e.classList.toggle('off',ord.indexOf(i)<k));}}}},500);
 
 // the places of the cups after the first i swaps
-function cupsAt(P,i){const pos=[...P.start];for(let k=0;k<i&&k<P.swaps.length;k++){const [a,b]=P.swaps[k];const ka=pos.indexOf(a),kb=pos.indexOf(b);pos[ka]=b;pos[kb]=a;}return pos;}
+// a step is one swap [a,b] or, on later rounds, two at once [a,b,c,e]
+function cupsAt(P,i){const pos=[...P.start];for(let k=0;k<i&&k<P.swaps.length;k++){const w=P.swaps[k];for(let j=0;j+1<w.length;j+=2){const a=w[j],b=w[j+1];const ka=pos.indexOf(a),kb=pos.indexOf(b);pos[ka]=b;pos[kb]=a;}}return pos;}
 /* ---------- «وين شخصيتك؟»: every player's character hides under a cup, the cups shuffle, pick yours ---------- */
 GAMES.cups={...spdBase({name:'وين شخصيتك؟',lbc:'#6C3483',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#884EA0"/>${[18,50,82].map((x,k)=>`<path d="M${x-13} 72L${x-9} 34H${x+9}L${x+13} 72Z" fill="${k===1?'#F5B041':'#F8C471'}" stroke="#6E2C00" stroke-width="2"/>`).join('')}<circle cx="50" cy="84" r="7" fill="#EC6158"/></svg>`,
-  title:'شخصيتك بتنحط تحت كوب، والأكواب بتتحرك. ركّز ووين ما وقفت اختار كوبها',
-  start(d,st){st.phase='show';st.run=false;st.i=0;st.lift=true;},
+  title:'شخصيتك بتنحط تحت كوب، والأكواب بتتحرك. ركّز ووين ما وقفت اختار كوبها. متأكد؟ اضغط 🎯 قبل وتاخذ الضعف',
+  // a bot follows the cups less well when there are more of them, more swaps and two swaps at once; the hard one says
+  // «متأكد» when it is sure (it never doubles a cup it lost track of), the easy one guesses at it
+  bot(d,s,lv){const P=GAMES.cups.plan(d);const hard=P.m*.025+P.swaps.length*.008+P.swaps.filter(w=>w.length>2).length*.02;
+    const ok=Math.random()<[0,.78,.9,.985][lv]-hard*[0,1.4,1,.5][lv];const x=lv===3?ok&&Math.random()<.8:lv===2?Math.random()<(ok?.45:.2):Math.random()<.3;
+    return {ok,ms:[0,1500,1100,800][lv]+rnd([0,1500,900,600][lv]),x:x?1:0};},
+  start(d,st){st.phase='show';st.run=false;st.i=0;st.lift=true;st.x=false;},
   /* the shuffle is drawn from st (how many swaps are done): every step is a normal render, the cups slide by transform,
      so nothing holds the screen and a redraw in the middle shows the same places */
   view(d,ctx,st){const P=GAMES.cups.plan(d);const m=P.m;
     const pos=st.phase==='go'?P.end:cupsAt(P,st.i||0);
+    const dbl=P.swaps.some(w=>w.length>2);
     return `<div class="cupsw"><div class="cups ${st.phase==='show'&&st.lift?'lift':''}" id="cups" style="--sp:${P.speed}ms">${Array(m).fill(0).map((_,k)=>{const ch=k<d.pl.length?d.pl[k]:-1;
       return `<button class="cupb" data-ga="pick" data-i="${k}" style="width:${100/m}%;transform:translateX(${pos[k]*100}%)" ${st.phase==='go'?'':'disabled'}><span class="cupc">${ch>=0?`<i style="background:${COLS[ch]}">${shapeW(ch).replace('<svg ','<svg style="width:18px;height:18px" ')}</i>`:''}</span><span class="cup"></span></button>`;}).join('')}</div></div>
-      <p class="note">${st.phase==='go'?'اختار الكوب اللي تحته شخصيتك':'ركّز على شخصيتك'} <b style="color:${col(d,ctx.v)}">●</b></p>`;},
-  click(a,k,d,ctx,st){if(a!=='pick'||st.phase!=='go')return;spdSubmit(d,ctx,k===ctx.v);}}),
+      <p class="note">${st.phase==='go'?'اختار الكوب اللي تحته شخصيتك':'ركّز على شخصيتك'} <b style="color:${col(d,ctx.v)}">●</b>${st.phase!=='go'&&dbl?'<br><small>⚠️ هالجولة فيها تبديلتين مع بعض</small>':''}</p>
+      ${st.phase==='go'?`<button class="cupx ${st.x?'on':''}" data-ga="sure">🎯 ${st.x?'متأكد! صح ×2، غلط −1':'متأكد؟ اضغط قبل تختار'}</button>`:''}`;},
+  click(a,k,d,ctx,st){if(st.phase!=='go')return;if(a==='sure'){st.x=!st.x;render();return;}if(a!=='pick')return;
+    // like spdSubmit, with the «متأكد» mark
+    const ms=Math.round(performance.now()-st.t0),ok=k===ctx.v;S.sp={...st,phase:'sent'};try{sfx(ok?'pop':'lose');}catch(e){}simulPick(d,ctx.v,{ok,ms,x:st.x?1:0});}}),
   plan(d){const m=d.pl.length+1+(d.rd>2?1:0);const R=srng(d,'cup'+d.rd);const start=[...Array(m).keys()];const pos=[...start];const swaps=[];
-    const nsw=6+d.rd*3;for(let i=0;i<nsw;i++){let a=Math.floor(R()*m),b=Math.floor(R()*(m-1));if(b>=a)b++;swaps.push([a,b]);
-      const ka=pos.indexOf(a),kb=pos.indexOf(b);pos[ka]=b;pos[kb]=a;}
+    const nsw=6+d.rd*3;for(let i=0;i<nsw;i++){let a=Math.floor(R()*m),b=Math.floor(R()*(m-1));if(b>=a)b++;const w=[a,b];
+      // from the third round on, now and then two other cups swap at the same time
+      if(d.rd>=2&&m>=4&&R()<.18+d.rd*.06){const rest=[...Array(m).keys()].filter(x=>x!==a&&x!==b);const c=rest[Math.floor(R()*rest.length)];const r2=rest.filter(x=>x!==c);w.push(c,r2[Math.floor(R()*r2.length)]);}
+      swaps.push(w);for(let j=0;j<w.length;j+=2){const ka=pos.indexOf(w[j]),kb=pos.indexOf(w[j+1]);pos[ka]=w[j+1];pos[kb]=w[j];}}
     return {m,start,end:pos,swaps,speed:Math.max(220,520-d.rd*70)};},
-  resolve(d,picks){const pts=[...d.pts];const ok=[];picks.forEach((p,s)=>{if(p&&p.ok){pts[s]++;ok.push(nm(d,s));}});const rd=d.rd+1;
-    return {...d,pts,rd,res:ok.length?`لقوا شخصياتهم: ${ok.join('، ')}`:'محد لقى شخصيته 😅',win:rd>=SPD_ROUNDS?mostPts(pts):null};},
+  // a right cup is 1, the quickest right cup 1 more; «متأكد» doubles a right cup and costs 1 for a wrong one
+  resolve(d,picks){const pts=[...d.pts];const ok=[],sg=Array(d.pl.length).fill(0);
+    const P=picks.map(p=>p&&typeof p==='object'?{ok:!!p.ok,ms:typeof p.ms==='number'&&isFinite(p.ms)?Math.max(0,p.ms):9e9,x:p.x===1}:null);
+    const right=P.map((p,s)=>p&&p.ok?s:-1).filter(s=>s>=0).sort((a,b)=>P[a].ms-P[b].ms);const fast=right.length&&(right.length===1||P[right[0]].ms<P[right[1]].ms)?right[0]:-1;
+    P.forEach((p,s)=>{if(!p)return;if(p.ok){sg[s]=(p.x?2:1)+(s===fast?1:0);ok.push(nm(d,s)+(p.x?' 🎯':''));}else if(p.x)sg[s]=-Math.min(1,pts[s]);pts[s]+=sg[s];});
+    const lost=P.map((p,s)=>p&&!p.ok&&p.x&&sg[s]<0?nm(d,s):'').filter(Boolean);const rd=d.rd+1;
+    return {...d,pts,sg,rd,res:(ok.length?`لقوا شخصياتهم: ${ok.join('، ')}`:'محد لقى شخصيته 😅')+(fast>=0?`. الأسرع: ${nm(d,fast)}`:'')+(lost.length?`. خسر نقطة: ${lost.join('، ')}`:''),win:rd>=SPD_ROUNDS?mostPts(pts):null};},
   after(d,ctx){if(!ctx.my)return;const st=spdState(d,ctx.v);if(st.phase!=='show'||st.run)return;st.run=true;
     const P=GAMES.cups.plan(d),lite=document.documentElement.classList.contains('lite');const live=()=>S.sp===st;
     const step=()=>{if(!live())return;if(st.i>=P.swaps.length){setTimeout(()=>{if(!live())return;st.phase='go';st.t0=performance.now();render();},300);return;}

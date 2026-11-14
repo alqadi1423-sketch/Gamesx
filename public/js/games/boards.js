@@ -19,36 +19,82 @@ const ptsBadges=()=>'';
 
 /* ---------- connect four ---------- */
 const CF={2:[7,6],3:[8,7],4:[9,7],5:[10,8],6:[11,8],7:[12,9],8:[12,9]};
+// the four of seat p on board b (or null)
+function c4Line(b,R,C,p){const v=String(p);for(let r=0;r<R;r++)for(let c=0;c<C;c++){if(b[r*C+c]!==v)continue;
+  for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]){const cells=[];for(let j=0;j<4;j++){const rr=r+dr*j,cc=c+dc*j;if(rr<0||rr>=R||cc<0||cc>=C||b[rr*C+cc]!==v)break;cells.push(rr*C+cc);}
+    if(cells.length===4)return cells;}}return null;}
+/* vr 1 (pull from below): on your turn drop a disc, or pull one of your own discs out of the bottom row and the column slides down.
+   A pull that makes four for you wins even if it makes four for someone else too; one that makes only someone else's four loses */
+function c4Pop(d,c){const {C,R}=d,t=d.turn;if(d.b[(R-1)*C+c]!==String(t))return null;const a=[...d.b];
+  for(let r=R-1;r>0;r--)a[r*C+c]=a[(r-1)*C+c];a[c]='.';const b=a.join('');
+  let ln=c4Line(b,R,C,t),win=ln?t:null;if(!ln)for(let k=1;k<d.pl.length&&!ln;k++){const o=(t+k)%d.pl.length;if(d.out[o]==='1')continue;const l=c4Line(b,R,C,o);if(l){ln=l;win=o;}}
+  return {b,ln,win};}
+let C4V=0;// the last choice on this phone, kept for the next rounds
+// a full board ends the game, unless the next player can still pull a disc
+const c4Stuck=(d,b,t)=>!b.includes('.')&&!(d.vr&&b.slice((d.R-1)*d.C).includes(String(t)));
 GAMES.c4={name:'أربعة في صف',cat:'board',lbc:'#2F6FB5',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3A7FCB"/>${[0,1,2,3].map(r=>[0,1,2,3].map(c=>{const k=(r*4+c)%5;const f=r<1?'#2a5f9c':k===0||k===3?'#EC6158':k===1?'#F2C14E':'#2a5f9c';return `<circle cx="${17+c*22}" cy="${17+r*22}" r="8.5" fill="${f}"/>`;}).join('')).join('')}</svg>`,
-  init:n=>{const [C,R]=CF[n]||[12,9];return {C,R,b:'.'.repeat(C*R),ln:null};},
-  status:(d,ctx)=>turnTxt(d,ctx),
-  render(d,ctx){const {C,R}=d,lm=d.ln?-1:bdLast('c4',d,d.b);
+  init:n=>{const [C,R]=CF[n]||[12,9];return {C,R,b:'.'.repeat(C*R),ln:null,vr:C4V,nmv:0,lp:null};},
+  status:(d,ctx)=>turnTxt(d,ctx)+(d.vr&&d.win==null?'<br><small>حط قرص، أو اسحب قرص لك من الصف التحتي ⬇</small>':''),
+  render(d,ctx){const {C,R}=d,lm=d.ln?-1:bdLast('c4',d,d.b),fresh=!ctx.bot&&!/[0-9]/.test(d.b)&&d.win==null;
     // where a disc dropped in each column would land: shown as a soft ghost while it is your turn
     const nx=new Set();if(ctx.my)for(let c=0;c<C;c++){let r=R-1;while(r>=0&&d.b[r*C+c]!=='.')r--;if(r>=0)nx.add(r*C+c);}
-    return `<div class="cellgrid bd-c4" style="grid-template-columns:repeat(${C},minmax(0,1fr));gap:${C>9?3:4}px;--c:${col(d,d.turn)}">${[...d.b].map((v,i)=>{const c=i%C;
-      return `<button class="cg ${nx.has(i)?'nx':''}" data-ga="m" data-i="${c}" ${ctx.my&&d.b[c]==='.'?'':'disabled'}>${v==='.'?'<i class="hole"></i>':`<i class="dk ${d.ln&&d.ln.includes(i)?'won':''} ${i===lm?'lm':''}" style="--c:${col(d,+v)};--r:${(i-c)/C+1}"></i>`}</button>`;}).join('')}</div>`;},
+    // the column just pulled: its discs are new nodes and slide down one hole
+    const lp=d.lp&&d.lp[1]===(d.nmv||0)?d.lp[0]:-1;
+    let h=fresh?`<div class="segs tttv">${[['0','كلاسيكية'],['1','تقدر تسحب من تحت']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:'';
+    h+=`<div class="cellgrid bd-c4" style="grid-template-columns:repeat(${C},minmax(0,1fr));gap:${C>9?3:4}px;--c:${col(d,d.turn)}">${[...d.b].map((v,i)=>{const c=i%C;
+      return `<button class="cg ${nx.has(i)?'nx':''}" data-ga="m" data-i="${c}" ${ctx.my&&d.b[c]==='.'?'':'disabled'}>${v==='.'?'<i class="hole"></i>':`<i class="dk ${d.ln&&d.ln.includes(i)?'won':''} ${i===lm?'lm':''} ${c===lp?'pp':''}" ${c===lp?`data-k="p${d.nmv}_${i}"`:''} style="--c:${col(d,+v)};--r:${(i-c)/C+1}"></i>`}</button>`;}).join('')}</div>`;
+    // the pull buttons sit under the columns whose bottom disc is yours
+    if(d.vr&&ctx.my&&d.win==null){const me=String(d.turn),row=d.b.slice((R-1)*C);
+      h+=`<div class="c4pull" style="grid-template-columns:repeat(${C},minmax(0,1fr));gap:${C>9?3:4}px">${[...row].map((v,c)=>v===me?`<button class="c4p" data-ga="pop" data-i="${c}" aria-label="اسحب" style="--c:${col(d,d.turn)}">⬇</button>`:'<i></i>').join('')}</div>`;}
+    return h;},
   click(a,c,d,ctx){
-    if(!ctx.my)return;const {C,R}=d;let r=R-1;while(r>=0&&d.b[r*C+c]!=='.')r--;if(r<0)return;
-    const b=setAt(d.b,r*C+c,String(d.turn));const w=lineWinRC(b,R,C,4);
-    act({...d,b,ln:w?w.ln:null,win:w?w.w:(b.includes('.')?null:'d'),turn:nextSeat(d,d.turn)});
+    if(!ctx.my)return;const {C,R}=d,t=d.turn,nmv=(d.nmv||0)+1;
+    if(a==='vr'){if(/[0-9]/.test(d.b))return;C4V=c?1:0;act({...d,vr:C4V});return;}
+    // a long pulling game ends in a draw
+    const cap=!!d.vr&&nmv>=C*R*3;
+    if(a==='pop'){if(!d.vr||!Number.isInteger(c))return;const p=c4Pop(d,c);if(!p)return;
+      let win=p.win;if(win==null&&(cap||c4Stuck(d,p.b,nextSeat(d,t))))win='d';
+      act({...d,b:p.b,ln:p.ln,win,nmv,lp:[c,nmv],turn:nextSeat(d,t)});return;}
+    if(!Number.isInteger(c)||c<0||c>=C)return;let r=R-1;while(r>=0&&d.b[r*C+c]!=='.')r--;if(r<0)return;
+    const b=setAt(d.b,r*C+c,String(t));const w=lineWinRC(b,R,C,4);
+    act({...d,b,nmv,ln:w?w.ln:null,win:w?w.w:(cap||(d.vr?c4Stuck(d,b,nextSeat(d,t)):!b.includes('.')))?'d':null,turn:nextSeat(d,t)});
   }
 };
 
 /* ---------- five in a row ---------- */
 const GMS={2:11,3:13,4:13,5:15,6:15,7:15,8:15};
+const GMD=[[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0],[-1,-1],[-1,1]];
+/* vr 1 (with captures, an old Japanese way of playing): a stone that closes in exactly two stones of one other player
+   in a line (you, them, them, you) takes both off the board. Five captures (ten stones) also win */
+function gmCaps(b,z,i,t,d){const me=String(t),out=[],r0=Math.floor(i/z),c0=i%z;
+  for(const [dr,dc] of GMD){const at=k=>{const r=r0+dr*k,c=c0+dc*k;return r<0||r>=z||c<0||c>=z?-1:r*z+c;};
+    const a=at(1),b2=at(2),e=at(3);if(a<0||b2<0||e<0)continue;const va=b[a];
+    if(va==='.'||va===me||b[b2]!==va||b[e]!==me||(d&&sameTeam(d,+va,t)))continue;out.push(a,b2);}
+  return out;}
+let GMV=0;// the last choice on this phone, kept for the next rounds
 GAMES.gomoku={name:'خمسة على التوالي',cat:'board',lbc:'#9A6B3C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E9C48F"/>${[1,2,3,4,5,6,7,8].map(k=>`<path d="M${k*11} 4V96M4 ${k*11}H96" stroke="#9A6B3C" stroke-width="1.5"/>`).join('')}${[[2,2],[3,3],[4,4],[5,5],[6,6]].map(([x,y])=>`<circle cx="${x*11}" cy="${y*11}" r="4.6" fill="#2D4763"/>`).join('')}${[[3,5],[4,6],[6,3],[2,6]].map(([x,y])=>`<circle cx="${x*11}" cy="${y*11}" r="4.6" fill="#EC6158"/>`).join('')}</svg>`,
-  init:n=>{const z=GMS[n]||15;return {z,b:'.'.repeat(z*z),ln:null};},
-  status:(d,ctx)=>turnTxt(d,ctx),
-  render(d,ctx){const z=d.z,lm=d.ln?-1:bdLast('gomoku',d,d.b),e=3,m=z-4,h=(z-1)/2;
+  init:n=>{const z=GMS[n]||15;return {z,b:'.'.repeat(z*z),ln:null,vr:GMV,cp:Array(n).fill(0),cx:[],lm:-1,nmv:0};},
+  status:(d,ctx)=>turnTxt(d,ctx)+(d.vr?`<br><small>الأسر: ${d.pl.map((_,s)=>`${nm(d,s)} ${(d.cp||[])[s]||0}/5`).join('، ')}</small>`:''),
+  winExtra:d=>d.vr&&!d.ln&&typeof d.win==='number'?`${nm(d,d.win)} أسر خمس مرات`:'',
+  render(d,ctx){const z=d.z,lm=d.ln?-1:d.lm>=0?d.lm:bdLast('gomoku',d,d.b),e=3,m=z-4,h=(z-1)/2,fresh=!ctx.bot&&!/[0-9]/.test(d.b)&&!d.nmv&&d.win==null;
     // star points, as on a real board: the centre and the four 4-4 points
     const star=new Set([[e,e],[e,m],[m,e],[m,m],[h,h]].map(([r,c])=>r*z+c));
-    return `<div class="cellgrid bd-gm ${ctx.my?'my':''}" style="grid-template-columns:repeat(${z},minmax(0,1fr));--z:${z};--c:${col(d,d.turn)}">${[...d.b].map((v,i)=>
-      `<button class="cg ${star.has(i)?'hs':''}" data-ga="m" data-i="${i}" ${ctx.my&&v==='.'?'':'disabled'}>${v==='.'?'':`<i class="st ${d.ln&&d.ln.includes(i)?'won':''} ${i===lm?'lm':''}" style="--c:${col(d,+v)}"></i>`}</button>`).join('')}</div>`;},
+    // the stones just taken fade out where they stood (new nodes keyed by the move, so they play once)
+    const gone={};for(const [c,o] of d.cx||[])gone[c]=o;
+    let s=fresh?`<div class="segs tttv">${[['0','كلاسيكية'],['1','بالأسر']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:'';
+    if(d.vr&&!fresh)s+=`<div class="gmcap">${d.pl.map((_,o)=>d.out[o]==='1'?'':`<span style="--c:${col(d,o)}"><i></i>${'●'.repeat(Math.min(5,(d.cp||[])[o]||0))}<small>${'○'.repeat(Math.max(0,5-((d.cp||[])[o]||0)))}</small></span>`).join('')}</div>`;
+    return s+`<div class="cellgrid bd-gm ${ctx.my?'my':''}" style="grid-template-columns:repeat(${z},minmax(0,1fr));--z:${z};--c:${col(d,d.turn)}">${[...d.b].map((v,i)=>
+      `<button class="cg ${star.has(i)?'hs':''}" data-ga="m" data-i="${i}" ${ctx.my&&v==='.'?'':'disabled'}>${v==='.'?(i in gone?`<i class="st gone" data-k="x${d.nmv}" style="--c:${col(d,gone[i])}"></i>`:''):`<i class="st ${d.ln&&d.ln.includes(i)?'won':''} ${i===lm?'lm':''}" style="--c:${col(d,+v)}"></i>`}</button>`).join('')}</div>`;},
   click(a,i,d,ctx){
-    if(!ctx.my||d.b[i]!=='.')return;const b=setAt(d.b,i,String(d.turn));const w=lineWinRC(b,d.z,d.z,5);
-    act({...d,b,ln:w?w.ln:null,win:w?w.w:(b.includes('.')?null:'d'),turn:nextSeat(d,d.turn)});
+    if(!ctx.my)return;const t=d.turn;
+    if(a==='vr'){if(/[0-9]/.test(d.b)||d.nmv)return;GMV=i?1:0;act({...d,vr:GMV,cp:d.pl.map(()=>0)});return;}
+    if(!Number.isInteger(i)||d.b[i]!=='.')return;let b=setAt(d.b,i,String(t));const cp=[...(d.cp||d.pl.map(()=>0))],cx=[];
+    if(d.vr){const k=gmCaps(b,d.z,i,t,d);for(const c of k){cx.push([c,+b[c]]);b=setAt(b,c,'.');}cp[t]+=k.length/2;}
+    const w=lineWinRC(b,d.z,d.z,5);const win=w?w.w:d.vr&&cp[t]>=5?t:(b.includes('.')?null:'d');
+    if(cx.length&&!w)sfx('pop');
+    act({...d,b,cp,cx,lm:i,nmv:(d.nmv||0)+1,ln:w?w.ln:null,win,turn:nextSeat(d,t)});
   }
 };
 

@@ -252,7 +252,9 @@ GAMES.shut.bot=(d,s,lv)=>{const b=d.boxes[s],m=shMask(b),small=b.slice(6)==='000
    and you earn a coin) or take the best betting card left for a camel. A camel that lands on others climbs
    on top, and a camel carries every camel riding on it. When all five have moved the leg is scored:
    a card on the leader pays its value, on the second camel 1, on any other camel it costs 1.
-   The race ends when a camel crosses the finish; the richest player wins. */
+   The race ends when a camel crosses the finish; the richest player wins.
+   Each player also holds one camel stick (wp) for the whole race: instead of shaking, pick a camel that has not run this leg and
+   drive it on (1 to 3 steps, no coin). */
 const CML=[['#E5483F','الأحمر'],['#3D8FD8','الأزرق'],['#3FAE5C','الأخضر'],['#F0B429','الأصفر'],['#ECEFF1','الأبيض']];
 const CTRACK=16,CTILES=[5,3,2];
 // camel order on the track: furthest first, and on the same square the one on top first
@@ -266,35 +268,47 @@ function cNewLeg(d){return {dl:'00000',tk:[0,0,0,0,0],bt:[],lg:(d.lg||0)+1};}
 GAMES.camel={name:'سباق الهجن',cat:'cards',lbc:'#B8860B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8C16A"/><path d="M0 74Q25 64 50 74T100 74V100H0Z" fill="#D9A441"/><text x="50" y="66" font-size="44" text-anchor="middle">🐪</text></svg>`,
   init:n=>{let cam=[0,1,2,3,4].map(()=>[0,0]);const ord=shuffle([0,1,2,3,4]);for(const c of ord){const p=rnd(3);const h=cam.filter((x,k)=>k!==c&&ord.indexOf(k)<ord.indexOf(c)&&x[0]===p).length;cam[c]=[p,h];}
-    return {cam,co:Array(n).fill(3),...cNewLeg({}),ld:null,last:''};},
+    return {cam,co:Array(n).fill(3),...cNewLeg({}),ld:null,last:'',wp:'1'.repeat(n),mvn:0};},
   points:d=>d.co,
   // online the pyramid is shaken on the host's phone, so no player can choose the camel or the steps
-  net:{host:['roll','bet']},redeal:d=>d,
+  net:{host:['roll','bet','whip'],local:['wm']},redeal:d=>d,
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+(d.win==null?`<small>الشوط ${d.lg}</small> • `:'')+turnTxt(d,ctx),
   winExtra:d=>'الفلوس: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.co[s]} 🪙`).join('، '),
   render(d,ctx){const my=ctx.my&&d.win==null;const rk=cRank(d.cam);
     const chip=(c,big)=>`<span class="cm ${big?'big':''}" style="--c:${CML[c][0]}">🐪</span>`;
     // the track bends: squares 1 to 8 on the top row, 9 to 16 back along the bottom row
     const cell=p=>{const here=[0,1,2,3,4].filter(c=>d.cam[c][0]===p).sort((a,b)=>d.cam[a][1]-d.cam[b][1]);const moved=d.ld&&here.includes(d.ld[0]);
-      return `<div class="ct ${moved?'mv':''}"><small>${p+1}</small><div class="cst">${here.map(c=>chip(c)).join('')}</div></div>`;};
+      return `<div class="ct ${moved?'mv':''}" data-p="${p}"><small>${p+1}</small><div class="cst">${here.map(c=>`${chip(c).replace("<span ",`<span data-c="${c}" `)}`).join('')}</div></div>`;};
     const top=[...Array(8).keys()].map(cell).join(''),bot=[...Array(8).keys()].map(k=>cell(15-k)).join('');
     const over=[0,1,2,3,4].filter(c=>d.cam[c][0]>=CTRACK);
     let s=`<div class="ctrack"><div class="crow">${top}</div><div class="crow">${bot}</div><div class="cfin">🏁 ${over.length?over.sort((a,b)=>d.cam[b][1]-d.cam[a][1]).map(c=>chip(c)).join(''):'خط النهاية'}</div></div>`;
-    s+=`<div class="cpyr">${[0,1,2,3,4].map(c=>{const v=d.dl[c];return `<span class="cd ${v!=='0'?'done':''} ${d.ld&&d.ld[0]===c?'last':''}" style="--c:${CML[c][0]}">${v==='0'?'?':v}</span>`;}).join('')}
-      <button class="btn red" data-ga="roll" ${my?'':'disabled'}>🎲 هز الهرم <small>+1 🪙</small></button></div>`;
+    const wOk=my&&(d.wp||'')[d.turn]==='1',wm=wOk&&S.cmW===d.gid+':'+d.mvn;
+    s+=`<div class="cpyr ${wm?'whip':''}">${[0,1,2,3,4].map(c=>{const v=d.dl[c],cls=`cd ${v!=='0'?'done':''} ${d.ld&&d.ld[0]===c?'last':''}`;
+        return wm&&v==='0'?`<button class="${cls} can" style="--c:${CML[c][0]}" data-ga="whip" data-i="${c}" aria-label="${CML[c][1]}">🐪</button>`:`<span class="${cls}" style="--c:${CML[c][0]}">${v==='0'?'?':v}</span>`;}).join('')}
+      <button class="btn red" data-ga="roll" ${my&&!wm?'':'disabled'}>🎲 هز الهرم <small>+1 🪙</small></button></div>`;
+    if(wOk)s+=`<div class="acts cwhip"><button class="btn ${wm?'red':'navy'}" data-ga="wm">${wm?'اختر الهجين اللي تبي تسوقه… (إلغاء)':'🪃 عصا الهجّان: سوق هجين تختاره (مرة بالسباق)'}</button></div>`;
     s+=`<p class="lbl" style="text-align:center;margin:8px 0 4px">راهن على مين يتصدر الشوط</p><div class="cbets">${[0,1,2,3,4].map(c=>{const t=d.tk[c];const v=CTILES[t];const pos=rk.indexOf(c)+1;
       return `<button class="cbet" style="--c:${CML[c][0]}" data-ga="bet" data-i="${c}" ${my&&v?'':'disabled'}>${chip(c,1)}<b>${v?v:'—'}</b><small>${pos===1?'الأول':pos===2?'الثاني':'المركز '+pos}</small></button>`;}).join('')}</div>`;
     const mine=d.bt.filter(b=>b[0]===(ctx.local?d.turn:ctx.v));
     if(d.bt.length)s+=`<div class="cmine">${d.bt.map(([x,c,v])=>`<span style="--c:${col(d,x)}">${nm(d,x)} ${chip(c)} ${v}</span>`).join('')}</div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
+    if(a==='wm'){if((d.wp||'')[t]!=='1')return;const k=d.gid+':'+d.mvn;S.cmW=S.cmW===k?null:k;render();return;}
     if(a==='bet'){const v=CTILES[d.tk[i]];if(!v)return;const tk=[...d.tk];tk[i]++;act({...d,tk,bt:[...d.bt,[t,i,v]],ld:null,turn:nextSeat(d,t),last:`${nm(d,t)} راهن على ${CML[i][1]} بـ${v}`});return;}
-    if(a!=='roll')return;const left=[0,1,2,3,4].filter(c=>d.dl[c]==='0');const c=left[rnd(left.length)],r=1+rnd(3);
-    const cam=cMove(d.cam,c,r);const co=[...d.co];co[t]++;let x={...d,cam,co,dl:setAt(d.dl,c,String(r)),ld:[c,r],last:`${nm(d,t)} هز الهرم: ${CML[c][1]} مشى ${r}`};
+    if(a!=='roll'&&a!=='whip')return;const left=[0,1,2,3,4].filter(c=>d.dl[c]==='0');
+    if(a==='whip'&&((d.wp||'')[t]!=='1'||!left.includes(i)))return;S.cmW=null;
+    const c=a==='whip'?i:left[rnd(left.length)],r=1+rnd(3);
+    const cam=cMove(d.cam,c,r);const co=[...d.co];if(a==='roll')co[t]++;
+    let x={...d,cam,co,dl:setAt(d.dl,c,String(r)),ld:[c,r],mvn:(d.mvn||0)+1,wp:a==='whip'?setAt(d.wp,t,'0'):d.wp,
+      last:a==='whip'?`${nm(d,t)} ساق ${CML[c][1]} بالعصا 🪃: مشى ${r}`:`${nm(d,t)} هز الهرم: ${CML[c][1]} مشى ${r}`};
     const fin=[0,1,2,3,4].some(k=>cam[k][0]>=CTRACK);
     if(fin||!x.dl.includes('0')){const sc=cLegScore(x,cam);x={...x,co:sc.co,last:x.last+' • '+sc.msg};
       if(fin){act({...x,win:mostPts(x.co),last:x.last+` • ${CML[cRank(cam)[0]][1]} فاز بالسباق 🏁`});return;}x={...x,...cNewLeg(x)};}
     act({...x,turn:nextSeat(d,t)});},
+  // the moved camels (with the ones riding on them) slide from where they stood (look only; light mode skips it)
+  after(d){const k=d.gid+':'+(d.mvn||0),P=S.cmP;S.cmP={k,gid:d.gid,cam:d.cam};if(!P||P.gid!==d.gid||P.k===k||!d.ld)return;
+    for(let c=0;c<5;c++){const a=P.cam[c],b=d.cam[c];if(!a||a[0]===b[0])continue;const el=app.querySelector(`.ctrack .ct[data-p="${b[0]}"] .cm[data-c="${c}"]`),from=app.querySelector(`.ctrack .ct[data-p="${a[0]}"] .cst`);
+      if(el&&from)bdFly(el,[from],380);}},
   onTimeout:d=>{const left=[0,1,2,3,4].filter(c=>d.dl[c]==='0');return {...d,turn:nextSeat(d,d.turn),last:`${nm(d,d.turn)} فوّت دوره`};}
 };
 

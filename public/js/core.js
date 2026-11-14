@@ -552,7 +552,7 @@ function roomBar(full){try{
 }
 const NEWG=['baloot','hand','chess','tavla','dama','bara','mafia','wasla'];
 // games rebuilt with new rules or a new look
-const UPG=['tele','cats','sea','camel','luck','wires','hilo','chess','dama','tavla','ttt','snakes','mines','treasure','baloot','uno','hand','domino','rev','memory','liar','arena','duel','mafia','bara','scr','odd','word','war','lowu','n99','fish','stroop','two3','trivia','math','caps','islam','sci','geo','rps','react','nmem','cnt','oddc','sudo','typing','farkle'];
+const UPG=['tele','cats','sea','camel','luck','wires','hilo','chess','dama','tavla','ttt','snakes','mines','treasure','baloot','uno','hand','domino','rev','memory','liar','arena','duel','mafia','bara','scr','odd','word','war','lowu','n99','fish','stroop','two3','trivia','math','caps','islam','sci','geo','rps','react','nmem','cnt','oddc','sudo','typing','farkle','guess','gomoku','dots','cw','c4','bingo','pig','bj','oldmaid','tanks','dwars','tapwar','ludo','cups','wasla','close','major','tf','prov','num','nim','c31','simon'];
 // the sections of the game list; a game says its own (G.cat), CAT_OF files the older games into the newer, finer sections
 const CATS=[['board','ألعاب لوحة'],['cards','ورق ودومينو'],['dice','زهر'],['party','جماعية'],['quiz','مسابقات'],['words','كلمات وحروف'],
   ['mind','ذكاء وتخمين'],['puzzle','ألغاز وتركيب'],['speed','سرعة وردة فعل'],['fight','قتالية'],['sport','رياضة ومهارة']];
@@ -706,7 +706,7 @@ const ICO_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12L4 4l
 const myAv=()=>{const v=lsGet(LSK.av);const i=v==null||v===''?-1:+v;return EMJ_AV.includes(i)?i:-1;};
 // a player's emoji face (the avatar they picked), or '' when they have none
 function avOf(r){const a=r===S.me&&r!=null?myAv():S.avs[r];return EMJ_AV.includes(a)?`<span class="eav">${EMJ[a].svg}</span>`:'';}
-const faceOf=r=>avOf(r)||(isRole(r)?shapeW(r):PIC.me);
+const chatFace=r=>avOf(r)||(isRole(r)?shapeW(r):PIC.me);
 // the players whose messages this phone hides (their device keys)
 function hideSet(){if(!S.hideSet){try{const a=JSON.parse(lsGet(LSK.hide)||'[]');S.hideSet=new Set(Array.isArray(a)?a.filter(isFpStr).slice(-32):[]);}catch(e){S.hideSet=new Set();}}return S.hideSet;}
 const isFpStr=x=>typeof x==='string'&&/^[\w-]{12}$/.test(x);
@@ -722,7 +722,7 @@ function modalHTML(){
     inner=`<div class="rules">${t.replace(/([.؟!])\s+/g,'$1\n').split('\n').map(x=>`<p>${x}</p>`).join('')}</div>${tk&&typeof HELP_TEAMS!=='undefined'?`<div class="rules tmrules"><p><b>👥 الفرق</b></p><p>${HELP_TEAMS[tk]}</p></div>`:''}`;}
   else if(m==='chat'){S.chatSeen=Date.now();
     const ppl=S.chatPpl?`<div class="cppl">${h?`<div class="segs">${['true','false'].map(v=>`<button class="seg ${String(chatOn())===v?'on':''}" data-a="cfg" data-k="chat" data-v="${v}">${v==='true'?'💬 المحادثة مفتوحة':'🔇 مقفلة للكل'}</button>`).join('')}</div>`:''}
-      ${players().filter(r=>r!==S.me&&S.ids[r]).map(r=>{const hid=hideSet().has(S.ids[r]);return `<div class="cpr" style="--c:${COLS[r]}"><i class="cav">${faceOf(r)}</i><b>${pname(r)}</b><button class="sm ${hid?'go':''}" data-a="chathide" data-i="${r}">${hid?'أظهر رسائله':'اخفِ رسائله'}</button></div>`;}).join('')||'<p class="note">ما فيه أحد غيرك في الغرفة</p>'}
+      ${players().filter(r=>r!==S.me&&S.ids[r]).map(r=>{const hid=hideSet().has(S.ids[r]);return `<div class="cpr" style="--c:${COLS[r]}"><i class="cav">${chatFace(r)}</i><b>${pname(r)}</b><button class="sm ${hid?'go':''}" data-a="chathide" data-i="${r}">${hid?'أظهر رسائله':'اخفِ رسائله'}</button></div>`;}).join('')||'<p class="note">ما فيه أحد غيرك في الغرفة</p>'}
       <p class="note">إخفاء الرسائل على جوالك أنت بس</p></div>`:'';
     return `<div class="sheet-bg" data-a="closemodal"><div class="sheet chat"><div class="sh-head"><h2>المحادثة</h2><div class="sh-acts"><button class="x ${S.chatPpl?'on':''}" data-a="chatppl" aria-label="الأشخاص والإخفاء" aria-pressed="${!!S.chatPpl}">👥</button><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div></div>${ppl}${chatHTML()}</div></div>`;}
   else if(m==='react'){title='رد سريع';inner=`<div class="rxs">${RX.map(i=>`<button class="rxe" data-a="rx" data-i="${i}" aria-label="${EMJ[i].n}">${EMJ[i].svg}</button>`).join('')}</div>`;}
@@ -754,7 +754,7 @@ function fabs(){const u=unread();return `<div class="rx">${S.me!=null?`<button c
 function chatHTML(){const L=chatList(),gs=[];let g=null;
   for(const m of L){const k=m.me?'me':(m.f||'r'+m.r);if(!g||g.k!==k||m.t-g.t>180000){g={k,t:m.t,m,list:[]};gs.push(g);}g.t=m.t;g.list.push(m);}
   const items=gs.map(g=>{const mine=!!g.m.me,r=g.m.r,c=COLS[r]||'#8A99AA';
-    return `<div class="chg ${mine?'me':''}" style="--c:${c}">${mine?'':`<i class="cav">${faceOf(r)}</i>`}<div class="chgb">${mine?'':`<b class="cnm">${chatName(g.m)}</b>`}${g.list.map(m=>m.k!=null?`<p class="msg stk" data-k="m${escH(m.i)}"><i class="emj">${emoSVG(m.k)}</i><time>${hhmm(m.t)}</time></p>`:`<p class="msg" data-k="m${escH(m.i)}"><span>${escH(m.x)}</span><time>${hhmm(m.t)}</time></p>`).join('')}</div></div>`;}).join('');
+    return `<div class="chg ${mine?'me':''}" style="--c:${c}">${mine?'':`<i class="cav">${chatFace(r)}</i>`}<div class="chgb">${mine?'':`<b class="cnm">${chatName(g.m)}</b>`}${g.list.map(m=>m.k!=null?`<p class="msg stk" data-k="m${escH(m.i)}"><i class="emj">${emoSVG(m.k)}</i><time>${hhmm(m.t)}</time></p>`:`<p class="msg" data-k="m${escH(m.i)}"><span>${escH(m.x)}</span><time>${hhmm(m.t)}</time></p>`).join('')}</div></div>`;}).join('');
   const on=chatOn(),x=String(S.draft.chat||''),tray=!!S.chatTray;
   const comp=!on?'<p class="chat-off">🔇 صاحب الغرفة قفل المحادثة، والردود السريعة شغالة</p>':
     `<div class="chatq ${tray?'tray':''}">${tray?RX.map(i=>`<button class="stkb" data-a="stk" data-i="${i}" aria-label="${EMJ[i].n}">${EMJ[i].svg}</button>`).join(''):CHAT_QP.map((t,i)=>`<button class="qp" data-a="chatq" data-i="${i}">${t}</button>`).join('')}</div>
@@ -769,7 +769,7 @@ function sendChat(b){if(S.mode!=='online'||!b)return false;if(!chatOn()){toast('
 // a new line while the chat is closed: a short note at the top (one at a time), tap it to open the chat
 function chatPop(m){const now=Date.now();if(now-(S.popAt||0)>900)sfx('pop');S.popAt=now;document.querySelectorAll('.chatpop').forEach(e=>e.remove());
   const el=document.createElement('button');el.className='chatpop';el.style.setProperty('--c',COLS[m.r]||'#8A99AA');
-  el.innerHTML=`<i class="cav">${faceOf(m.r)}</i><span><b>${chatName(m)}</b>${m.k!=null?`<i class="emj">${emoSVG(m.k)}</i>`:`<em>${escH(m.x)}</em>`}</span>`;
+  el.innerHTML=`<i class="cav">${chatFace(m.r)}</i><span><b>${chatName(m)}</b>${m.k!=null?`<i class="emj">${emoSVG(m.k)}</i>`:`<em>${escH(m.x)}</em>`}</span>`;
   el.addEventListener('click',()=>{S.modal='chat';S.chatSeen=Date.now();render();el.remove();});document.body.appendChild(el);setTimeout(()=>el.remove(),3500);}
 // a reaction floats up from the player's badge (transform and opacity only); a phone that sends too many is shown less often
 function floatRx(r,i){if(!emoOk(i))return;const now=Date.now();S.rxLast=S.rxLast||{};if(now-(S.rxLast[r]||0)<450||document.querySelectorAll('.floatrx').length>10)return;S.rxLast[r]=now;

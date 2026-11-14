@@ -50,7 +50,12 @@ const LT=n=>n<=4?4:n<=6?3:2;
 const luT=d=>13*starArms(d.pl.length);
 function luXY(d,s,k,p){const n=d.pl.length,G=starGeo(starArms(n)),a=armOf(n,s),T=13*G.A;
   if(p<0)return G.slot(a,k);if(p<=T-2)return G.track[(a*13+8+p)%T];if(p<T+4)return G.homes[a][p-(T-1)];return G.fin(a,k);}
-function luMovable(d,s,r){const F=luT(d)+4,o=[];for(let k=0;k<d.T;k++){const p=d.tk[s*d.T+k];if(p<0){if(r===6)o.push(k);}else if(p<F&&p+r<=F)o.push(k);}return o;}
+/* vr 1 (pairs): two pieces of one player on the same track square make a pair that nobody else may land on, so it cannot be taken */
+let LUV=0;// the last choice on this phone, kept for the next rounds
+const luCell=(d,s,p)=>(armOf(d.pl.length,s)*13+8+p)%luT(d);
+function luPairAt(d,tk,g,s){const T=luT(d);for(let o=0;o<d.pl.length;o++){if(o===s)continue;let c=0;for(let k=0;k<d.T;k++){const q=tk[o*d.T+k];if(q>=0&&q<=T-2&&luCell(d,o,q)===g)c++;}if(c>=2)return true;}return false;}
+function luMovable(d,s,r){const T=luT(d),F=T+4,o=[];for(let k=0;k<d.T;k++){const p=d.tk[s*d.T+k];let to;if(p<0){if(r!==6)continue;to=0;}else if(p<F&&p+r<=F)to=p+r;else continue;
+    if(d.vr&&to<=T-2&&luPairAt(d,d.tk,luCell(d,s,to),s))continue;o.push(k);}return o;}
 function luApply(d,s,k,r){const n=d.pl.length,T=luT(d),F=T+4,tk=[...d.tk],i=s*d.T+k,from=tk[i],to=from<0?0:from+r;tk[i]=to;const cap=[];
   if(to<=T-2){const g=(armOf(n,s)*13+8+to)%T;if(g%13!==3&&g%13!==8)for(let o=0;o<n;o++){if(o===s)continue;for(let kk=0;kk<d.T;kk++){const q=tk[o*d.T+kk];if(q>=0&&q<=T-2&&(armOf(n,o)*13+8+q)%T===g){cap.push([o,kk,q]);tk[o*d.T+kk]=-1;}}}}
   let done=true;for(let kk=0;kk<d.T;kk++)if(tk[s*d.T+kk]!==F)done=false;
@@ -70,9 +75,9 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
   // online the die is thrown on the host's phone, so nobody picks their own number
   net:{host:['roll']},redeal:d=>d,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><rect width="40" height="40" fill="#EC6158"/><rect x="60" width="40" height="40" fill="#4CB97F"/><rect y="60" width="40" height="40" fill="#4AB1E8"/><rect x="60" y="60" width="40" height="40" fill="#F0B429"/>${[[20,20],[80,20],[20,80],[80,80]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="13" fill="#fff"/>`).join('')}<path d="M40 40L50 50L60 40Z" fill="#4CB97F"/><path d="M40 40L50 50L40 60Z" fill="#EC6158"/><path d="M60 60L50 50L40 60Z" fill="#4AB1E8"/><path d="M60 60L50 50L60 40Z" fill="#F0B429"/><rect x="40" y="0" width="20" height="40" fill="none" stroke="#c9d6e4" stroke-width="1.5"/><rect x="47" y="6" width="6" height="34" fill="#4CB97F" opacity=".5"/><circle cx="20" cy="20" r="7" fill="#EC6158"/><circle cx="80" cy="80" r="7" fill="#F0B429"/></svg>`,
-  init:n=>({T:LT(n),tk:Array(n*LT(n)).fill(-1),roll:null,six:0,die:6,dsid:0,mv:null,last:''}),
+  init:n=>({T:LT(n),tk:Array(n*LT(n)).fill(-1),roll:null,six:0,die:6,dsid:0,mv:null,last:'',vr:LUV}),
   points:d=>d.pl.map((r,s)=>{let f=0;for(let k=0;k<d.T;k++)if(d.tk[s*d.T+k]===luT(d)+4)f++;return f+'/'+d.T;}),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.vr&&d.win==null?'<br><small>قطعتين لك على نفس المربع = زوج محمي، محد يقدر ينزل عليه</small>':''),
   onSkip:nd=>S.st.d&&S.st.d.turn!==nd.turn?{...nd,roll:null,six:0}:nd,
   onTimeout:d=>{if(d.roll!=null){const mv=luMovable(d,d.turn,d.roll);return mv.length?luApply(d,d.turn,mv[0],d.roll):{...d,roll:null,turn:nextSeat(d,d.turn)};}return luRoll(d,true);},
   render(d,ctx){const n=d.pl.length,A=starArms(n),G=starGeo(A),T=13*A,s0=d.turn,my=ctx.my;
@@ -95,6 +100,9 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
       if(c.j===3||c.j===8)v+=`<path d="${LSTAR}" transform="translate(${f2(c.x)} ${f2(c.y)}) rotate(${f2(c.rot)})" fill="${st?'#fff':'#F0B429'}" ${st?'':'opacity=".85"'}/>`;});
     G.homes.forEach((h,k)=>h.forEach((c,i)=>{v+=cellRect(c,own[k]>=0?C(k):'#E3E9EF','rgba(255,255,255,.7)',own[k]>=0?`fill-opacity="${f2(.5+.12*i)}"`:'');}));
     // the last move: a soft ring in the mover's colour where the piece landed
+    // pairs (with pairs on): a ring in the owner's colour round the square nobody may land on
+    if(d.vr){const T2=T-2;for(let s=0;s<n;s++){const seen={};for(let k=0;k<d.T;k++){const p=d.tk[s*d.T+k];if(p<0||p>T2)continue;const g=luCell(d,s,p);seen[g]=(seen[g]||0)+1;}
+      for(const g in seen)if(seen[g]>=2){const c=G.track[+g];v+=`<circle cx="${f2(c.x)}" cy="${f2(c.y)}" r=".56" fill="none" stroke="${col(d,s)}" stroke-width=".11" stroke-dasharray=".18 .1"/>`;}}}
     if(d.mv&&d.mv.to!=null&&d.mv.to>=0&&d.win==null){const m=d.mv,q=luXY(d,m.s,m.k,m.to);v+=`<circle cx="${f2(q.x)}" cy="${f2(q.y)}" r=".52" fill="${col(d,m.s)}" fill-opacity=".22" stroke="${col(d,m.s)}" stroke-width=".07" stroke-opacity=".6"/>`;}
     const pos={};const seq=[];
     for(let s=0;s<n;s++)for(let k=0;k<d.T;k++){const p=d.tk[s*d.T+k];const xy=luXY(d,s,k,p);const key=f2(xy.x)+','+f2(xy.y);(pos[key]=pos[key]||[]).push(1);seq.push({s,k,p,xy,key,i:pos[key].length-1});}
@@ -108,8 +116,10 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
     if(d.win==null){if(my&&d.roll==null)lab='';
       else if(my)lab='<b class="hint">اختار القطعة</b>';
       else lab=`<span class="note">ينتظر ${nm(d,s0)}</span>`;}
-    return v+dieBox(d,my,lab,my&&d.roll==null&&d.win==null);},
+    const fresh=!ctx.bot&&!d.dsid&&d.tk.every(x=>x<0)&&d.win==null;
+    return (fresh?`<div class="segs tttv">${[['0','كلاسيكية'],['1','الزوج محمي']].map(([k,t])=>`<button class="seg ${+k===(d.vr||0)?'on':''}" data-ga="vr" data-i="${k}" ${my?'':'disabled'}>${t}</button>`).join('')}</div>`:'')+v+dieBox(d,my,lab,my&&d.roll==null&&d.win==null);},
   click(a,i,d,ctx){if(!ctx.my)return;
+    if(a==='vr'){if(d.dsid||d.tk.some(x=>x>=0))return;LUV=i?1:0;act({...d,vr:LUV});return;}
     if(a==='roll'&&d.roll==null){act(luRoll(d));return;}
     if(a==='tok'&&d.roll!=null&&luMovable(d,d.turn,d.roll).includes(i))act(luApply(d,d.turn,i,d.roll));},
   after(d){const m=d.mv;if(!m||!once('lu'+d.gid+'_'+m.sid))return;const el=document.getElementById(`lt${m.s}_${m.k}`);if(!el)return;

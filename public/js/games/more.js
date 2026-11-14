@@ -282,8 +282,10 @@ const PROV=[['الصبر مفتاح…','الفرج'],['من جد…','وجد'],
 // near twins (ذهب/ذهبًا، عين/العين، وقع/وقع فيها) never sit together as options
 const pvN=s=>s.replace(/[\u064B-\u0652]/g,'').split(' ')[0].replace(/^ال/,'').replace(/ا$/,'');
 GAMES.prov=makeQuiz({name:'أكمل المثل',lbc:'#7A5230',icon:iconE('#A06B3E','📜'),
-  gen(d,rd){const R=srng(d,'pv');const ord=[...PROV.keys()];for(let i=ord.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}
-    const k=ord[rd%ord.length];const R2=srng(d,'pv'+rd);const w=new Set();while(w.size<3){const x=Math.floor(R2()*PROV.length);if(x!==k&&![PROV[k][1],...w].some(y=>pvN(y)===pvN(PROV[x][1])))w.add(PROV[x][1]);}
+  // ten proverbs dealt when the game starts (ones this phone has not shown lately first); streaks and two ×2 chips per player
+  deep:true,deal:()=>{const all=[...PROV.keys()];return qDeal('prov',{1:all,2:all,3:all});},
+  gen(d,rd){let k=d.qs&&Number.isInteger(d.qs[rd])&&PROV[d.qs[rd]]?d.qs[rd]:-1;
+    if(k<0){const R=srng(d,'pv');const ord=[...PROV.keys()];for(let i=ord.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]];}k=ord[rd%ord.length];}const R2=srng(d,'pv'+rd);const w=new Set();while(w.size<3){const x=Math.floor(R2()*PROV.length);if(x!==k&&![PROV[k][1],...w].some(y=>pvN(y)===pvN(PROV[x][1])))w.add(PROV[x][1]);}
     return {q:`<span class="pvq">${PROV[k][0].replace(/…$/,'')}<i class="pvb">…</i></span>`,...withOptions(R2,PROV[k][1],[...w])};}});
 
 /* ---------- number sequences ---------- */
@@ -342,28 +344,41 @@ function wCut(d,i){const t=d.turn;
 GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A4A4A"/><circle cx="50" cy="56" r="26" fill="#1d1d1d"/><path d="M60 30q10-12 22-8" stroke="#E8C38E" stroke-width="4" fill="none"/><circle cx="83" cy="22" r="5" fill="#F0B429"/>${['#E5483F','#3D8FD8','#3FAE5C'].map((c,k)=>`<path d="M30 ${50+k*7}H70" stroke="${c}" stroke-width="4"/>`).join('')}</svg>`,
   /* every bomb has one deadly wire; each player secretly knows two wires that are safe.
-     On your turn cut a wire, or pass once per bomb. Cut the deadly one and you are out, then a new bomb arrives.
-     Online the deadly wire and the other players' safe wires stay on the host (hide); a cut is checked there */
+     On your turn cut a wire. Once per bomb you may instead pass (with three or more players: throw the bomb at someone),
+     or scan one wire in secret before you cut (kn gets i for a safe wire, -(i+1) for the deadly one).
+     Cut the deadly one and you are out, then a new bomb arrives.
+     Online the deadly wire and the other players' safe wires (and scans) stay on the host (hide); a cut or scan is checked there */
   init:n=>wNewBomb({last:''},n,[...Array(n).keys()]),
   hide:{seat:['kn'],all:['bomb']},
-  net:{host:['cut','pass']},
+  net:{host:['cut','pass','scan'],local:['scm']},
   viewer:d=>d.win==null?d.turn:null,
   coverMsg:d=>d.last||'',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   // a bomb device: a counter of wires still in, then the wires between two terminal strips. A cut wire is a new node,
   // so its two halves spring apart once; a new bomb (someone went out) is a new device, so it shakes in
   render(d,ctx){const v=ctx.local?d.turn:ctx.v;const my=ctx.my&&d.win==null;const kn=v>=0&&Array.isArray(d.kn[v])?d.kn[v].filter(i=>i>=0):[];
+    const kb=v>=0&&Array.isArray(d.kn[v])?d.kn[v].filter(i=>i<-0.5).map(i=>-i-1):[];const scan=my&&d.ps[d.turn]!=='1'&&S.wscan===d.gid+':'+d.nb+':'+d.turn;
     const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const boom=!d.cut.length&&/^💥/.test(d.last||'');
     let s=`<div class="gm gm-wires"><div class="bombx ${boom?'boom':''}" data-k="b${d.nb}"><div class="bhd">${BOMB}<div class="blcd"><b class="ltr">${String(left.length).padStart(2,'0')}</b><small>أسلاك باقية</small></div><i class="bled"></i></div>
     <div class="wset">${[...Array(d.k).keys()].map(i=>{const c=WCOL[i][0];if(d.cut.includes(i))return `<div class="wire cut ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}"><i class="wh a"></i><i class="wh b"></i></div>`;
-      const known=kn.includes(i),tag=my?'button':'div';
-      return `<${tag} class="wire ${known?'known':''} ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}" ${my?`data-ga="cut" data-i="${i}" aria-label="قص السلك ${WCOL[i][1]}"`:''}><i class="wh"></i>${known?'<s class="wsafe">سليم ✓</s>':''}</${tag}>`;}).join('')}</div></div>`;
-    if(v>=0&&d.out[v]!=='1'&&d.win==null){const k2=kn.filter(i=>!d.cut.includes(i));
-      s+=`<p class="wsec">${k2.length?`🤫 سر بينك وبين نفسك: ${k2.map(i=>`<b style="color:${WCOL[i][0]}">${WCOL[i][1]}</b>`).join(' و')} سليم`:'الأسلاك اللي تعرفها انقصت، الحين حظك'}</p>`;}
-    if(my&&d.ps[d.turn]!=='1')s+=`<div class="acts"><button class="btn navy" data-ga="pass">⏭ مرّر الدور (مرة وحدة لكل قنبلة)</button></div>`;
+      const known=kn.includes(i),bad=kb.includes(i),tag=my?'button':'div';
+      return `<${tag} class="wire ${known?'known':''} ${bad?'bad':''} ${d.win!=null&&i===d.bomb?'deadly':''} ${scan?'wscn':''}" style="--c:${c}" ${my?`data-ga="${scan?'scan':'cut'}" data-i="${i}" aria-label="${scan?'افحص':'قص'} السلك ${WCOL[i][1]}"`:''}><i class="wh"></i>${known?'<s class="wsafe">سليم ✓</s>':bad?'<s class="wsafe wbad">💣 هذا هو!</s>':''}</${tag}>`;}).join('')}</div></div>`;
+    if(v>=0&&d.out[v]!=='1'&&d.win==null){const k2=kn.filter(i=>!d.cut.includes(i)),b2=kb.filter(i=>!d.cut.includes(i));
+      s+=`<p class="wsec">${b2.length?`🤫 فحصت ولقيتها: <b style="color:${WCOL[b2[0]][0]}">${WCOL[b2[0]][1]}</b> هو سلك التفجير! كل الباقي سليم`:k2.length?`🤫 سر بينك وبين نفسك: ${k2.map(i=>`<b style="color:${WCOL[i][0]}">${WCOL[i][1]}</b>`).join(' و')} سليم`:'الأسلاك اللي تعرفها انقصت، الحين حظك'}</p>`;}
+    if(scan)s+=`<p class="wsec wscan">🔍 اختار سلك تفحصه بالسر، وبعدها تقص</p>`;
+    // the pass: with three or more still in, you choose who gets the bomb next (the turn goes on from them)
+    // the one move per bomb: scan a wire in secret (then cut), or pass (with three or more: choose who gets the bomb)
+    if(my&&d.ps[d.turn]!=='1'){const al=aliveSeats(d).filter(x=>x!==d.turn);
+      s+=`<div class="wpass"><p>ورقة وحدة لكل قنبلة: <b>🔍 افحص</b> سلك بالسر وبعدها قص، أو <b>⏭ مرّر</b></p><div><button class="wpt scm ${scan?'on':''}" data-ga="scm">🔍 ${scan?'إلغاء الفحص':'افحص سلك'}</button>`+
+        (al.length>1?al.map(x=>`<button class="wpt ${d.ps[x]==='1'?'used':''}" style="--c:${col(d,x)}" data-ga="pass" data-i="${x}">⏭ ${nm(d,x)}${d.ps[x]==='1'?'<small>ما عنده ورقة</small>':''}</button>`).join(''):`<button class="wpt" data-ga="pass" data-i="${al[0]??-1}">⏭ مرّر</button>`)+'</div></div>';}
     return s+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
-    if(a==='pass'){if(d.ps[t]==='1')return;act({...d,ps:setAt(d.ps,t,'1'),turn:nextSeat(d,t),last:`${nm(d,t)} مرّر دوره ⏭`});return;}
+    if(a==='scm'){const k=d.gid+':'+d.nb+':'+t;S.wscan=S.wscan===k?null:k;render();return;}
+    if(a==='pass'){if(d.ps[t]==='1')return;const to=Number.isInteger(i)&&i>=0&&i<d.pl.length&&i!==t&&d.out[i]!=='1'?i:nextSeat(d,t);S.wscan=null;
+      const many=aliveSeats(d).length>2;act({...d,ps:setAt(d.ps,t,'1'),turn:to,last:many?`${nm(d,t)} رمى القنبلة على ${nm(d,to)} ⏭`:`${nm(d,t)} مرّر دوره ⏭`});return;}
+    // a scan: the answer goes into this player's own secret list, the turn stays (now cut)
+    if(a==='scan'){if(d.ps[t]==='1'||!Number.isInteger(i)||i<0||i>=d.k||d.cut.includes(i))return;S.wscan=null;
+      const kn=d.kn.map((x,s)=>s===t?[...(x||[]),i===d.bomb?-(i+1):i]:x);act({...d,kn,ps:setAt(d.ps,t,'1'),last:`${nm(d,t)} فحص سلك بالسر 🔍 والحين يقص`});return;}
     if(a==='cut'&&Number.isInteger(i)&&i>=0&&i<d.k&&!d.cut.includes(i))act(wCut(d,i));},
   // time ran out: a random wire is cut for you (never a safe one on purpose, or waiting out the clock would be the best move)
   onTimeout:d=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));return wCut(d,left[rnd(left.length)]);}

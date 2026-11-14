@@ -47,9 +47,12 @@ let TTTV=0;// the last choice on this phone, kept for the next rounds
 
 /* ================= game: dots and boxes ================= */
 const cntSeat=(s,n)=>{const a=Array(n).fill(0);for(const c of s)if(c!=='.')a[+c]++;return a;};
+let DTV=1;// the last size chosen on this phone, kept for the next rounds
+function dtBoard(n,sz){const B0=n===2?4:n<=4?5:6,B=sz===0?B0-1:sz===2?Math.min(7,B0+2):B0;return {B,sz,h:'.'.repeat((B+1)*B),v:'.'.repeat(B*(B+1)),bx:'.'.repeat(B*B)};}
 GAMES.dots={name:'نقاط ومربعات',cat:'board',lbc:'#8F86C9',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D8D2F6"/><rect x="22" y="22" width="28" height="28" fill="#F6B3AC"/><path d="M22 22H50V50H22Z" stroke="#EC6158" stroke-width="4" fill="none"/><path d="M50 50H78M78 22V50" stroke="#4AB1E8" stroke-width="4"/>${[22,50,78].map(y=>[22,50,78].map(x=>`<circle cx="${x}" cy="${y}" r="5" fill="#2D4763"/>`).join('')).join('')}</svg>`,
-  init:n=>{const B=n===2?4:n<=4?5:6;return {B,h:'.'.repeat((B+1)*B),v:'.'.repeat(B*(B+1)),bx:'.'.repeat(B*B)};},
+  // sz: the board size chosen before the first line (0 small, 1 normal, 2 big: longer chains, a longer fight for control)
+  init:n=>dtBoard(n,DTV),
   points:d=>cntSeat(d.bx,d.pl.length),status:(d,ctx)=>turnTxt(d,ctx),
   winExtra(d){const c=cntSeat(d.bx,d.pl.length);return 'المربعات: '+c.map((x,s)=>`${nm(d,s)} ${x}`).join('، ');},
   render(d,ctx){
@@ -63,10 +66,13 @@ GAMES.dots={name:'نقاط ومربعات',cat:'board',lbc:'#8F86C9',
     for(let r=0;r<=B;r++)for(let c=0;c<B;c++){const k=r*B+c;segs+=seg(P(c),P(r),P(c+1),P(r),d.h[k],'h',k);}
     for(let r=0;r<B;r++)for(let c=0;c<=B;c++){const k=r*(B+1)+c;segs+=seg(P(c),P(r),P(c),P(r+1),d.v[k],'v',k);}
     for(let r=0;r<=B;r++)for(let c=0;c<=B;c++)dots+=`<circle cx="${P(c)}" cy="${P(r)}" r="${B>4?1.9:2.3}" class="dt" pointer-events="none"/>`;
-    return `<svg class="dots bd-dots" viewBox="0 0 100 100" style="--c:${col(d,d.turn)}">${bx}${segs}${dots}</svg>`;
+    const fresh=!ctx.bot&&!/[0-9]/.test(d.h+d.v)&&d.win==null;
+    return `${fresh?`<div class="segs tttv">${[['0','صغيرة'],['1','عادية'],['2','كبيرة']].map(([k,t])=>`<button class="seg ${+k===(d.sz??1)?'on':''}" data-ga="sz" data-i="${k}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:''}<svg class="dots bd-dots" viewBox="0 0 100 100" style="--c:${col(d,d.turn)}">${bx}${segs}${dots}</svg>`;
   },
   click(a,i,d,ctx){
-    if(!ctx.my)return;let {h,v,bx}=d;const B=d.B,t=String(d.turn);
+    if(!ctx.my)return;
+    if(a==='sz'){if(/[0-9]/.test(d.h+d.v)||![0,1,2].includes(i))return;DTV=i;act({...d,...dtBoard(d.pl.length,i)});return;}
+    let {h,v,bx}=d;const B=d.B,t=String(d.turn);
     if(a==='h'){if(h[i]!=='.')return;h=setAt(h,i,t);}else{if(v[i]!=='.')return;v=setAt(v,i,t);}
     let got=false;
     for(let r=0;r<B;r++)for(let c=0;c<B;c++){const k=r*B+c;if(bx[k]!=='.')continue;
@@ -170,29 +176,42 @@ const NB=(i,Z)=>{const r=Math.floor(i/Z),c=i%Z,o=[];if(r>0)o.push(i-Z);if(r<Z-1)
 const CP={1:[[50,50]],2:[[34,34],[66,66]],3:[[50,30],[31,64],[69,64]]};
 function cwCell(c,n){const pts=CP[n]||[];
   return `<svg viewBox="0 0 100 100" class="blob"><circle cx="50" cy="53" r="44" fill="${shade(c,-.3)}"/><circle cx="50" cy="49" r="44" fill="${c}"/><ellipse cx="40" cy="27" rx="22" ry="11" fill="#fff" opacity=".28"/>${pts.map(([x,y])=>`<g class="pip"><circle cx="${x}" cy="${y+2}" r="9.5" fill="rgba(0,0,0,.18)"/><circle cx="${x}" cy="${y}" r="9.5" fill="#fff"/></g>`).join('')}${n>3?`<text x="50" y="62" text-anchor="middle" font-size="36" fill="#fff" font-weight="800">${n}</text>`:''}</svg>`;}
+let CWV=0;// the last choice on this phone, kept for the next rounds
+// how many dots make cell i burst: always 4 in the classic game, the number of its neighbours in the chain reaction
+const cwCap=(i,d)=>d.vr?NB(i,d.Z).length:4;
 GAMES.cw={name:'حرب الألوان',cat:'board',lbc:'#4B3A62',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4B3A62"/>${[0,1,2].map(r=>[0,1,2].map(c=>{const x=6+c*31,y=6+r*31;const k=(r*3+c)%4;const bg=k===0?'#FAD2CE':k===1?'#CDEAFA':'#EFE8DD';const dot=k===0?'#EC6158':k===1?'#4AB1E8':'';return `<rect x="${x}" y="${y}" width="27" height="27" rx="7" fill="${bg}"/>`+(dot?`<circle cx="${x+13.5}" cy="${y+13.5}" r="10" fill="${dot}"/><circle cx="${x+10}" cy="${y+10}" r="2.6" fill="#fff"/><circle cx="${x+17}" cy="${y+17}" r="2.6" fill="#fff"/>`:'');}).join('')).join('')}</svg>`,
-  init:n=>{const Z=CWS[n]||8;return {Z,o:'.'.repeat(Z*Z),n:'0'.repeat(Z*Z),mv:Array(n).fill(0)};},
-  status(d,ctx){return turnTxt(d,ctx);},
+  // vr 1 (chain reaction): one dot at a time on an empty cell or your own, and a cell bursts when its dots reach its neighbours
+  // (two in a corner, three on an edge, four inside), so corners are quick and the middle is slow
+  init:n=>{const Z=CWS[n]||8;return {Z,o:'.'.repeat(Z*Z),n:'0'.repeat(Z*Z),mv:Array(n).fill(0),vr:CWV};},
+  status(d,ctx){return turnTxt(d,ctx)+(d.vr&&d.win==null?'<br><small>نقطة وحدة بكل دور، والخانة تنفجر لما تساوي نقاطها عدد جيرانها</small>':'');},
   render(d,ctx){
-    const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z,ex=new Set(d.ex||[]);
-    return `<div class="cw bd-cw" style="grid-template-columns:repeat(${Z},minmax(0,1fr));gap:${Z>6?4:6}px;--c:${col(d,d.turn)}">${[...d.o].map((o,i)=>{const can=ctx.my&&(first?o==='.':o===t);
-      return `<button class="cc ${can?'can':''} ${o!=='.'?'own':''}" style="${o!=='.'?`background:${lit(d,+o)}`:''}" data-ga="m" data-i="${i}" ${can?'':'disabled'}>${o!=='.'?cwCell(col(d,+o),+d.n[i]):''}${ex.has(i)?`<i class="cwx" data-k="x${d.xn}"></i>`:''}</button>`;}).join('')}</div>`;
+    const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z,ex=new Set(d.ex||[]),fresh=!ctx.bot&&d.mv.every(m=>!m)&&d.win==null;
+    // the dots a cell sends to its neighbours when it bursts (the first few bursts only, so a long chain stays light)
+    const fly=new Set((d.ex||[]).slice(0,10)),dir={[-Z]:[0,-1],[Z]:[0,1],[-1]:[-1,0],[1]:[1,0]},by=d.xb!=null?d.xb:d.turn;
+    const h=fresh?`<div class="segs tttv">${[['0','كلاسيكية'],['1','تفاعل متسلسل']].map(([v,tx])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${tx}</button>`).join('')}</div>`:'';
+    return h+`<div class="cw bd-cw ${d.vr?'cr':''}" style="grid-template-columns:repeat(${Z},minmax(0,1fr));gap:${Z>6?4:6}px;--c:${col(d,d.turn)}">${[...d.o].map((o,i)=>{const can=ctx.my&&(d.vr?o==='.'||o===t:first?o==='.':o===t);
+      const sp=fly.has(i)?NB(i,Z).map((b,k)=>{const [x,y]=dir[b-i]||[0,0];return `<i class="cwo" data-k="o${d.xn}_${k}" style="--x:${x*100}%;--y:${y*100}%;--c:${col(d,by)}"></i>`;}).join(''):'';
+      return `<button class="cc ${can?'can':''} ${o!=='.'?'own':''} ${d.vr&&o!=='.'&&+d.n[i]===cwCap(i,d)-1?'hot':''}" style="${o!=='.'?`background:${lit(d,+o)}`:''}" data-ga="m" data-i="${i}" ${can?'':'disabled'}>${o!=='.'?cwCell(col(d,+o),+d.n[i]):''}${ex.has(i)?`<i class="cwx" data-k="x${d.xn}"></i>`:''}${sp}</button>`;}).join('')}</div>`;
   },
   click(a,i,d,ctx){
-    if(!ctx.my)return;const t=d.turn,ts=String(t),Z=d.Z,N=d.pl.length;const o=[...d.o],n=[...d.n].map(Number);
-    if(d.mv[t]===0){if(o[i]!=='.')return;o[i]=ts;n[i]=3;}else{if(o[i]!==ts)return;n[i]++;}
-    const othersMoved=d.mv.every((m,s)=>s===t||m>0||d.out[s]==='1');const ex=[];
+    if(!ctx.my)return;
+    if(a==='vr'){if(d.mv.some(m=>m))return;CWV=i?1:0;act({...d,vr:CWV});return;}
+    if(!Number.isInteger(i)||i<0||i>=d.o.length)return;
+    const t=d.turn,ts=String(t),Z=d.Z,N=d.pl.length;const o=[...d.o],n=[...d.n].map(Number);
+    if(d.vr){if(o[i]!=='.'&&o[i]!==ts)return;o[i]=ts;n[i]++;}
+    else if(d.mv[t]===0){if(o[i]!=='.')return;o[i]=ts;n[i]=3;}else{if(o[i]!==ts)return;n[i]++;}
+    const othersMoved=d.mv.every((m,s)=>s===t||m>0||d.out[s]==='1');const ex=[];const cap=k=>cwCap(k,d);
     for(let g=0;g<5000;g++){
-      const k=n.findIndex(x=>x>=4);if(k<0)break;
-      n[k]-=4;if(n[k]===0)o[k]='.';if(!ex.includes(k))ex.push(k);
+      const k=n.findIndex((x,j)=>x>=cap(j));if(k<0)break;
+      n[k]-=cap(k);if(n[k]===0)o[k]='.';if(!ex.includes(k))ex.push(k);
       for(const b of NB(k,Z)){o[b]=ts;n[b]++;}
       if(othersMoved&&o.every(c=>c==='.'||c===ts))break;
     }
     const mv=[...d.mv];mv[t]++;let out=d.out;
     for(let s=0;s<N;s++)if(out[s]!=='1'&&mv[s]>0&&!o.includes(String(s)))out=setAt(out,s,'1');
     const al=aliveSeats(d,out);const win=al.length===1?al[0]:null;
-    act({...d,o:o.join(''),n:n.map(x=>Math.min(x,9)).join(''),mv,out,turn:nextSeat(d,t,out),win,ex:ex.slice(0,40),xn:(d.xn||0)+1});
+    act({...d,o:o.join(''),n:n.map(x=>Math.min(x,9)).join(''),mv,out,turn:nextSeat(d,t,out),win,ex:ex.slice(0,40),xn:(d.xn||0)+1,xb:t});
   }
 };
 
@@ -254,10 +273,14 @@ function seaSound(kind){if(S.mute)return;try{seaAC=seaAC||new (window.AudioConte
   for(let i=0;i<ch.length;i++)ch[i]=(Math.random()*2-1)*Math.pow(1-i/ch.length,kind==='splash'?1.5:2.5);
   const src=ac.createBufferSource();src.buffer=buf;const flt=ac.createBiquadFilter();flt.type=kind==='splash'?'bandpass':'lowpass';flt.frequency.value=kind==='splash'?1400:kind==='boom'?380:700;
   const g=ac.createGain();g.gain.value=kind==='boom'?.9:.55;src.connect(flt);flt.connect(g);g.connect(ac.destination);src.start(t+.4);}
-const seaSalvo=d=>d.pl.length>2;
+// three or more always fire salvos; two players choose before the battle (vr 1: a salvo of one shot for every ship still afloat)
+const seaSalvo=d=>d.pl.length>2||!!d.vr;
+let SEAV=0;// the last choice on this phone, kept for the next rounds
+// the choice shows while the fleets are being placed (public: it changes no fleet)
+const seaVrSeg=(d,ctx)=>d.pl.length!==2||ctx.bot?'':`<div class="segs tttv">${[['0','طلقة بالدور'],['1','طلقة لكل سفينة']].map(([k,t])=>`<button class="seg ${+k===(d.vr||0)?'on':''}" data-ga="vr" data-i="${k}">${t}</button>`).join('')}</div>`;
 GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3E8FC4"/><path d="M25 0V100M50 0V100M75 0V100M0 25H100M0 50H100M0 75H100" stroke="#5FAEDF" stroke-width="2"/><path d="M8 46H74L84 52L74 60H14Z" fill="#E8746B" stroke="#2D4763" stroke-width="3"/><path d="M22 48l6 5M32 48l6 5M42 48l6 5" stroke="#2D4763" stroke-width="3"/><path d="M72 52l-9-9 4-2-5-7 9 4 1-6 4 8 6-2-3 7 7 3-7 3" fill="#fff"/><circle cx="72" cy="52" r="7" fill="#2D4763"/><circle cx="70" cy="50" r="2" fill="#fff"/><path d="M14 82l8-8M22 82l-8-8" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
-  init:n=>({sh:Array(n).fill('.'.repeat(64)),rd:0,last:'',rep:[],ls:[]}),
+  init:n=>({sh:Array(n).fill('.'.repeat(64)),rd:0,last:'',rep:[],ls:[],vr:n===2?SEAV:0}),
   // bots keep the random fleet they are dealt, so a game against bots only waits for the people
   privInit:(d,r)=>{const s=d.pl.indexOf(r);return {f:randFleet(),ready:s>=0&&isBot(d,s)};},
   canAct:(d,pr)=>allReady(d,pr),
@@ -298,8 +321,8 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
     if(v==null||v<0){const o=d.win!=null&&typeof d.win==='number'?d.win:d.turn;return `<p class="lbl">بحر ${nm(d,o)}</p>${seaGrid(seaFleet(d,o,pr),d.sh[o],d.win!=null,false)}`;}
     const mine=pr[d.pl[v]];if(!mine||mine.gid!==d.gid)return '<p class="note">جاري التجهيز…</p>';
     if(!allReady(d,pr)){
-      if(seaReady(mine,d))return `<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false)}<p class="hint">جاهز ✓ ننتظر الباقين</p>`;
-      return `<p class="lbl">رتّب سفنك (${SHIPS.length} سفن)</p>${seaGrid(mine.f,d.sh[v],true,'ed')}
+      if(seaReady(mine,d))return `${seaVrSeg(d,ctx)}<p class="lbl">بحرك</p>${seaGrid(mine.f,d.sh[v],true,false)}<p class="hint">جاهز ✓ ننتظر الباقين</p>`;
+      return `${seaVrSeg(d,ctx)}<p class="lbl">رتّب سفنك (${SHIPS.length} سفن)</p>${seaGrid(mine.f,d.sh[v],true,'ed')}
         <div class="acts"><button class="btn navy" data-ga="rot" ${S.seaSel?'':'disabled'}>🔄 تدوير</button><button class="btn navy" data-ga="shuffle">🔀 عشوائي</button><button class="btn red" data-ga="ready">جاهز ✓</button></div>`;}
     const rep=d.rep&&d.rep.length?`<div class="srep">${d.rep.map(x=>`<p>${x}</p>`).join('')}</div>`:'';
     if(seaSalvo(d)){const dead=d.out[v]==='1';const k=dead?0:seaAfloat(mine.f,d.sh[v]);const marks=(S.salvo&&S.salvo.k===d.gid+':'+d.rd?S.salvo.l:[]);
@@ -319,6 +342,7 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
     if(a==='tgt'){S.tgt=i;S.gw=false;render();return;}
     if(a==='gone'){const g=seaGone(d,S.priv);if(!g.length)return;let out=d.out;for(const s of g)out=setAt(out,s,'1');const al=aliveSeats(d,out);act({...d,out,win:al.length===1?al[0]:null});return;}
     const v=ctx.v;if(v==null||v<0)return;const r=d.pl[v];const p=S.priv[r];
+    if(a==='vr'){if(d.pl.length!==2||allReady(d,S.priv)||d.rd||/[ox]/.test(d.sh.join('')))return;SEAV=i?1:0;act({...d,vr:SEAV});return;}
     if(['shuffle','ready','ed','rot'].includes(a)){if(!p||seaReady(p,d))return;
       if(a==='shuffle'){S.seaSel=null;setPriv(r,{...p,f:randFleet()});return;}
       if(a==='ready'){S.seaSel=null;setPriv(r,{...p,ready:true});
@@ -354,6 +378,9 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
 /* ================= game: guess the person ================= */
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const MN=['أحمد','خالد','فهد','سعد','ناصر','عمر','يوسف','سلطان','ماجد','تركي','بدر','حمد'],FN=['سارة','نورة','ريم','هند','لمى','دانة','جود','مها','عبير','لينا','رهف','شهد'];
+// more people: each game puts 24 of them on the board (12 men, 12 women), so the faces change from game to game
+const MN2=['عبدالله','محمد','فيصل','نواف','راشد','مشاري','سعود','حسن','وليد','طلال','هشام','سامي','عادل','منصور','جاسم','عمار','ياسر','حمزة'],
+  FN2=['منى','أمل','هيا','غادة','بشاير','العنود','ليلى','أسماء','سلمى','رنا','وعد','جواهر','لولوة','دلال','شيماء','حنان','مريم','فاطمة'];
 const HC={black:'#2B2B2B',brown:'#7A4A2A',blond:'#E8C15A',red:'#C8512E',gray:'#B9B9B9'};
 const SKIN=['#F6D6B8','#EBC09A','#C9905F','#8E5B3A'],SHIRTS=[['#4CB97F','أخضر'],['#F2A93B','برتقالي'],['#9C7BD6','بنفسجي'],['#4AB1E8','أزرق'],['#E8574E','أحمر'],['#3D5A80','كحلي']],HIJ=['#3D5A80','#9C7BD6','#2D4763','#C76A8A','#5C8D89','#A0522D'];
 const CARDBG=['#FDECEA','#E8F4FD','#EAF7EF','#FFF6DD','#F1ECFA','#FDEFE4'],CAPC=['#2D4763','#E5483F','#2F7F86','#F0B429'];
@@ -362,7 +389,8 @@ const PEOPLE=(()=>{const R=mulberry(20261113);const pick=a=>a[Math.floor(R()*a.l
       if(m){p.sh=R()<.28;p.cap=!p.sh&&R()<.25;p.hj=false;p.hair=p.sh?'none':pick(['black','brown','blond','red','gray','bald','black']);if(p.cap&&p.hair==='bald')p.hair='black';p.hs=pick(['short','curly','spiky']);p.bd=R()<.4;p.mu=p.bd||R()<.35;p.er=false;p.capc=pick(CAPC);}
       else{p.hj=R()<.35;p.sh=false;p.cap=false;p.hair=p.hj?'none':pick(['black','brown','blond','red','gray']);p.hs=p.hj?'none':pick(['long','bob','bun','long']);p.bd=false;p.mu=false;p.er=!p.hj&&R()<.5;p.hjc=pick(HIJ);}
       const sig=[p.m,p.gl,p.sm,p.sh,p.cap,p.hj,p.hair,p.hs==='long',p.bd,p.mu,p.er,p.shn].join();if(!seen.has(sig)){seen.add(sig);return p;}}};
-  for(let i=0;i<12;i++){out.push(make(true,MN[i]));out.push(make(false,FN[i]));}return out;})();
+  for(let i=0;i<12;i++){out.push(make(true,MN[i]));out.push(make(false,FN[i]));}
+  for(let i=0;i<MN2.length;i++){out.push(make(true,MN2[i]));out.push(make(false,FN2[i]));}return out.filter(Boolean);})();
 function faceSVG(p){
   const hc=HC[p.hair]||'#2B2B2B',sk=p.sk,dk=shade(sk,-.2),O='stroke="#2D4763" stroke-width=".9"';let s=`<svg viewBox="0 0 60 66"><rect width="60" height="66" fill="${p.bg}"/><circle cx="30" cy="70" r="34" fill="#fff" opacity=".45"/>`;
   if(!p.m&&!p.hj&&p.hs==='long')s+=`<path d="M13 31C13 13 21 8 30 8S47 13 47 31V59C42 61 18 61 13 59Z" fill="${hc}" ${O}/>`;
@@ -396,42 +424,65 @@ function faceSVG(p){
   s+=p.sm?`<path d="M25.6 38.6Q30 43 34.4 38.6Z" fill="#fff" stroke="#2D4763" stroke-width="1.1" stroke-linejoin="round"/>`:`<path d="M27 40H33" stroke="#2D4763" stroke-width="1.3" stroke-linecap="round"/>`;
   return s+'</svg>';
 }
-const FACES=PEOPLE.map(faceSVG);
+const FACES=[];// drawn when first needed
+const faceOf=k=>FACES[k]||(FACES[k]=faceSVG(PEOPLE[k]));
 const QS=[['رجل',p=>p.m,0],['امرأة',p=>!p.m,0],['مبتسم',p=>p.sm,0],['نظارة',p=>p.gl,0],['حلق',p=>p.er,0],
   ['شماغ',p=>p.sh,1],['حجاب',p=>p.hj,1],['كاب',p=>p.cap,1],['أصلع',p=>p.hair==='bald',1],['شعر طويل',p=>p.hs==='long',1],['لحية',p=>p.bd,1],['شنب',p=>p.mu,1],
   ['شعر أسود',p=>p.hair==='black',2],['شعر بني',p=>p.hair==='brown',2],['شعر أشقر',p=>p.hair==='blond',2],['شعر أحمر',p=>p.hair==='red',2],['شعر رمادي',p=>p.hair==='gray',2],
   ...SHIRTS.map(([c,n])=>['لبس '+n,p=>p.shn===n,3,c])];
 const QCAT=['الشخص','الرأس والوجه','لون الشعر','لون اللبس'];
-const pc=(i,cls,attrs)=>`<${attrs?'button':'div'} class="pc ${cls}" ${attrs||''}><div class="fr">${FACES[i]}<b>${PEOPLE[i].name}</b></div><div class="bk"><span>؟</span><b>${PEOPLE[i].name}</b></div></${attrs?'button':'div'}>`;
+/* the animals deck: what each one is (m mammal, b bird, r reptile, i insect), how it lives (f flies, w lives in the sea and never
+   leaves it, l four legs), e eats meat or other animals, g heavier than a person, h horns, d people raise it, o lays eggs, z black and white */
+const ANIM=[['أسد','🦁','melgx'],['نمر','🐅','melgs'],['فيل','🐘','mlgk'],['زرافة','🦒','mlghu'],['حمار وحشي','🦓','mlgzs'],['دب','🐻','melg'],['باندا','🐼','mlgz'],
+  ['جمل','🐪','mlgdy'],['حصان','🐎','mlgd'],['ثور','🐂','mlghd'],['ماعز','🐐','mlhd'],['خروف','🐑','mldp'],['قطة','🐈','meld'],['كلب','🐕','meldj'],['أرنب','🐇','mld'],
+  ['قنفذ','🦔','melq'],['حوت','🐳','mwegt'],['دلفين','🐬','mweg'],['ثعلب','🦊','melj'],['فرس النهر','🦛','mlg'],['وحيد القرن','🦏','mlgh'],['كوالا','🐨','ml'],
+  ['نسر','🦅','bfeo'],['بومة','🦉','bfeon'],['ببغاء','🦜','bfdov'],['بطريق','🐧','beoz'],['حمامة','🕊️','bfdo'],['تمساح','🐊','relgo'],['ثعبان','🐍','reo'],['ضفدع','🐸','elo'],
+  ['نحلة','🐝','ifdos'],['فراشة','🦋','ifo'],['دعسوقة','🐞','ifeo'],['عقرب','🦂','e'],['عنكبوت','🕷️','eo'],['أخطبوط','🐙','weo'],['حلزون','🐌','o']].map(([name,em,f],k)=>({name,em,f,bg:CARDBG[k%CARDBG.length]}));
+// the last group is one marked trait each (a trunk, a hump, a mane…), so every animal on the board can be told apart
+const AQS=[['ثديي',0,'m'],['طائر',0,'b'],['زاحف',0,'r'],['حشرة',0,'i'],['يطير',1,'f'],['يعيش في البحر وما يطلع منه',1,'w'],['عنده أربع أرجل',1,'l'],
+  ['ياكل لحم أو حيوانات',2,'e'],['أثقل من الإنسان',2,'g'],['أكبر من الباص',2,'t'],['له قرون',3,'h'],['الناس يربّونه',3,'d'],['يبيض',3,'o'],['لونه أبيض وأسود',3,'z'],['عليه خطوط',3,'s'],
+  ['له خرطوم',4,'k'],['أطول حيوان في العالم',4,'u'],['عنده سنام',4,'y'],['له لبدة حول راسه',4,'x'],['له صوف',4,'p'],['جسمه شوك',4,'q'],['يقدر يلف راسه لورا',4,'n'],['يقلّد كلام الناس',4,'v'],['ينبح',4,'j']].map(([t,c,k])=>[t,a=>a.f.includes(k),c]);
+const ACAT=['النوع','الحركة والمكان','الأكل والحجم','صفات ثانية','علامات مميزة'];
+const animSVG=a=>`<svg viewBox="0 0 60 66"><rect width="60" height="66" fill="${a.bg}"/><circle cx="30" cy="70" r="34" fill="#fff" opacity=".45"/><text x="30" y="44" font-size="34" text-anchor="middle">${a.em}</text></svg>`;
+// deck 0 people, 1 animals; d.bd lists the 24 on the board (old games without it: the first 24 people)
+const GDK=[{n:'أشخاص',it:PEOPLE,Q:QS,cat:QCAT,face:k=>faceOf(k),ask:'هل شخصية',ttl:'شخصية',sec:'شخصيتك السرية',it2:'يعرفونها'},{n:'حيوانات',it:ANIM,Q:AQS,cat:ACAT,face:k=>animSVG(ANIM[k]),ask:'هل حيوان',ttl:'حيوان',sec:'حيوانك السري',it2:'يعرفونه'}];
+const gDeck=d=>GDK[d.dk]||GDK[0];
+const gItem=(d,k)=>gDeck(d).it[d.bd?d.bd[k]:k];
+function gBoard(dk){if(dk===1)return shuffle([...ANIM.keys()]).slice(0,24);const m=[],f=[];PEOPLE.forEach((p,k)=>(p.m?m:f).push(k));return shuffle([...shuffle(m).slice(0,12),...shuffle(f).slice(0,12)]);}
+const pc=(d,i,cls,attrs)=>{const it=gItem(d,i),k=d.bd?d.bd[i]:i;return `<${attrs?'button':'div'} class="pc ${cls}" ${attrs||''}><div class="fr">${gDeck(d).face(k)}<b>${it.name}</b></div><div class="bk"><span>؟</span><b>${it.name}</b></div></${attrs?'button':'div'}>`;};
 const elSeg=(d,a,t)=>d.el[a].slice(t*24,t*24+24);
+let GSV=0;// the last deck chosen on this phone, kept for the next rounds
 GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B4FA0"/>${[[4,4,0],[36,4,1],[68,4,2],[4,36,3],[36,36,4],[68,36,6],[4,68,9],[36,68,10],[68,68,13]].map(([x,y,k])=>`<g transform="translate(${x} ${y}) scale(.47)"><rect width="60" height="66" rx="8" fill="#fff"/>${FACES[k].replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g>`).join('')}</svg>`,
-  init:n=>({el:Array(n).fill('0'.repeat(24*n)),last:'',qa:[]}),
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B4FA0"/>${[[4,4,0],[36,4,1],[68,4,2],[4,36,3],[36,36,4],[68,36,6],[4,68,9],[36,68,10],[68,68,13]].map(([x,y,k])=>`<g transform="translate(${x} ${y}) scale(.47)"><rect width="60" height="66" rx="8" fill="#fff"/>${faceOf(k).replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g>`).join('')}</svg>`,
+  // the secret (sec) is a place on the board, 0 to 23, so choosing the deck never touches it
+  init:n=>({el:Array(n).fill('0'.repeat(24*n)),last:'',qa:[],dk:GSV,bd:gBoard(GSV)}),
   privInit:()=>({sec:rnd(24)}),
   // online, the secret people stay with the host and their owners: questions and guesses are answered on the host
-  net:{host:['ask','guess'],local:['tgt','gmode']},privOk:()=>false,
+  net:{host:['ask','guess','dk'],local:['tgt','gmode']},privOk:()=>false,
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   status(d,ctx){return (d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx);},
-  winExtra(d,ctx){const p=ctx.priv;return `${d.last}<br>`+d.pl.map((r,s)=>`${nm(d,s)}: ${p[r]&&p[r].gid===d.gid&&PEOPLE[p[r].sec]?PEOPLE[p[r].sec].name:'؟'}`).join('، ');},
+  winExtra(d,ctx){const p=ctx.priv;return `${d.last}<br>`+d.pl.map((r,s)=>`${nm(d,s)}: ${p[r]&&p[r].gid===d.gid&&p[r].sec>=0&&p[r].sec<24?gItem(d,p[r].sec).name:'؟'}`).join('، ');},
   render(d,ctx){
     let v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;
     const spect=v<0;if(spect)v=d.turn;
     const mine=ctx.priv[d.pl[v]];const myTurn=ctx.my&&d.turn===v;const gm=myTurn&&S.gw;
     const o=curTarget(d,v);if(o==null)return '';
-    let s=!spect&&mine&&mine.gid===d.gid?`<div class="secret">${pc(mine.sec,'')}<div><b>شخصيتك السرية: ${PEOPLE[mine.sec].name}</b><br><small class="note">الباقين يحاولون يعرفونها</small></div></div>`:'';
+    const D=gDeck(d),fresh=!(d.qa||[]).length&&d.out.indexOf('1')<0&&d.win==null&&!ctx.bot;
+    let s=fresh?`<div class="segs tttv">${GDK.map((x,k)=>`<button class="seg ${k===(d.dk||0)?'on':''}" data-ga="dk" data-i="${k}" ${myTurn?'':'disabled'}>${k?'🐾 ':'🙂 '}${x.n}</button>`).join('')}</div>`:'';
+    s+=!spect&&mine&&mine.gid===d.gid?`<div class="secret">${pc(d,mine.sec,'')}<div><b>${D.sec}: ${gItem(d,mine.sec).name}</b><br><small class="note">الباقين يحاولون ${D.it2}</small></div></div>`:'';
     s+=tabsHTML(d,v,myTurn?'اختر مين تسأل عنه':'لوحتك عن كل لاعب');
     const el=elSeg(d,v,o);const left=[...el].filter(c=>c==='0').length;
     const key=d.gid+'_'+v+'_'+o;S.gPrev=S.gPrev||{};const prev=S.gPrev[key]||el;S.gPrev[key]=el;
-    s+=`<div class="gwh"><span>شخصية ${nameTag(d,o)}</span><b>باقي ${left} من 24</b></div>`;
-    if(gm)s+=`<p class="hint" style="text-align:center">اضغط على الشخص اللي تتوقعه (لو غلطت تطلع من الجولة)</p>`;
-    s+=`<div class="gw ${gm?'gm':''}">${PEOPLE.map((p,i)=>{const out=el[i]==='1';const nw=out&&prev[i]!=='1'?' flip':'';return gm&&!out?pc(i,'pick',`data-ga="guess" data-i="${i}"`):pc(i,(out?'out':'')+nw);}).join('')}</div>`;
+    s+=`<div class="gwh"><span>${D.ttl} ${nameTag(d,o)}</span><b>باقي ${left} من 24</b></div>`;
+    if(gm)s+=`<p class="hint" style="text-align:center">اضغط على ${d.dk===1?"الحيوان":"الشخص"} اللي تتوقعه (لو غلطت تطلع من الجولة)</p>`;
+    s+=`<div class="gw ${gm?'gm':''} ${d.dk===1?'an':''}">${[...Array(24).keys()].map(i=>{const out=el[i]==='1';const nw=out&&prev[i]!=='1'?' flip':'';return gm&&!out?pc(d,i,'pick',`data-ga="guess" data-i="${i}"`):pc(d,i,(out?'out':'')+nw);}).join('')}</div>`;
     const log=(d.qa||[]).filter(q=>q[0]===v&&q[1]===o);
-    if(log.length)s+=`<div class="qlog">${log.map(q=>`<span class="${q[3]?'y':'n'}">${QS[q[2]][0]}؟ ${q[3]?'✓':'✗'}</span>`).join('')}</div>`;
+    if(log.length)s+=`<div class="qlog">${log.map(q=>`<span class="${q[3]?'y':'n'}">${(D.Q[q[2]]||['؟'])[0]}؟ ${q[3]?'✓':'✗'}</span>`).join('')}</div>`;
     if(myTurn){
       if(gm)s+=`<div class="acts"><button class="btn navy" data-ga="gmode">رجوع للأسئلة</button></div>`;
-      else{const rem=PEOPLE.filter((p,i)=>el[i]==='0');
-        s+=`<p class="lbl" style="text-align:center">اسأل: هل شخصية ${nm(d,o)} فيها…</p>`+QCAT.map((cn,ci)=>{const qs=QS.map((q,k)=>[q,k]).filter(([q])=>q[2]===ci);
+      else{const rem=[...Array(24).keys()].filter(i=>el[i]==='0').map(i=>gItem(d,i));
+        s+=`<p class="lbl" style="text-align:center">اسأل: ${D.ask} ${nm(d,o)}${d.dk===1?'…':' فيها…'}</p>`+D.cat.map((cn,ci)=>{const qs=D.Q.map((q,k)=>[q,k]).filter(([q])=>q[2]===ci);
           return `<div class="qcat"><small>${cn}</small><div class="qs">${qs.map(([q,k])=>{const y=rem.filter(q[1]).length;const useful=y>0&&y<rem.length;return `<button class="q" data-ga="ask" data-i="${k}" ${useful?'':'disabled'}>${q[3]?`<i style="background:${q[3]}"></i>`:''}${q[0]}؟</button>`;}).join('')}</div></div>`;}).join('')+
           `<div class="acts"><button class="btn red" data-ga="gmode">🎯 أعرفه! أبي أخمّن</button></div>`;}
     }
@@ -440,15 +491,16 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
   click(a,i,d,ctx){
     if(a==='tgt'){S.tgt=i;S.gw=false;render();return;}
     if(a==='gmode'){S.gw=!S.gw;render();return;}
-    if(!ctx.my)return;const t=d.turn,o=curTarget(d,t);if(o==null)return;const op=S.priv[d.pl[o]];
+    if(!ctx.my)return;
+    if(a==='dk'){if((d.qa||[]).length||!GDK[i])return;GSV=i;act({...d,dk:i,bd:gBoard(i),last:''});return;}const t=d.turn,o=curTarget(d,t);if(o==null)return;const op=S.priv[d.pl[o]];
     if(!op||op.gid!==d.gid){toast('انتظر اللاعب');return;}
-    const P=PEOPLE[op.sec];
-    if(a==='ask'){const f=QS[i][1];const ans=!!f(P);const el=[...d.el];const seg=[...elSeg(d,t,o)].map((c,k)=>c==='1'||!!f(PEOPLE[k])!==ans?'1':'0').join('');
+    const P=gItem(d,op.sec),D=gDeck(d);
+    if(a==='ask'){if(!D.Q[i])return;const f=D.Q[i][1];const ans=!!f(P);const el=[...d.el];const seg=[...elSeg(d,t,o)].map((c,k)=>c==='1'||!!f(gItem(d,k))!==ans?'1':'0').join('');
       el[t]=el[t].slice(0,o*24)+seg+el[t].slice(o*24+24);const qa=[...(d.qa||[]),[t,o,i,ans?1:0]].slice(-60);
-      act({...d,el,qa,turn:nextSeat(d,t),last:`${nm(d,t)} سأل عن ${nm(d,o)}: «${QS[i][0]}؟» والجواب ${ans?'نعم ✓':'لا ✗'}`});}
+      act({...d,el,qa,turn:nextSeat(d,t),last:`${nm(d,t)} سأل عن ${nm(d,o)}: «${D.Q[i][0]}؟» والجواب ${ans?'نعم ✓':'لا ✗'}`});}
     else if(a==='guess'&&S.gw){S.gw=false;const right=i===op.sec;const out=setAt(d.out,right?o:t,'1');const al=aliveSeats(d,out);
       act({...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,t,out),
-        last:right?`${nm(d,t)} عرف شخصية ${nm(d,o)}: ${P.name} 🎉`:`${nm(d,t)} خمّن ${PEOPLE[i].name} لـ${nm(d,o)} وطلع غلط`});}
+        last:right?`${nm(d,t)} عرف ${D.ttl} ${nm(d,o)}: ${P.name} 🎉`:`${nm(d,t)} خمّن ${gItem(d,i).name} لـ${nm(d,o)} وطلع غلط`});}
   }
 };
 
