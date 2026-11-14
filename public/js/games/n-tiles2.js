@@ -200,7 +200,7 @@ const k2dDraw=(d,s)=>{const j=rnd(d.bone.length/2)*2,t=d.bone.slice(j,j+2),hands
    boneyard is empty, then pass. Going out scores the others' pips rounded to the nearest 5; a block gives the lowest hand
    the others' pips. Four players play in partnerships (opposite). First to 150.
    ================================================================= */
-const K2FV=150;
+const K2FV=150,k2fT=d=>d.pl.length>4?250:K2FV;
 const k2fSide=(d,s)=>d.tm?d.tm[s]:d.pairs?s%2:s;
 const k2fSides=d=>[...new Set(d.pl.map((_,s)=>k2fSide(d,s)))];
 const k2fSi=(d,s)=>k2fSides(d).indexOf(k2fSide(d,s));
@@ -227,7 +227,7 @@ function k2fPlay(d,i,end){const s=d.turn,hs=cardsOf(d.hands[s]),t=hs[i];if(!t||!
   const hands=[...d.hands];hs.splice(i,1);hands[s]=hs.join('');let nd={...k2fPlace(d,t,end),hands,ps:0,lp:{s,t,end},dt:''};
   const sum=k2fSum(nd),got=sum>0&&sum%5===0?sum:0;const sc=[...d.sc];if(got)sc[k2fSi(d,s)]+=got;
   nd={...nd,sc,last:`${nameTag(d,s)} نزّل <bdi dir="ltr">${k2dn(t[0])}|${k2dn(t[1])}</bdi>${got?` وسجّل ${got} 🎯`:''}`};
-  if(got&&sc[k2fSi(d,s)]>=K2FV)return k2fEndGame({...nd,ph:'sum',sum:{w:s,add:k2fSides(d).map((_,j)=>j===k2fSi(d,s)?got:0),pips:d.pl.map((_,q)=>k2fPips(nd,q))}},k2fSide(d,s));
+  if(got&&sc[k2fSi(d,s)]>=k2fT(d))return k2fEndGame({...nd,ph:'sum',sum:{w:s,add:k2fSides(d).map((_,j)=>j===k2fSi(d,s)?got:0),pips:d.pl.map((_,q)=>k2fPips(nd,q))}},k2fSide(d,s));
   if(!hs.length)return k2fHandEnd(nd,s);
   return {...nd,turn:nextSeat(nd,s)};}
 const k2fPips=(d,s)=>cardsOf(d.hands[s]).reduce((x,t)=>x+k2dPip(t),0);
@@ -237,7 +237,7 @@ function k2fHandEnd(d,w){const sides=k2fSides(d),sc=[...d.sc];let add=sides.map(
     msg='انقفل اللعب';if(lo.length===1){const i=sides.indexOf(lo[0]);add[i]=k2fRound(bySide.reduce((x,v,j)=>j===i?x:x+v,0));w=al.find(s=>k2fSide(d,s)===lo[0]);}
     else if(lo.length===2&&sides.length===3){const third=bySide.findIndex(v=>v!==mn);const half=k2fRound(bySide[third]/2);lo.forEach(t=>add[sides.indexOf(t)]=half);w=-1;}else w=-1;}
   add.forEach((x,i)=>sc[i]+=x);const nd={...d,sc,ph:'sum',sum:{w,add,pips:d.pl.map((_,s)=>k2fPips(d,s))},last:msg};
-  const hi=Math.max(...sc);if(hi>=K2FV){const top=sides.filter((_,i)=>sc[i]===hi);if(top.length===1)return k2fEndGame(nd,top[0]);}
+  const hi=Math.max(...sc);if(hi>=k2fT(d)){const top=sides.filter((_,i)=>sc[i]===hi);if(top.length===1)return k2fEndGame(nd,top[0]);}
   return nd;}
 function k2fEndGame(d,t){const ws=d.pl.map((_,s)=>s).filter(s=>k2fSide(d,s)===t);return k2Win(d,ws);}
 function k2fDeal(d){const n=d.pl.length,m=k2fMax(n),x=k2dDeal(d,m,k2fCnt(n));const al=aliveSeats(d);const st=d.lead>=0&&d.out[d.lead]!=='1'?d.lead:al[rnd(al.length)];
@@ -265,7 +265,7 @@ GAMES.k_fives={name:'الدومينو الخمسات',cat:'cards',lbc:'#6B4F3A',
   pass(d){const ps=d.ps+1,nd={...d,ps,last:`${nameTag(d,d.turn)} مرّر`};if(ps>=aliveSeats(d).length)return k2fHandEnd(nd,-1);return {...nd,turn:nextSeat(d,d.turn)};},
   onTimeout(d){if(d.ph==='sum')return k2fNext(d);const L=k2fLegal(d,d.turn);if(L.length){const t=cardsOf(d.hands[d.turn])[L[0]];return k2fPlay(d,L[0],k2fFits(d,t)[0]);}
     if(d.bone)return k2dDraw(d,d.turn);return GAMES.k_fives.pass(d);},
-  status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';return s+k2Who(d,ctx)+` • الهدف ${K2FV}`;},
+  status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';return s+k2Who(d,ctx)+` • الهدف ${k2fT(d)}`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph==='play';
     let h=`<div class="k2 k2fv">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.sc[k2fSi(d,s)]}</em>${d.pairs&&!d.tm?`<u>${s%2?'🔷':'🔶'}</u>`:''}`,s=>d.turn===s&&d.ph==='play'&&d.win==null)}${k2fTable(d)}`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel k2sum"><h3>${r&&r.w>=0?nameTag(d,r.w)+(cardsOf(d.hands[r.w]).length?' أقل نقاط':' خلّص قطعه')+' 🏆':'انقفل اللعب بتعادل'}</h3>
@@ -281,7 +281,7 @@ GAMES.k_fives={name:'الدومينو الخمسات',cat:'cards',lbc:'#6B4F3A',
     if(a==='pass'){if(d.bone||k2fLegal(d,s).length)return;act(GAMES.k_fives.pass(d));return;}
     if(a==='tile'){const t=cardsOf(hs)[i];if(!t)return;const f=k2fFits(d,t);if(!f.length)return;if(f.length===1){S.sel=[];act(k2fPlay(d,i,f[0]));return;}S.sel=[k2Key(d,'fv',hs),i];render();return;}
     if(a==='end'){const sel=k2Sel(d,'fv',hs);S.sel=[];if(i===9||!sel.length){render();return;}const e='lrud'[i];if(!e)return;act(k2fPlay(d,sel[0],e));}}};
-HELP.k_fives='دومينو الخمسات (أول فايفز): من 2 لين 4 لاعبين بطقم الدبل ستة (9 قطع لكل واحد لو اثنين، 7 لو ثلاثة، 5 لو أربعة)، ومن 5 وفوق بطقم الدبل تسعة. الأربعة يلعبون فريقين: كل اثنين متقابلين (أو حسب الفرق لو شغّلتوها). أول دبل ينلعب يصير «الدوّار»: لما تنلعب قطعة على جنبيه الاثنين ينفتح منه فرعين، فيصير للعب أربع أطراف. بعد كل قطعة تنجمع الأطراف المفتوحة، ولو المجموع من مضاعفات الخمسة (5، 10، 15…) تاخذه نقاط على طول. الدبل في الطرف ينحسب بنصّينه، والدوّار ينحسب بطرفينه لين يتغطى جنبيه. لو ما عندك قطعة تمشي لازم تسحب من المخزن لين تلقى، ولو خلص المخزن تمرّر. اللي يخلّص قطعه ياخذ مجموع نقاط قطع الخصوم مقرّب لأقرب خمسة ويبدأ الجولة الجاية، ولو انقفل اللعب صاحب أقل نقاط ياخذ نقاط الباقين. أول من يوصل 150 يفوز (المشهور بين 150 و250).';
+HELP.k_fives='دومينو الخمسات (أول فايفز): من 2 لين 4 لاعبين بطقم الدبل ستة (9 قطع لكل واحد لو اثنين، 7 لو ثلاثة، 5 لو أربعة)، ومن 5 وفوق بطقم الدبل تسعة. الأربعة يلعبون فريقين: كل اثنين متقابلين (أو حسب الفرق لو شغّلتوها). أول دبل ينلعب يصير «الدوّار»: لما تنلعب قطعة على جنبيه الاثنين ينفتح منه فرعين، فيصير للعب أربع أطراف. بعد كل قطعة تنجمع الأطراف المفتوحة، ولو المجموع من مضاعفات الخمسة (5، 10، 15…) تاخذه نقاط على طول. الدبل في الطرف ينحسب بنصّينه، والدوّار ينحسب بطرفينه لين يتغطى جنبيه. لو ما عندك قطعة تمشي لازم تسحب من المخزن لين تلقى، ولو خلص المخزن تمرّر. اللي يخلّص قطعه ياخذ مجموع نقاط قطع الخصوم مقرّب لأقرب خمسة ويبدأ الجولة الجاية، ولو انقفل اللعب صاحب أقل نقاط ياخذ نقاط الباقين. أول من يوصل 150 يفوز (و250 لو كنتوا 5 وفوق).';
 // the bot: the move that scores most now, minus what it hands the next foe (a sum he can make a multiple of 5 from the tiles
 // it has not seen), plus a little for dumping heavy tiles and keeping ends it can answer
 GAMES.k_fives.bot=(d,s,lv)=>{if(d.ph==='sum')return k2fNext(d);const hs=cardsOf(d.hands[s]),L=k2fLegal(d,s);
