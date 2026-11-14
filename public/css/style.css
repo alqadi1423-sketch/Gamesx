@@ -1199,3 +1199,7 @@ html.lite .floatrx{will-change:auto}
 .nlog{direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.5;background:var(--surface);border-radius:12px;padding:10px;margin:6px 0;max-height:320px;overflow:auto;color:var(--mut)}
 @media (min-height:780px){#app[data-s=home] .hx-hero .logo{width:104px}.hx-tt h1{font-size:40px}.hx-tt p{font-size:15px}.hx-tiles{gap:14px;margin-top:22px}.tile .mode-ic{width:60px;height:60px}.tile .mode-ic svg{width:36px;height:36px}.tile b{font-size:20px}.tile small{font-size:14px}.hx-foot{margin-top:20px}.hr,.hx-st{height:56px}.hr{width:56px}.hx-rec{height:56px}}
 .big.mkroom{margin:12px 0}
+/* the end-of-round button in the status card is a full-size tap target */
+.status .sm.go{min-height:40px}
+/* a phone on its side has little height: the status card keeps one line so the board and its controls fit */
+@media (orientation:landscape) and (max-height:500px){.status .st-sub{display:none}}
