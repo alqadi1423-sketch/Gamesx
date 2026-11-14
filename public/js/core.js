@@ -618,7 +618,7 @@ function renderGrid(){
   const cnt={};for(const k of all){const c=catOf(k);cnt[c]=(cnt[c]||0)+1;}
   const dim=n>=2&&all.some(k=>!fitN(k,n));
   OUT=`${topBar('اختر لعبة',S.mode==='online'?'leave':'home',S.mode==='local'?'<button class="ib" data-a="m-settings" aria-label="الإعدادات">⚙️</button>':'')}${roomBar(true)}${mid}${standings()}
-  <div class="gsent"></div><div class="gtools"><div class="gsrow"><input class="field search" type="search" data-draft="q" value="${escH(S.draft.q||'')}" placeholder="🔍 دوّر على لعبة" autocomplete="off" enterkeyhint="search" aria-label="دوّر على لعبة"><button class="rnd" data-a="rand" aria-label="لعبة عشوائية">${ICO_DICE}<span>عشوائية</span></button></div>
+  <div class="gsent"></div><div class="gtools"><div class="gsrow"><input class="field search" type="search" data-draft="q" value="${escH(S.draft.q||'')}" placeholder="🔍 دوّر على لعبة" autocomplete="off" enterkeyhint="search" aria-label="دوّر على لعبة"><button class="grnd" data-a="rand" aria-label="لعبة عشوائية">${ICO_DICE}<span>عشوائية</span></button></div>
   <div class="cats">${[['','الكل',all.length],...CATS.filter(([c])=>cnt[c]).map(([c,t])=>[c,t,cnt[c]])].map(([c,t,k])=>`<button class="cchip ${cat===c?'on':''}" data-a="gcat" data-v="${c}" aria-pressed="${cat===c}">${t}<small>${k}</small></button>`).join('')}</div></div>
   ${S.mode==='online'?fabs():''}
   ${fav.length?`<h2 class="cat">⭐ المفضلة</h2>${recRow(fav,'rpick')}`:''}
@@ -748,12 +748,12 @@ function fabs(){const u=unread();return `<div class="rx">${S.me!=null?`<button c
 function chatHTML(){const L=chatList(),gs=[];let g=null;
   for(const m of L){const k=m.me?'me':(m.f||'r'+m.r);if(!g||g.k!==k||m.t-g.t>180000){g={k,t:m.t,m,list:[]};gs.push(g);}g.t=m.t;g.list.push(m);}
   const items=gs.map(g=>{const mine=!!g.m.me,r=g.m.r,c=COLS[r]||'#8A99AA';
-    return `<div class="cg ${mine?'me':''}" style="--c:${c}">${mine?'':`<i class="cav">${faceOf(r)}</i>`}<div class="cgb">${mine?'':`<b class="cnm">${chatName(g.m)}</b>`}${g.list.map(m=>m.k!=null?`<p class="msg stk" data-k="m${escH(m.i)}"><i class="emo">${emoSVG(m.k)}</i><time>${hhmm(m.t)}</time></p>`:`<p class="msg" data-k="m${escH(m.i)}"><span>${escH(m.x)}</span><time>${hhmm(m.t)}</time></p>`).join('')}</div></div>`;}).join('');
+    return `<div class="chg ${mine?'me':''}" style="--c:${c}">${mine?'':`<i class="cav">${faceOf(r)}</i>`}<div class="chgb">${mine?'':`<b class="cnm">${chatName(g.m)}</b>`}${g.list.map(m=>m.k!=null?`<p class="msg stk" data-k="m${escH(m.i)}"><i class="emj">${emoSVG(m.k)}</i><time>${hhmm(m.t)}</time></p>`:`<p class="msg" data-k="m${escH(m.i)}"><span>${escH(m.x)}</span><time>${hhmm(m.t)}</time></p>`).join('')}</div></div>`;}).join('');
   const on=chatOn(),x=String(S.draft.chat||''),tray=!!S.chatTray;
   const comp=!on?'<p class="chat-off">🔇 صاحب الغرفة قفل المحادثة، والردود السريعة شغالة</p>':
     `<div class="chatq ${tray?'tray':''}">${tray?RX.map(i=>`<button class="stkb" data-a="stk" data-i="${i}" aria-label="${EMJ[i].n}">${EMJ[i].svg}</button>`).join(''):CHAT_QP.map((t,i)=>`<button class="qp" data-a="chatq" data-i="${i}">${t}</button>`).join('')}</div>
     <div class="chatin"><button class="ctog ${tray?'on':''}" data-a="chattray" aria-label="${tray?'عبارات سريعة':'ستيكرات'}" aria-pressed="${tray}">${tray?'<b>أب</b>':EMJ[9].svg}</button><div class="cfield"><input class="field" data-draft="chat" value="${escH(x)}" maxlength="${CHAT_MAX}" placeholder="اكتب رسالة…" autocomplete="off" enterkeyhint="send" aria-label="رسالة"><small class="ccount ${x.length>CHAT_MAX-20?'near':''}" aria-hidden="true">${x.length}/${CHAT_MAX}</small></div><button class="send" data-a="send" aria-label="إرسال" ${x.trim()?'':'disabled'}>${ICO_SEND}</button></div>`;
-  return `<div class="msgs" aria-live="polite">${items||'<div class="chat-empty"><i class="emo">'+EMJ[27].svg+'</i><br>ما فيه رسائل للحين، قل هلا!</div>'}</div><button class="jump ${S.chatJump?'on':''}" data-a="chatjump">رسائل جديدة ↓</button>${comp}`;}
+  return `<div class="msgs" aria-live="polite">${items||'<div class="chat-empty"><i class="emj">'+EMJ[27].svg+'</i><br>ما فيه رسائل للحين، قل هلا!</div>'}</div><button class="jump ${S.chatJump?'on':''}" data-a="chatjump">رسائل جديدة ↓</button>${comp}`;}
 // a phone sends at most 6 lines in 10 s (and one every 0.7 s): the room cuts a phone that floods it
 function chatRateOk(){const now=Date.now();S.chatT=(S.chatT||[]).filter(t=>now-t<10000);if(S.chatT.length>=6||now-(S.chatT[S.chatT.length-1]||0)<700){toast('شوي شوي على الرسائل ✋');return false;}S.chatT.push(now);return true;}
 function sendChat(b){if(S.mode!=='online'||!b)return false;if(!chatOn()){toast('صاحب الغرفة قفل المحادثة');return false;}
@@ -763,7 +763,7 @@ function sendChat(b){if(S.mode!=='online'||!b)return false;if(!chatOn()){toast('
 // a new line while the chat is closed: a short note at the top (one at a time), tap it to open the chat
 function chatPop(m){const now=Date.now();if(now-(S.popAt||0)>900)sfx('pop');S.popAt=now;document.querySelectorAll('.chatpop').forEach(e=>e.remove());
   const el=document.createElement('button');el.className='chatpop';el.style.setProperty('--c',COLS[m.r]||'#8A99AA');
-  el.innerHTML=`<i class="cav">${faceOf(m.r)}</i><span><b>${chatName(m)}</b>${m.k!=null?`<i class="emo">${emoSVG(m.k)}</i>`:`<em>${escH(m.x)}</em>`}</span>`;
+  el.innerHTML=`<i class="cav">${faceOf(m.r)}</i><span><b>${chatName(m)}</b>${m.k!=null?`<i class="emj">${emoSVG(m.k)}</i>`:`<em>${escH(m.x)}</em>`}</span>`;
   el.addEventListener('click',()=>{S.modal='chat';S.chatSeen=Date.now();render();el.remove();});document.body.appendChild(el);setTimeout(()=>el.remove(),3500);}
 // a reaction floats up from the player's badge (transform and opacity only); a phone that sends too many is shown less often
 function floatRx(r,i){if(!emoOk(i))return;const now=Date.now();S.rxLast=S.rxLast||{};if(now-(S.rxLast[r]||0)<450||document.querySelectorAll('.floatrx').length>10)return;S.rxLast[r]=now;
