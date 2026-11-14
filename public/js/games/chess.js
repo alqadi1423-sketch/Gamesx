@@ -163,7 +163,7 @@ function chScore(B){let v=0,npm=0,bw=0,bb=0,kw=0,kb=0;
 const CHMATE=100000;
 function chThink(d,lv){
   const B=[...d.b],K=[B.indexOf('K'),B.indexOf('k')];let side=d.sd,cr=d.cr,ep=d.ep,nodes=0,lim=Infinity;
-  const STOP={},kill=[],qsOn=lv>1,t0=performance.now(),budget=[0,60,220,480][lv]||220;
+  const STOP={},kill=[],qsOn=lv>1,t0=performance.now(),budget=[0,50,150,300][lv]||150;
   const gen=()=>chPseudo({b:B,cr,ep},side).filter(m=>!m.pr||m.pr==='q');
   function make(m){const p=B[m.f],cs=m.ep?m.t+(side?-8:8):m.t,u={m,p,cap:B[cs],cs,cr,ep,k0:K[0],k1:K[1]};
     B[m.t]=m.pr?(side?m.pr:m.pr.toUpperCase()):p;B[m.f]='.';if(m.ep)B[cs]='.';
@@ -291,7 +291,7 @@ function dmScore(b,side){let v=0,n0=0,n1=0;for(let i=0;i<64;i++){const p=b[i],sd
   // ahead in material: trading down helps
   const me=side?n1:n0,op=side?n0:n1;if(me!==op)v+=(me-op)*Math.round(120/(me+op));return v;}
 function dmThink(d,lv){const side=d.sd,ms=dmMoves(d.b,side);if(ms.length===1)return ms[0];
-  const t0=performance.now(),budget=[0,40,160,420][lv]||160,STOP={};let lim=Infinity,nodes=0;
+  const t0=performance.now(),budget=[0,40,120,300][lv]||120,STOP={};let lim=Infinity,nodes=0;
   const cap=[0,3000,30000,120000][lv]||30000;
   function srch(b,turn,dep,a,z,q){if(!(++nodes&127)&&(performance.now()>lim||lim<Infinity&&nodes>cap))throw STOP;const mv=dmMoves(b,turn);
     if(!mv.length)return -(9000+dep);

@@ -69,7 +69,9 @@ const YB=(()=>{let T=null;return ()=>{if(T)return T;
   const ms=m=>{const o=[];const rec=(f,left,c)=>{if(f===5){o.push([...c.slice(0,5),left]);return;}for(let x=0;x<=left;x++){c[f]=x;rec(f+1,left-x,c);}};rec(0,m,[0,0,0,0,0,0]);return o;};
   const fact=[1,1,2,6,24,120],out=[0,1,2,3,4,5].map(m=>ms(m).map(c=>[c,fact[m]/c.reduce((a,x)=>a*fact[x],1)/6**m]));
   const st=ms(5),id=new Map(st.map((c,i)=>[c.join(''),i])),str=st.map(c=>c.map((x,f)=>String(f+1).repeat(x)).join(''));
-  const keeps=st.map(c=>{const ks=[];const rec=(f,k)=>{if(f===6){const n=k.reduce((a,b)=>a+b,0);ks.push({k:[...k],t:out[5-n].map(([o,p])=>[id.get(k.map((x,j)=>x+o[j]).join('')),p])});return;}for(let x=0;x<=c[f];x++){k[f]=x;rec(f+1,k);}};rec(0,[0,0,0,0,0,0]);return ks;});
+  // a kept part (k) is the same object for every throw it can come from, so its odds are listed once and valued once per card
+  const kc=new Map();const keepOf=k=>{const key=k.join('');let K=kc.get(key);if(!K){const n=k.reduce((a,b)=>a+b,0);K={k:[...k],key,t:out[5-n].map(([o,p])=>[id.get(k.map((x,j)=>x+o[j]).join('')),p])};kc.set(key,K);}return K;};
+  const keeps=st.map(c=>{const ks=[];const rec=(f,k)=>{if(f===6){ks.push(keepOf(k));return;}for(let x=0;x<=c[f];x++){k[f]=x;rec(f+1,k);}};rec(0,[0,0,0,0,0,0]);return ks;});
   return T={st,id,str,keeps};};})();
 function yEff(card,k,v,dice){let e=v-YPAR[k];if(yIsY(dice)&&card[11]===50)e+=100;
   if(k<6){const up=card.slice(0,6).reduce((a,b)=>a+Math.max(b,0),0);if(up<63){e+=.6*(v-3*(k+1));if(up+v>=63)e+=22;}}
@@ -77,7 +79,8 @@ function yEff(card,k,v,dice){let e=v-YPAR[k];if(yIsY(dice)&&card[11]===50)e+=100
 const yBest=(card,dice)=>{let b=null;for(const [k,v] of yOpts(card,dice)){const e=yEff(card,k,v,dice);if(!b||e>b[1])b=[k,e];}return b;};
 const YVC={};
 function yV(card,left){const key=card.join(',')+'|'+left;if(YVC[key])return YVC[key];const T=YB();let V;
-  if(!left)V=T.str.map(x=>yBest(card,x)[1]);else{const P=yV(card,left-1);V=T.keeps.map(ks=>Math.max(...ks.map(K=>K.t.reduce((a,[j,p])=>a+p*P[j],0))));}
+  if(!left)V=T.str.map(x=>yBest(card,x)[1]);else{const P=yV(card,left-1),E=new Map();
+    V=T.keeps.map(ks=>{let m=-Infinity;for(const K of ks){let v=E.get(K.key);if(v===undefined){v=0;for(const [j,p] of K.t)v+=p*P[j];E.set(K.key,v);}if(v>m)m=v;}return m;});}
   if(Object.keys(YVC).length>40)for(const k in YVC)delete YVC[k];return YVC[key]=V;}
 // the dice to keep: the part of the throw with the best value after the throws still left (all five means score now)
 function yKeep(card,dice,left){const T=YB(),c=[0,0,0,0,0,0];for(const x of dice)c[+x-1]++;const P=yV(card,left-1);let best=null;

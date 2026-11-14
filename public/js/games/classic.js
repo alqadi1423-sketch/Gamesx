@@ -392,7 +392,8 @@ const PEOPLE=(()=>{const R=mulberry(20261113);const pick=a=>a[Math.floor(R()*a.l
   for(let i=0;i<12;i++){out.push(make(true,MN[i]));out.push(make(false,FN[i]));}
   for(let i=0;i<MN2.length;i++){out.push(make(true,MN2[i]));out.push(make(false,FN2[i]));}return out.filter(Boolean);})();
 function faceSVG(p){
-  const hc=HC[p.hair]||'#2B2B2B',sk=p.sk,dk=shade(sk,-.2),O='stroke="#2D4763" stroke-width=".9"';let s=`<svg viewBox="0 0 60 66"><rect width="60" height="66" fill="${p.bg}"/><circle cx="30" cy="70" r="34" fill="#fff" opacity=".45"/>`;
+  // a self-contained picture (it is drawn as an image): the shemagh's red and white checks are defined inside it
+  const hc=HC[p.hair]||'#2B2B2B',sk=p.sk,dk=shade(sk,-.2),O='stroke="#2D4763" stroke-width=".9"';let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 66">${p.sh?'<defs><pattern id="shm" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fff"/><rect width="2.5" height="2.5" fill="#D8423A"/><rect x="2.5" y="2.5" width="2.5" height="2.5" fill="#D8423A"/></pattern></defs>':''}<rect width="60" height="66" fill="${p.bg}"/><circle cx="30" cy="70" r="34" fill="#fff" opacity=".45"/>`;
   if(!p.m&&!p.hj&&p.hs==='long')s+=`<path d="M13 31C13 13 21 8 30 8S47 13 47 31V59C42 61 18 61 13 59Z" fill="${hc}" ${O}/>`;
   if(!p.m&&!p.hj&&p.hs==='bob')s+=`<path d="M14 30C14 13 21 9 30 9S46 13 46 30V43C46 46 43 47 41 45H19C17 47 14 46 14 43Z" fill="${hc}" ${O}/>`;
   if(!p.m&&!p.hj&&p.hs==='bun')s+=`<circle cx="30" cy="9" r="6" fill="${hc}" ${O}/>`;
@@ -425,7 +426,8 @@ function faceSVG(p){
   return s+'</svg>';
 }
 const FACES=[];// drawn when first needed
-const faceOf=k=>FACES[k]||(FACES[k]=faceSVG(PEOPLE[k]));
+// each face is one image node (its SVG as a data URL) instead of ~25 SVG nodes: 24 faces on a board stay cheap to draw
+const faceOf=k=>FACES[k]||(FACES[k]=`<img class="fimg" alt="" draggable="false" src="data:image/svg+xml,${encodeURIComponent(faceSVG(PEOPLE[k]))}">`);
 const QS=[['رجل',p=>p.m,0],['امرأة',p=>!p.m,0],['مبتسم',p=>p.sm,0],['نظارة',p=>p.gl,0],['حلق',p=>p.er,0],
   ['شماغ',p=>p.sh,1],['حجاب',p=>p.hj,1],['كاب',p=>p.cap,1],['أصلع',p=>p.hair==='bald',1],['شعر طويل',p=>p.hs==='long',1],['لحية',p=>p.bd,1],['شنب',p=>p.mu,1],
   ['شعر أسود',p=>p.hair==='black',2],['شعر بني',p=>p.hair==='brown',2],['شعر أشقر',p=>p.hair==='blond',2],['شعر أحمر',p=>p.hair==='red',2],['شعر رمادي',p=>p.hair==='gray',2],

@@ -25,9 +25,10 @@ GAMES.war={name:'حرب الأوراق',cat:'cards',lbc:'#3A5F8F',
     let s=`<div class="gm gm-war"><div class="mtab wtab"><div class="wprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${d.prize+pot}</b>${pot?`<em>${d.prize} + ${pot} من التعادل</em>`:''}</div>
     <div class="wrds"><span class="wrd">${[0,1,2,3,4,5,6].map(k=>`<i class="${k<d.rd?'done':k===d.rd?'on':''}"></i>`).join('')}</span><small>جولة ${d.rd+1} من 7</small>
     ${d.left.length?`<span class="wnext"><small>الجوائز الجاية</small>${[...d.left].sort((a,b)=>b-a).map(x=>`<i>${x}</i>`).join('')}</span>`:''}</div></div>${warLast(d)}`;
-    s+=`<div class="wfoes">${d.pl.map((_,o)=>o===v||d.out[o]==='1'?'':`<span style="--c:${col(d,o)}"><b>${nm(d,o)}</b>${warFree(d,o).map(c=>`<i>${c}</i>`).join('')}</span>`).join('')}</div>`;
+    // your cards first (the move), then what the others still hold
+    const foes=`<div class="wfoes">${d.pl.map((_,o)=>o===v||d.out[o]==='1'?'':`<span style="--c:${col(d,o)}"><b>${nm(d,o)}</b>${warFree(d,o).map(c=>`<i>${c}</i>`).join('')}</span>`).join('')}</div>`;
     s+=`<div class="hand whand">${[1,2,3,4,5,6,7].map(c=>!free.includes(c)?`<div class="card big wc dim">${c}</div>`:c===mp?`<div class="card big wc sel">${c}</div>`:`<button class="card ${ctx.my?'pick':''} big wc" data-ga="m" data-i="${c}" ${ctx.my?'':'disabled'}>${c}</button>`).join('')}</div>`;
-    return s+(me?`<p class="wmine">نقاطك <b class="ltr">${d.pts[v]}</b></p>`:'')+'</div>';},
+    return s+(me?`<p class="wmine">نقاطك <b class="ltr">${d.pts[v]}</b></p>`:'')+foes+'</div>';},
   click(a,c,d,ctx){if(!ctx.my||!warFree(d,ctx.v).includes(c))return;simulPick(d,ctx.v,c);},
   // a tie keeps the prize on the table and it adds to the next one (on the last round it is lost)
   resolve(d,picks){const val=d.prize+(d.pot||0);const v=picks.map(x=>x==null?-1:x);const mx=Math.max(...v);const top=v.map((x,s)=>x===mx&&x>0?s:-1).filter(s=>s>=0);const pts=[...d.pts];
