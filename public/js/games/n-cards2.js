@@ -124,6 +124,14 @@ function c2Est(cs,T){const by={s:[],h:[],d:[],c:[]};for(const c of cs)if(!c2IsJ(
     else{v+=(has(12)?.95:0)+(has(11)?(has(12)?.8:n>=2?.45:.1):0)+(has(10)&&n>=3&&(has(12)||has(11))?.3:0);
       if(T){const t=by[T].length;if(n===0&&t>=3)v+=Math.min(2,t-2)*.55;else if(n===1&&t>=3)v+=.4;}}}
   return v;}
+// the same for any table: each card wins when the unseen higher cards of its suit that sit in other hands are used up by my higher ones
+function c2EstP(cs,T,H,Tn){const q=Math.min(1,(H-1)*Tn/Math.max(1,52-Tn))*.7,mine=new Set(cs);let v=0;
+  const cdf=(u,i)=>{let p=0,c=1;for(let k=0;k<=Math.min(i,u);k++){p+=c*Math.pow(q,k)*Math.pow(1-q,u-k);c=c*(u-k)/(k+1);}return p;};
+  for(const s of 'shdc'){const m=cs.filter(c=>c[1]===s).sort((a,b)=>c2r(b)-c2r(a));
+    m.forEach((c,i)=>{const u=C2R.slice(c2r(c)+1).split('').filter(r=>!mine.has(r+s)).length;let p=cdf(u,i);
+      if(s===T){if(i>=3)p=Math.max(p,.8);}else{if(i>=2)p*=T?.55:.8;if(i>=3)p*=.7;}v+=p;});
+    if(T&&s!==T){const t=cs.filter(c=>c[1]===T).length;if(t>=2&&m.length<=1)v+=(2-m.length)*.35*Math.min(1,(t-1)/2);}}
+  return v;}
 const c2Lv=lv=>lv===1?Math.random()*3-1.5:lv===2?Math.random()*1.2-.6:0;
 
 /* =================================================================
@@ -167,7 +175,7 @@ function c2TeamGame(o){return {teams:'native',teamsOk:z=>z.length===2&&Math.abs(
 function c2Frame(d,ctx,o){const v=ctx.local?d.turn:ctx.v,{mine,me,watch}=c2Me(d,v),ah=d.ah;
   let h=`<div class="blt c2 ${o.cls||''}">${o.head(d,me)}`;
   h+=c2Table(d,me,{on:d.ph==='sum'?-1:ah,info:k=>o.info(d,k),mark:o.mark?k=>o.mark(d,k):null,center:o.center?o.center(d,me):null});
-  if(d.ph==='play')h+=c2Last(d,o.lastX?o.lastX(d):'');
+  if(d.ph==='play'&&d.lt&&d.tk)h+=c2Last(d,o.lastX?o.lastX(d):'');
   const my=ctx.my&&mine.includes(ah)&&d.ctl[ah]===d.turn;
   if(d.ph==='sum')h+=o.sum(d,ctx,me);
   else{if(my&&o.panel)h+=o.panel(d,ctx,me)||'';else if(o.wait)h+=o.wait(d,me)||'';
@@ -349,3 +357,331 @@ GAMES.c_kout.bot=(d,s,lv)=>{if(d.ph==='sum')return c2NextTeam(d,ktDeal);const h=
   const L=ktLegal(d,h);
   return ktPlay(d,c2BotWin(d,h,L,lv,{T:d.tr,suit:c=>ktSuit(d,c),str:c=>{const v=ktStr(d,c);return ktSuit(d,c)===d.tr?v+2000:v;},win:tk=>ktWin(d,tk),mate:(a,b)=>a%2===b%2,deck:ktDeck(d.H),draw:d.best.h%2===h%2}));};
 GAMES.c_kout.botDelay=GAMES.c_tarneeb.botDelay;
+
+/* ---------- shared parts of the games scored hand by hand (hearts, trix, estimation) ---------- */
+const c2HeadMid=mid=>`<div class="bsc c2sc"><span class="bmode" style="flex:1;justify-content:center">${mid}</span></div>`;
+// the score of every seat: the hands it plays (one hand each, or a team's sum)
+const c2SeatPts=(d,arr)=>d.pl.map((_,s)=>d.team?arr.reduce((x,v,h)=>x+(h%2===s%2?v:0),0):arr[s]);
+// the end: in a partnership the team with the better sum, else the best hand (several on a tie)
+function c2EndBy(d,arr,low){if(d.team){const t=[0,1].map(x=>arr.reduce((a,v,h)=>a+(h%2===x?v:0),0));if(t[0]===t[1])return null;return c2WinTeam(d,(low?t[0]<t[1]:t[0]>t[1])?0:1);}
+  const al=d.pl.map((_,s)=>s).filter(s=>d.out[s]!=='1');const b=low?Math.min(...al.map(s=>arr[s])):Math.max(...al.map(s=>arr[s]));const ws=al.filter(s=>arr[s]===b);return {...d,win:ws[0],wins:ws};}
+// a card selection kept on this phone for one prompt (S.sel: the prompt's key, then the chosen cards)
+const c2SelKey=d=>[d.gid,d.k,d.ah,d.ph].join(':');
+const c2Sel=d=>Array.isArray(S.sel)&&S.sel[0]===c2SelKey(d)?S.sel.slice(1).filter(c=>cardsOf(d.hands[d.ah]).includes(c)):[];
+function c2Toggle(d,c,max){let s=c2Sel(d);s=s.includes(c)?s.filter(x=>x!==c):s.length<max?[...s,c]:s;S.sel=[c2SelKey(d),...s];render();}
+function c2IndGame(o){return {cat:'cards',teams:o.teams||'none',
+  onSkip:nd=>{if(nd.win!=null)return nd;if(nd.team){for(const t of [0,1])if(!nd.pl.some((_,s)=>s%2===t&&nd.out[s]!=='1'))return c2WinTeam(nd,1-t);}
+    const ctl=c2Fix(nd);if(!ctl)return nd;return {...nd,ctl,turn:ctl[nd.ah]};},
+  mask:(d,v)=>c2Mask(d,v),
+  viewer:d=>d.win!=null?null:d.turn,
+  coverMsg:d=>d.last||'',
+  ...o};}
+/* the bot for games where points are to be avoided: o.pen(c) what a card costs its taker, o.tp what a trick costs,
+   o.mine(c) a doubled card this hand would like someone else to take */
+function c2BotAvoid(d,h,L,lv,o){if(L.length===1)return L[0];if(Math.random()<[0,.4,.1,0][lv])return L[rnd(L.length)];
+  const tk=cardsOf(d.tk),pos=tk.length,H=d.H,me=cardsOf(d.hands[h]),pen=o.pen,tp=o.tp||0;
+  const seen=new Set([...cardsOf(d.pd),...me]),unseen=(o.deck||c2Deck()).filter(c=>!seen.has(c));
+  const lowR=a=>a.slice().sort((x,y)=>c2r(x)-c2r(y))[0],highR=a=>a.slice().sort((x,y)=>c2r(y)-c2r(x)||pen(y)-pen(x))[0];
+  const len=s=>me.filter(c=>c[1]===s).length;
+  if(!pos){// lead: a low card nobody has to go under, from a suit where the dangerous cards are not mine
+    const sc=c=>{const s=c[1],under=unseen.filter(u=>u[1]===s&&c2r(u)<c2r(c)).length,over=unseen.filter(u=>u[1]===s&&c2r(u)>c2r(c)).length;
+      return (over?0:30)+under*2-over*.5+pen(c)*3+(lv>=2&&o.risk?o.risk(c,unseen):0)+(len(s)<=2?-1.5:0);};
+    return L.slice().sort((a,b)=>sc(a)-sc(b))[0];}
+  const led=tk[0][1],follow=me.some(c=>c[1]===led);
+  const pts=tk.reduce((x,c)=>x+pen(c),0)+tp;
+  if(follow){const top=tk.filter(c=>c[1]===led).reduce((a,c)=>c2r(c)>c2r(a)?c:a,tk[0]);
+    const under=L.filter(c=>c2r(c)<c2r(top));
+    if(under.length)return under.slice().sort((a,b)=>pen(b)-pen(a)||c2r(b)-c2r(a))[0];
+    // every card wins: the last player takes it with the biggest card when it costs little, else the smallest
+    if(pos===H-1&&pts+Math.max(...L.map(pen))<=(lv===3?4:8))return highR(L.filter(c=>!pen(c)).length?L.filter(c=>!pen(c)):L);
+    const safe=L.filter(c=>!pen(c));return lowR(safe.length?safe:L);}
+  // out of the suit: unload the costliest card (a doubled one of mine first), then the highest
+  return L.slice().sort((a,b)=>(o.mine&&o.mine(b)?50:0)-(o.mine&&o.mine(a)?50:0)||pen(b)-pen(a)||c2r(b)-c2r(a)||len(a[1])-len(b[1]))[0];}
+
+/* =================================================================
+   القلوب (hearts): every heart costs 1 and the queen of spades 13; lowest total when someone reaches 100 wins.
+   3 to 8 players one hand each (low diamonds and clubs are taken out so the pack shares evenly); 2 players play
+   two hands each as partners. Before each deal 3 cards are passed (right, left, across with 4 hands, then a deal without).
+   The lowest club leads the first trick, where no points may be thrown; hearts may not be led before one was thrown.
+   Taking all 26 (shooting the moon) gives 26 to every other hand instead.
+   ================================================================= */
+const HT_RM=['2d','2c','3d','3c','4d','4c','5d'];
+const htDeck=H=>{const k=52%H;return c2Deck().filter(c=>!HT_RM.slice(0,k).includes(c));};
+const htPen=c=>c[1]==='h'?1:c==='Qs'?13:0;
+const htCyc=H=>H===4?[1,3,2,0]:[1,H-1,0];
+const htDir=(H,o)=>o===0?'بدون تمرير':o===1?'تمرير لليمين':o===H-1?'تمرير لليسار':'تمرير للي قدامك';
+function htDeal(d){const H=d.H,dk=shuffle(htDeck(H)),m=dk.length/H,off=htCyc(H)[d.k%htCyc(H).length],ah=(d.dl+1)%H;
+  const nd={...d,hands:[...Array(H)].map((_,h)=>c2Sort(dk.slice(h*m,h*m+m).join(''))),off,ps:Array(H).fill(''),tk:'',lt:null,tw:Array(H).fill(0),pd:'',tlog:'',
+    pts:Array(H).fill(0),brk:false,sum:null,ah,tl:ah,t0:ah,turn:d.ctl[ah]};
+  return off?{...nd,ph:'pass'}:htStart(nd);}
+function htLow(d){for(const r of C2R){const c=r+'c';const h=d.hands.findIndex(x=>cardsOf(x).includes(c));if(h>=0)return [c,h];}return ['',0];}
+function htStart(d){const [c,h]=htLow(d);return {...d,ph:'play',ah:h,tl:h,t0:h,lc:c,turn:d.ctl[h]};}
+function htPass(d,cs){const h=d.ah,ps=[...d.ps];ps[h]=cs.join('');const hands=[...d.hands];hands[h]=cs.reduce((x,c)=>c2Rm(x,c),hands[h]);
+  let nd={...d,ps,hands,last:`${c2Name(d,h)} اختار أوراقه`};const nx=(h+1)%d.H;
+  if(ps.every(x=>x.length===6)){const hs=[...hands];ps.forEach((x,k)=>{const to=(k+d.off)%d.H;hs[to]=c2Sort(hs[to]+x);});
+    return htStart({...nd,hands:hs,ps:Array(d.H).fill(''),last:'تبادلتوا الأوراق'});}
+  return {...nd,ah:nx,turn:d.ctl[nx]};}
+function htLegal(d,h){const H=cardsOf(d.hands[h]),tk=cardsOf(d.tk),first=!d.tlog.length;
+  if(!tk.length){if(first&&H.includes(d.lc))return [d.lc];if(d.brk)return H;const nh=H.filter(c=>c[1]!=='h');return nh.length?nh:H;}
+  const f=H.filter(c=>c[1]===tk[0][1]);if(f.length)return f;
+  if(first){const ok=H.filter(c=>!htPen(c));if(ok.length)return ok;}return H;}
+function htPlay(d,c){const brk=d.brk||c[1]==='h';return c2Put({...d,brk},c,(nd,tk)=>c2Win(tk,null),(nd,w,tk)=>{const pts=[...nd.pts];pts[w]+=tk.reduce((x,y)=>x+htPen(y),0);
+  nd={...nd,pts};return cardsOf(nd.hands[0]).length?nd:htScore(nd);});}
+function htScore(d){let add=[...d.pts];const moon=add.findIndex(x=>x===26);if(moon>=0)add=add.map((x,h)=>h===moon?0:26);
+  const sc=d.sc.map((x,h)=>x+add[h]),nx=(d.dl+1)%d.H;
+  let nd={...d,ph:'sum',sc,sum:{add,moon},ah:nx,turn:d.ctl[nx],last:moon>=0?`${c2Name(d,moon)} أخذ كل النقاط! 🌙`:'انتهت الجولة'};
+  if(sc.some(x=>x>=100)){const w=c2EndBy(nd,sc,true);if(w)return w;}
+  return nd;}
+function htNext(d){const k=d.k+1;return {...htDeal({...d,k,dl:(d.dl+1)%d.H,ctl:d.team?c2Ctl(d.pl.length,d.H,k,d.out,1):d.ctl}),last:''};}
+GAMES.c_hearts=c2IndGame({name:'القلوب',lbc:'#B23A5A',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#B23A5A"/><circle cx="50" cy="52" r="38" fill="#C44D6C"/><path transform="translate(38 46) scale(4.4)" d="${SUITP.h}" fill="#fff"/><g transform="rotate(14 66 58)"><rect x="50" y="34" width="32" height="46" rx="5" fill="#fff"/><text x="66" y="63" font-size="20" font-weight="800" text-anchor="middle" fill="#2D4763">Q♠</text></g></svg>`,
+  init:n=>{const team=n===2?1:0,H=team?4:n;return htDeal({H,team,ctl:c2Ctl(n,H,0,'',team),k:0,dl:H-1,sc:Array(H).fill(0),last:''});},
+  start:(d,base)=>({...d,turn:base.turn}),
+  redeal:d=>d.win!=null||d.ph==='sum'?d:{...htDeal(d),last:'انعادت التوزيعة من جديد'},
+  points:d=>c2SeatPts(d,d.sc),
+  winText:d=>d.win!=null?`فاز ${d.wt!=null&&d.team?'فريق '+c2TeamName(d,d.wt):(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بأقل نقاط`:null,
+  onTimeout(d){if(d.ph==='sum')return htNext(d);if(d.ph==='pass')return htPass(d,cardsOf(d.hands[d.ah]).slice(-3));const L=htLegal(d,d.ah);return htPlay(d,L[rnd(L.length)]);},
+  status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
+    if(d.ph==='pass')return s+`${who}: اختر 3 أوراق (${htDir(d.H,d.off)})`;if(d.ph==='play')return s+who+(!d.tlog.length&&!d.tk?' <small>• ابدأ بأصغر سباتي</small>':'');return s+'انتهت الجولة';},
+  render(d,ctx){return c2Frame(d,ctx,{
+    head:(d,me)=>c2HeadMid(`${c2Su('h')} <small>${d.ph==='pass'?htDir(d.H,d.off):d.brk?'القلوب انكسرت':'القلوب مقفلة'}</small>`),
+    info:(d,k)=>d.ph==='sum'?'':`${d.ps[k]&&d.ph==='pass'?'<small>✓</small>':''}<b class="c2pt ${d.pts[k]?'bad':''}">${d.pts[k]}</b>`,
+    panel(d,ctx,me){if(d.ph!=='pass')return '';const n=c2Sel(d).length;return `<p class="lbl c2lb">اختر 3 أوراق تمرّرها (${htDir(d.H,d.off)})</p><div class="row bopts"><button class="btn green" data-ga="pass" ${n===3?'':'disabled'}>مرّر (${n}/3)</button></div>`;},
+    canCard:d=>d.ph==='play'||d.ph==='pass',legal:(d,h)=>d.ph==='pass'?cardsOf(d.hands[h]):htLegal(d,h),sel:d=>d.ph==='pass'?c2Sel(d).map(c=>cardsOf(d.hands[d.ah]).indexOf(c)):null,
+    lastX:d=>{const p=d.lt.c.reduce((x,c)=>x+htPen(c),0);return p?`<em style="color:var(--bad)">+${p}</em>`:'';},
+    sum(d,ctx){const r=d.sum;return `<div class="panel bsum"><h3>${r.moon>=0?`${c2Name(d,r.moon)} صاد القمر 🌙`:'نقاط الجولة'}</h3>${[...Array(d.H)].map((_,h)=>`<div class="bsr"><span>${c2Name(d,h)}</span><em>+${r.add[h]}</em><b>${d.sc[h]}</b></div>`).join('')}
+      ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">وزّع الجولة التالية</button>':''}</div>`;}});},
+  click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(htNext(d));return;}
+    if(d.ph==='sum'||d.ctl[d.ah]!==d.turn)return;const h=d.ah;
+    if(a==='card'&&d.ph==='pass'){const c=cardsOf(d.hands[h])[i];if(c)c2Toggle(d,c,3);return;}
+    if(a==='pass'&&d.ph==='pass'){const cs=c2Sel(d);if(cs.length!==3)return;S.sel=[];act(htPass(d,cs));return;}
+    if(a==='card'&&d.ph==='play'){const c=cardsOf(d.hands[h])[i];if(!c||!htLegal(d,h).includes(c))return;act(htPlay(d,c));}}});
+HELP.c_hearts='الهدف تتجنب النقاط: كل ورقة قلب (كبة) بنقطة، وبنت الأسباتي Q♠ بـ13 نقطة. الورق يتوزع كله بالتساوي (مع 3 لاعبين وأكثر من 4 تنشال كم ورقة ديناري وسباتي صغيرة). قبل كل جولة تختار 3 أوراق تمرّرها: مرة لليمين ومرة لليسار ومرة للي قدامك (مع 4 أيادي)، وجولة بدون تمرير. اللي معه أصغر سباتي يبدأ فيه، وفي أول لمّة ما تنرمى قلوب ولا بنت الأسباتي. لازم تنزل من النوع الأول، وإذا ما عندك ترمي اللي تبي. ما تبدأ بالقلوب لين ينرمى قلب (إلا إذا ما عندك غيرها). أعلى ورقة من النوع الأول تاخذ اللمّة ونقاطها. اللي ياخذ كل الـ26 نقطة «يصيد القمر»: ياخذ صفر والباقين كل واحد 26. لما يوصل أحد 100 تخلص اللعبة ويفوز صاحب أقل نقاط. لاعبين اثنين: كل واحد يلعب يدين متقابلة ونقاطهم تنجمع.';
+GAMES.c_hearts.bot=(d,s,lv)=>{if(d.ph==='sum')return htNext(d);const h=d.ah,H=cardsOf(d.hands[h]);
+  if(d.ph==='pass'){// the queen and the big spades, high hearts, and what empties a short suit
+    const sp=H.filter(c=>c[1]==='s').length;const cost=c=>(c==='Qs'?60:0)+((c==='As'||c==='Ks')&&!H.includes('Qs')&&sp<4?40:0)+(c[1]==='h'?10+c2r(c)*2:0)+c2r(c)*2+(H.filter(x=>x[1]===c[1]).length<=2&&c[1]!=='s'?15:0)+(lv===1?Math.random()*40:0);
+    return htPass(d,H.slice().sort((a,b)=>cost(b)-cost(a)).slice(0,3));}
+  const L=htLegal(d,h);
+  return htPlay(d,c2BotAvoid(d,h,L,lv,{pen:htPen,win:tk=>c2Win(tk,null),deck:htDeck(d.H),risk:(c,un)=>c[1]==='s'&&c2r(c)>=10&&un.includes('Qs')?20:c==='Qs'?60:0}));};
+GAMES.c_hearts.botDelay=(d,s,lv)=>d.ph==='sum'?7000:650+rnd(600);
+
+/* =================================================================
+   تركس: four hands, four kingdoms of five deals. The kingdom's owner (first the holder of 7♥) deals and chooses, once each,
+   one of: ملك الكبة (K♥ -75), البنات (each queen -25), الديناري (each diamond -10), اللطش (each trick -15) and تركس
+   (lay out from the jacks up and down; out first +200, then 150, 100, 50). In the king and queens the holder may double
+   the card: its taker loses double and the holder gains the single value (taking one's own: -double and the trick's leader
+   gains, unless the holder led it). Hearts may not be led in the king deal before only hearts remain.
+   4 players alone (or 2 teams of 2 with teams on); other counts play as two teams of opposite hands.
+   ================================================================= */
+const TX_K=['K','Q','D','L','T'],TX_N={K:'ملك الكبة',Q:'البنات',D:'الديناري',L:'اللطش',T:'تركس'};
+const txPen=(k,c)=>k==='K'?(c==='Kh'?75:0):k==='Q'?(c[0]==='Q'?25:0):k==='D'?(c[1]==='d'?10:0):0;
+function txDeal(d){const dk=shuffle(c2Deck()),hands=[0,1,2,3].map(h=>c2Sort(dk.slice(h*13,h*13+13).join('')));
+  let ow=d.ow;if(ow==null||ow<0)ow=hands.findIndex(x=>cardsOf(x).includes('7h'));
+  return {...d,ow,ph:'pick',hands,ct:null,dbl:'',tk:'',lt:null,tw:[0,0,0,0],pd:'',tlog:'',pts:[0,0,0,0],lay:[-1,-1,-1,-1,-1,-1,-1,-1],fin:'',sum:null,
+    ah:ow,tl:ow,t0:ow,turn:d.ctl[ow]};}
+const txLeft=d=>TX_K.filter(k=>!(d.used[d.ow]||'').includes(k));
+// doubling goes round from the owner: each hand that holds the king (or a queen) says which to double
+function txPick(d,k){const used=[...d.used];used[d.ow]=(used[d.ow]||'')+k;let nd={...d,used,ct:k,last:`${c2Name(d,d.ow)} اختار ${TX_N[k]}`};
+  if(k==='T')return txTNext({...nd,ph:'trix'},(d.ow+3)%4);
+  if(k==='K'||k==='Q')return txDblNext({...nd,ph:'dbl',dq:0},-1);
+  return {...nd,ph:'play',ah:d.ow,tl:d.ow,t0:d.ow,turn:d.ctl[d.ow]};}
+const txDblCards=(d,h)=>cardsOf(d.hands[h]).filter(c=>d.ct==='K'?c==='Kh':c[0]==='Q');
+function txDblNext(d,from){for(let j=from+1;j<4;j++){const h=(d.ow+j)%4;if(txDblCards(d,h).length)return {...d,dq:j,ah:h,turn:d.ctl[h]};}
+  return {...d,ph:'play',dq:-1,ah:d.ow,tl:d.ow,t0:d.ow,turn:d.ctl[d.ow]};}
+function txDbl(d,cs){const h=d.ah;const own=txDblCards(d,h);cs=cs.filter(c=>own.includes(c));
+  const nd={...d,dbl:d.dbl+cs.map(c=>c+h).join(''),last:cs.length?`${c2Name(d,h)} كبّر ${cs.map(c=>c[0]==='K'?'الشايب':'البنت '+C2SN[c[1]]).join(' و')}`:`${c2Name(d,h)} ما كبّر`};
+  return txDblNext(nd,d.dq);}
+// who doubled card c (or -1): stored as card + hand digit
+const txDblBy=(d,c)=>{const m=(d.dbl||'').match(/.{3}/g)||[];const x=m.find(z=>z.slice(0,2)===c);return x?+x[2]:-1;};
+function txLegal(d,h){const H=cardsOf(d.hands[h]),tk=cardsOf(d.tk);if(tk.length)return c2Follow(d.hands[h],tk);
+  if(d.ct==='K'){const nh=H.filter(c=>c[1]!=='h');return nh.length?nh:H;}return H;}
+function txPlay(d,c){return c2Put(d,c,(nd,tk)=>c2Win(tk,null),(nd,w,tk)=>{const pts=[...nd.pts],k=nd.ct,L=nd.lt.f;
+  if(k==='L')pts[w]-=15;
+  for(const x of tk){const p=txPen(k,x);if(!p)continue;const by=txDblBy(nd,x);
+    if(by<0){pts[w]-=p;continue;}
+    if(by!==w){pts[w]-=2*p;pts[by]+=p;}else if(L===w&&tk[0]===x){pts[w]-=p;}else{pts[w]-=2*p;pts[L]+=p;}}
+  nd={...nd,pts};const pd=cardsOf(nd.pd);
+  const over=k==='K'?pd.includes('Kh'):k==='Q'?pd.filter(x=>x[0]==='Q').length===4:k==='D'?pd.filter(x=>x[1]==='d').length===13:nd.tlog.length===13;
+  return over?txScore(nd):nd;});}
+// trix layout: lay holds for each suit the lowest and highest rank out (-1 before its jack)
+const txCan=(d,c)=>{const s='shdc'.indexOf(c[1]),lo=d.lay[s*2],hi=d.lay[s*2+1],r=c2r(c);return lo<0?c[0]==='J':r===hi+1||r===lo-1;};
+const txTLegal=(d,h)=>cardsOf(d.hands[h]).filter(c=>txCan(d,c));
+function txTNext(d,from){// the next hand that still holds cards; one with no move passes by itself
+  const msg=[];for(let j=1;j<=4;j++){const h=(from+j)%4;if(!cardsOf(d.hands[h]).length)continue;if(txTLegal(d,h).length)return {...d,ah:h,turn:d.ctl[h],last:[d.last,...msg].filter(Boolean).join(' • ')};msg.push(`${c2Name(d,h)} مرّر`);}
+  return d;}
+function txTPlay(d,c){const h=d.ah,s='shdc'.indexOf(c[1]),lay=[...d.lay],r=c2r(c);if(lay[s*2]<0){lay[s*2]=r;lay[s*2+1]=r;}else if(r>lay[s*2+1])lay[s*2+1]=r;else lay[s*2]=r;
+  const hands=[...d.hands];hands[h]=c2Rm(hands[h],c);const nd={...d,hands,lay,pd:d.pd+c,last:`${c2Name(d,h)} نزّل ${c[0]==='T'?'10':c[0]}${C2SN[c[1]]}`};
+  if(!cardsOf(hands[h]).length){nd.fin=nd.fin+h;nd.last+=` وخلّص ${['أول','ثاني','ثالث'][nd.fin.length-1]||''}`;}
+  if(nd.fin.length>=3){const last=[0,1,2,3].find(x=>!nd.fin.includes(String(x)));nd.fin+=last;const pts=[0,0,0,0];[200,150,100,50].forEach((p,i)=>pts[+nd.fin[i]]+=p);return txScore({...nd,pts});}
+  return txTNext(nd,h);}
+function txScore(d){const sc=d.sc.map((x,h)=>x+d.pts[h]);const deals=d.used.reduce((x,u)=>x+(u||'').length,0);
+  const nd={...d,ph:'sum',sc,sum:{add:[...d.pts],ct:d.ct},ah:d.ow,turn:d.ctl[d.ow],last:`خلص ${TX_N[d.ct]}`};
+  if(deals>=20){const w=c2EndBy(nd,sc,false);return w||{...nd,sum:{...nd.sum,tie:1}};}
+  return nd;}
+// after the fifth deal of a kingdom the next owner (to the right) takes over; a tie after 20 deals plays one more kingdom
+function txNext(d){let ow=d.ow,used=d.used;if((used[ow]||'').length>=5)ow=(ow+1)%4;const k=d.k+1;
+  if(used.every(u=>(u||'').length>=5))used=['','','',''];
+  return {...txDeal({...d,ow,used,k,ctl:d.team?c2Ctl(d.pl.length,4,k,d.out,1):d.ctl}),last:''};}
+function txLayHTML(d){return `<div class="trx-lay">${'shdc'.split('').map((s,i)=>{const lo=d.lay[i*2],hi=d.lay[i*2+1];
+  return `<div class="trx-row"><em class="${'hd'.includes(s)?'rs':''}">${C2SN[s]}</em><span class="lc">${lo<0?'':C2R.slice(lo,hi+1).split('').map(r=>miniCard(r+s).replace('<div class="card','<div data-k="'+r+s+'" class="card')).join('')}</span></div>`;}).join('')}
+  ${d.fin?`<div class="trx-fin">${d.fin.split('').map((h,i)=>`<span>${i+1}. ${c2Name(d,+h)}</span>`).join('')}</div>`:''}</div>`;}
+GAMES.c_trix=c2IndGame({name:'تركس',lbc:'#5B3A8C',teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#5B3A8C"/><circle cx="50" cy="50" r="40" fill="#6C4AA0"/>${['s','h','d','c'].map((s,i)=>`<g transform="translate(${11+i*20} ${26+(i%2)*6})"><rect width="18" height="26" rx="3" fill="#fff"/><text x="9" y="18" font-size="13" font-weight="800" text-anchor="middle" fill="${'hd'.includes(s)?'#D43C33':'#2D4763'}">J</text></g>`).join('')}<path d="M26 78l6-10 6 7 6-11 6 11 6-7 6 10z" fill="#F0B429"/><rect x="26" y="78" width="48" height="6" rx="2" fill="#E09E14"/></svg>`,
+  init:n=>{const team=n!==4?1:0;return txDeal({H:4,team,ctl:c2Ctl(n,4,0,'',team),k:0,ow:-1,used:['','','',''],sc:[0,0,0,0],last:''});},
+  start:(d,base)=>{const team=d.pl.length!==4||!!d.tm?1:0;return {...d,team,turn:base.turn};},
+  redeal:d=>{if(d.win!=null||d.ph==='sum')return d;const used=[...d.used];if(d.ct)used[d.ow]=used[d.ow].replace(d.ct,'');return {...txDeal({...d,used}),last:'انعادت التوزيعة من جديد'};},
+  points:d=>c2SeatPts(d,d.sc),
+  winText:d=>d.win!=null?`فاز ${d.team&&d.wt!=null?'فريق '+c2TeamName(d,d.wt):(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بعد 4 ممالك`:null,
+  onTimeout(d){if(d.ph==='sum')return txNext(d);if(d.ph==='pick'){const l=txLeft(d);return txPick(d,l[rnd(l.length)]);}if(d.ph==='dbl')return txDbl(d,[]);
+    if(d.ph==='trix'){const L=txTLegal(d,d.ah);return txTPlay(d,L[rnd(L.length)]);}const L=txLegal(d,d.ah);return txPlay(d,L[rnd(L.length)]);},
+  status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
+    if(d.ph==='pick')return s+`${who}: اختر لعبة من مملكتك`;if(d.ph==='dbl')return s+`${who}: تكبّر؟`;if(d.ph==='sum')return s+'انتهت الجولة';
+    return s+who+` <small>• ${TX_N[d.ct]}</small>`;},
+  render(d,ctx){return c2Frame(d,ctx,{
+    head:d=>c2HeadMid(`👑 ${c2Name(d,d.ow)} <small>${d.ct?TX_N[d.ct]:'يختار'} • لعبة ${Math.max(1,(d.used[d.ow]||'').length)} من 5 • ${d.used.reduce((x,u)=>x+(u||'').length,0)||1}/20</small>`),
+    info:(d,k)=>{if(d.ph==='sum'||d.ph==='pick')return k===d.ow?'<small>👑</small>':'';const db=(d.dbl.match(/.{3}/g)||[]).filter(x=>+x[2]===k).map(x=>x.slice(0,2));
+      return `${db.length?`<span class="trx-dbl">${db.map(miniCard).join('')}</span>`:''}${d.ph==='trix'?'':`<b class="c2pt ${d.pts[k]<0?'bad':''}">${d.pts[k]}</b>`}`;},
+    center:d=>d.ph==='trix'?txLayHTML(d):d.ph==='pick'||d.ph==='dbl'?'':null,
+    panel(d){if(d.ph==='pick'){const l=txLeft(d);return `<div class="trx-k">${TX_K.map((k,i)=>`<button class="btn ${l.includes(k)?'navy':'done'}" data-ga="pick" data-i="${i}" ${l.includes(k)?'':'disabled'}>${TX_N[k]}</button>`).join('')}</div>`;}
+      if(d.ph==='dbl'){const own=txDblCards(d,d.ah),sel=c2Sel(d);return `<p class="lbl c2lb">تكبّر ${d.ct==='K'?'الشايب':'البنات'}؟ اللي ياخذ الورقة المكبّرة تنخصم منه ضعف، وأنت تاخذ قيمتها</p><div class="row bopts">${own.map((c,i)=>`<button class="btn ${sel.includes(c)?'red':''}" data-ga="dsel" data-i="${i}">${c[0]==='K'?'الشايب':'البنت'} ${C2SN[c[1]]}</button>`).join('')}<button class="btn green" data-ga="dok">${sel.length?'كبّر':'لا، كمّل'}</button></div>`;}},
+    canCard:d=>d.ph==='play'||d.ph==='trix',legal:(d,h)=>d.ph==='trix'?txTLegal(d,h):txLegal(d,h),
+    lastX:d=>{const p=d.lt.c.reduce((x,c)=>x+txPen(d.ct,c),0)+(d.ct==='L'?15:0);return p?`<em style="color:var(--bad)">‎-${p}</em>`:'';},
+    sum(d,ctx){const r=d.sum;return `<div class="panel bsum"><h3>${TX_N[r.ct]}${r.tie?' • تعادل، نكمل':''}</h3>${[0,1,2,3].map(h=>`<div class="bsr"><span>${c2Name(d,h)}</span><em>${r.add[h]>0?'+':''}${r.add[h]}</em><b>${d.sc[h]}</b></div>`).join('')}
+      ${d.team?`<div class="bsr tot"><span>الفرق</span><em>${d.sc[0]+d.sc[2]}</em><em>${d.sc[1]+d.sc[3]}</em></div>`:''}
+      ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;}});},
+  click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(txNext(d));return;}
+    if(d.ph==='sum'||d.ctl[d.ah]!==d.turn)return;const h=d.ah;
+    if(a==='pick'&&d.ph==='pick'){const k=TX_K[i];if(!k||!txLeft(d).includes(k))return;act(txPick(d,k));return;}
+    if(a==='dsel'&&d.ph==='dbl'){const c=txDblCards(d,h)[i];if(c)c2Toggle(d,c,4);return;}
+    if(a==='dok'&&d.ph==='dbl'){const cs=c2Sel(d);S.sel=[];act(txDbl(d,cs));return;}
+    if(a==='card'&&d.ph==='trix'){const c=cardsOf(d.hands[h])[i];if(!c||!txCan(d,c))return;act(txTPlay(d,c));return;}
+    if(a==='card'&&d.ph==='play'){const c=cardsOf(d.hands[h])[i];if(!c||!txLegal(d,h).includes(c))return;act(txPlay(d,c));}}});
+HELP.c_trix='أربع أيادي، كل يد 13 ورقة. اللعبة 4 ممالك، وكل مملكة 5 جولات: صاحب المملكة (أول واحد اللي عنده 7 كبة، وبعده اللي على يمينه) يختار كل جولة لعبة ما لعبها قبل: ملك الكبة (اللي ياخذ الشايب ♥ ينخصم منه 75)، البنات (كل بنت ‎-25)، الديناري (كل ورقة ديناري ‎-10)، اللطش (كل لمّة ‎-15)، والتركس. في الألعاب الأربع الأولى صاحب المملكة يبدأ، ولازم تنزل من النوع الأول، وأعلى ورقة منه تاخذ اللمّة. في ملك الكبة ما تبدأ بالكبة إلا إذا ما عندك غيرها، والجولة تخلص أول ما ينوكل الشايب (والبنات أول ما تنوكل الأربع، والديناري أول ما تخلص الديناري). في ملك الكبة والبنات تقدر «تكبّر» ورقتك قبل اللعب: اللي ياخذها تنخصم منه ضعف وأنت تاخذ قيمتها (ولو أخذتها أنت تنخصم ضعف وياخذ قيمتها اللي بدأ اللمّة، إلا إذا أنت اللي بديت فيها). التركس: تبدأ الصفوف من الولد (J) وتكمل فوق وتحت بالترتيب، ولو ما عندك ورقة تنفع تمرّر. أول من يخلص ورقه ياخذ 200، والثاني 150، والثالث 100، والأخير 50. بعد 20 جولة يفوز صاحب أعلى مجموع. مع 4 لاعبين كل واحد لحاله (أو فريقين لو شغلتوا الفرق)، ومع غيرها يلعبون فريقين: كل اثنين متقابلين فريق ونقاطهم تنجمع.';
+GAMES.c_trix.bot=(d,s,lv)=>{if(d.ph==='sum')return txNext(d);const h=d.ah,H=cardsOf(d.hands[h]);
+  const by=x=>H.filter(c=>c[1]===x);
+  if(d.ph==='pick'){const l=txLeft(d);if(lv===1)return txPick(d,l[rnd(l.length)]);
+    const hi=c=>c2r(c)>=9;const risk={K:H.includes('Kh')?(by('h').length>=5?20:75):by('h').filter(hi).length*4+10,
+      Q:H.filter(c=>c[0]==='Q').reduce((x,c)=>x+(by(c[1]).length>=5?6:25),0)+12,
+      D:by('d').filter(hi).length*14+by('d').length*4,L:H.filter(hi).length*11,T:-(H.filter(c=>c[0]==='J').length*25+H.filter(c=>Math.abs(c2r(c)-9)<=2).length*8)+40};
+    return txPick(d,l.slice().sort((a,b)=>risk[a]-risk[b])[0]);}
+  if(d.ph==='dbl'){const own=txDblCards(d,h);return txDbl(d,lv===1?[]:own.filter(c=>by(c[1]).length>=(lv===3?5:6)));}
+  if(d.ph==='trix'){const L=txTLegal(d,h);if(L.length===1||lv===1)return txTPlay(d,L[rnd(L.length)]);
+    // play the card that keeps my own runs going and opens the least for the others
+    const sc=c=>{const r=c2r(c),s=c[1],up=r>=9;let v=0;const nxt=up?r+1:r-1;if(nxt>=0&&nxt<13&&H.includes(C2R[nxt]+s))v+=6;
+      if(c[0]==='J')v+=H.filter(x=>x[1]===s).length*2-4;v+=Math.abs(r-9)*.6;return v+(lv===2?Math.random()*3:0);};
+    return txTPlay(d,L.slice().sort((a,b)=>sc(b)-sc(a))[0]);}
+  const L=txLegal(d,h),k=d.ct;
+  return txPlay(d,c2BotAvoid(d,h,L,lv,{pen:c=>txPen(k,c),tp:k==='L'?15:0,win:tk=>c2Win(tk,null),mine:c=>txDblBy(d,c)===h,
+    risk:(c,un)=>k==='K'&&c[1]==='h'&&un.includes('Kh')?3:k==='K'&&c==='Kh'?80:k==='Q'&&c[0]==='Q'?30:k==='D'&&c[1]==='d'?c2r(c):0}));};
+GAMES.c_trix.botDelay=(d,s,lv)=>d.ph==='sum'?7000:d.ph==='pick'?1200:650+rnd(600);
+
+/* =================================================================
+   استيميشن (Egyptian estimation): each plays alone and must take exactly the tricks he estimated.
+   Normal rounds: a call round from the dealer's right (pass, «داش» = zero at no trumps, at most two, or a call of tricks
+   and a trump; a call beats a lower number, or the same number in a higher suit: no trumps, ♠, ♥, ♦, ♣). The best caller
+   names the trump; the others then estimate in turn, never above his call, and the last one («المخاطر») may not make the
+   total equal the tricks. Speed rounds: trumps fixed (no trumps, ♠, ♥, ♦, ♣) and everyone estimates.
+   Score: exact = the estimate plus a bonus (caller 20, «مع» 20, risk 20 / 30 / 40, others 10), missed = minus the
+   difference minus a penalty (caller 10, «مع» 20, risk 10 / 20 / 30); dash ±23; only one exact +10; the only one who
+   missed -10; an estimate of 8 or more doubles the round; a round nobody hits scores nothing and doubles the next one.
+   Full game 18 rounds (13 + 5 speed), short 8 (5 + 3). Cards: 13 each up to 4 players, then the pack shared out.
+   ================================================================= */
+const ES_SU=['n','s','h','d','c'];                       // high to low; n = no trumps
+const esTr=x=>x==='n'?null:x;
+const esT=H=>Math.min(13,Math.floor(52/H));
+const esMin=T=>Math.max(1,Math.ceil(T*4/13));
+const esNum=c=>c?c.v*5+(4-ES_SU.indexOf(c.s)):-1;
+const esSuN=s=>s==='n'?'صن':C2SN[s];
+function esDeal(d){const H=d.H,T=esT(H),dk=shuffle(c2Deck()),ah=(d.dl+1)%H,speed=d.r>d.nr;
+  const nd={...d,T,hands:[...Array(H)].map((_,h)=>c2Sort(dk.slice(h*T,h*T+T).join(''))),call:Array(H).fill(-1),cs:Array(H).fill(''),best:null,est:Array(H).fill(-1),
+    tr:null,trs:'',hb:-1,risk:-1,tk:'',lt:null,tw:Array(H).fill(0),pd:'',tlog:'',sum:null,ah,tl:ah,t0:ah,turn:d.ctl[ah],eo:''};
+  if(speed){const s=ES_SU[(d.r-d.nr-1)%5];return {...nd,ph:'est',trs:s,tr:esTr(s),hands:nd.hands.map(x=>c2Sort(x,esTr(s))),eo:[...Array(H)].map((_,j)=>(ah+j)%H).join(''),ei:0};}
+  return {...nd,ph:'call'};}
+const esDash=d=>d.call.filter(x=>x===0).length;
+// call options: pass (-1 shown as «باس»), dash (0), or {v,s}
+function esCallOK(d,v,s){if(v===0)return esDash(d)<2;if(v<esMin(d.T)||v>d.T)return false;return esNum({v,s})>esNum(d.best);}
+function esCall(d,v,s){const h=d.ah,call=[...d.call],cs=[...d.cs];call[h]=v;cs[h]=v>0?s:'';let best=d.best;if(v>0)best={h,v,s};
+  const say=`${c2Name(d,h)}: ${v<0?'باس':v===0?'داش':v+' '+esSuN(s)}`;const nx=(h+1)%d.H,done=nx===(d.dl+1)%d.H;
+  if(!done)return {...d,call,cs,best,ah:nx,turn:d.ctl[nx],last:say};
+  if(!best)return {...esDeal(d),last:say+' • ما أحد طلب، نعيد التوزيع'};
+  // estimates: everyone but the caller and the dash callers, in turn from the caller's right; the caller's call is his estimate
+  const est=[...d.est];est[best.h]=best.v;call.forEach((x,k)=>{if(x===0)est[k]=0;});
+  const eo=[...Array(d.H-1)].map((_,j)=>(best.h+1+j)%d.H).filter(k=>call[k]!==0).join('');
+  const tr=esTr(best.s),nd={...d,call,cs,best,est,trs:best.s,tr,hands:d.hands.map(x=>c2Sort(x,tr)),hb:best.h,eo,ei:0,last:say+` • ${c2Name(d,best.h)} طلب ${best.v} ${esSuN(best.s)}`};
+  if(!eo.length)return esGo(nd);
+  return {...nd,ph:'est',ah:+eo[0],turn:d.ctl[+eo[0]]};}
+// the values a hand may estimate now: up to the call (normal rounds), and the last one may not make the total T
+function esOpts(d){const h=d.ah,last=d.ei===d.eo.length-1,mx=d.best?d.best.v:d.T;const sum=d.est.reduce((x,v,k)=>x+(k!==h&&v>0?v:0),0);
+  const o=[];for(let v=0;v<=mx;v++)if(!(last&&sum+v===d.T))o.push(v);return o;}
+function esEst(d,v){const h=d.ah,est=[...d.est];est[h]=v;const ei=d.ei+1,say=`${c2Name(d,h)}: ${v}`;
+  if(ei<d.eo.length){const nx=+d.eo[ei];return {...d,est,ei,ah:nx,turn:d.ctl[nx],last:say};}
+  let nd={...d,est,ei,risk:h,last:say};
+  if(!d.best){const mx=Math.max(...est);nd.hb=+d.eo.split('').find(k=>est[+k]===mx);}
+  return esGo(nd);}
+function esGo(d){const h=d.hb;return {...d,ph:'play',ah:h,tl:h,t0:h,turn:d.ctl[h]};}
+function esPlay(d,c){return c2Put(d,c,(nd,tk)=>c2Win(tk,nd.tr),nd=>nd.tlog.length===nd.T?esScore(nd):nd);}
+function esScore(d){const H=d.H,T=d.T,tot=d.est.reduce((x,v)=>x+v,0),hb=d.hb,hv=d.est[hb],speed=!d.best;
+  const ok=d.est.map((e,h)=>d.tw[h]===e),nOk=ok.filter(Boolean).length,dbl=Math.abs(tot-T)>=4;
+  const add=Array(H).fill(0),why=Array(H).fill('');
+  for(let h=0;h<H;h++){const e=d.est[h],w=d.tw[h],with_=!speed&&h!==hb&&e===hv&&d.call[h]!==0;
+    if(!speed&&d.call[h]===0){add[h]=ok[h]?23:-23;why[h]='داش';if(tot<T){add[h]+=ok[h]?10:-10;}continue;}
+    let b,p;if(h===hb){b=20;p=10;why[h]='الطالب';}
+    else if(h===d.risk&&!speed){if(dbl){b=with_?40:30;p=with_?30:20;why[h]='مخاطر مضاعف';}else{b=with_?30:20;p=with_?20:10;why[h]='المخاطر';}if(with_)why[h]+=' مع';}
+    else if(with_){b=20;p=20;why[h]='مع';}else{b=10;p=0;}
+    add[h]=ok[h]?e+b:-Math.abs(w-e)-p;}
+  if(nOk===1)add[ok.indexOf(true)]+=10;
+  if(nOk===H-1&&H>2)add[ok.indexOf(false)]-=10;
+  let mul=(d.mul||1)*(d.est.some(e=>e>=Math.ceil(T*8/13))?2:1),nm2=1;
+  if(!nOk){add.fill(0);nm2=2;mul=1;}
+  const fin=add.map(x=>x*mul),sc=d.sc.map((x,h)=>x+fin[h]),nx=(d.dl+1)%H;
+  const nd={...d,ph:'sum',sc,mul:nm2,sum:{add:fin,ok,why,mul,none:!nOk},ah:nx,turn:d.ctl[nx],last:`انتهت الجولة ${d.r}`};
+  if(d.r>=d.nr+d.ns){const w=c2EndBy(nd,sc,false);if(w)return w;return {...nd,ns:d.ns+1};}
+  return nd;}
+function esNext(d){return {...esDeal({...d,r:d.r+1,k:d.k+1,dl:(d.dl+1)%d.H}),last:''};}
+const esLen=(d,full)=>({...esDeal({...d,nr:full?13:5,ns:full?5:3,r:1}),last:full?'لعبة كاملة: 18 جولة':'لعبة قصيرة: 8 جولات'});
+GAMES.c_estim=c2IndGame({name:'استيميشن',lbc:'#1D5C8C',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1D5C8C"/><circle cx="50" cy="50" r="40" fill="#2670A6"/><g transform="rotate(-12 40 54)"><rect x="22" y="30" width="32" height="46" rx="5" fill="#fff"/><text x="38" y="59" font-size="20" font-weight="800" text-anchor="middle" fill="#2D4763">7♠</text></g><circle cx="68" cy="40" r="17" fill="#F0B429"/><text x="68" y="47" font-size="19" font-weight="900" text-anchor="middle" fill="#1D5C8C">=</text><rect x="52" y="64" width="34" height="16" rx="8" fill="#fff"/><text x="69" y="76" font-size="12" font-weight="900" text-anchor="middle" fill="#1D5C8C">3/3</text></svg>`,
+  init:n=>({H:n,team:0,ctl:c2Ctl(n,n,0,'',0),k:0,dl:n-1,sc:Array(n).fill(0),r:0,nr:5,ns:3,mul:1,ph:'len',hands:Array(n).fill(''),tw:Array(n).fill(0),est:Array(n).fill(-1),call:Array(n).fill(-1),cs:Array(n).fill(''),
+    tk:'',pd:'',tlog:'',lt:null,ah:0,tl:0,t0:0,T:esT(n),turn:0,last:''}),
+  start:(d,base)=>{const h=base.turn%d.H;return {...d,ah:h,turn:d.ctl[h]};},
+  redeal:d=>d.win!=null||d.ph==='sum'||d.ph==='len'?d:{...esDeal(d),last:'انعادت التوزيعة من جديد'},
+  points:d=>d.sc.map(x=>x),
+  winText:d=>d.win!=null?`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بـ${d.sc[d.win]} نقطة`:null,
+  onTimeout(d){if(d.ph==='len')return esLen(d,false);if(d.ph==='sum')return esNext(d);if(d.ph==='call')return esCall(d,-1);if(d.ph==='est'){const o=esOpts(d);return esEst(d,o[0]);}
+    const L=c2Follow(d.hands[d.ah],cardsOf(d.tk));return esPlay(d,L[rnd(L.length)]);},
+  status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
+    if(d.ph==='len')return s+`${who}: اختر طول اللعبة`;if(d.ph==='call')return s+`${who}: الطلب${d.best?` • أعلى طلب ${d.best.v} ${esSuN(d.best.s)}`:''}`;
+    if(d.ph==='est')return s+`${who}: كم لمّة بتاخذ بالضبط؟${d.ei===d.eo.length-1?' <small>(أنت المخاطر)</small>':''}`;if(d.ph==='play')return s+who;return s+`انتهت الجولة ${d.r}`;},
+  render(d,ctx){if(d.ph==='len'){const my=ctx.my;return `<div class="blt c2"><div class="panel bsum"><h3>استيميشن</h3><p>كل واحد لحاله، والمطلوب تاخذ بالضبط عدد اللمّات اللي قلته</p>
+      ${my?'<button class="big navy" data-ga="len" data-i="0">لعبة قصيرة: 8 جولات</button><button class="big green" data-ga="len" data-i="1">لعبة كاملة: 18 جولة</button>':`<p class="note">${nameTag(d,d.turn)} يختار طول اللعبة</p>`}</div></div>`;}
+    return c2Frame(d,ctx,{
+    head:d=>c2HeadMid(`${d.trs?(d.trs==='n'?'صن':c2Su(d.trs)):''} <small>جولة ${d.r} من ${d.nr+d.ns}${d.r>d.nr?' (سريعة)':''} • ${d.T} لمّات${(d.mul||1)>1?' • مضاعفة':''}</small>`),
+    info:(d,k)=>{if(d.ph==='sum')return '';if(d.ph==='call')return d.call[k]>0?`<b class="c2bid">${d.call[k]} ${d.cs[k]==='n'?'صن':C2SN[d.cs[k]]}</b>`:d.call[k]===0?'<b class="c2bid">داش</b>':'';
+      const e=d.est[k];return e<0?'':`<b class="${d.ph==='play'&&d.tw[k]>e?'c2pt bad':'c2tw'}">${d.ph==='play'?d.tw[k]+'/':''}${e}</b>${k===d.hb?' 👑':''}`;},
+    panel(d){if(d.ph==='call'){const sel=Array.isArray(S.sel)&&S.sel[0]==='es:'+c2SelKey(d)?S.sel[1]:null;
+        if(sel!=null)return `<p class="lbl c2lb">${sel} لمّات، وش الحكم؟</p>`+c2Btns([...ES_SU.map((s,i)=>esCallOK(d,sel,s)?[i,s==='n'?'صن':C2SN[s],s==='n'?'navy':'bsuit '+('hd'.includes(s)?'rs':'')]:null).filter(Boolean),[9,'رجوع','']],'csuit');
+        const nums=[];for(let v=esMin(d.T);v<=d.T;v++)if(ES_SU.some(s=>esCallOK(d,v,s)))nums.push([v,String(v),'green']);
+        return `<p class="lbl c2lb">اطلب عدد لمّات وحكم، أو داش (صفر بدون حكم)</p>`+c2Btns([[-1,'باس',''],...(esCallOK(d,0)?[[0,'داش','navy']]:[]),...nums],'call');}
+      if(d.ph==='est')return `<p class="lbl c2lb">كم لمّة بتاخذ؟${d.ei===d.eo.length-1?' (المجموع ما يصير '+d.T+')':''}</p>`+c2Btns(esOpts(d).map(v=>[v,String(v),'green']),'est');},
+    canCard:d=>d.ph==='play',legal:(d,h)=>c2Follow(d.hands[h],cardsOf(d.tk)),
+    sum(d,ctx){const r=d.sum;return `<div class="panel bsum"><h3>${r.none?'ما أحد جابها بالضبط: الجولة الجاية مضاعفة':`نتيجة الجولة ${d.r}${r.mul>1?' (×'+r.mul+')':''}`}</h3>${[...Array(d.H)].map((_,h)=>`<div class="bsr"><span>${c2Name(d,h)}</span><em>${d.tw[h]}/${d.est[h]} ${r.ok[h]?'✅':'❌'} <small>${r.why[h]}</small></em><b>${r.add[h]>0?'+':''}${r.add[h]} → ${d.sc[h]}</b></div>`).join('')}
+      ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;}});},
+  click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(esNext(d));return;}if(a==='len'&&d.ph==='len'){act(esLen(d,i===1));return;}
+    if(d.ph==='sum'||d.ctl[d.ah]!==d.turn)return;
+    if(a==='call'&&d.ph==='call'){if(i===-1){act(esCall(d,-1));return;}if(i===0){if(esCallOK(d,0))act(esCall(d,0));return;}if(!ES_SU.some(s=>esCallOK(d,i,s)))return;S.sel=['es:'+c2SelKey(d),i];render();return;}
+    if(a==='csuit'&&d.ph==='call'){const v=Array.isArray(S.sel)&&S.sel[0]==='es:'+c2SelKey(d)?S.sel[1]:null;S.sel=[];if(i===9||v==null){render();return;}const s=ES_SU[i];if(!s||!esCallOK(d,v,s)){render();return;}act(esCall(d,v,s));return;}
+    if(a==='est'&&d.ph==='est'){if(!esOpts(d).includes(i))return;act(esEst(d,i));return;}
+    if(a==='card'&&d.ph==='play'){const c=cardsOf(d.hands[d.ah])[i];if(!c||!c2Follow(d.hands[d.ah],cardsOf(d.tk)).includes(c))return;act(esPlay(d,c));}}});
+HELP.c_estim='كل واحد يلعب لحاله، والهدف تاخذ بالضبط عدد اللمّات اللي قلته. أول ما تبدأ تختارون طول اللعبة: قصيرة (5 جولات عادية و3 سريعة) أو كاملة (13 عادية و5 سريعة). مع 4 لاعبين أو أقل كل واحد 13 ورقة، ومع أكثر يتقسم الورق بالتساوي. الجولة العادية: الطلب يبدأ من يمين الموزّع ويلف مرة: تقول باس، أو «داش» (يعني ما بتاخذ ولا لمّة، وبالكثير اثنين بالجولة)، أو تطلب عدد لمّات (4 أو أكثر) مع حكم. الطلب يغلب اللي أقل منه بالعدد، أو نفس العدد بحكم أعلى: صن (بدون حكم) ثم ♠ ثم ♥ ثم ♦ ثم ♣. صاحب أعلى طلب يصير الطالب وحكمه هو الحكم. بعدها الباقين كل واحد يقول تقديره بالترتيب (ما يتعدى طلب الطالب، واللي يساويه اسمه «مع»)، وآخر واحد «المخاطر» ما يقدر يخلي المجموع يساوي عدد اللمّات. الجولات السريعة: الحكم محدد (صن، ♠، ♥، ♦، ♣) وكلكم تقولون تقديركم مباشرة. الطالب يبدأ اللعب، ولازم تنزل من النوع الأول. النقاط: اللي يجيبها بالضبط ياخذ تقديره + 10 (الطالب +20، اللي «مع» +20، المخاطر +20 أو +30 إذا كان «مع» أو بعيد عن المجموع بـ4 أو أكثر، و+40 للاثنين). اللي ما يجيبها ينخصم منه الفرق وعليه زيادة: الطالب ‎-10، اللي «مع» ‎-20، المخاطر ‎-10 أو ‎-20 أو ‎-30. الداش: ‎+23 أو ‎-23. لو واحد بس جابها ياخذ 10 زيادة، ولو كلهم جابوها إلا واحد ينخصم منه 10. لو أحد قدّر 8 أو أكثر تتضاعف الجولة، ولو ما أحد جابها بالضبط ما تنحسب وتتضاعف اللي بعدها. بعد آخر جولة يفوز صاحب أعلى مجموع.';
+GAMES.c_estim.bot=(d,s,lv)=>{if(d.ph==='len')return esLen(d,false);if(d.ph==='sum')return esNext(d);const h=d.ah,H=cardsOf(d.hands[h]),k=d.T/13;
+  const ev=tr=>c2EstP(H,tr,d.H,d.T)+(lv>1?.2:0);
+  if(d.ph==='call'){let bs='n',bv=ev(null)*.95;for(const x of 'shdc'){const v=ev(x);if(v>bv){bv=v;bs=x;}}
+    const want=Math.round(bv+c2Lv(lv)*.8);
+    if(lv>=2&&bv<.5*k+.2&&esCallOK(d,0)&&!H.some(c=>c2r(c)>=11))return esCall(d,0);
+    if(want>=esMin(d.T)){for(const s of ES_SU)if(esCallOK(d,want,s)&&(s===bs||ES_SU.indexOf(s)<ES_SU.indexOf(bs)&&lv===1))return esCall(d,want,s);
+      if(esCallOK(d,want,bs))return esCall(d,want,bs);}
+    return esCall(d,-1);}
+  if(d.ph==='est'){const o=esOpts(d);const e=Math.round(ev(d.tr)+c2Lv(lv)*.8);const pick=o.slice().sort((a,b)=>Math.abs(a-e)-Math.abs(b-e))[0];return esEst(d,pick);}
+  const L=c2Follow(d.hands[h],cardsOf(d.tk)),want=d.tw[h]<d.est[h];
+  return esPlay(d,c2BotWin(d,h,L,lv,{T:d.tr,str:c=>(c[1]===d.tr?100:0)+c2r(c),win:tk=>c2Win(tk,d.tr),mate:(a,b)=>a===b,deck:c2Deck(),want,draw:false}));};
+GAMES.c_estim.botDelay=(d,s,lv)=>d.ph==='sum'?7000:d.ph==='play'?650+rnd(600):900+rnd(700);
