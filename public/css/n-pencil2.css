@@ -173,3 +173,70 @@
 .pntb.up{transform:translateY(-10px) rotate(-4deg);opacity:.55;box-shadow:0 0 0 2px #F0B429}
 .pntt.lm .pnts{box-shadow:0 3px 0 -1px rgba(240,180,41,.9)}
 .pntc .btn{font-size:15px}
+
+/* ---------- dots and lines: ink on squared paper ---------- */
+.pnlb{position:relative;width:min(100%,370px);margin:4px auto 4px;direction:ltr;border-radius:16px;background:#FBF7EE;background-image:linear-gradient(rgba(70,120,170,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(70,120,170,.10) 1px,transparent 1px);background-size:12px 12px;
+ box-shadow:0 0 0 1px #E3D8C2,0 5px 0 #D8CBB0,0 10px 20px rgba(60,40,10,.12)}
+.pnlb>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.pnll{stroke-width:2.2;stroke-linecap:round}
+.pnll.s0{stroke:#D9433A}.pnll.s1{stroke:#2F74D0}
+.pnll.nw{animation:pnin .3s ease-out}
+.pnllm{stroke:#F0B429;stroke-width:4.6;stroke-linecap:round;opacity:.5}
+.pnlgh{stroke:#F0B429;stroke-width:1.4;stroke-dasharray:1.2 1.4;stroke-linecap:round}
+.pnld{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;padding:0;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:900;color:#fff;
+ background:radial-gradient(circle at 38% 32%,#4E6178,#2D3B4C 65%);box-shadow:0 2px 0 rgba(0,0,0,.25);transition:transform var(--t1) var(--ease)}
+.pnld.l2{background:radial-gradient(circle at 38% 32%,#5C7590,#3B4F66 65%)}
+.pnld.l1{background:radial-gradient(circle at 38% 32%,#8798AC,#62758C 65%)}
+.pnld.l0{background:#B9C2CC;color:#6B7785;box-shadow:none}
+button.pnld{cursor:pointer}
+.pnlb.my button.pnld{box-shadow:0 0 0 2px rgba(240,180,41,.55),0 2px 0 rgba(0,0,0,.25)}
+.pnld.sel{transform:scale(1.18);box-shadow:0 0 0 3px #FFD84D,0 2px 0 rgba(0,0,0,.25)!important}
+.pnld.to{box-shadow:0 0 0 3px #F0B429,0 2px 0 rgba(0,0,0,.25)!important}
+.pnld:active{transform:scale(.92)}
+
+/* ---------- chomp: a box of sweets with one chilli ---------- */
+.pnhb{width:min(100%,380px);margin:4px auto 4px;padding:10px;border-radius:16px;direction:ltr;background:linear-gradient(160deg,#8A5636,#6B3E26);box-shadow:inset 0 2px 0 rgba(255,255,255,.18),0 0 0 2px #4A2817,0 7px 0 2px rgba(0,0,0,.16),0 12px 20px rgba(0,0,0,.18)}
+.pnhg{display:grid;gap:4px}
+.pnhc{position:relative;aspect-ratio:1;padding:0;border-radius:10px;background:#5A321E;box-shadow:inset 0 3px 5px rgba(0,0,0,.4);display:grid;place-items:center}
+.pnhc.e{background:#4E2B19}
+.pnhs{display:grid;place-items:center;width:78%;height:78%;border-radius:50%;font-style:normal;font-size:20px;background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.65),transparent 32%),var(--k);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 2px 2px rgba(0,0,0,.35);transition:transform var(--t2) var(--ease),opacity var(--t2)}
+.pnhs.chili{background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.5),transparent 32%),#FFE7D6}
+.pnhs.gone{opacity:0;animation:pnfade .35s ease-out}
+@keyframes pnfade{0%{opacity:.9;transform:none}100%{opacity:0;transform:scale(.4)}}
+.pnhc.pre .pnhs{transform:scale(.82);opacity:.45}
+.pnhc.sel{box-shadow:inset 0 3px 5px rgba(0,0,0,.4),0 0 0 3px #FFD84D}
+.pnhb.my button.pnhc:active .pnhs{transform:scale(.88)}
+
+/* ---------- notakto: small paper boards ---------- */
+.pnxw{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(100%,380px);margin:4px auto 4px}
+.pnxw.k1{grid-template-columns:minmax(0,260px);justify-content:center}
+.pnxw.k3 .pnxb:last-child{grid-column:1/-1;width:calc(50% - 6px);justify-self:center}
+.pnxb{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px;aspect-ratio:1;border-radius:14px;background:#FFFFFF;box-shadow:0 0 0 1.5px #C5CBE6,0 4px 0 #C5CBE6,0 8px 14px rgba(40,50,100,.1);direction:ltr;transition:opacity var(--t3)}
+@media (prefers-color-scheme:dark){.pnxb{background:#EEF1FB}}
+.pnxb.dead{opacity:.5;background:#E4E7F2}
+.pnxc{position:relative;padding:0;border-radius:8px;background:#F2F4FB;display:grid;place-items:center}
+button.pnxc:active{background:#E1E6F7}
+.pnxc.lm{box-shadow:inset 0 0 0 2.5px #F0B429}
+.pnxx{position:relative;width:62%;height:62%;display:block;animation:pnpop .2s var(--ease)}
+.pnxx::before,.pnxx::after{content:'';position:absolute;left:44%;top:-6%;width:13%;height:112%;border-radius:4px;transform:rotate(45deg)}
+.pnxx::after{transform:rotate(-45deg)}
+.pnxx.s0::before,.pnxx.s0::after{background:#D9433A}.pnxx.s1::before,.pnxx.s1::after{background:#2F74D0}
+.pnxln{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);pointer-events:none}
+.pnxln path{stroke:#2D3B4C;stroke-width:.14;stroke-linecap:round;animation:pnin .35s ease-out}
+
+/* ---------- red and blue sticks on golden ground ---------- */
+.pngb{width:min(100%,400px);margin:4px auto 2px;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#DDF0FB,#F7FBFE 75%);box-shadow:0 0 0 1px var(--edge),0 6px 16px rgba(0,0,0,.1)}
+@media (prefers-color-scheme:dark){.pngb{background:linear-gradient(180deg,#1E3346,#22394E 75%)}}
+.pngb svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.pngg{fill:#E8B730}
+.pnggl{stroke:#B8860B;stroke-width:1}
+.pnge{stroke-width:2.6;stroke-linecap:round;fill:none}
+.pnge.c0{stroke:#D9433A}.pnge.c1{stroke:#2F74D0}
+.pngb.my .pnge.can{stroke-width:3.2}
+.pnge.fall{opacity:0;animation:pngfall .45s ease-in}
+@keyframes pngfall{0%{opacity:.85;transform:none}100%{opacity:0;transform:translateY(8px)}}
+.pngn{fill:#5A4316}
+.pngx{stroke:#2D3B4C;stroke-width:1.1;stroke-linecap:round;animation:pnpop .3s var(--ease)}
+.pngh{stroke:transparent;stroke-width:8;stroke-linecap:round;cursor:pointer}
+.pnrl{gap:10px;font-size:13px}
+.pnrl i{display:inline-block;width:18px;height:9px;border-radius:3px;background:linear-gradient(160deg,#A39A8A,#7D7466);box-shadow:inset 0 0 0 1.5px var(--c)}

@@ -425,6 +425,7 @@ GAMES.g_kings={name:'سباق الملوك',cat:'board',lbc:'#A8541E',
       h+=`<${tap?'button':'div'} class="pnrc ${to.has(i)?'to':''} ${anc.has(i)?'an':''} ${ghost.includes(i)?'gh':''} ${lm.has(i)&&d.b[i]==='.'?'lm':''}"${tap?` data-ga="c" data-i="${i}"`:''}>${s!=null?`<svg class="pnrk ${s===t&&d.win==null?'on':''}" data-k="k${s}" viewBox="0 0 40 36" style="--c:${col(d,s)}">${PNRCR}</svg>`:''}</${tap?'button':'div'}>`;}
     h+='</div>';d.br.forEach(([i,o,s],k)=>{const r=i/z|0,c=i%z;h+=`<i class="pnrs ${k===d.br.length-1&&d.lm&&d.lm[0]===i?'nw':''}" data-k="s${k}" style="left:${(c/z*100).toFixed(3)}%;top:${(r/z*100).toFixed(3)}%;width:${((o?1:2)/z*100).toFixed(3)}%;height:${((o?2:1)/z*100).toFixed(3)}%;--c:${col(d,s)}"></i>`;});
     h+='</div></div>';
+    h+=`<div class="pnleg pnrl">${d.pl.map((_,s)=>d.out[s]==='1'?'':`<span style="--c:${col(d,s)}"><i></i>${nm(d,s)} ${d.wl[s]}</span>`).join('')}</div>`;
     if(my&&mode)h+=`<p class="pnnote">${P&&P.g!=null?'اضغط الحاجز مرة ثانية تثبّته':'اختار مكان الحاجز (ما يصير يسكّر طريق أحد)'} • باقي لك ${d.wl[t]}</p>`;
     return h;},
   after(d){const L=d.lm;if(!L||d.b[L[1]]!=='.')return;const k='nr'+d.gid+':'+d.mvn;if(S.pnFx===k)return;S.pnFx=k;const q=x=>app.querySelector(`.pnrgd>:nth-child(${x+1})`);const el=q(L[1]),f=q(L[0]);if(el&&f)bdFly(el.querySelector('.pnrk'),[f],260);},
@@ -570,7 +571,7 @@ GAMES.g_swallow={name:'ابتلع المربعات',cat:'mind',lbc:'#D65A8C',
     pnfStarts(d.pl.length,z).forEach((i,s)=>{const x=i%z*U+5,y=(i/z|0)*U+5;g+=`<circle cx="${x}" cy="${y}" r="3.6" fill="${PNFC[d.pc[s]]}" stroke="#fff" stroke-width="1.4" class="${s===t&&d.win==null?'pnfon':''}"/>`;});
     let h=`<div class="pnfb"><svg viewBox="0 0 ${W} ${W}">${g}</svg></div>`;
     if(d.win==null){const gains=my?[0,1,2,3,4,5].map(k=>k===d.pc[t]?-1:pnfGain(d.c,d.o,z,t,k).length):null;
-      h+=`<div class="pnfp">${PNFC.map((c,k)=>`<button class="pnfk ${k===d.pc[t]?'cur':''}" style="--k:${c}" data-ga="k" data-i="${k}" ${my&&k!==d.pc[t]?'':'disabled'}>${gains&&gains[k]>=0?`<b>+${gains[k]}</b>`:k===d.pc[t]?'<small>لونك</small>':''}</button>`).join('')}</div>`;}
+      h+=`<div class="pnfp">${PNFC.map((c,k)=>`<button class="pnfk ${k===d.pc[t]?'cur':''}" style="--k:${c}" data-ga="k" data-i="${k}" ${my&&k!==d.pc[t]?'':'disabled'}>${gains&&gains[k]>=0?`<b dir="ltr">+${gains[k]}</b>`:k===d.pc[t]?'<small>لونك</small>':''}</button>`).join('')}</div>`;}
     return h;},
   click(a,i,d,ctx){if(!ctx.my||a!=='k'||!(i>=0&&i<6)||i===d.pc[d.turn])return;act(pnfDo(d,i));},
   bot:(d,s,lv)=>pnfDo(d,pnfBot(d,s,lv)),
@@ -602,15 +603,15 @@ GAMES.g_tower={...PNTEAM,name:'البرج',cat:'mind',lbc:'#8E5A2B',
   winText:d=>pnWinTxt(d,PNKN2,{last:'أخذ آخر قطعة'}),
   status:(d,ctx)=>pnStat(d,ctx,PNKN2),
   render(d,ctx){const my=ctx.my,P=pnSel(d);const sel=P&&P.i<d.t.length?P:null;
-    let h=`<div class="pntw"><div class="pntr">${d.t.map((n,i)=>{let blk='';for(let j=n-1;j>=0;j--){const top=n-j;const take=sel&&sel.i===i&&top<=sel.k;const can=my&&top<=3;
+    let h=`<div class="pntw"><div class="pntr">${d.t.map((n,i)=>{let blk='';for(let j=n-1;j>=0;j--){const top=n-j;const take=sel&&sel.i===i&&top<=sel.n;const can=my&&top<=3;
         blk+=`<${can?'button':'div'} class="pntb ${take?'up':''} ${can?'can':''}" style="--c:${PNTC[(i*2+j)%6]}"${can?` data-ga="b" data-i="${i*100+top}"`:''}></${can?'button':'div'}>`;}
       return `<div class="pntt ${d.lm&&d.lm.i===i&&!d.lm.a?'lm':''}" data-k="t${i}-${n}"><div class="pnts">${blk}</div><b>${n}</b></div>`;}).join('')}</div></div>`;
-    if(my&&sel){const m=d.t[sel.i]-sel.k;h+=`<div class="pntc"><p class="pnnote">تاخذ ${sel.k} من البرج، ويبقى فيه ${m}</p><div class="row chact"><button class="btn pngo" data-ga="go" data-i="0">${m?'خذ بدون تقسيم':'خذها'}</button>${[...Array(Math.floor(m/2))].map((_,a)=>`<button class="btn" data-ga="go" data-i="${a+1}">قسّم ${a+1} و${m-a-1}</button>`).join('')}</div></div>`;}
+    if(my&&sel){const m=d.t[sel.i]-sel.n;h+=`<div class="pntc"><p class="pnnote">تاخذ ${sel.n} من البرج، ويبقى فيه ${m}</p><div class="row chact"><button class="btn pngo" data-ga="go" data-i="0">${m?'خذ بدون تقسيم':'خذها'}</button>${[...Array(Math.floor(m/2))].map((_,a)=>`<button class="btn" data-ga="go" data-i="${a+1}">قسّم ${a+1} و${m-a-1}</button>`).join('')}</div></div>`;}
     else if(d.win==null)h+=`<p class="pnnote">${d.t.reduce((a,b)=>a+b,0)} قطعة في ${d.t.length} ${d.t.length>2?'أبراج':'برج'} • خذ من 1 إلى 3 من فوق</p>`;
     return h;},
   click(a,i,d,ctx){if(!ctx.my)return;
-    if(a==='b'){const ti=Math.floor(i/100),k=i%100;if(!(ti>=0&&ti<d.t.length)||k<1||k>3||k>d.t[ti])return;const P=pnSel(d);pnPick(d,P&&P.i===ti&&P.k===k?null:{i:ti,k});return;}
-    if(a==='go'){const P=pnSel(d);if(!P||P.i>=d.t.length)return;const m=d.t[P.i]-P.k;if(!(i>=0&&i+i<=m)||(i&&m<2))return;S.pn=null;act(pntDo(d,[P.i,P.k,i]));}},
+    if(a==='b'){const ti=Math.floor(i/100),k=i%100;if(!(ti>=0&&ti<d.t.length)||k<1||k>3||k>d.t[ti])return;const P=pnSel(d);pnPick(d,P&&P.i===ti&&P.n===k?null:{i:ti,n:k});return;}
+    if(a==='go'){const P=pnSel(d);if(!P||P.i>=d.t.length)return;const m=d.t[P.i]-P.n;if(!(i>=0&&i+i<=m)||(i&&m<2))return;S.pn=null;act(pntDo(d,[P.i,P.n,i]));}},
   bot:(d,s,lv)=>pntDo(d,pntBot(d,lv)),
   botDelay:()=>500+rnd(400)};
 HELP.g_tower='البرج (لعبة من تصميمنا): على الطاولة كم برج من قطع خشب. في دورك اضغط قطعة من فوق أي برج: تاخذها هي واللي فوقها (من قطعة لين ثلاث). بعدها إذا بقى في البرج قطعتين أو أكثر تقدر تخليه مثل ما هو، أو تقسمه لبرجين (تختار كم في كل واحد). اللي ياخذ آخر قطعة على الطاولة يفوز. التقسيم يغيّر الحسبة كلها، فكّر قبل! الفريق اللي يبدأ يتبدل كل جولة. إذا أكثر من لاعبين: فريقين يتناوبون.';
@@ -635,7 +636,7 @@ const PNLM=new Map();
 function pnlWin(e,T,bud){const k=e.replace(/[01]/g,'x');const m=PNLM.get(k);if(m!=null)return m;if(--bud.n<0)throw PNSTOP;
   let w=false;for(const i of pnlMoves(e,T)){if(!pnlWin(setAt(e,i,'x'),T,bud)){w=true;break;}}if(PNLM.size>400000)PNLM.clear();PNLM.set(k,w);return w;}
 function pnlBot(d,lv){const T=pnlTab(d.R,d.C),ms=pnlMoves(d.e,T);if(lv===1&&Math.random()<.6)return pnRnd(ms);
-  const bud={n:lv===3?160000:lv===2?6000:600};const good=[];
+  const bud={n:lv===3?30000:lv===2?4000:600};const good=[];
   try{for(const i of pnShuf(ms)){if(!pnlWin(setAt(d.e,i,'x'),T,bud)){good.push(i);break;}}}catch(x){if(x!==PNSTOP)throw x;}
   if(good.length)return good[0];
   // not worked out: keep the dots with many lines left (the game stays open), a little at random
@@ -793,19 +794,21 @@ const pngMine=(d,s)=>{const m=parseInt(d.m,36);return d.E.map((e,k)=>(m>>k&1)&&e
 function pngBot(d,lv){const s=d.sd,ms=pngMine(d,s),m=parseInt(d.m,36),key=pngKey(d.E);
   // height of a stick: how many sticks hang above it (cutting low loses them all)
   const above=j=>{const after=pngKeep(d.N,d.E,m&~(1<<j));let n=0;for(let k=0;k<d.E.length;k++)if((m>>k&1)&&!(after>>k&1)&&k!==j)n+=d.E[k][2]===s?1:-1;return n;};
-  if(lv===1&&Math.random()<.6)return pnRnd(ms);
-  const bud={n:lv===3?300000:lv===2?3000:300};
+  if(lv===1&&Math.random()<.65||lv===2&&Math.random()<.25)return pnRnd(ms);
+  const bud={n:lv===3?300000:lv===2?3000:0};
   try{for(const j of pnShuf(ms))if(!pngWin(d.N,d.E,pngKeep(d.N,d.E,m&~(1<<j)),1-s,bud,key))return j;}catch(x){if(x!==PNSTOP)throw x;}
   // not worked out (or lost anyway): cut the stick that drops the fewest of my own and the most of the other side's
   let best=ms[0],bv=Infinity;for(const j of ms){const v=above(j)+Math.random()*.5;if(v<bv){bv=v;best=j;}}return best;}
 GAMES.g_hacken={...PNTEAM,name:'الشبكة الذهبية',cat:'mind',lbc:'#B8860B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#FFF6DD"/><rect y="76" width="100" height="24" fill="#E8B730"/><path d="M0 76H100" stroke="#B8860B" stroke-width="2"/><g stroke-width="5.5" stroke-linecap="round" fill="none"><path d="M26 76L24 56" stroke="#D9433A"/><path d="M24 56L26 36" stroke="#2F74D0"/><path d="M26 36L14 22M26 36L38 22" stroke="#D9433A"/><path d="M70 76L60 58L72 44L84 58L80 76" stroke="#2F74D0"/><path d="M72 44L72 26" stroke="#D9433A"/></g>${[[24,56],[26,36],[14,22],[38,22],[60,58],[72,44],[84,58],[72,26]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.4" fill="#5A4316"/>`).join('')}<path d="M44 30l8 8M52 30l-8 8" stroke="#2D3B4C" stroke-width="3" stroke-linecap="round"/></svg>`,
-  init:()=>{let G=pngGen(),best=null;
-    // look for a fair picture (the side that opens loses with best play), and take the last try when none turns up
-    for(let t=0;t<30;t++){const all=(1<<G.E.length)-1,key=pngKey(G.E),bud={n:60000};let w0,w1;
-      try{w0=pngWin(G.N,G.E,all,0,bud,key);w1=pngWin(G.N,G.E,all,1,bud,key);}catch(x){if(x!==PNSTOP)throw x;w0=w1=null;}
-      const nr=G.E.filter(e=>!e[2]).length;if(w0===false&&w1===false&&nr*2===G.E.length){best=G;break;}if(!best&&Math.abs(nr*2-G.E.length)<=2)best=G;G=pngGen();}
-    best=best||G;return {N:best.N,E:best.E,m:((1<<best.E.length)-1).toString(36),sd:0,tr:[0,0],lm:-1,fell:[],mvn:0,last:''};},
+  // a fair picture: the side that opens loses with best play. A picture that leans to one colour gets one of that
+  // colour's sticks painted over, and is looked at again
+  init:()=>{let G=pngGen();
+    for(let t=0;t<40;t++){const all=(1<<G.E.length)-1,key=pngKey(G.E),bud={n:80000};let w0,w1;
+      try{w0=pngWin(G.N,G.E,all,0,bud,key);w1=pngWin(G.N,G.E,all,1,bud,key);}catch(x){if(x!==PNSTOP)throw x;G=pngGen();continue;}
+      if(!w0&&!w1)break;const lean=w0?0:1;const ks=G.E.map((e,k)=>e[2]===lean?k:-1).filter(k=>k>=0);if(!ks.length){G=pngGen();continue;}
+      const k=pnRnd(ks);G={N:G.N,E:G.E.map((e,j)=>j===k?[e[0],e[1],1-lean]:e)};}
+    return {N:G.N,E:G.E,m:((1<<G.E.length)-1).toString(36),sd:0,tr:[0,0],lm:-1,fell:[],mvn:0,last:''};},
   onTimeout(d){return pngDo(d,pngBot(d,1));},
   points:d=>{const m=parseInt(d.m,36);const n=[0,1].map(s=>d.E.filter((e,k)=>(m>>k&1)&&e[2]===s).length);return d.pl.map((_,s)=>`${s%2?'🔵':'🔴'} ${n[s%2]} عود`);},
   winText:d=>pnWinTxt(d,PNKN2,{none:'الخصم ما بقى له عود يقطعه'}),
