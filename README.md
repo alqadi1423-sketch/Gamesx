@@ -26,7 +26,7 @@
 ## بنية المشروع
 1. `public/index.html` الصفحة، و`public/js/boot.js` يبدأ تشغيل الألعاب (برّا الصفحة عشان الموقع يمنع السكربتات المكتوبة داخلها)
 2. `public/_headers` ترويسات الأمان للموقع على Cloudflare (منها Content-Security-Policy)
-3. `public/css/style.css` التصميم
+3. `public/css/style.css` التصميم العام (الألوان والمقاسات والشاشات)، وملفات `public/css/g-*.css` شكل كل مجموعة ألعاب (اللوحات، الورق، الزهر، المسابقات، ألعاب الذكاء، ألعاب الجمعات)
 4. `public/js/core.js` المحرك: اللاعبين والأدوار والشاشات، و`public/js/net.js` و`seal.js` و`views.js` اللعب أونلاين والتشفير وإخفاء الأسرار
 5. `public/js/transport-ws.js` الاتصال أونلاين بغرف Cloudflare
 6. `public/js/transport-near.js` غرف «قريب بدون إنترنت» بين الجوالات (بلوتوث أو واي فاي مباشر، داخل التطبيق بس)، و`public/js/capacitor.js` جسر التطبيق (Capacitor)
