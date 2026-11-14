@@ -24,20 +24,25 @@ const f2=v=>+v.toFixed(2);
 const LSTAR=(()=>{let p='';for(let i=0;i<10;i++){const r=i%2?.13:.31,a=-Math.PI/2+i*Math.PI/5;p+=(i?'L':'M')+(+(r*Math.cos(a)).toFixed(3))+' '+(+(r*Math.sin(a)).toFixed(3));}return p+'Z';})();
 const tr=p=>`translate(${f2(p.x)}px,${f2(p.y)}px)`;
 function cellRect(c,fill,stroke,extra){return `<rect x="-.44" y="-.44" width=".88" height=".88" rx=".16" fill="${fill}" stroke="${stroke||'rgba(45,71,99,.25)'}" stroke-width=".05" transform="translate(${f2(c.x)} ${f2(c.y)}) rotate(${f2(c.rot)})" ${extra||''}/>`;}
-/* step animation for pieces drawn as <g> with a css transform */
-function animPieces(items,caps,stepMs){
-  S.holdRender=true;const st=stepMs||150;
+/* step animation for pieces drawn as <g> with a css transform: each piece hops square by square to where it now stands.
+   The whole walk stays under about a second (the steps get quicker on a long move); delay lets a die land first.
+   Light mode (or reduced motion) skips it: the pieces are already drawn where they end */
+const liteFx=()=>{try{return document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}};
+function animPieces(items,caps,stepMs,delay){
+  if(liteFx()){if(caps.length)sfx('lose');else sfx('pop');return;}
+  S.holdRender=true;const total=items.reduce((a,it)=>a+(it.ms?1:it.pts.length),0);const st=Math.max(55,Math.min(stepMs||150,Math.round(650/Math.max(1,total))));
   const set=(e,p,ms)=>{e.style.transition=ms?`transform ${ms}ms cubic-bezier(.3,.7,.4,1)`:'none';e.style.transform=typeof p==='string'?p:tr(p);};
   items.forEach(it=>{it.fin=it.el.style.transform;set(it.el,it.start,0);});caps.forEach(c=>{c.fin=c.el.style.transform;set(c.el,c.from,0);});
   void document.body.offsetWidth;let n=0;
+  const done=()=>{S.holdRender=false;if(S.renderPending)render();};
   const run=()=>{if(n>=items.length){
-      caps.forEach(c=>{c.el.classList.add('zap');set(c.el,c.fin,520);});if(caps.length)sfx('lose');
-      setTimeout(()=>{caps.forEach(c=>c.el.classList.remove('zap'));S.holdRender=false;if(S.renderPending)render();},caps.length?560:60);return;}
+      caps.forEach(c=>{c.el.classList.add('zap');set(c.el,c.fin,300);});if(caps.length)sfx('lose');
+      setTimeout(()=>{caps.forEach(c=>c.el.classList.remove('zap'));done();},caps.length?320:40);return;}
     const it=items[n++];it.el.classList.add('hop');let i=0;
-    const step=()=>{if(i<it.pts.length){set(it.el,it.pts[i++],it.ms||st-10);setTimeout(step,it.ms||st);return;}
-      set(it.el,it.fin,90);it.el.classList.remove('hop');it.el.classList.add('land');setTimeout(()=>it.el.classList.remove('land'),340);sfx('pop');setTimeout(run,110);};
+    const step=()=>{if(i<it.pts.length){set(it.el,it.pts[i++],it.ms||st-8);setTimeout(step,it.ms||st);return;}
+      set(it.el,it.fin,80);it.el.classList.remove('hop');it.el.classList.add('land');setTimeout(()=>it.el.classList.remove('land'),340);sfx('pop');setTimeout(run,90);};
     step();};
-  setTimeout(run,40);
+  setTimeout(run,Math.max(30,delay||0));
 }
 
 /* ================= ludo ================= */
@@ -58,11 +63,12 @@ function luRoll(d,auto){const s=d.turn,r=1+rnd(6),six=r===6?d.six+1:0;const b={.
   if(!mv.length)return {...b,roll:null,six:0,mv:null,turn:nextSeat(d,s),last:`${nm(d,s)} جاب ${r} وما عنده حركة`};
   if(auto||new Set(mv.map(k=>d.tk[s*d.T+k])).size===1)return luApply({...b,six},s,mv[0],r);
   return {...b,roll:r,six,last:`${nm(d,s)} جاب ${r}، يختار القطعة`};}
-function rollDie(after){S.rolling=true;render();S.holdRender=true;const iv=setInterval(()=>{const el=document.querySelector('.ldie');if(el)el.innerHTML=diceSVG(1+rnd(6));},70);
-  setTimeout(()=>{clearInterval(iv);S.holdRender=false;S.rolling=false;after();},440);}
-function dieBox(d,my,label,can){const fresh=d.dsid&&once('die'+d.gid+'_'+d.dsid);
-  return `<div class="lupanel">${tapDie(d.die||6,can&&!S.rolling,col(d,d.turn),'ldie '+(S.rolling?'spin':fresh?'land':''))}${label}</div>`;}
+// the die: it tumbles in when a new throw shows (on every phone, also for bots and online players)
+function dieBox(d,my,label,can){const fresh=d.dsid&&once('die'+d.gid+'_'+d.dsid);if(fresh)S.luDieAt=Date.now();
+  return `<div class="lupanel">${tapDie(d.die||6,can,col(d,d.turn),'ldie '+(fresh?'land':''))}${label}</div>`;}
 GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
+  // online the die is thrown on the host's phone, so nobody picks their own number
+  net:{host:['roll']},redeal:d=>d,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><rect width="40" height="40" fill="#EC6158"/><rect x="60" width="40" height="40" fill="#4CB97F"/><rect y="60" width="40" height="40" fill="#4AB1E8"/><rect x="60" y="60" width="40" height="40" fill="#F0B429"/>${[[20,20],[80,20],[20,80],[80,80]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="13" fill="#fff"/>`).join('')}<path d="M40 40L50 50L60 40Z" fill="#4CB97F"/><path d="M40 40L50 50L40 60Z" fill="#EC6158"/><path d="M60 60L50 50L40 60Z" fill="#4AB1E8"/><path d="M60 60L50 50L60 40Z" fill="#F0B429"/><rect x="40" y="0" width="20" height="40" fill="none" stroke="#c9d6e4" stroke-width="1.5"/><rect x="47" y="6" width="6" height="34" fill="#4CB97F" opacity=".5"/><circle cx="20" cy="20" r="7" fill="#EC6158"/><circle cx="80" cy="80" r="7" fill="#F0B429"/></svg>`,
   init:n=>({T:LT(n),tk:Array(n*LT(n)).fill(-1),roll:null,six:0,die:6,dsid:0,mv:null,last:''}),
   points:d=>d.pl.map((r,s)=>{let f=0;for(let k=0;k<d.T;k++)if(d.tk[s*d.T+k]===luT(d)+4)f++;return f+'/'+d.T;}),
@@ -70,7 +76,7 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
   onSkip:nd=>S.st.d&&S.st.d.turn!==nd.turn?{...nd,roll:null,six:0}:nd,
   onTimeout:d=>{if(d.roll!=null){const mv=luMovable(d,d.turn,d.roll);return mv.length?luApply(d,d.turn,mv[0],d.roll):{...d,roll:null,turn:nextSeat(d,d.turn)};}return luRoll(d,true);},
   render(d,ctx){const n=d.pl.length,A=starArms(n),G=starGeo(A),T=13*A,s0=d.turn,my=ctx.my;
-    const mov=my&&d.roll!=null&&!S.rolling?new Set(luMovable(d,s0,d.roll)):new Set();
+    const mov=my&&d.roll!=null?new Set(luMovable(d,s0,d.roll)):new Set();
     const own=Array(A).fill(-1);for(let s=0;s<n;s++)own[armOf(n,s)]=s;
     const C=k=>own[k]>=0?col(d,own[k]):'#C5CFDA',Lc=k=>own[k]>=0?LIGHT[d.pl[own[k]]]:'#EEF2F6';
     // board with depth: a soft vignette, yards with sunk slots, track cells that cast a little shadow, gold safe stars
@@ -104,12 +110,14 @@ GAMES.ludo={name:'لودو',cat:'board',lbc:'#B03A2E',
       else lab=`<span class="note">ينتظر ${nm(d,s0)}</span>`;}
     return v+dieBox(d,my,lab,my&&d.roll==null&&d.win==null);},
   click(a,i,d,ctx){if(!ctx.my)return;
-    if(a==='roll'&&d.roll==null&&!S.rolling){const g=d.gid,t=d.turn;rollDie(()=>{const nd=S.st.d;if(!nd||nd.gid!==g||nd.turn!==t||nd.roll!=null){render();return;}act(luRoll(nd));});return;}
+    if(a==='roll'&&d.roll==null){act(luRoll(d));return;}
     if(a==='tok'&&d.roll!=null&&luMovable(d,d.turn,d.roll).includes(i))act(luApply(d,d.turn,i,d.roll));},
   after(d){const m=d.mv;if(!m||!once('lu'+d.gid+'_'+m.sid))return;const el=document.getElementById(`lt${m.s}_${m.k}`);if(!el)return;
     const pts=[];if(m.from<0)pts.push(luXY(d,m.s,m.k,0));else for(let p=m.from+1;p<=m.to;p++)pts.push(luXY(d,m.s,m.k,p));
     const caps=m.cap.map(([o,kk,q])=>({el:document.getElementById(`lt${o}_${kk}`),from:luXY(d,o,kk,q)})).filter(c=>c.el);
-    animPieces([{el,start:luXY(d,m.s,m.k,m.from),pts}],caps,150);}
+    // a piece moved by the throw that just showed waits for the die to land
+    const wait=Math.max(0,300-(Date.now()-(S.luDieAt||0)));
+    animPieces([{el,start:luXY(d,m.s,m.k,m.from),pts}],caps,150,wait);}
 };
 
 /* ================= jakaro ================= */
@@ -254,8 +262,8 @@ GAMES.jakaro={teams:'native',teamsOk:(z,n)=>n>=4&&n%2===0&&z.length===n/2&&z.eve
       if(m.swap)return {el,start,pts:[jkXY(d,x.s,x.k,x.to)],ms:520};
       const pts=[];if(x.from<0)pts.push(jkXY(d,x.s,x.k,0));else if(x.back){for(let t=1;t<=4;t++)pts.push(jkXY(d,x.s,x.k,(x.from-t+L)%L));}else for(let p=x.from+1;p<=x.to;p++)pts.push(jkXY(d,x.s,x.k,p));
       return {el,start,pts};}).filter(Boolean);
-    if(m.swap&&items.length===2){S.holdRender=true;items.forEach(it=>{it.fin=it.el.style.transform;it.el.style.transition='none';it.el.style.transform=tr(it.start);});void document.body.offsetWidth;
-      setTimeout(()=>{items.forEach(it=>{it.el.style.transition='transform .55s cubic-bezier(.5,0,.3,1)';it.el.style.transform=it.fin;});sfx('pop');setTimeout(()=>{S.holdRender=false;if(S.renderPending)render();},600);},60);return;}
+    if(m.swap&&items.length===2){if(liteFx())return;S.holdRender=true;items.forEach(it=>{it.fin=it.el.style.transform;it.el.style.transition='none';it.el.style.transform=tr(it.start);});void document.body.offsetWidth;
+      setTimeout(()=>{items.forEach(it=>{it.el.style.transition='transform .44s cubic-bezier(.5,0,.3,1)';it.el.style.transform=it.fin;});sfx('pop');setTimeout(()=>{S.holdRender=false;if(S.renderPending)render();},470);},40);return;}
     const caps=m.kills.map(x=>({el:document.getElementById(`jm${x.s}_${x.k}`),from:jkXY(d,x.s,x.k,x.from)})).filter(c=>c.el);
-    if(items.length)animPieces(items,caps,110);}
+    if(items.length)animPieces(items,caps,120);}
 };
