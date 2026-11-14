@@ -66,20 +66,21 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     if(d.win!=null)return this.album(d,ctx.priv);
     if(!ctx.my)return ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="spd"><div class="spdt">✓ أرسلت</div><p class="note">ننتظر الباقين</p></div>':'';
     const r=d.rd,n=d.pl.length,v=ctx.v,prevSeat=(v-1+n)%n,prev=r>0?teleHist(d,prevSeat,r-1,ctx.priv):null;
-    if(r===0)return `<div class="qbox" style="font-size:20px">اكتب جملة، واللي بعدك بيرسمها ✏️</div><input class="field" data-draft="tw" maxlength="80" value="${escH(S.draft.tw||'')}" placeholder="مثلًا: قطوة تشرب شاي على القمر" autocomplete="off"><button class="btn red wide" data-ga="send">أرسل</button>`;
+    const slip=(ic,lbl,txt)=>`<div class="tslip"><span>${ic}</span><div>${lbl?`<small>${lbl}</small>`:''}<b>${txt}</b></div></div>`;
+    if(r===0)return `<div class="tele">${slip('✏️','','اكتب جملة، واللي بعدك بيرسمها')}<input class="field" data-draft="tw" maxlength="80" value="${escH(S.draft.tw||'')}" placeholder="مثلًا: قطوة تشرب شاي على القمر" autocomplete="off"><button class="btn red wide" data-ga="send">أرسل</button></div>`;
     if(r%2){const st=teleDraw(d,v);
-      return `<div class="qbox" style="font-size:20px"><small style="font-size:14px;color:var(--mut)">ارسم هذي الجملة:</small><br>${prev?escH(prev):'(ما وصلت جملة، ارسم أي شي يعجبك)'}</div>
-      <svg viewBox="0 0 63 63" class="drw pad" id="pad">${st.strokes.map(strokeSVG).join('')}</svg>
-      <div class="tools">${DRC.map((c,k)=>`<button class="tcol ${st.c===k?'on':''}" style="background:${c}" data-ga="col" data-i="${k}"></button>`).join('')}<button class="sm" data-ga="undo">↶ تراجع</button><button class="sm" data-ga="clr">مسح</button></div>
-      <button class="btn red wide" data-ga="send" ${st.strokes.length?'':'disabled'}>خلصت الرسمة</button>`;}
-    return `<div class="qbox" style="font-size:20px">وش هذي الرسمة؟ 🤔</div>${prev?drawSVG(prev):'<p class="note">(ما وصلت رسمة، اكتب أي جملة)</p>'}
-      <input class="field" data-draft="tw" maxlength="80" value="${escH(S.draft.tw||'')}" placeholder="اكتب تخمينك" autocomplete="off"><button class="btn red wide" data-ga="send">أرسل</button>`;
+      return `<div class="tele">${slip('🎨','ارسم هذي الجملة:',prev?escH(prev):'(ما وصلت جملة، ارسم أي شي يعجبك)')}
+      <div class="easel"><svg viewBox="0 0 63 63" class="drw pad" id="pad">${st.strokes.map(strokeSVG).join('')}</svg></div>
+      <div class="tools"><div class="tpal">${DRC.map((c,k)=>`<button class="tcol ${st.c===k?'on':''}" style="background:${c}" data-ga="col" data-i="${k}" aria-label="لون"></button>`).join('')}</div><div class="tact"><button class="sm" data-ga="undo" ${st.strokes.length?'':'disabled'}>↶ تراجع</button><button class="sm" data-ga="clr" ${st.strokes.length?'':'disabled'}>مسح</button></div></div>
+      <button class="btn red wide" data-ga="send" ${st.strokes.length?'':'disabled'}>خلصت الرسمة</button></div>`;}
+    return `<div class="tele">${slip('🤔','','وش هذي الرسمة؟')}${prev?`<div class="easel view">${drawSVG(prev)}</div>`:'<p class="note">(ما وصلت رسمة، اكتب أي جملة)</p>'}
+      <input class="field" data-draft="tw" maxlength="80" value="${escH(S.draft.tw||'')}" placeholder="اكتب تخمينك" autocomplete="off"><button class="btn red wide" data-ga="send">أرسل</button></div>`;
   },
-  album(d,priv){const n=d.pl.length;let s='<div class="album">';
-    for(let c=0;c<n;c++){s+=`<div class="chainc"><h3>قصة ${nameTag(d,c)}</h3>`;
+  album(d,priv){const n=d.pl.length;let s='<div class="album tele">';
+    for(let c=0;c<n;c++){s+=`<section class="chainc" style="--c:${col(d,c)}"><h3><i>${shapeW(d.pl[c])}</i><span>قصة ${nm(d,c)}</span></h3><ol class="tsteps">`;
       for(let r=0;r<d.R;r++){const seat=(c+r)%n;const x=teleHist(d,seat,r,priv);
-        s+=`<div class="step"><small style="color:${col(d,seat)}">${nm(d,seat)} ${r===0?'كتب':r%2?'رسم':'خمّن'}</small>${r%2?(x?drawSVG(x):'<p class="note">(ما رسم)</p>'):`<div class="bub">${x?escH(x):'…'}</div>`}</div>`;}
-      s+='</div>';}
+        s+=`<li class="step ${r%2?'pic':'txt'}" style="--c:${col(d,seat)}"><small><i>${shapeW(d.pl[seat])}</i>${nm(d,seat)} ${r===0?'كتب':r%2?'رسم':'خمّن'}</small>${r%2?(x?`<div class="polar">${drawSVG(x)}</div>`:'<p class="note">(ما رسم)</p>'):`<div class="bub">${x?escH(x):'…'}</div>`}</li>`;}
+      s+='</ol></section>';}
     return s+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||ctx.bot)return;const v=ctx.v;
     if(d.rd%2){const st=teleDraw(d,v);

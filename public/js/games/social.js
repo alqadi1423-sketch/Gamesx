@@ -21,6 +21,17 @@ function baraPairs(d){const p=shuffle(aliveSeats(d));return p.map((a,i)=>[a,p[(i
 // drop seats that left from the question chain: whoever had to ask them asks the next one still playing
 function baraFix(d){const o=s=>d.out[s]==='1',nx={};d.pr.forEach(([a,b])=>nx[a]=b);let qi=0;const pr=[];
   d.pr.forEach(([a,b],i)=>{if(o(a))return;for(let k=0;o(b)&&k<d.pl.length;k++)b=nx[b];if(b==null||b===a||o(b))return;if(i<d.qi)qi++;pr.push([a,b]);});return {...d,pr,qi};}
+/* look: an emoji per category, vote counts from d.votes, the player tiles and the reveal of the one out of the loop */
+const BARA_E=['🍲','🦁','🌍','🏙️','👷','📍','🛋️','⚽','🚗','👕','🍎','🎒'];
+const baraCount=d=>{const c=d.pl.map(()=>0);(d.votes||[]).forEach(x=>{if(x>=0&&x<c.length)c[x]++;});return c;};
+function baraTiles(d,v,can,cnt){return `<div class="pvg n${d.pl.length}">${d.pl.map((r,s)=>{const out=d.out[s]==='1',ok=can(s),bo=!!cnt&&s===d.bo;
+    const cls=`pv ${out?'out':ok?'can':cnt?'':'no'} ${s===v?'me':''} ${bo?'hot':''}`;
+    const inner=`<i>${shapeW(r)}${cnt&&cnt[s]?`<u class="pvc">${cnt[s]}</u>`:''}${bo?'<u class="pvm">🕵️</u>':''}</i><span>${nm(d,s)}</span>${s===v?'<em>أنت</em>':bo?'<em>برة السالفة</em>':''}`;
+    return ok?`<button class="${cls}" style="--c:${COLS[r]}" data-ga="v" data-i="${s}">${inner}</button>`:`<div class="${cls}" style="--c:${COLS[r]}">${inner}</div>`;}).join('')}</div>`;}
+// the word shows only at the end: while they guess, the one out of the loop may be looking at this screen
+function baraReveal(d,end){const g=d.guess!=null&&d.guess>=0?BARA[d.cat][1][d.guess]:null;
+  return `<div class="breveal ${end?'end':''}"><div class="brv" style="--c:${col(d,d.bo)}"><i>${shapeW(d.pl[d.bo])}</i><div><small>${end?'اللي كان برة السالفة':'انكشف!'}</small><b>${nm(d,d.bo)}</b></div></div>`+
+    (end?`<div class="brw"><small>${BARA_E[d.cat]||''} السالفة</small><b>${baraWord(d)}</b>${g?`<em class="${d.guess===d.w?'ok':'no'}">خمّن: ${g} ${d.guess===d.w?'✓':'✗'}</em>`:''}</div>`:'')+`</div>`;}
 GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer:false,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D9573A"/><circle cx="30" cy="40" r="11" fill="#fff"/><circle cx="50" cy="40" r="11" fill="#fff"/><circle cx="70" cy="40" r="11" fill="#2D4763"/><path d="M14 80c0-12 7-18 16-18s16 6 16 18zM34 80c0-12 7-18 16-18s16 6 16 18z" fill="#fff"/><path d="M54 80c0-12 7-18 16-18s16 6 16 18z" fill="#2D4763"/><text x="70" y="45" font-size="13" font-weight="800" text-anchor="middle" fill="#fff">؟</text></svg>`,
   init:n=>({ph:'cat',cat:-1,w:-1,bo:-1,pr:[],qi:0,q2:false,rd:0,votes:null,opts:null,res:'',last:''}),
@@ -48,17 +59,21 @@ GAMES.bara={name:'برة السالفة',cat:'quiz',lbc:'#B5452B',minP:3,noTimer
     if(d.ph==='vote')return s+'مين برة السالفة؟ صوّتوا';
     if(d.ph==='guess')return s+`انكشف ${nameTag(d,d.bo)}! باقي له فرصة: يخمّن السالفة`;return s;},
   render(d,ctx){const v=ctx.v,local=ctx.local;let h='';const myT=local||d.turn===v;
-    if(d.ph==='cat'){h+=`<div class="bcat">${BARA.map(([t],i)=>`<button class="btn" data-ga="cat" data-i="${i}" ${myT?'':'disabled'}>${t}</button>`).join('')}<button class="btn navy" data-ga="cat" data-i="-1" ${myT?'':'disabled'}>عشوائي 🎲</button></div>`;return h;}
-    const card=s=>s===d.bo?`<div class="scard out"><small>${BARA[d.cat][0]}</small><b>أنت برة السالفة!</b><p>حاول تفهم السالفة من أسئلتهم، ولا تنكشف</p></div>`:`<div class="scard"><small>${BARA[d.cat][0]}</small><b>${baraWord(d)}</b><p>واحد منكم ما يعرفها، اكشفوه</p></div>`;
-    if(d.ph==='see'){if(v==null||v<0)return '<p class="note">ينتظرون الكل يشوف بطاقته</p>';return card(v)+(ctx.my?`<button class="big green" data-ga="ok">فهمت</button>`:'<p class="note">ننتظر الباقين…</p>');}
-    const mine=v!=null&&v>=0&&!local?`<details class="smine"><summary>بطاقتي</summary>${card(v)}</details>`:'';
-    if(d.ph==='ask'){const [a,b]=d.pr[d.qi];h+=`<div class="bqa"><span style="--c:${col(d,a)}">${nm(d,a)}</span><i>يسأل</i><span style="--c:${col(d,b)}">${nm(d,b)}</span></div>`;
+    if(d.ph==='cat'){h+=`<p class="bhead">اختر نوع السالفة</p><div class="bcats">${BARA.map(([t],i)=>`<button class="bct" data-ga="cat" data-i="${i}" ${myT?'':'disabled'}><span>${BARA_E[i]||'❓'}</span><b>${t}</b></button>`).join('')}<button class="bct rnd" data-ga="cat" data-i="-1" ${myT?'':'disabled'}><span>🎲</span><b>عشوائي</b></button></div>`;return h;}
+    const card=s=>`<div class="bscard ${s===d.bo?'out':''}"><div class="mfin"><div class="bsback"><b>؟</b><small>برة السالفة</small></div>${s===d.bo?`<div class="bsfront"><small class="bchip">${BARA[d.cat][0]}</small><span class="bspy">🕵️</span><b>أنت برة السالفة!</b><p>حاول تفهم السالفة من أسئلتهم، ولا تنكشف</p></div>`:`<div class="bsfront"><small class="bchip">${BARA_E[d.cat]||''} ${BARA[d.cat][0]}</small><b>${baraWord(d)}</b><p>واحد منكم ما يعرفها، اكشفوه</p></div>`}</div></div>`;
+    if(d.ph==='see'){if(v==null||v<0)return '<p class="note">ينتظرون الكل يشوف بطاقته</p>';return card(v)+(ctx.my?`<button class="big green bok" data-ga="ok">فهمت</button>`:'<p class="note">ننتظر الباقين…</p>');}
+    const mine=v!=null&&v>=0&&!local&&d.win==null?`<details class="smine bmine"><summary>🃏 بطاقتي</summary>${card(v)}</details>`:'';
+    if(d.ph==='ask'){const [a,b]=d.pr[d.qi];const who=s=>`<div class="bqp" style="--c:${col(d,s)}"><i>${shapeW(d.pl[s])}</i><b>${nm(d,s)}</b></div>`;
+      h+=`<div class="bqa2">${who(a)}<div class="bqarrow"><small>يسأل</small><svg viewBox="0 0 60 16"><path d="M58 8H6M14 2L4 8l10 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>${who(b)}</div>`;
+      h+=`<div class="bdots">${d.pr.map((_,k)=>`<i class="${k<d.qi?'done':k===d.qi?'now':''}"></i>`).join('')}</div>`;
       if(local||a===v)h+='<button class="big green" data-ga="asked">سأل وجاوب، التالي</button>';return h+mine;}
-    if(d.ph==='more'){if(myT)h+=`<div class="row bopts">${d.q2?'':'<button class="btn" data-ga="again">جولة ثانية</button>'}<button class="btn red" data-ga="vote">نصوّت</button></div>`;return h+mine;}
+    if(d.ph==='more'){if(myT)h+=`<p class="bhead">جولة أسئلة ثانية ولا نصوّت؟</p><div class="bmore">${d.q2?'':'<button class="bmb again" data-ga="again"><span>🔁</span><b>جولة ثانية</b></button>'}<button class="bmb vote" data-ga="vote"><span>🗳️</span><b>نصوّت</b></button></div>`;return h+mine;}
     if(d.ph==='vote'){if(v==null||v<0||!ctx.my)return '<p class="note">ننتظر تصويت الباقين…</p>'+mine;
-      return `<p class="lbl" style="text-align:center">مين تتوقع برة السالفة؟</p><div class="tabs">${d.pl.map((_,s)=>s===v||d.out[s]==='1'?'':`<button class="tab" style="background:${col(d,s)}" data-ga="v" data-i="${s}">${nm(d,s)}</button>`).join('')}</div>`+mine;}
-    if(d.ph==='guess'){if(!(local||v===d.bo))return `<p class="note">${nm(d,d.bo)} يخمّن السالفة الحين…</p>`;
-      return `<p class="lbl" style="text-align:center">وش السالفة؟ (${BARA[d.cat][0]})</p><div class="opts g2">${d.opts.map(i=>`<button class="opt" data-ga="g" data-i="${i}">${BARA[d.cat][1][i]}</button>`).join('')}</div>`;}
+      return `<p class="bhead">مين تتوقع برة السالفة؟</p>`+baraTiles(d,v,s=>s!==v&&d.out[s]!=='1',null)+mine;}
+    const cnt=baraCount(d);
+    if(d.ph==='guess'){h+=baraReveal(d,false)+baraTiles(d,-1,()=>false,cnt);if(!(local||v===d.bo))return h+`<p class="note">${nm(d,d.bo)} يخمّن السالفة الحين…</p>`;
+      return h+`<p class="bhead">وش السالفة؟ <small>(${BARA[d.cat][0]})</small></p><div class="opts g2 bguess">${d.opts.map(i=>`<button class="opt" data-ga="g" data-i="${i}">${BARA[d.cat][1][i]}</button>`).join('')}</div>`;}
+    if(d.win!=null&&d.cat>=0&&d.bo>=0)return baraReveal(d,true)+baraTiles(d,-1,()=>false,cnt);
     return h;},
   click(a,i,d,ctx){const v=ctx.v,local=ctx.local,myT=local||d.turn===v;
     if(a==='ok'&&d.ph==='see'&&ctx.my){simulPick(d,v,1);return;}
@@ -90,6 +105,22 @@ function mfCheck(d){const al=aliveSeats(d);const m=al.filter(s=>d.roles[s]==='m'
   if(!m){const w=team('t');return {...d,win:w[0],wins:w,side:'t'};}
   if(m>=o){const w=team('m');return {...d,win:w[0],wins:w,side:'m'};}
   return d;}
+/* role emblems (inline SVG), the night sky / day sun band, and the player roster that doubles as the voting board */
+const MF_SVG={m:'<path d="M18 35c0-9 3-17 6-19 3-2 5 1 8 1s5-3 8-1c3 2 6 10 6 19-8 2-20 2-28 0z" fill="#1d1d24"/><path d="M18 30c9 2 19 2 28 0v5c-9 2-19 2-28 0z" fill="#C0392B"/><path d="M9 35c9 4 37 4 46 0l-3 5c-9 3-31 3-40 0z" fill="#111"/><path d="M15 45c5-3 12-3 17 1 5-4 12-4 17-1-1 5-5 8-9 8-3 0-6-2-8-4-2 2-5 4-8 4-4 0-8-3-9-8z" fill="#111"/><ellipse cx="24" cy="48" rx="3.2" ry="2" fill="#F2E3A0"/><ellipse cx="40" cy="48" rx="3.2" ry="2" fill="#F2E3A0"/>',
+  d:'<rect x="25" y="11" width="14" height="42" rx="4" fill="#fff"/><rect x="11" y="25" width="42" height="14" rx="4" fill="#fff"/><path d="M32 40c-6-4-8.5-6.5-8.5-9.5a4.3 4.3 0 0 1 8.5-1.6 4.3 4.3 0 0 1 8.5 1.6c0 3-2.5 5.5-8.5 9.5z" fill="#E5534B"/>',
+  t:'<circle cx="27" cy="27" r="13" fill="#CFE9FF" stroke="#fff" stroke-width="5"/><path d="M21 22a8 8 0 0 1 7-4" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M37 37l13 13" stroke="#fff" stroke-width="8" stroke-linecap="round"/>',
+  c:'<path d="M17 31v20h30V31L32 17z" fill="#fff"/><path d="M11 33L32 14l21 19" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="28" y="38" width="8" height="13" rx="2" fill="#C98B4B"/>',
+  '?':'<text x="32" y="45" font-size="36" font-weight="800" text-anchor="middle" fill="#fff">؟</text>'};
+const MF_MOON='<svg viewBox="0 0 64 64" class="mfmoon"><path d="M38 8a24 24 0 1 0 18 38A20 20 0 0 1 38 8z" fill="#F2E3A0"/><circle cx="13" cy="14" r="1.6" fill="#fff"/><circle cx="54" cy="16" r="1.2" fill="#fff"/><circle cx="50" cy="56" r="1.4" fill="#fff"/></svg>';
+const mfEmb=r=>`<i class="mfe r-${MF_SVG[r]?r:'q'}"><svg viewBox="0 0 64 64">${MF_SVG[r]||MF_SVG['?']}</svg></i>`;
+function mfSky(d){if(d.ph==='role')return `<div class="mfsky"><span>🃏</span><b>توزيع الأدوار</b></div>`;
+  return d.ph==='night'?`<div class="mfsky">${MF_MOON}<b>الليلة ${d.night}</b><small>${aliveSeats(d).length} باقين</small></div>`:`<div class="mfsky"><svg viewBox="0 0 64 64" class="mfsun"><circle cx="32" cy="32" r="13" fill="#F0B429"/><g stroke="#F0B429" stroke-width="4" stroke-linecap="round">${[0,1,2,3,4,5,6,7].map(k=>{const a=k*Math.PI/4,c=Math.cos(a),s=Math.sin(a);return `<path d="M${(32+19*c).toFixed(1)} ${(32+19*s).toFixed(1)}L${(32+26*c).toFixed(1)} ${(32+26*s).toFixed(1)}"/>`;}).join('')}</g></svg><b>النهار</b><small>${aliveSeats(d).length} باقين</small></div>`;}
+// every seat as a tile: the ones you can pick now are buttons (data-ga="p"), the ones that are out are greyed and show their role
+function mfRoster(d,v,can){const meM=v>=0&&d.roles[v]==='m';
+  return `<div class="pvg n${d.pl.length}">${d.pl.map((r,s)=>{const out=d.out[s]==='1',ok=!out&&can(s),mate=meM&&s!==v&&d.roles[s]==='m';
+    const cls=`pv ${out?'out':ok?'can':'no'} ${s===v?'me':''} ${mate?'mate':''}`;
+    const inner=`<i>${shapeW(r)}${out?'<u class="pvx">💀</u>':''}${mate?'<u class="pvm">🎩</u>':''}</i><span>${nm(d,s)}</span>${out&&d.roles[s]!=='?'?`<em>${MFR[d.roles[s]]||''}</em>`:s===v?'<em>أنت</em>':''}`;
+    return ok?`<button class="${cls}" style="--c:${COLS[r]}" data-ga="p" data-i="${s}">${inner}</button>`:`<div class="${cls}" style="--c:${COLS[r]}">${inner}</div>`;}).join('')}</div>`;}
 GAMES.mafia={name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2B2F45"/><circle cx="78" cy="22" r="10" fill="#F2E3A0"/><circle cx="82" cy="19" r="9" fill="#2B2F45"/><path d="M26 44h48l-6-16H32z" fill="#111"/><rect x="18" y="42" width="64" height="7" rx="3" fill="#111"/><path d="M30 52c0 14 9 24 20 24s20-10 20-24z" fill="#E9C9A6"/><rect x="34" y="56" width="32" height="7" rx="3" fill="#111"/></svg>`,
   init:n=>({roles:mfRoles(n),ph:'role',rd:0,night:1,last:'',res:'',ls:-1,inv:null,log:[]}),
@@ -106,22 +137,24 @@ GAMES.mafia={name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
     if(d.ph==='role')return s+'كل واحد يشوف دوره بالسر';
     if(d.ph==='night')return s+`الليلة ${d.night} 🌙 كل واحد يسوي دوره`;
     return s+`النهار ☀️ تناقشوا وبعدها صوّتوا مين تطلّعون`;},
-  render(d,ctx){const v=ctx.v;if(v==null||v<0){return '<p class="note">ننتظر الباقين…</p>'+mfLog(d);}
+  render(d,ctx){const v=ctx.v;const ph=d.ph==='role'?'role':d.ph;const wrap=h=>`<div class="mfb ${ph}">${mfSky(d)}${h}</div>`;
+    if(v==null||v<0)return wrap(mfRoster(d,-1,()=>false)+'<p class="note">ننتظر الباقين…</p>'+mfLog(d));
     const r=d.roles[v];const mates=d.pl.map((_,s)=>s).filter(s=>s!==v&&d.roles[s]==='m');
-    const card=`<div class="scard mf ${r}"><span>${MFE[r]}</span><b>${MFR[r]}</b><p>${({m:`تقتلون واحد كل ليلة${mates.length?` • معك: ${mates.map(s=>nm(d,s)).join('، ')}`:''}`,d:'كل ليلة تنقذ واحد من القتل، وما تنقذ نفس الشخص ليلتين ورا بعض',t:'كل ليلة تسأل عن واحد وتعرف هل هو مافيا',c:'نام بالليل، وبالنهار اكشف المافيا بالتصويت'})[r]}</p></div>`;
-    if(!mfAlive(d,v))return `<p class="note">أنت طلعت من اللعبة، تابع بصمت 🤐</p>`+mfLog(d);
-    if(!ctx.my)return card+'<p class="note">ننتظر الباقين…</p>'+mfLog(d);
-    if(d.ph==='role')return card+'<button class="big green" data-ga="ok">فهمت دوري</button>';
-    const al=aliveSeats(d);const pick=(lbl,list,extra)=>`<p class="lbl" style="text-align:center">${lbl}</p><div class="tabs">${list.map(s=>`<button class="tab" style="background:${col(d,s)}" data-ga="p" data-i="${s}">${nm(d,s)}</button>`).join('')}${extra||''}</div>`;
-    let h=`<details class="smine"><summary>دوري: ${MFR[r]} ${MFE[r]}</summary>${card}</details>`;
+    const desc=({m:`تقتلون واحد كل ليلة${mates.length?` • معك: ${mates.map(s=>nm(d,s)).join('، ')}`:''}`,d:'كل ليلة تنقذ واحد من القتل، وما تنقذ نفس الشخص ليلتين ورا بعض',t:'كل ليلة تسأل عن واحد وتعرف هل هو مافيا',c:'نام بالليل، وبالنهار اكشف المافيا بالتصويت'})[r];
+    const card=`<div class="mfcard r-${r}"><div class="mfin"><div class="mfback">${MF_MOON}</div><div class="mffront"><small>دورك</small>${mfEmb(r)}<b>${MFR[r]}</b><p>${desc}</p></div></div></div>`;
+    if(!mfAlive(d,v))return wrap(`<div class="mfgone">${mfEmb(r)}<p>أنت طلعت من اللعبة، تابع بصمت 🤐</p></div>`+mfRoster(d,v,()=>false)+mfLog(d));
+    if(!ctx.my)return wrap(card+'<p class="note">ننتظر الباقين…</p>'+mfLog(d));
+    if(d.ph==='role')return wrap(card+'<button class="big green" data-ga="ok">فهمت دوري</button>');
+    const al=aliveSeats(d);let h=`<details class="mfme r-${r}"><summary>${mfEmb(r)}<span>دوري: <b>${MFR[r]}</b></span></summary>${card}</details>`;
+    const pick=(lbl,list,extra)=>`<p class="mfq">${lbl}</p>`+mfRoster(d,v,s=>list.includes(s))+(extra||'');
     if(d.ph==='night'){
       if(r==='m')h+=pick('مين تقتلون الليلة؟',al.filter(s=>d.roles[s]!=='m'));
       else if(r==='d')h+=pick('مين تنقذ الليلة؟',al.filter(s=>s!==d.ls));
       else if(r==='t')h+=pick('مين تبي تكشف؟',al.filter(s=>s!==v));
-      else h+='<button class="big navy" data-ga="p" data-i="-1">نام 😴</button>';}
-    else{if(d.inv&&d.inv.s===v)h+=`<p class="hint">🔎 ${nm(d,d.inv.t)} ${d.inv.m?'<b>مافيا!</b>':'مو مافيا'}</p>`;
-      h+=pick('مين تطلّعون؟',al.filter(s=>s!==v),'<button class="tab" style="background:var(--mut)" data-ga="p" data-i="-1">ما أصوّت</button>');}
-    return h+mfLog(d);},
+      else h+=mfRoster(d,v,()=>false)+'<button class="big navy mfsleep" data-ga="p" data-i="-1">نام 😴</button>';}
+    else{if(d.inv&&d.inv.s===v)h+=`<div class="mfinv ${d.inv.m?'bad':'ok'}">${mfEmb('t')}<span>${nm(d,d.inv.t)} ${d.inv.m?'<b>مافيا!</b>':'<b>مو مافيا</b>'}</span></div>`;
+      h+=pick('مين تطلّعون؟',al.filter(s=>s!==v),'<button class="mfskip" data-ga="p" data-i="-1">ما أصوّت</button>');}
+    return wrap(h+mfLog(d));},
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='ok'&&d.ph==='role'){simulPick(d,ctx.v,1);return;}if(a==='p')simulPick(d,ctx.v,i);},
   resolve(d,picks){
     if(d.ph==='role')return {...d,ph:'night',rd:d.rd+1,res:'جت الليلة الأولى 🌙'};
@@ -136,7 +169,7 @@ GAMES.mafia={name:'المافيا',cat:'quiz',lbc:'#2B2F45',minP:4,
     if(mx>0&&top.length===1){const k=top[0];out=setAt(out,k,'1');res=`طلّعتوا ${nm(d,k)} وكان ${MFR[d.roles[k]]} (${mx} أصوات)`;}else res=mx?'تعادلت الأصوات وما طلع أحد':'ما أحد صوّت';
     const nd={...d,out,ph:'night',night:d.night+1,rd:d.rd+1,inv:null,res,log:[...d.log,res]};return mfCheck(nd);}
 };
-const mfLog=d=>d.log.length?`<details class="smine"><summary>اللي صار</summary><ul class="mflog">${d.log.map(x=>`<li>${x}</li>`).join('')}</ul></details>`:'';
+const mfLog=d=>d.log.length?`<details class="mflogd"><summary>📜 اللي صار <small>${d.log.length}</small></summary><ul class="mflog">${d.log.map(x=>`<li>${x}</li>`).join('')}</ul></details>`:'';
 
 /* ---------- وصلة: كلمة من خمس حروف بست محاولات، الكل يلعب بنفس الوقت ---------- */
 const WNORM=w=>String(w).replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه');
@@ -168,16 +201,17 @@ GAMES.wasla={name:'وصلة',cat:'mind',lbc:'#2E7D5B',noTimer:false,
   status(d,ctx){return `<small>كلمة من 5 حروف</small><br>المحاولة ${Math.min(6,(d.rd||0)+1)} من 6`;},
   outDone:true,
   render(d,ctx){const v=ctx.v;const gs=d.gs||d.pl.map(()=>[]);const sc=(s,r)=>wSc(d,s,r);
-    const row=(w,sc,hide)=>`<div class="wrow">${[...Array(5)].map((_,i)=>`<i class="${sc?'w'+sc[i]:''} ${w&&w[i]&&!sc?'typed':''}">${hide?'':(w&&w[i])||''}</i>`).join('')}</div>`;
+    const row=(w,sc,hide,c)=>`<div class="wrow ${c||''}">${[...Array(5)].map((_,i)=>`<i class="${sc?'w'+sc[i]:''} ${w&&w[i]&&!sc?'typed':''}" style="--i:${i}">${hide?'':(w&&w[i])||''}</i>`).join('')}</div>`;
     if(v==null||v<0)return '<p class="note">ننتظر الباقين…</p>';
     const mine=gs[v]||[];const draft=ctx.my?(S.draft.wl||''):'';
-    let h=`<div class="wgrid">`;for(let r=0;r<6;r++){if(r<mine.length)h+=row(mine[r],sc(v,r));else if(r===mine.length&&ctx.my)h+=row(draft);else h+=row('');}h+='</div><div class="wleg"><span><i class="w2"></i>بمكانه</span><span><i class="w1"></i>بمكان ثاني</span><span><i class="w0"></i>مو موجود</span></div>';
+    // the newest scored row flips in; the row being typed is marked
+    let h=`<div class="wasla"><div class="wgrid">`;for(let r=0;r<6;r++){if(r<mine.length)h+=row(mine[r],sc(v,r),false,r===mine.length-1?'new':'');else if(r===mine.length&&ctx.my)h+=row(draft,null,false,'cur');else h+=row('');}h+='</div><div class="wleg"><span><i class="w2"></i>بمكانه</span><span><i class="w1"></i>بمكان ثاني</span><span><i class="w0"></i>مو موجود</span></div>';
     // the others: colours only
     const others=d.pl.map((_,s)=>s).filter(s=>s!==v&&!ctx.local);
     if(others.length)h+=`<div class="wothers">${others.map(s=>`<div class="wo"><b style="color:${col(d,s)}">${nm(d,s)}</b>${(gs[s]||[]).map((g,r)=>row(g,sc(s,r),true)).join('')||'<small>…</small>'}</div>`).join('')}</div>`;
-    if(!ctx.my)return h+'<p class="note">ننتظر الباقين…</p>';
+    if(!ctx.my)return h+'<p class="note">ننتظر الباقين…</p></div>';
     const st={};mine.forEach((g,r)=>{const x=sc(v,r);if(x)[...g].forEach((c,i)=>{st[c]=Math.max(st[c]??-1,x[i]);});});
-    h+=`<div class="wkb">${WKEYS.map((r,ri)=>`<div>${ri===2?'<button class="wk wide" data-ga="ent">إدخال</button>':''}${[...r].map(c=>`<button class="wk ${st[WNORM(c)]!=null?'w'+st[WNORM(c)]:''}" data-ga="k" data-i="${'ضصثقفغعهخحجشسيبلاتنمكطءئؤرذدزظوة'.indexOf(c)}">${c}</button>`).join('')}${ri===2?'<button class="wk wide" data-ga="del">⌫</button>':''}</div>`).join('')}</div>`;
+    h+=`<div class="wkb">${WKEYS.map((r,ri)=>`<div>${ri===2?'<button class="wk wide" data-ga="ent">إدخال</button>':''}${[...r].map(c=>`<button class="wk ${st[WNORM(c)]!=null?'w'+st[WNORM(c)]:''}" data-ga="k" data-i="${'ضصثقفغعهخحجشسيبلاتنمكطءئؤرذدزظوة'.indexOf(c)}">${c}</button>`).join('')}${ri===2?'<button class="wk wide" data-ga="del">⌫</button>':''}</div>`).join('')}</div></div>`;
     return h;},
   after(){wLoad();},
   click(a,i,d,ctx){if(!ctx.my)return;let w=S.draft.wl||'';
