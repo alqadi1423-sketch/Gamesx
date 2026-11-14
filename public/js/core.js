@@ -251,9 +251,14 @@ async function enterRoom(code,host,restore,given){
   const room=given||await getRoom();
   if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
-  try{nr=await room.join('g-'+code.toLowerCase());}
-  catch(e){S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
-  netReset();
+  // a new room must get a free code, and joining someone's room needs a room that is open: both are checked before entering
+  try{nr=await room.join('g-'+code.toLowerCase(),{create:!!(host&&!restore),need:!host&&!restore&&!given});}
+  catch(e){const why=e&&e.message;
+    if(why==='taken'&&host&&!restore&&(S.codeTries=(S.codeTries||0)+1)<5){S.joining=false;return enterRoom(genCode(),true);}
+    S.codeTries=0;
+    if(why==='noroom'){S.joining=false;S.roomErr='ما فيه غرفة بهالرمز. تأكد من الرمز، أو أنشئ غرفة جديدة.';render();return;}
+    S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
+  netReset();S.codeTries=0;
   S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
   S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();tabEnter(code);
   // a saved room: its state, the seat table and the epoch it was at; a saved host takes the room back only if nobody else did (net.js)
