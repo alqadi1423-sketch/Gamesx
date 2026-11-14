@@ -260,3 +260,6 @@ svg.bd-tv{border-radius:12px;box-shadow:0 6px 0 #3E220F,0 12px 24px rgba(0,0,0,.
 .bd-mn.flag .tile:not(:disabled){box-shadow:inset 0 0 0 2px #E5483F,inset 0 -3px 0 rgba(0,0,0,.18)}
 .bd-mn .flg{background:radial-gradient(circle,#fff 0 30%,var(--c) 100%);display:grid;place-items:center;font-size:clamp(12px,4.6vw,20px);animation:bd-boom var(--t3) var(--spring) both}
 .bd-mn .open.miss{box-shadow:inset 0 0 0 2px #E5483F}
+/* colour wars: a ring bursts from every cell that blew up in the last move (invisible when still) */
+.bd-cw .cc{position:relative}
+.bd-cw .cwx{position:absolute;inset:6%;border-radius:50%;border:3px solid #fff;opacity:0;pointer-events:none;animation:bd-ring .42s ease-out}

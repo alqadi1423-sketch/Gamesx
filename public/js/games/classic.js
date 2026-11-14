@@ -175,24 +175,24 @@ GAMES.cw={name:'حرب الألوان',cat:'board',lbc:'#4B3A62',
   init:n=>{const Z=CWS[n]||8;return {Z,o:'.'.repeat(Z*Z),n:'0'.repeat(Z*Z),mv:Array(n).fill(0)};},
   status(d,ctx){return turnTxt(d,ctx);},
   render(d,ctx){
-    const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z;
+    const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z,ex=new Set(d.ex||[]);
     return `<div class="cw bd-cw" style="grid-template-columns:repeat(${Z},minmax(0,1fr));gap:${Z>6?4:6}px;--c:${col(d,d.turn)}">${[...d.o].map((o,i)=>{const can=ctx.my&&(first?o==='.':o===t);
-      return `<button class="cc ${can?'can':''} ${o!=='.'?'own':''}" style="${o!=='.'?`background:${lit(d,+o)}`:''}" data-ga="m" data-i="${i}" ${can?'':'disabled'}>${o!=='.'?cwCell(col(d,+o),+d.n[i]):''}</button>`;}).join('')}</div>`;
+      return `<button class="cc ${can?'can':''} ${o!=='.'?'own':''}" style="${o!=='.'?`background:${lit(d,+o)}`:''}" data-ga="m" data-i="${i}" ${can?'':'disabled'}>${o!=='.'?cwCell(col(d,+o),+d.n[i]):''}${ex.has(i)?`<i class="cwx" data-k="x${d.xn}"></i>`:''}</button>`;}).join('')}</div>`;
   },
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn,ts=String(t),Z=d.Z,N=d.pl.length;const o=[...d.o],n=[...d.n].map(Number);
     if(d.mv[t]===0){if(o[i]!=='.')return;o[i]=ts;n[i]=3;}else{if(o[i]!==ts)return;n[i]++;}
-    const othersMoved=d.mv.every((m,s)=>s===t||m>0||d.out[s]==='1');
+    const othersMoved=d.mv.every((m,s)=>s===t||m>0||d.out[s]==='1');const ex=[];
     for(let g=0;g<5000;g++){
       const k=n.findIndex(x=>x>=4);if(k<0)break;
-      n[k]-=4;if(n[k]===0)o[k]='.';
+      n[k]-=4;if(n[k]===0)o[k]='.';if(!ex.includes(k))ex.push(k);
       for(const b of NB(k,Z)){o[b]=ts;n[b]++;}
       if(othersMoved&&o.every(c=>c==='.'||c===ts))break;
     }
     const mv=[...d.mv];mv[t]++;let out=d.out;
     for(let s=0;s<N;s++)if(out[s]!=='1'&&mv[s]>0&&!o.includes(String(s)))out=setAt(out,s,'1');
     const al=aliveSeats(d,out);const win=al.length===1?al[0]:null;
-    act({...d,o:o.join(''),n:n.map(x=>Math.min(x,9)).join(''),mv,out,turn:nextSeat(d,t,out),win});
+    act({...d,o:o.join(''),n:n.map(x=>Math.min(x,9)).join(''),mv,out,turn:nextSeat(d,t,out),win,ex:ex.slice(0,40),xn:(d.xn||0)+1});
   }
 };
 

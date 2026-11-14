@@ -64,8 +64,9 @@ function c4Think(d,s){const C=d.C,R=d.R,b=[...d.b].map(x=>x==='.'?-1:+x),h=[];fo
   const ev=p=>{let v=0;for(let r=0;r<R;r++)for(let c=0;c<C;c++){if(b[r*C+c]===p&&Math.abs(c-(C-1)/2)<1)v+=3;
       for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]){if(at(r+dr*3,c+dc*3)===-2)continue;let m=0,o=0;for(let k=0;k<4;k++){const x=b[(r+dr*k)*C+c+dc*k];if(x===p)m++;else if(x>=0)o++;}
         if(m&&!o)v+=m===3?40:m===2?5:0;else if(o&&!m)v-=o===3?45:o===2?5:0;}}return v;};
-  function ng(p,dep,a,z,left){if(!(++nodes&255)&&performance.now()>lim)throw STOP;if(!left)return 0;if(!dep)return ev(p);
+  function ng(p,dep,a,z,left){if(!(++nodes&255)&&(performance.now()>lim||lim<Infinity&&nodes>150000))throw STOP;if(!left)return 0;
     for(const c of ord){const r=h[c];if(r<0)continue;b[r*C+c]=p;const w=won(r,c,p);b[r*C+c]=-1;if(w)return 1e6+dep;}
+    if(!dep)return ev(p);
     let best=-Infinity;for(const c of ord){const r=h[c];if(r<0)continue;b[r*C+c]=p;h[c]--;const v=-ng(1-p,dep-1,-z,-a,left-1);h[c]++;b[r*C+c]=-1;if(v>best)best=v;if(v>a)a=v;if(a>=z)break;}return best;}
   const free=b.filter(x=>x<0).length;let best=ord.find(c=>h[c]>=0);
   for(let dep=1;dep<=Math.min(12,free);dep++){lim=dep<=2?Infinity:t0+300;let bv=-Infinity,bm=null;

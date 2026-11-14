@@ -95,7 +95,7 @@ GAMES.mines={name:'حقل الألغام',cat:'mind',lbc:'#4E6A57',
       if(kk[i]==='f')return `<div class="cg flg" style="--c:${col(d,+v)}"><span>🚩</span></div>`;
       if(d.m[i]==='1')return `<div class="cg boom" style="--c:${col(d,+v)}">${MINE}</div>`;
       const k=kk[i]&&kk[i]!=='.'&&kk[i]!=='x'?+kk[i]:mineCount(d.m,z,i);return `<div class="cg open n${k} ${kk[i]==='x'||d.wf&&d.wf===i+1?'miss':''}" style="--l:${lit(d,+v)}">${k||''}</div>`;}).join('')}</div>`;
-    if(ctx.my&&!end)h+=`<div class="row mnbar"><button class="btn ${fl?'red':'navy'}" data-ga="fm">${fl?'🚩 علّم: اضغط على اللغم':'🚩 علّم لغم (+3)'}</button><small>معلّمة ${flags} من ${total}</small></div>`;
+    if(ctx.my&&!end)h+=`<div class="row mnbar"><button class="btn ${fl?'red':'navy'}" data-ga="fm">${fl?'🚩 علّم: اضغط على اللغم':'🚩 علّم لغم (+3)'}</button><small>💣 ${total} لغم، علّمتوا ${flags}</small></div>`;
     return h;},
   click(a,i,d,ctx){
     if(a==='fm'){const k=d.gid+d.rv+d.turn;S.mnF=S.mnF===k?null:k;render();return;}

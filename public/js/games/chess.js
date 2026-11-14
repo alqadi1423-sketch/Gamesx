@@ -175,7 +175,8 @@ function chThink(d,lv){
   const ev=()=>{const v=chScore(B);return side?-v:v;};
   const val=m=>{const c=m.ep?'p':B[m.t];return (c!=='.'?10000+CHV[c.toLowerCase()]*10-CHV[B[m.f].toLowerCase()]/10:0)+(m.pr?9000:0);};
   const order=(ms,ply)=>{const k=kill[ply];for(const m of ms)m.o=val(m)+(k===m.f*64+m.t?5000:0);ms.sort((a,b)=>b.o-a.o);return ms;};
-  const tick=()=>{if(!(++nodes&255)&&performance.now()>lim)throw STOP;};
+  // a node cap too, so a stalled clock (or a very slow phone) can never keep it thinking
+  const cap=[0,4000,40000,150000][lv]||40000,tick=()=>{if(!(++nodes&255)&&(performance.now()>lim||lim<Infinity&&nodes>cap))throw STOP;};
   function qs(a,b,ply){tick();const st=ev();if(!qsOn||st>=b||ply>24)return st;if(st>a)a=st;
     for(const m of order(gen().filter(m=>B[m.t]!=='.'||m.ep||m.pr),ply)){const u=make(m);
       if(chAttacked(B,K[1-side],side)){undo(u);continue;}const v=-qs(-b,-a,ply+1);undo(u);if(v>=b)return v;if(v>a)a=v;}
@@ -289,7 +290,8 @@ function dmScore(b,side){let v=0,n0=0,n1=0;for(let i=0;i<64;i++){const p=b[i],sd
   const me=side?n1:n0,op=side?n0:n1;if(me!==op)v+=(me-op)*Math.round(120/(me+op));return v;}
 function dmThink(d,lv){const side=d.sd,ms=dmMoves(d.b,side);if(ms.length===1)return ms[0];
   const t0=performance.now(),budget=[0,40,160,420][lv]||160,STOP={};let lim=Infinity,nodes=0;
-  function srch(b,turn,dep,a,z,q){if(!(++nodes&127)&&performance.now()>lim)throw STOP;const mv=dmMoves(b,turn);
+  const cap=[0,3000,30000,120000][lv]||30000;
+  function srch(b,turn,dep,a,z,q){if(!(++nodes&127)&&(performance.now()>lim||lim<Infinity&&nodes>cap))throw STOP;const mv=dmMoves(b,turn);
     if(!mv.length)return -(9000+dep);
     // a position with a capture to make is never judged: the captures are played out first
     if(dep<=0&&(!mv[0].caps.length||q>6))return dmScore(b,turn);
