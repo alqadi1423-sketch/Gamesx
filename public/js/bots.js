@@ -224,18 +224,41 @@ GAMES.memory.bot=(d,s,lv)=>{const K=memOf(d,s);const op=(d.open||[]).length===2?
 GAMES.simon.bot=(d,s,lv)=>{const n=d.seq.length;const okP=Math.pow([0,.9,.96,.99][lv],n);
   if(Math.random()<okP)return {...d,seq:d.seq+rnd(4),turn:nextSeat(d,s),last:`${nm(d,s)} كرر ${n} وزاد لون`};
   const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);return {...d,out,win:al.length===1?al[0]:null,turn:nextSeat(d,s,out),last:`${nm(d,s)} غلط وطلع`};};
+// tanks: aim toward the foes only, coarse first, then fine around the nearest miss; stop after ~120 ms so the page never freezes.
+// Medium and hard load the heavy shell for a shot that lands (hard: when a normal one would not finish the foe, or for a near miss
+// its wider blast still catches); with no shot anywhere near, medium and hard drive closer instead of wasting the turn
 GAMES.tanks.bot=(d,s,lv)=>{let best=null,near=null;const foes=foesOf(d,s),me=d.tx[s],t0=performance.now();
-  // aim toward the foes only, coarse first, then fine around the nearest miss; stop after ~120 ms so the page never freezes
   const rt=foes.some(f=>d.tx[f]>me),lf=foes.some(f=>d.tx[f]<me),A0=lf?(rt?5:70):5,A1=rt?(lf?179:110):179;
-  const shot=(a,pw)=>{const r=tkFire(d,s,a,pw);if(r.hits.some(h=>h.s===s||sameTeam(d,h.s,s)))return;if(r.hits.some(h=>foes.includes(h.s)&&h.dmg>=10)){best=[a,pw];return;}
+  const shot=(a,pw)=>{const r=tkFire(d,s,a,pw);if(r.hits.some(h=>h.s===s||sameTeam(d,h.s,s)))return;if(r.hits.some(h=>foes.includes(h.s)&&h.dmg>=10)){best=[a,pw,r];return;}
     if(r.hit){const e=Math.min(...foes.map(f=>Math.abs(r.hit.x-d.tx[f])));if(!near||e<near[2])near=[a,pw,e];}};
   const scan=(a0,a1,da,p0,p1,dp)=>{for(let a=Math.max(1,a0);a<=Math.min(179,a1)&&!best;a+=da)for(let pw=Math.max(10,p0);pw<=Math.min(100,p1)&&!best;pw+=dp){if(performance.now()-t0>120)return;shot(a,pw);}};
   scan(A0,A1,10,20,100,10);if(!best&&near)scan(near[0]-9,near[0]+9,lv===3?2:3,near[1]-9,near[1]+9,lv===3?2:3);if(!best)scan(A0,A1,lv===3?2:5,20,100,lv===3?2:6);
+  const hvl=(d.hv||[])[s]||0,fl=(d.fu||[])[s]||0;
+  if(!best&&lv>1&&fl&&(!near||near[2]>12)&&foes.length){const f=foes.sort((a,b)=>Math.abs(d.tx[a]-me)-Math.abs(d.tx[b]-me))[0],dir=Math.sign(d.tx[f]-me)||1;
+    if(Math.abs(d.tx[f]-me)>18&&GAMES.tanks.tkDrive(d,s,dir)!=null)return botDo(d,s,'mv',dir);}
+  let heavy=false;if(hvl&&lv>1){if(best){const r=best[2],tough=r.hits.some(h=>foes.includes(h.s)&&d.hp[h.s]>h.dmg);heavy=lv===3?tough:Math.random()<.35;}
+    else if(lv===3&&near&&near[2]<=9){const r=tkFire(d,s,near[0],near[1],true);if(r.hits.some(h=>foes.includes(h.s))&&!r.hits.some(h=>h.s===s||sameTeam(d,h.s,s)))heavy=true;}}
+  else if(hvl&&lv===1&&Math.random()<.25)heavy=true;
   const noise=[0,18,8,2][lv],aim=best||near;const a=aim?aim[0]+rnd(noise*2+1)-noise:rnd(180),pw=aim?aim[1]+rnd(noise+1)-noise/2:40+rnd(60);
-  S.draft.angs=String(180-Math.max(1,Math.min(179,a)));S.draft.pow=String(Math.max(10,Math.min(100,pw)));return botDo(d,s,'fire',null);};
-GAMES.dwars.bot=(d,s,lv)=>{const ts=String(s);const o=[];for(let i=0;i<d.own.length;i++)if(d.own[i]===ts&&+d.dice[i]>1)for(const b of dwNb(i))if(d.own[b]!=='.'&&d.own[b]!==ts&&!sameTeam(d,+d.own[b],s)&&+d.dice[i]>=+d.dice[b]+(lv===3?1:0))o.push([i,b]);
-  if(!o.length||(lv===1&&Math.random()<.3)){return dwEnd(d);}const [a,b]=lv===1?pickR(o):o.sort((x,y)=>(+d.dice[y[0]]-+d.dice[y[1]])-(+d.dice[x[0]]-+d.dice[x[1]]))[0];
-  const n1=botDo(d,s,'cell',a);if(!n1){S.dwSel=a;}const n2=botDo(n1||d,s,'cell',b);return n2||dwEnd(d);};
+  S.draft.angs=String(180-Math.max(1,Math.min(179,a)));S.draft.pow=String(Math.max(10,Math.min(100,pw)));S.draft.tkw=heavy?'h':'n';return botDo(d,s,'fire',null);};
+// dice wars: the chance that a dice attack wins (its sum beats the defender's), for 1 to 8 dice on each side
+const DWP=(()=>{const dist=[[1]];for(let n=1;n<=8;n++){const p=dist[n-1],q=Array(6*n+1).fill(0);p.forEach((x,s)=>{if(x)for(let f=1;f<=6;f++)q[s+f]+=x/6;});dist.push(q);}
+  const P=[];for(let a=1;a<=8;a++){P[a]=[];for(let b=1;b<=8;b++){let w=0;const A=dist[a],B=dist[b];let cb=0;const cum=B.map(x=>cb+=x);A.forEach((x,s)=>{if(x&&s>0)w+=x*(s-1>=cum.length?1:cum[s-1]);});P[a][b]=w;}}return P;})();
+// easy attacks at random, medium when it has at least as many dice; hard weighs the odds, how much the win joins its lands (more new
+// dice each turn) and what a loss leaves open, and stops when nothing is worth it
+GAMES.dwars.bot=(d,s,lv)=>{const ts=String(s);const o=[];for(let i=0;i<d.own.length;i++)if(d.own[i]===ts&&+d.dice[i]>1)for(const b of dwNb(i))if(d.own[b]!=='.'&&d.own[b]!==ts&&!sameTeam(d,+d.own[b],s)&&(lv===3||+d.dice[i]>=+d.dice[b]))o.push([i,b]);
+  if(!o.length||(lv===1&&Math.random()<.3))return dwEnd(d);let pick;
+  if(lv===1)pick=pickR(o);
+  else if(lv===2)pick=o.sort((x,y)=>(+d.dice[y[0]]-+d.dice[y[1]])-(+d.dice[x[0]]-+d.dice[x[1]]))[0];
+  else{const L0=dwLargest(d.own,s);let bv=.2;
+    // how many foe dice stand next to land i (a land left with one die next to big stacks is easy prey)
+    const threat=(own,dice,i)=>dwNb(i).reduce((m,b)=>own[b]!=='.'&&own[b]!==ts&&!sameTeam(d,+own[b],s)?Math.max(m,+dice[b]):m,0);
+    for(const [a,b] of o){const na=+d.dice[a],nb=+d.dice[b],p=DWP[na][nb];if(p<.42)continue;const own=setAt(d.own,b,ts),dice=setAt(setAt(d.dice,b,String(na-1)),a,'1');
+      const dl=dwLargest(own,s)-L0,def=+d.own[b],gone=![...own].includes(String(def));
+      const v=p*(1+dl*.9+(gone?4:0)-(threat(own,dice,b)>na?.5:0))-(1-p)*(.7+(threat(d.own,setAt(d.dice,a,'1'),a)>2?.4:0))+Math.random()*.05;
+      if(v>bv){bv=v;pick=[a,b];}}
+    if(!pick)return dwEnd(d);}
+  const [a,b]=pick;const n1=botDo(d,s,'cell',a);if(!n1){S.dwSel=a;}const n2=botDo(n1||d,s,'cell',b);return n2||dwEnd(d);};
 GAMES.arena.botPick=(d,s,lv)=>{const foes=foesOf(d,s);const weak=foes.sort((a,b)=>d.hp[a]-d.hp[b])[0];
   if(lvRand(lv))return {a:pickR(['atk','def','heal','spc'].filter(k=>k!=='spc'||d.en[s]>=3)),t:pickR(foes)};
   if(lv===2){if(d.hp[s]<35&&Math.random()<.7)return {a:Math.random()<.6?'heal':'def',t:weak};if(d.en[s]>=3)return {a:'spc',t:weak};return {a:'atk',t:weak};}
@@ -248,7 +271,7 @@ GAMES.arena.botPick=(d,s,lv)=>{const foes=foesOf(d,s);const weak=foes.sort((a,b)
   if(hp<50&&!last&&Math.random()<.55)return {a:spcFoe?'heal':pickR(['heal','def']),t:weak};
   if(!spcFoe&&Math.random()<.2)return {a:'def',t:weak};
   return {a:'atk',t:weak};};
-GAMES.tapwar.botPick=(d,s,lv)=>({ok:true,ms:[0,18,27,35][lv]+rnd(8)});
+// tapping battle: its bot (one for each kind of round) is in games/combat.js
 
 /* ---------- party and word games ---------- */
 GAMES.wasla.botPick=(d,s,lv)=>{const mine=(d.gs||[])[s]||[];const ans=WNORM(WASLA[d.ans]);
@@ -273,11 +296,13 @@ GAMES.close.botPick=(d,s,lv)=>{const Q=GAMES.close.q(d,d.rd);const a=Q[1];const 
 GAMES.ludo.bot=(d,s,lv)=>{if(d.roll==null)return luRoll(d);const r=d.roll,mv=luMovable(d,s,r);if(!mv.length)return GAMES.ludo.onTimeout(d);
   if(lvRand(lv))return luApply(d,s,pickR(mv),r);const n=d.pl.length,T=luT(d),F=T+4,K=d.T;
   const cell=(o,q)=>(armOf(n,o)*13+8+q)%T;
-  const danger=(tk,q)=>{if(q<0||q>T-2)return 0;const g=cell(s,q);if(g%13===3||g%13===8)return 0;let x=0;// opponents up to six cells behind
+  // with pairs on, a piece with a partner on its square cannot be taken
+  const paired=(tk,g)=>{let c=0;for(let kk=0;kk<K;kk++){const p=tk[s*K+kk];if(p>=0&&p<=T-2&&cell(s,p)===g)c++;}return c>=2;};
+  const danger=(tk,q)=>{if(q<0||q>T-2)return 0;const g=cell(s,q);if(g%13===3||g%13===8||(d.vr&&paired(tk,g)))return 0;let x=0;// opponents up to six cells behind
     for(let o=0;o<n;o++){if(sameTeam(d,o,s))continue;for(let kk=0;kk<K;kk++){const p=tk[o*K+kk];if(p<0||p>T-2)continue;const dist=(g-cell(o,p)+T)%T;if(dist>=1&&dist<=6&&p+dist<=T-2)x++;}}return x;};
   const val=k=>{const nd=luApply(d,s,k,r);if(nd.win===s)return 1e9;const i=s*K+k,p0=d.tk[i],p1=nd.tk[i];let v=0;
     v+=nd.mv.cap.reduce((a,c)=>a+(sameTeam(d,c[0],s)?-40:60),0);if(p0<0)v+=35;v+=(p1-Math.max(0,p0))*.6;if(p1===F)v+=45;else if(p1>T-2)v+=20;
-    if(lv===3){v-=danger(nd.tk,p1)*28;v+=danger(d.tk,p0)*22;}return v+Math.random();};
+    if(lv===3){v-=danger(nd.tk,p1)*28;v+=danger(d.tk,p0)*22;if(d.vr&&p1>=0&&p1<=T-2&&paired(nd.tk,cell(s,p1)))v+=8;}return v+Math.random();};
   return luApply(d,s,mv.sort((a,b)=>val(b)-val(a))[0],r);};
 GAMES.ludo.botDelay=(d,s,lv)=>d.roll==null?700+rnd(400):900+rnd(500);
 const JKCOST={A:3,K:3,J:3,7:2,4:1,Q:1,5:1};
@@ -402,8 +427,16 @@ function camelOdds(d,runs){const win=[0,0,0,0,0],sec=[0,0,0,0,0];
     for(const c of left){cam=cMove(cam,c,1+rnd(3));if(cam[c][0]>=CTRACK)break;}const rk=cRank(cam);win[rk[0]]++;sec[rk[1]]++;}
   return {win:win.map(x=>x/runs),sec:sec.map(x=>x/runs)};}
 GAMES.camel.bot=(d,s,lv)=>{const open=[0,1,2,3,4].filter(c=>CTILES[d.tk[c]]);
-  if(lv===1){if(open.length&&Math.random()<.45)return botDo(d,s,'bet',pickR(open));return botDo(d,s,'roll',0);}
+  const wOk=(d.wp||'')[s]==='1',still=[0,1,2,3,4].filter(c=>d.dl[c]==='0');
+  if(lv===1){if(wOk&&still.length&&Math.random()<.06)return botDo(d,s,'whip',pickR(still));if(open.length&&Math.random()<.45)return botDo(d,s,'bet',pickR(open));return botDo(d,s,'roll',0);}
   const od=camelOdds(d,lv===3?400:60);let best=-1,bv=lv===3?1.05:1.5;
+  // the camel stick: used when driving one camel on is worth more to the bets on the table than the coin a shake earns
+  // (the bot's own bets for it, the others' bets against it); hard plays each choice out, medium looks roughly
+  if(wOk&&still.length&&d.bt.some(b=>b[0]===s)){const ev=(o,[,c,v])=>o.win[c]*v+o.sec[c]-(1-o.win[c]-o.sec[c]);
+    const val=o=>d.bt.reduce((a,b)=>a+(b[0]===s?ev(o,b):-ev(o,b)/Math.max(1,d.pl.length-1)),0);
+    let bw=-1,bwv=val(od)+1+(lv===3?.5:1.2);
+    for(const c of still){let tot=0;for(let r=1;r<=3;r++)tot+=val(camelOdds({...d,cam:cMove(d.cam,c,r),dl:setAt(d.dl,c,String(r))},lv===3?150:40));tot/=3;if(tot>bwv){bwv=tot;bw=c;}}
+    if(bw>=0)return botDo(d,s,'whip',bw);}
   for(const c of open){const v=CTILES[d.tk[c]];const ev=od.win[c]*v+od.sec[c]*1-(1-od.win[c]-od.sec[c]);if(ev>bv){bv=ev;best=c;}}
   return best>=0?botDo(d,s,'bet',best):botDo(d,s,'roll',0);};
 

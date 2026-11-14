@@ -72,7 +72,8 @@ const tkAng=(d,t)=>S.draft.angs!=null?180-(+S.draft.angs):(d.ang[t]??45);
 const tkPow=(d,t)=>+(S.draft.pow??(d.pw||[])[t]??60);
 const tkAngTxt=a=>a<=90?`${a}° →`:`${180-a}° ←`;
 function tkTip(d,s,ang){const r=ang*Math.PI/180,x=d.tx[s],g=tkY(d,s);return {x:x+Math.cos(r)*3.4*TKS,y:g+3.1*TKS+Math.sin(r)*3.4*TKS};}
-function tkFire(d,s,ang,pow){
+// hv: a heavy shell (two per tank): a wider blast that hits harder and digs a bigger crater
+function tkFire(d,s,ang,pow,hv){const R=hv?11:8,DM=hv?58:45;
   const rad=ang*Math.PI/180,v=pow*0.45;const tp=tkTip(d,s,ang);let x=tp.x,y=tp.y,vx=Math.cos(rad)*v,vy=Math.sin(rad)*v;const ax=d.wind*0.6,dt=0.02;const path=[[+x.toFixed(1),+y.toFixed(1)]];let hit=null;
   for(let k=0;k<900;k++){vx+=ax*dt;vy-=TK_G*dt;x+=vx*dt;y+=vy*dt;if(k%2===0)path.push([+x.toFixed(1),+y.toFixed(1)]);
     if(x<-5||x>105||y<-10)break;
@@ -81,8 +82,8 @@ function tkFire(d,s,ang,pow){
   path.push(hit?[+hit.x.toFixed(1),+hit.y.toFixed(1)]:[+x.toFixed(1),+y.toFixed(1)]);
   if(path.length>60){const st=(path.length-1)/59;const q=[];for(let j=0;j<60;j++)q.push(path[Math.round(j*st)]);path.length=0;path.push(...q);}
   const hp=[...d.hp],h=[...d.h];const hits=[];
-  if(hit){for(let t=0;t<d.pl.length;t++){if(d.out[t]==='1')continue;const dist=Math.hypot(hit.x-d.tx[t],hit.y-(tkY(d,t)+1.6*TKS));if(dist<8){const dm=Math.round(45*(1-dist/8))+(dist<3?10:0);if(dm>0){hp[t]=Math.max(0,hp[t]-dm);hits.push({s:t,dmg:dm});}}}
-    for(let xx=Math.max(0,Math.floor(hit.x-6));xx<=Math.min(100,Math.ceil(hit.x+6));xx++){const dz=Math.sqrt(Math.max(0,36-(xx-hit.x)**2))*0.7;h[xx]=+Math.max(2,Math.min(h[xx],hit.y-dz+2)).toFixed(1);}}
+  if(hit){for(let t=0;t<d.pl.length;t++){if(d.out[t]==='1')continue;const dist=Math.hypot(hit.x-d.tx[t],hit.y-(tkY(d,t)+1.6*TKS));if(dist<R){const dm=Math.round(DM*(1-dist/R))+(dist<3?10:0);if(dm>0){hp[t]=Math.max(0,hp[t]-dm);hits.push({s:t,dmg:dm});}}}
+    const CR=hv?8.5:6;for(let xx=Math.max(0,Math.floor(hit.x-CR));xx<=Math.min(100,Math.ceil(hit.x+CR));xx++){const dz=Math.sqrt(Math.max(0,CR*CR-(xx-hit.x)**2))*0.7;h[xx]=+Math.max(2,Math.min(h[xx],hit.y-dz+2)).toFixed(1);}}
   return {path,hit,hp,h,hits};
 }
 function tankSVG(d,i,ang,on){const x=d.tx[i],y=60-tkY(d,i),c=col(d,i),a=ang*Math.PI/180,dk=shade(c,-.35);
@@ -94,14 +95,16 @@ function tankSVG(d,i,ang,on){const x=d.tx[i],y=60-tkY(d,i),c=col(d,i),a=ang*Math
     <path d="M-1.05 -2.75A1.15 1.15 0 0 1 .35 -3.8" stroke="rgba(255,255,255,.6)" stroke-width=".28" fill="none" stroke-linecap="round"/><path d="M-2.6 -1.45H2.6" stroke="rgba(0,0,0,.2)" stroke-width=".22"/>
     <rect x="-3.1" y="-5.5" width="6.2" height="1.1" rx=".55" fill="rgba(20,30,40,.55)" stroke="#fff" stroke-width=".18"/><rect x="-3" y="-5.4" width="${(6*d.hp[i]/100).toFixed(2)}" height=".9" rx=".45" fill="${d.hp[i]>50?'#2ECC71':d.hp[i]>25?'#F4D03F':'#E74C3C'}"/>${on?'<path class="tkon" d="M-1.05 -8.7H1.05L0 -7.1Z" fill="#FFD84D" stroke="#1F2A36" stroke-width=".18" stroke-linejoin="round"/>':''}</g>`;}
 GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
-  // online each shot is fired on the host's phone, which also draws the next wind
-  net:{host:['fire']},redeal:d=>d,
+  // online each shot (and each drive, which also brings a new wind) is made on the host's phone; the shell choice is the phone's own
+  net:{host:['fire','mv'],local:['wpn']},redeal:d=>d,
   icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="tks" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#85C1E9"/><stop offset="1" stop-color="#D6EAF8"/></linearGradient></defs><rect width="100" height="100" fill="url(#tks)"/><path d="M0 76Q25 60 50 72T100 66V100H0Z" fill="#58D68D"/><path d="M0 84Q30 76 60 84T100 80V100H0Z" fill="#45B39D"/><rect x="18" y="60" width="20" height="9" rx="3" fill="#EC6158"/><path d="M28 62L40 52" stroke="#2D4763" stroke-width="3"/><path d="M42 50Q60 20 74 52" stroke="#2D4763" stroke-width="2" stroke-dasharray="3 3" fill="none"/><circle cx="76" cy="58" r="6" fill="#F5B041"/></svg>`,
   init:n=>{const ph=[Math.random()*6,Math.random()*6,Math.random()*6];const h=[];for(let x=0;x<=100;x++)h.push(+Math.max(6,Math.min(36,20+7*Math.sin(x/9+ph[0])+5*Math.sin(x/4.3+ph[1])+3*Math.sin(x/2.1+ph[2]))).toFixed(1));
-    const slots=shuffle(Array(n).fill(0).map((_,i)=>n===1?50:8+i*(84/(n-1))));return {h,tx:slots,hp:Array(n).fill(100),ang:slots.map(x=>x<50?50:130),wind:rnd(9)-4,shot:null,sid:0,turns:0};},
+    const slots=shuffle(Array(n).fill(0).map((_,i)=>n===1?50:8+i*(84/(n-1))));return {h,tx:slots,hp:Array(n).fill(100),ang:slots.map(x=>x<50?50:130),wind:rnd(9)-4,shot:null,sid:0,turns:0,hv:Array(n).fill(2),fu:Array(n).fill(2),mvd:null};},
   points:d=>d.hp.map(h=>h+'❤'),
   status:(d,ctx)=>(d.shot&&d.shot.msg?`<small>${d.shot.msg}</small><br>`:'')+turnTxt(d,ctx),
   onTimeout:d=>({...d,turn:nextSeat(d,d.turn),wind:rnd(9)-4}),
+  // a turn can also be spent driving (fu: two drives a game): 9 steps along the ground, never onto another tank or off the field
+  tkDrive(d,t,dir){const x=d.tx[t],to=Math.max(4,Math.min(96,x+dir*9));if(Math.abs(to-x)<2||d.tx.some((o,k)=>k!==t&&d.out[k]!=='1'&&Math.abs(o-to)<6&&Math.sign(o-x)===dir))return null;return to;},
   render(d,ctx){const my=ctx.my;const t=d.turn;const ang=tkAng(d,t),pow=tkPow(d,t);
     const Y=y=>60-y;const terr='M0 60 '+d.h.map((y,x)=>`L${x} ${Y(y).toFixed(1)}`).join(' ')+' L100 60Z';const w=d.wind;
     let s=`<svg viewBox="0 0 100 60" class="tanks" id="tkf"><defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E8ED0"/><stop offset=".7" stop-color="#A9D4F2"/><stop offset="1" stop-color="#E6F3FB"/></linearGradient><linearGradient id="grd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6BCF7F"/><stop offset=".12" stop-color="#3DAA5A"/><stop offset="1" stop-color="#1E6B3C"/></linearGradient></defs>
@@ -109,30 +112,40 @@ GAMES.tanks={name:'معركة الدبابات',cat:'fight',lbc:'#4D5656',
       <path d="M0 40Q15 28 30 36T60 32T100 34V60H0Z" fill="#8FC1E3" opacity=".55"/>
       <g class="clouds ${w>0?'r':w<0?'l':''}" style="--sp:${w?Math.max(6,30-Math.abs(w)*5):0}s"><g opacity=".9"><ellipse cx="20" cy="12" rx="6" ry="2.4" fill="#fff"/><ellipse cx="23" cy="10.5" rx="3.5" ry="2.4" fill="#fff"/></g><g opacity=".75"><ellipse cx="62" cy="7" rx="5" ry="1.9" fill="#fff"/><ellipse cx="60" cy="5.8" rx="2.8" ry="1.9" fill="#fff"/></g></g>
       <path d="${terr}" fill="url(#grd)"/><path d="${'M'+d.h.map((y,x)=>`${x} ${Y(y).toFixed(1)}`).join(' L')}" fill="none" stroke="#8BE09A" stroke-width=".5" opacity=".8"/>`;
-    d.pl.forEach((r,i)=>{if(d.out[i]==='1')return;s+=tankSVG(d,i,i===t&&my?ang:d.ang[i],i===t&&d.win==null);});
+    d.pl.forEach((r,i)=>{if(d.out[i]==='1')return;s+=`<g id="tkw${i}">${tankSVG(d,i,i===t&&my?ang:d.ang[i],i===t&&d.win==null)}</g>`;});
     if(my){const tp=tkTip(d,t,ang),a=ang*Math.PI/180,L=3+pow/9;s+=`<line id="aim" x1="${tp.x.toFixed(2)}" y1="${Y(tp.y).toFixed(2)}" x2="${(tp.x+Math.cos(a)*L).toFixed(2)}" y2="${(Y(tp.y)-Math.sin(a)*L).toFixed(2)}" stroke="#fff" stroke-width=".7" stroke-dasharray="1.2 1" stroke-linecap="round"/>`;}
     s+=`<g id="fx"></g><g transform="translate(50 5.5)"><rect x="-9" y="-3" width="18" height="5.4" rx="2.7" fill="rgba(255,255,255,.75)"/><text y="1.1" font-size="3.3" text-anchor="middle" fill="#1B4F72" font-weight="800">💨 ${w===0?'هادي':(w>0?'→ ':'← ')+Math.abs(w)}</text></g></svg>`;
-    if(my)s+=`<div class="aimc"><label>الاتجاه <b id="angv">${tkAngTxt(ang)}</b><input type="range" min="0" max="180" value="${180-ang}" data-draft="angs" dir="ltr"></label><label>القوة <b id="powv">${pow}</b><input type="range" min="10" max="100" value="${pow}" data-draft="pow" dir="ltr"></label></div><button class="btn red wide" data-ga="fire">💥 أطلق</button>`;
+    if(my){const hl=(d.hv||[])[t]||0,fl=(d.fu||[])[t]||0,heavy=S.draft.tkw==='h'&&hl>0;
+      s+=`<div class="aimc"><label>الاتجاه <b id="angv">${tkAngTxt(ang)}</b><input type="range" min="0" max="180" value="${180-ang}" data-draft="angs" dir="ltr"></label><label>القوة <b id="powv">${pow}</b><input type="range" min="10" max="100" value="${pow}" data-draft="pow" dir="ltr"></label></div>
+      <div class="segs tkw">${[['n','قذيفة عادية'],['h',`💣 ثقيلة (${hl})`]].map(([k,tx])=>`<button class="seg ${(k==='h')===heavy?'on':''}" data-ga="wpn" data-i="${k==='h'?1:0}" ${k==='h'&&!hl?'disabled':''}>${tx}</button>`).join('')}</div>
+      <div class="row tkrow">${fl?`<button class="btn navy" data-ga="mv" data-i="-1" ${GAMES.tanks.tkDrive(d,t,-1)==null?'disabled':''}>تحرّك ⬅</button>`:''}<button class="btn red wide" data-ga="fire">💥 أطلق${heavy?' الثقيلة':''}</button>${fl?`<button class="btn navy" data-ga="mv" data-i="1" ${GAMES.tanks.tkDrive(d,t,1)==null?'disabled':''}>➡ تحرّك</button>`:''}</div>${fl?`<small class="note tkfu">⛽ تقدر تتحرك ${fl===2?'مرتين':'مرة'} بالجولة بدل ما تطلق</small>`:''}`;}
     return s;},
-  click(a,i,d,ctx){if(!ctx.my||a!=='fire')return;const t=d.turn;const ang=tkAng(d,t),pow=tkPow(d,t);
-    const r=tkFire(d,t,ang,pow);let out=d.out;r.hp.forEach((h,s)=>{if(h<=0&&out[s]!=='1')out=setAt(out,s,'1');});
+  click(a,i,d,ctx){if(!ctx.my)return;const t=d.turn;
+    if(a==='wpn'){S.draft.tkw=i&&((d.hv||[])[t]||0)>0?'h':'n';render();return;}
+    if(a==='mv'){if(!((d.fu||[])[t]>0)||(i!==1&&i!==-1))return;const to=GAMES.tanks.tkDrive(d,t,i);if(to==null)return;const tx=[...d.tx],fu=[...d.fu];tx[t]=to;fu[t]--;
+      act({...d,tx,fu,mvd:[t,d.tx[t],(d.mvd?d.mvd[2]:0)+1],shot:{msg:`${nm(d,t)} حرّك دبابته 🚜`},turns:d.turns+1,wind:rnd(9)-4,turn:nextSeat(d,t)});return;}
+    if(a!=='fire')return;const ang=tkAng(d,t),pow=tkPow(d,t),hv=S.draft.tkw==='h'&&((d.hv||[])[t]||0)>0;
+    const r=tkFire(d,t,ang,pow,hv);let out=d.out;r.hp.forEach((h,s)=>{if(h<=0&&out[s]!=='1')out=setAt(out,s,'1');});
     const al=aliveSeats(d,out);const turns=d.turns+1;let win=null;if(al.length===1)win=al[0];else if(!al.length)win='d';else if(turns>=12*d.pl.length)win=mostPts(r.hp.map((h,s)=>out[s]==='1'?-1:h));
     const angs=[...d.ang];angs[t]=ang;const pw=d.pl.map((_,s)=>(d.pw||[])[s]??60);pw[t]=pow;const msg=`${nm(d,t)} أطلق`+(r.hits.length?`: ${r.hits.map(x=>`${nm(d,x.s)} -${x.dmg}`).join('، ')}`:' وما صاب');
-    S.draft.angs=undefined;S.draft.pow=undefined;
-    act({...d,h:r.h,hp:r.hp,out,ang:angs,pw,shot:{path:r.path,hit:r.hit,hits:r.hits,msg},sid:d.sid+1,turns,wind:rnd(9)-4,turn:win==null?nextSeat(d,t,out):t,win});},
+    S.draft.angs=undefined;S.draft.pow=undefined;S.draft.tkw=undefined;const hvs=d.pl.map((_,k)=>(d.hv||[])[k]??2);if(hv)hvs[t]--;
+    act({...d,h:r.h,hp:r.hp,out,ang:angs,pw,hv:hvs,shot:{path:r.path,hit:r.hit,hits:r.hits,msg:hv?msg.replace('أطلق','أطلق الثقيلة 💣'):msg,...(hv?{hv:1}:{})},sid:d.sid+1,turns,wind:rnd(9)-4,turn:win==null?nextSeat(d,t,out):t,win});},
   after(d,ctx){const f=document.getElementById('tkf');if(!f)return;
+    // a tank that drove rolls from where it stood (transform on its wrapper only; light mode skips it)
+    if(d.mvd&&once('tkm'+d.gid+':'+d.mvd[2])&&!liteFx()){const w=document.getElementById('tkw'+d.mvd[0]);if(w&&w.animate){const s0=d.mvd[0],dx=d.mvd[1]-d.tx[s0],dy=-(tkHeight(d.h,d.mvd[1])-tkY(d,s0));
+      try{w.animate([{transform:`translate(${dx.toFixed(2)}px,${dy.toFixed(2)}px)`},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,.7,.4,1)'});}catch(e){}}}
     const upd=()=>{const d=S.st.d,ctx=mkCtx();if(!d||!d.tx)return;const t=d.turn,ang=tkAng(d,t),pow=tkPow(d,t);const av=document.getElementById('angv'),pv=document.getElementById('powv');if(av)av.textContent=tkAngTxt(ang);if(pv)pv.textContent=pow;
       const el=document.getElementById('aim');if(el){const tp=tkTip(d,t,ang),a=ang*Math.PI/180,L=3+pow/9;el.setAttribute('x1',tp.x.toFixed(2));el.setAttribute('y1',(60-tp.y).toFixed(2));el.setAttribute('x2',(tp.x+Math.cos(a)*L).toFixed(2));el.setAttribute('y2',(60-tp.y-Math.sin(a)*L).toFixed(2));}
       const tk=f.querySelector('.tank.on line');if(tk&&ctx.my){tk.setAttribute('x2',(Math.cos(ang*Math.PI/180)*3.4).toFixed(2));tk.setAttribute('y2',(-3.1-Math.sin(ang*Math.PI/180)*3.4).toFixed(2));}};
     app.querySelectorAll('.aimc input').forEach(inp=>{if(inp._b)return;inp._b=1;inp.addEventListener('input',()=>upd());});
     // the shell flies along its path (0.7 s at most), then the blast; light mode shows only where it hit
-    if(d.shot&&once('tk'+d.gid+d.sid)){const fx=document.getElementById('fx');if(!fx)return;if(liteFx()){if(d.shot.hit)sfx('lose');return;}S.holdRender=true;const P=d.shot.path;const ns='http://www.w3.org/2000/svg';
+    if(d.shot&&d.shot.path&&once('tk'+d.gid+d.sid)){const fx=document.getElementById('fx');if(!fx)return;if(liteFx()){if(d.shot.hit)sfx('lose');return;}S.holdRender=true;const P=d.shot.path;const ns='http://www.w3.org/2000/svg';
       const mk=(tag,at)=>{const e=document.createElementNS(ns,tag);for(const k in at)e.setAttribute(k,at[k]);fx.appendChild(e);return e;};
       const trail=mk('polyline',{fill:'none',stroke:'rgba(255,255,255,.75)','stroke-width':'.45','stroke-dasharray':'1 .8'});
       const ball=mk('circle',{r:'1',fill:'#1F2A36',stroke:'#fff','stroke-width':'.3'});
       mk('circle',{cx:P[0][0],cy:60-P[0][1],r:'1.6',fill:'#FDF2B3',class:'flash'});sfx('tap');
       let k=0;const pts=[];const stepT=Math.max(10,700/P.length);
-      const go=()=>{if(k>=P.length){ball.remove();const h=d.shot.hit;if(h){const cx=h.x,cy=60-h.y;mk('circle',{cx,cy,r:'1.2',fill:'#F39C12',class:'boom'});mk('circle',{cx,cy,r:'1',fill:'none',stroke:'#fff','stroke-width':'.5',class:'shock'});
+      const go=()=>{if(k>=P.length){ball.remove();const h=d.shot.hit;if(h){const cx=h.x,cy=60-h.y;mk('circle',{cx,cy,r:d.shot.hv?'1.8':'1.2',fill:d.shot.hv?'#E74C3C':'#F39C12',class:'boom'});mk('circle',{cx,cy,r:'1',fill:'none',stroke:'#fff','stroke-width':'.5',class:'shock'});
           for(let j=0;j<8;j++){const an=j/8*Math.PI*2;mk('circle',{cx,cy,r:'.45',fill:j%2?'#7a5230':'#F5B041',class:'deb',style:`--dx:${(Math.cos(an)*6).toFixed(1)}px;--dy:${(Math.sin(an)*5-3).toFixed(1)}px`});}
           f.classList.add('quake');sfx('lose');}
         setTimeout(()=>{f.classList.remove('quake');S.holdRender=false;if(S.renderPending)render();},h?420:60);return;}
@@ -145,10 +158,12 @@ const DW_W=7,DW_H=8;
 function dwNb(i){const r=Math.floor(i/DW_W),c=i%DW_W,o=r%2?[[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]]:[[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
   return o.map(([dr,dc])=>[r+dr,c+dc]).filter(([rr,cc])=>rr>=0&&rr<DW_H&&cc>=0&&cc<DW_W).map(([rr,cc])=>rr*DW_W+cc);}
 function dwLargest(own,s){const seen=new Set();let best=0;const ss=String(s);for(let i=0;i<own.length;i++){if(own[i]!==ss||seen.has(i))continue;let n=0;const st=[i];seen.add(i);while(st.length){const k=st.pop();n++;for(const b of dwNb(k))if(own[b]===ss&&!seen.has(b)){seen.add(b);st.push(b);}}best=Math.max(best,n);}return best;}
-function dwEnd(d){const t=d.turn,ts=String(t);let dice=[...d.dice].map(Number);let add=dwLargest(d.own,t);const mine=[...d.own].map((o,i)=>o===ts?i:-1).filter(i=>i>=0);
-  let guard=0;while(add>0&&guard++<500){const c=mine.filter(i=>dice[i]<8);if(!c.length)break;dice[c[rnd(c.length)]]++;add--;}
+/* end of turn: one new die for every land in the biggest joined block, dropped at random on lands that are not full. Dice that find no
+   room wait in the store (stk, up to 64) and come out with the next turn's new dice, as in the classic game */
+function dwEnd(d){const t=d.turn,ts=String(t);let dice=[...d.dice].map(Number);const stk=d.pl.map((_,k)=>(d.stk||[])[k]||0);const got=dwLargest(d.own,t);let add=got+stk[t];const mine=[...d.own].map((o,i)=>o===ts?i:-1).filter(i=>i>=0);
+  const rf={};let guard=0;while(add>0&&guard++<600){const c=mine.filter(i=>dice[i]<8);if(!c.length)break;const k=c[rnd(c.length)];dice[k]++;rf[k]=(rf[k]||0)+1;add--;}stk[t]=Math.min(64,add);
   const turns=(d.turns||0)+1;let win=null;if(turns>=30*d.pl.length){const c=d.pl.map((r,s)=>d.out[s]==='1'?-1:[...d.own].filter(o=>o===String(s)).length);win=mostPts(c);}
-  S.dwSel=null;return {...d,dice:dice.join(''),turns,win,turn:nextSeat(d,t),last:{msg:`${nm(d,t)} خلّص دوره وأخذ ${dwLargest(d.own,t)} زهرات تعزيز`}};}
+  S.dwSel=null;return {...d,dice:dice.join(''),turns,win,stk,turn:nextSeat(d,t),sid:(d.sid||0)+1,last:{msg:`${nm(d,t)} خلّص دوره وأخذ ${got} زهرات تعزيز${stk[t]?`، وخزّن ${stk[t]}`:''}`,rf:Object.entries(rf).slice(0,30).map(([k,n])=>[+k,n])}};}
 GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
   // online the attack dice and the new dice at the end of a turn are thrown on the host's phone
   net:{host:['end']},redeal:d=>d,
@@ -156,8 +171,8 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
   init:n=>{const N=DW_W*DW_H;const own=Array(N).fill('.');const cells=shuffle([...Array(N).keys()].filter(()=>Math.random()>0.1));const per=Math.floor(cells.length/n);
     cells.slice(0,per*n).forEach((c,k)=>own[c]=String(k%n));const dice=Array(N).fill(0);
     for(let s=0;s<n;s++){const mine=own.map((o,i)=>o===String(s)?i:-1).filter(i=>i>=0);mine.forEach(i=>dice[i]=1);let extra=Math.round(per*1.6);while(extra>0){const i=mine[rnd(mine.length)];if(dice[i]<8){dice[i]++;extra--;}}}
-    return {own:own.join(''),dice:dice.join(''),last:null,sid:0};},
-  points:d=>d.pl.map((r,s)=>[...d.own].filter(o=>o===String(s)).length+'⬢'),
+    return {own:own.join(''),dice:dice.join(''),last:null,sid:0,stk:Array(n).fill(0)};},
+  points:d=>d.pl.map((r,s)=>[...d.own].filter(o=>o===String(s)).length+'⬢'+((d.stk||[])[s]?` 📦${d.stk[s]}`:'')),
   onTimeout:d=>dwEnd(d),
   status:(d,ctx)=>(d.last&&d.last.msg?`<small>${d.last.msg}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const my=ctx.my,t=d.turn,ts=String(t);let sel=my?S.dwSel:null;if(sel!=null&&(d.own[sel]!==ts||+d.dice[sel]<2))sel=null;const targets=sel!=null?new Set(dwNb(sel).filter(b=>d.own[b]!=='.'&&d.own[b]!==ts&&!sameTeam(d,+d.own[b],t))):new Set();
@@ -168,6 +183,9 @@ GAMES.dwars={name:'حرب الزهر',cat:'fight',lbc:'#1A5276',
       const mine=o===ts,can=my&&((mine&&n>1)||targets.has(i));const cls=`${sel===i?'sel':''} ${targets.has(i)?'tg':''} ${d.last&&(d.last.a===i||d.last.b===i)&&once('dw'+d.gid+d.sid+'_'+i)?'flash':''}`;
       s+=`<g class="hx ${cls}" ${can?`data-ga="cell" data-i="${i}"`:''}><polygon points="${hex(cx,cy)}" fill="${sel===i?COLS[d.pl[+o]]:LIGHT[d.pl[+o]]}" stroke="${COLS[d.pl[+o]]}" stroke-width="${sel===i||targets.has(i)?1.1:.5}"/>
         ${n>=4?`<rect x="${(cx-1.6).toFixed(2)}" y="${(cy-3.6).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#E3E9F0" stroke="#2D4763" stroke-width=".22"/>`:''}<rect x="${(cx-2.4).toFixed(2)}" y="${(cy-2.05).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#9FB0C2"/><rect x="${(cx-2.4).toFixed(2)}" y="${(cy-2.6).toFixed(2)}" width="4.8" height="4.8" rx="1" fill="#fff" stroke="#2D4763" stroke-width=".22"/><text x="${cx.toFixed(2)}" y="${(cy+1.2).toFixed(2)}" text-anchor="middle" font-size="3.6" font-weight="800" fill="#2D4763">${n}</text></g>`;}
+    // the new dice of the turn just ended: a small «+n» rises from each land that got some
+    if(d.last&&d.last.rf&&pigNew('dwf'+d.gid+':'+d.sid)){for(const [i,k] of d.last.rf){const rr=Math.floor(i/DW_W),cc=i%DW_W;const cx=w/2+cc*w+(rr%2?w/2:0),cy=r+rr*1.5*r;
+      s+=`<text class="dwplus" x="${cx.toFixed(2)}" y="${(cy-3.2).toFixed(2)}" text-anchor="middle" font-size="3.4" font-weight="900" data-k="f${d.sid}_${i}">+${k}</text>`;}}
     s+='</svg>';
     if(d.last&&d.last.ra){const L=d.last;const sa=L.ra.reduce((a,b)=>a+b,0),sb=L.rb.reduce((a,b)=>a+b,0);const fresh=once('dwr'+d.gid+d.sid);
       s+=`<div class="dwroll ${fresh?'shake':''}"><div class="${L.win?'w':''}" style="--c:${col(d,L.sa)}"><b>${nm(d,L.sa)}</b><span>${L.ra.map(x=>`<i class="dice ${fresh?'roll':''}">${diceSVG(x)}</i>`).join('')}</span><em>${sa}</em></div><strong>${L.win?'🏆':'🛡️'}</strong><div class="${L.win?'':'w'}" style="--c:${col(d,L.sb)}"><b>${nm(d,L.sb)}</b><span>${L.rb.map(x=>`<i class="dice ${fresh?'roll':''}">${diceSVG(x)}</i>`).join('')}</span><em>${sb}</em></div></div>`;}
@@ -199,14 +217,36 @@ GAMES.duel=spdBase({name:'مبارزة السيوف',lbc:'#17202A',icon:`<svg vi
   click(a,i,d,ctx,st){if(a!=='tap')return;if(st.phase==='wait'){clearTimeout(st.timer);clearTimeout(st.t1);clearTimeout(st.t2);st.t0=performance.now();toast(st.fk?'انخدعت! هذي مو الإشارة':'سحبت بدري! خسرت الجولة');spdSubmit(d,ctx,false);return;}if(st.phase==='go'){sfx('pop');spdSubmit(d,ctx,true);}}});
 GAMES.duel.cat='fight';
 
-/* ---------- tapping battle ---------- */
-GAMES.tapwar={...spdBase({name:'معركة الضغط',lbc:'#1E8449',icon:iconE('#27AE60','👊'),art:'<div class="tapbtn prev">👊</div>',title:'عندك 5 ثواني. اضغط الزر بأسرع وأكثر ما تقدر',
-  start(d,st){st.phase='go';st.n=0;st.t0=performance.now();const v=+st.key.split(':').pop();st.timer=setTimeout(()=>{if(S.sp!==st)return;// left the game or round meanwhile: the hold and the pick belong to something else now
+/* ---------- tapping battle ----------
+   Five rounds of 5 seconds, and the rounds change (the same on every phone, from the round's seed):
+   0 the most taps wins; 1 hit an exact number: the counter hides for the last ten, so you count in your head, and the closest wins;
+   2 two pads, left and right: only taps that change hands count */
+const twType=d=>(Math.floor(srng(d,'twt')()*3)+d.rd)%3;
+const twGoal=d=>22+Math.floor(srng(d,'twg'+d.rd)()*14);
+const TWT=[['👊','الأسرع','اضغط الزر بأسرع وأكثر ما تقدر خلال 5 ثواني'],['🎯','بالضبط',''],['🤲','يمين ويسار','زرّين: اضغط يمين ثم يسار بالتناوب. ضغطتين ورا بعض على نفس الزر ما تنحسب']];
+const twTitle=d=>{const t=twType(d);return t===1?`اضغط ${twGoal(d)} ضغطة بالضبط خلال 5 ثواني. العدّاد يختفي قبل الهدف بعشر، كمّل العد في راسك. الأقرب يفوز`:TWT[t][2];};
+const twHide=(d,n)=>twType(d)===1&&n>=twGoal(d)-10;
+// the bar drains by itself (a css animation on the node made when the round starts), so nothing holds the screen
+function twView(d,ctx,st){const t=twType(d),g=twGoal(d);
+  const pads=t===2?`<div class="twpads">${[1,0].map(k=>`<button class="tapbtn tws ${st.side===k?'last':''}" data-ga="tap" data-i="${k}">${k?'🤚<small>يمين</small>':'✋<small>يسار</small>'}</button>`).join('')}</div>`:`<button class="tapbtn" data-ga="tap">${t===1?'🎯 اضغط!':'👊 اضغط!'}</button>`;
+  return `<div class="spd tw t${t}">${t===1?`<div class="twgoal">الهدف <b>${g}</b></div>`:''}<div class="memnum" id="tapn">${twHide(d,st.n)?'؟':st.n||0}</div>${pads}<div class="tbar" style="margin-top:12px"><i id="tapt" class="twd"></i></div></div>`;}
+function twClick(a,i,d,ctx,st){if(a!=='tap'||st.phase!=='go')return;
+  if(twType(d)===2){const k=i?1:0;if(k===st.side)return;st.side=k;app.querySelectorAll('.tws').forEach(b=>b.classList.toggle('last',+b.dataset.i===k));}
+  st.n++;const el=document.getElementById('tapn');if(el){el.textContent=twHide(d,st.n)?'؟':st.n;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}}
+GAMES.tapwar={...spdBase({name:'معركة الضغط',lbc:'#1E8449',icon:iconE('#27AE60','👊'),art:'<div class="tapbtn prev">👊</div>',title:'',
+  start(d,st){st.phase='go';st.n=0;st.side=-1;st.t0=performance.now();const v=+st.key.split(':').pop();st.timer=setTimeout(()=>{if(S.sp!==st)return;// left the game or round meanwhile: the hold and the pick belong to something else now
     S.holdRender=false;st.phase='sent';const nd=S.st.d;if(nd&&nd.gid===d.gid&&nd.rd===d.rd)simulPick(d,v,{ok:true,ms:st.n});else render();},5000);},
-  // the bar drains by itself (a css animation on the node made when the round starts), so nothing holds the screen
-  view(d,ctx,st){return `<div class="spd tw"><div class="memnum" id="tapn">${st.n||0}</div><button class="tapbtn" data-ga="tap">👊 اضغط!</button><div class="tbar" style="margin-top:12px"><i id="tapt" class="twd"></i></div></div>`;},
-  click(a,i,d,ctx,st){if(a!=='tap'||st.phase!=='go')return;st.n++;const el=document.getElementById('tapn');if(el){el.textContent=st.n;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}}}),
+  view:twView,click:twClick}),
   cat:'fight',
-  resolve(d,picks){const pts=[...d.pts];const v=picks.map(p=>p&&p.ok?p.ms:-1);const mx=Math.max(...v);const top=v.map((x,s)=>x===mx&&x>0?s:-1).filter(s=>s>=0);if(top.length===1)pts[top[0]]++;
-    const rd=d.rd+1;return {...d,pts,rd,res:d.pl.map((r,s)=>v[s]>=0?`${nm(d,s)} ${v[s]} ضغطة`:'').filter(Boolean).join('، ')+(top.length===1?`. الأقوى: ${nm(d,top[0])}`:''),win:rd>=SPD_ROUNDS?mostPts(pts):null};},
+  // the start card names this round's kind
+  render(d,ctx){if(d.win!=null)return `<div class="spd">${spdBoard(d)}</div>`;if(!ctx.my)return ctx.v>=0&&hasPicked(d,ctx.v)?waitCard(d,ctx):'';const st=spdState(d,ctx.v);
+    const t=twType(d);if(st.phase==='ready')return readyCard(`<b class="twk">${TWT[t][0]} ${TWT[t][1]}</b><br>${twTitle(d)}`,`<div class="tapbtn prev">${TWT[t][0]}</div>`,d);return twView(d,ctx,st);},
+  // easy is slow and counts badly, hard is quick and steady
+  botPick(d,s,lv){const t=twType(d);if(t===1){const g=twGoal(d),e=[0,5,2,1][lv];return {ok:true,ms:Math.max(0,g+rnd(e*2+1)-e)};}
+    const n=[0,18,27,35][lv]+rnd(8);return {ok:true,ms:t===2?Math.round(n*.7):n};},
+  resolve(d,picks){const pts=[...d.pts],t=twType(d),g=twGoal(d);const v=picks.map(p=>p&&p.ok&&Number.isFinite(p.ms)?Math.max(0,Math.round(p.ms)):-1);
+    const sc=v.map(x=>x<0?-1e9:t===1?-Math.abs(x-g):x),mx=Math.max(...sc);const top=sc.map((x,s)=>x===mx&&v[s]>0?s:-1).filter(s=>s>=0);
+    // the exact round can have several winners (everyone who is as close); the others need a single best
+    const won=top.length===1||(t===1&&top.length>0);if(won)top.forEach(s=>pts[s]++);
+    const rd=d.rd+1;return {...d,pts,rd,res:`${TWT[t][0]} ${TWT[t][1]}${t===1?` (${g})`:''}: `+d.pl.map((r,s)=>v[s]>=0?`${nm(d,s)} ${v[s]} ضغطة`:'').filter(Boolean).join('، ')+(won?`. الأقوى: ${top.map(s=>nm(d,s)).join(' و')}`:''),win:rd>=SPD_ROUNDS?mostPts(pts):null};},
 };

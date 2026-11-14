@@ -475,7 +475,7 @@ GAMES.guess={name:'خمّن الشخص',cat:'mind',lbc:'#6E4C8B',
     const el=elSeg(d,v,o);const left=[...el].filter(c=>c==='0').length;
     const key=d.gid+'_'+v+'_'+o;S.gPrev=S.gPrev||{};const prev=S.gPrev[key]||el;S.gPrev[key]=el;
     s+=`<div class="gwh"><span>${D.ttl} ${nameTag(d,o)}</span><b>باقي ${left} من 24</b></div>`;
-    if(gm)s+=`<p class="hint" style="text-align:center">اضغط على الشخص اللي تتوقعه (لو غلطت تطلع من الجولة)</p>`;
+    if(gm)s+=`<p class="hint" style="text-align:center">اضغط على ${d.dk===1?"الحيوان":"الشخص"} اللي تتوقعه (لو غلطت تطلع من الجولة)</p>`;
     s+=`<div class="gw ${gm?'gm':''} ${d.dk===1?'an':''}">${[...Array(24).keys()].map(i=>{const out=el[i]==='1';const nw=out&&prev[i]!=='1'?' flip':'';return gm&&!out?pc(d,i,'pick',`data-ga="guess" data-i="${i}"`):pc(d,i,(out?'out':'')+nw);}).join('')}</div>`;
     const log=(d.qa||[]).filter(q=>q[0]===v&&q[1]===o);
     if(log.length)s+=`<div class="qlog">${log.map(q=>`<span class="${q[3]?'y':'n'}">${(D.Q[q[2]]||['؟'])[0]}؟ ${q[3]?'✓':'✗'}</span>`).join('')}</div>`;
