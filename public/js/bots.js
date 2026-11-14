@@ -190,14 +190,7 @@ GAMES.fish.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);if(!H.length)return botDo(
 
 /* ---------- dice ---------- */
 GAMES.pig.bot=(d,s,lv)=>{const hold=[0,10+rnd(15),18,20][lv];const goal=d.goal-d.sc[s];return botDo(d,s,(d.tot>=hold||d.tot>=goal)&&d.tot>0?'bank':'roll',0);};
-GAMES.farkle.bot=(d,s,lv)=>{if(!d.rolled)return botDo(d,s,'roll',0);
-  const free=[...d.dice].map((x,i)=>d.used[i]==='0'?i:-1).filter(i=>i>=0);
-  // take every scoring die: triples first, then ones and fives
-  const by={};free.forEach(i=>{(by[d.dice[i]]=by[d.dice[i]]||[]).push(i);});let sel=[];
-  if(free.length===6&&fkScore(free.map(i=>+d.dice[i]))>=750)sel=free;else{for(const f in by)if(by[f].length>=3)sel.push(...by[f]);for(const f of ['1','5'])if(by[f]&&by[f].length<3)sel.push(...by[f]);}
-  if(!sel.length)return GAMES.farkle.onTimeout(d);S.sel=sel;const sv=fkScore(sel.map(i=>+d.dice[i]));const left=free.length-sel.length;
-  const bank=[0,350+rnd(300),350,300][lv];const go=left===0||(d.tot+sv<bank)||(lv===3&&left>=4&&d.tot+sv<600);
-  return botDo(d,s,go?'keep':'keepbank',0);};
+// ten thousand (farkle): its bots are in speed.js
 GAMES.yatzy.bot=(d,s,lv)=>{const card=d.cards[s];
   if(d.rolls===0)return botDo(d,s,'roll',0);
   const dice=[...d.dice].map(Number);const cnt=[0,0,0,0,0,0,0];dice.forEach(x=>cnt[x]++);
@@ -317,7 +310,6 @@ GAMES.mafia.botPick=(d,s,lv)=>{const r=d.roles[s];if(d.ph==='role')return 1;cons
   const bad=lv===3?al.find(x=>K['c'+x]===true):undefined;if(bad!=null)return bad;
   if(d.inv&&d.inv.s===s&&d.inv.m&&d.out[d.inv.t]!=='1')return d.inv.t;if(r==='m')return gang(al.filter(x=>d.roles[x]!=='m'))??pickR(al);return Math.random()<.15?-1:pickR(al);};
 GAMES.close.botPick=(d,s,lv)=>{const Q=GAMES.close.q(d,d.rd);const a=Q[1];const err=[0,.45,.22,.08][lv];return Math.max(0,Math.round(a*(1+(Math.random()*2-1)*err)));};
-GAMES.rps.botPick=()=>rnd(3);
 
 /* ---------- race games ---------- */
 // rolling returns with roll set when there is a real choice; the bot picks its piece on the next tick
