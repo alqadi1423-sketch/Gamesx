@@ -74,7 +74,7 @@ const c2fsInit=(n,extra)=>({pairs:n===4,dl:n-1,hands:Array(n).fill(''),sc:[],car
 const c2fsStart=deal=>(d,base)=>{const x={...d,pairs:!d.tm&&d.pl.length===4};const k=c2fsSides(x).length;return deal({...x,sc:Array(k).fill(0)});};
 const c2fsPoints=d=>d.pl.map((_,s)=>d.sc[c2fsSides(d).indexOf(c2fsSide(d,s))]??0);
 GAMES.c_basra={name:'باصرة',cat:'cards',lbc:'#1F7A4D',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1F7A4D"/><ellipse cx="50" cy="56" rx="42" ry="32" fill="#27925D"/><g transform="rotate(-10 30 56)"><rect x="14" y="34" width="30" height="42" rx="4" fill="#fff"/><text x="29" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#D43C33">7♦</text></g><g transform="rotate(8 70 56)"><rect x="56" y="34" width="30" height="42" rx="4" fill="#fff"/><text x="71" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#2D4763">J♣</text></g><rect x="30" y="10" width="40" height="18" rx="9" fill="#F0B429"/><text x="50" y="24" font-size="12" font-weight="900" text-anchor="middle" fill="#1F5E3C">+10</text></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1F7A4D"/><ellipse cx="50" cy="56" rx="42" ry="32" fill="#27925D"/><g transform="rotate(-10 30 56)"><rect x="14" y="34" width="30" height="42" rx="4" fill="#fff"/><text direction="ltr" x="29" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#D43C33">7♦</text></g><g transform="rotate(8 70 56)"><rect x="56" y="34" width="30" height="42" rx="4" fill="#fff"/><text direction="ltr" x="71" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#2D4763">J♣</text></g><rect x="30" y="10" width="40" height="18" rx="9" fill="#F0B429"/><text direction="ltr" x="50" y="24" font-size="12" font-weight="900" text-anchor="middle" fill="#1F5E3C">+10</text></svg>`,
   init:n=>c2fsInit(n,{dk:'',fl:'',caps:[],bas:[],lm:null,lc:-1,ph:'play'}),
   start:c2fsStart(c2bsNewDeal),
   mask:c2shMask,
@@ -144,7 +144,7 @@ function c2skScore(d){const sides=c2fsSides(d),caps=[...d.caps];if(d.fl&&d.lc>=0
 const c2skNext=d=>({...c2skNewDeal({...d,dl:nextSeat(d,d.dl)}),last:''});
 const c2skSelKey=d=>'sk:'+d.gid+':'+d.dk.length+':'+d.fl+':'+d.turn;
 GAMES.c_shakba={name:'شكبة',cat:'cards',lbc:'#A0522D',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#A0522D"/><ellipse cx="50" cy="56" rx="42" ry="32" fill="#B5643A"/><g transform="rotate(-12 34 56)"><rect x="18" y="34" width="30" height="42" rx="4" fill="#fff"/><text x="33" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#D43C33">7♦</text></g><g transform="rotate(10 66 56)"><rect x="52" y="34" width="30" height="42" rx="4" fill="#fff"/><text x="67" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#2D4763">K♠</text></g><path d="M22 22h56" stroke="#F0B429" stroke-width="6" stroke-linecap="round"/><path d="M30 14l-8 8 8 8M70 14l8 8-8 8" stroke="#F0B429" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#A0522D"/><ellipse cx="50" cy="56" rx="42" ry="32" fill="#B5643A"/><g transform="rotate(-12 34 56)"><rect x="18" y="34" width="30" height="42" rx="4" fill="#fff"/><text direction="ltr" x="33" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#D43C33">7♦</text></g><g transform="rotate(10 66 56)"><rect x="52" y="34" width="30" height="42" rx="4" fill="#fff"/><text direction="ltr" x="67" y="61" font-size="17" font-weight="800" text-anchor="middle" fill="#2D4763">K♠</text></g><path d="M22 22h56" stroke="#F0B429" stroke-width="6" stroke-linecap="round"/><path d="M30 14l-8 8 8 8M70 14l8 8-8 8" stroke="#F0B429" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   init:n=>c2fsInit(n,{dk:'',fl:'',caps:[],bas:[],lm:null,lc:-1,ph:'play'}),
   start:c2fsStart(c2skNewDeal),
   mask:c2shMask,
@@ -218,26 +218,26 @@ function c2e8Pass(d){const s=d.turn,ps=d.ps+1,nd={...d,ps,drew:0,last:`${nameTag
   if(ps>=aliveSeats(d).length){const al=aliveSeats(d),v=al.map(x=>cardsOf(d.hands[x]).reduce((a,c)=>a+c2e8Pen(c),0)),mn=Math.min(...v);return c2e8End(nd,al[v.indexOf(mn)],true);}
   return {...nd,turn:nextSeat(nd,s)};}
 function c2e8End(d,w,blocked){const pen=d.pl.map((_,s)=>s===w||d.out[s]==='1'?0:cardsOf(d.hands[s]).reduce((a,c)=>a+c2e8Pen(c),0));const got=pen.reduce((a,x)=>a+x,0);
-  const sc=[...d.sc];sc[w]+=got;const nd={...d,sc,ph:'sum',sum:{w,pen,got,blocked:!!blocked},turn:w,last:blocked?`انقفلت اللعبة، ${nameTag(d,w)} أقل ورق`:`${nameTag(d,w)} خلّص ورقه`};
-  if(sc[w]>=100)return {...nd,win:w};return nd;}
+  const sc=d.sc.map((x,s)=>x+pen[s]);const nd={...d,sc,ph:'sum',sum:{w,pen,got,blocked:!!blocked},turn:w,last:blocked?`انقفلت اللعبة، ${nameTag(d,w)} أقل ورق`:`${nameTag(d,w)} خلّص ورقه`};
+  if(sc.some(x=>x>=100)){const al=aliveSeats(nd),mn=Math.min(...al.map(s=>sc[s])),ws=al.filter(s=>sc[s]===mn);return {...nd,win:ws[0],wins:ws};}return nd;}
 const c2e8Next=d=>({...c2e8Deal({...d,dl:nextSeat(d,d.dl)}),last:''});
 const c2e8Key=d=>c2shKey(d,'e8');
 GAMES.c_eights={name:'الثمانيات',cat:'cards',lbc:'#2E7D9A',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E7D9A"/><circle cx="50" cy="50" r="40" fill="#3792B3"/><g transform="rotate(-10 40 52)"><rect x="24" y="26" width="34" height="50" rx="5" fill="#fff"/><text x="41" y="60" font-size="26" font-weight="900" text-anchor="middle" fill="#D43C33">8</text></g>${['s','h','d','c'].map((s,i)=>`<circle cx="${70+(i%2)*14}" cy="${34+Math.floor(i/2)*14}" r="7" fill="#fff"/><text x="${70+(i%2)*14}" y="${38.5+Math.floor(i/2)*14}" font-size="10" text-anchor="middle" fill="${'hd'.includes(s)?'#D43C33':'#2D4763'}">${C2SN[s]}</text>`).join('')}<rect x="60" y="66" width="34" height="14" rx="7" fill="#F0B429"/><text x="77" y="77" font-size="10" font-weight="900" text-anchor="middle" fill="#245F75">100</text></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E7D9A"/><circle cx="50" cy="50" r="40" fill="#3792B3"/><g transform="rotate(-10 40 52)"><rect x="24" y="26" width="34" height="50" rx="5" fill="#fff"/><text direction="ltr" x="41" y="60" font-size="26" font-weight="900" text-anchor="middle" fill="#D43C33">8</text></g>${['s','h','d','c'].map((s,i)=>`<circle cx="${70+(i%2)*14}" cy="${34+Math.floor(i/2)*14}" r="7" fill="#fff"/><text direction="ltr" x="${70+(i%2)*14}" y="${38.5+Math.floor(i/2)*14}" font-size="10" text-anchor="middle" fill="${'hd'.includes(s)?'#D43C33':'#2D4763'}">${C2SN[s]}</text>`).join('')}<rect x="60" y="66" width="34" height="14" rx="7" fill="#F0B429"/><text direction="ltr" x="77" y="77" font-size="10" font-weight="900" text-anchor="middle" fill="#245F75">100</text></svg>`,
   init:n=>({dl:n-1,hands:Array(n).fill(''),dk:'',disc:'',su:'s',ps:0,drew:0,lp:-1,sc:Array(n).fill(0),ph:'play',last:''}),
   start:(d,base)=>c2e8Deal(d),
   mask:c2shMask,
   redeal:d=>d.win!=null||d.ph==='sum'?d:{...c2e8Deal(d),last:'انعادت الجولة من جديد'},
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
   points:d=>d.sc.map(x=>x),
-  winText:d=>d.win!=null?`فاز ${nm(d,d.win)} بـ${d.sc[d.win]} نقطة`:null,
+  winText:d=>d.win!=null?`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بأقل نقاط (${d.sc[d.win]})`:null,
   onSkip(nd,d){if(nd.win!=null)return nd;return nd.out[d.turn]==='1'?{...nd,drew:0}:nd;},
   onTimeout(d){if(d.ph==='sum')return c2e8Next(d);const L=c2e8Legal(d,d.turn);if(L.length){const c=L[0];return c2e8Play(d,c,c[1]);}return d.dk.length?{...c2e8Draw(d),turn:nextSeat(d,d.turn)}:c2e8Pass(d);},
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';return s+c2shWho(d,ctx)+`: نزّل ${C2SN[d.su]} أو ${d.disc.slice(-2)[0]==='T'?'10':d.disc.slice(-2)[0]} أو ثمانية`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph==='play';const top=d.disc.slice(-2);
     let h=`<div class="c2">${c2shSeats(d,{x:s=>` <em>${d.sc[s]}</em>`})}<div class="sh-tab"><${my&&d.dk.length?'button data-ga="draw"':'div'} class="sh-stk">${cardHTML('??',true)}<small>${d.dk.length/2}</small></${my&&d.dk.length?'button':'div'}>
       <div class="sh-pile"><span class="sh-top" data-k="e${d.disc.length}">${c2Card(top,true)}</span></div><span class="sh-suit">الطلب <em class="${'hd'.includes(d.su)?'rs':''}">${C2SN[d.su]}</em></span></div>`;
-    if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${nameTag(d,r.w)} ياخذ ${r.got} نقطة${r.blocked?' (انقفلت)':''}</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${s===r.w?'🏆':r.pen[s]}</em><b>${d.sc[s]}</b></div>`).join('')}
+    if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${nameTag(d,r.w)} ${r.blocked?'أقل ورق (انقفلت)':'خلّص ورقه'} 🏆</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${s===r.w?'🏆 0':'+'+r.pen[s]}</em><b>${d.sc[s]}</b></div>`).join('')}
       ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
     const pend=my&&Array.isArray(S.sel)&&S.sel[0]===c2e8Key(d)?S.sel[1]:null;
     if(pend)h+=`<p class="lbl c2lb">اختر النوع اللي تطلبه</p>`+c2Btns([...'shdc'.split('').map((s,i)=>[i,C2SN[s],'bsuit '+('hd'.includes(s)?'rs':'')]),[9,'رجوع','']],'suit');
@@ -248,7 +248,7 @@ GAMES.c_eights={name:'الثمانيات',cat:'cards',lbc:'#2E7D9A',
     if(a==='pass'){if(d.dk.length||c2e8Legal(d,s).length)return;act(c2e8Pass(d));return;}
     if(a==='card'){const c=cardsOf(d.hands[s])[i];if(!c||!c2e8Ok(d,c))return;if(c[0]==='8'){S.sel=[c2e8Key(d),c];render();return;}act(c2e8Play(d,c));return;}
     if(a==='suit'){const c=Array.isArray(S.sel)&&S.sel[0]===c2e8Key(d)?S.sel[1]:null;S.sel=[];if(i===9||!c||!cardsOf(d.hands[s]).includes(c)||!'shdc'[i]){render();return;}act(c2e8Play(d,c,'shdc'[i]));}}};
-HELP.c_eights='كل لاعب ياخذ 5 أوراق (7 لو كنتوا اثنين)، وتنقلب ورقة في الوسط. في دورك نزّل ورقة من نفس نوع الورقة اللي فوق أو نفس رقمها. الثمانية تنزل على أي شي، واللي ينزلها يختار النوع اللي بعدها. تقدر تسحب من الكومة ورقة ورقة بدل ما تنزل، ولو خلصت الكومة وما عندك ورقة تنفع تمرّر. أول من يخلص ورقه ياخذ نقاط اللي باقي عند الباقين: الثمانية 50، الصور 10، الإكة 1، والباقي برقمها. ولو انقفلت اللعبة (الكل مرّر) ياخذها صاحب أقل ورق. أول من يوصل 100 يفوز.';
+HELP.c_eights='كل لاعب ياخذ 5 أوراق (7 لو كنتوا اثنين)، وتنقلب ورقة في الوسط. في دورك نزّل ورقة من نفس نوع الورقة اللي فوق أو نفس رقمها. الثمانية تنزل على أي شي، واللي ينزلها يختار النوع اللي بعدها. تقدر تسحب من الكومة ورقة ورقة بدل ما تنزل، ولو خلصت الكومة وما عندك ورقة تنفع تمرّر. أول من يخلص ورقه يفوز بالجولة، والباقين تنحسب عليهم أوراقهم: الثمانية 50، الصور 10، الإكة 1، والباقي برقمها. ولو انقفلت اللعبة (الكل مرّر) يفوز بالجولة صاحب أقل ورق. لما يوصل أحد 100 تخلص اللعبة ويفوز صاحب أقل مجموع.';
 // the bot: sheds the costly cards first, keeps its eights for when it is stuck (or someone is about to go out), and names its longest suit
 GAMES.c_eights.bot=(d,s,lv)=>{if(d.ph==='sum')return c2e8Next(d);const H=cardsOf(d.hands[s]),L=c2e8Legal(d,s);
   if(!L.length)return d.dk.length?c2e8Draw(d):c2e8Pass(d);
@@ -279,7 +279,7 @@ function c2chCall(d){const s=d.turn,lp=d.lp,cs=cardsOf(d.pile).slice(-lp.n),lie=
 const c2chBelieve=d=>d.fin>=0?{...d,win:d.fin,last:`${nameTag(d,d.turn)} صدّق، و${nameTag(d,d.fin)} خلّص ورقه`}:d;
 const c2chKeyT='ch';
 GAMES.c_cheat={name:'الكذاب',cat:'cards',lbc:'#7A3E9D',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7A3E9D"/><circle cx="50" cy="50" r="40" fill="#8C4FB0"/>${[0,1,2].map(k=>`<g transform="rotate(${-14+k*14} 50 80)"><rect x="34" y="28" width="32" height="46" rx="5" fill="#fff" stroke="#5B2C78" stroke-width="1.5"/><rect x="38" y="32" width="24" height="38" rx="3" fill="#2D4763"/><circle cx="50" cy="51" r="5" fill="#EC6158"/></g>`).join('')}<circle cx="74" cy="26" r="15" fill="#F0B429"/><text x="74" y="33" font-size="20" font-weight="900" text-anchor="middle" fill="#5B2C78">?</text></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7A3E9D"/><circle cx="50" cy="50" r="40" fill="#8C4FB0"/>${[0,1,2].map(k=>`<g transform="rotate(${-14+k*14} 50 80)"><rect x="34" y="28" width="32" height="46" rx="5" fill="#fff" stroke="#5B2C78" stroke-width="1.5"/><rect x="38" y="32" width="24" height="38" rx="3" fill="#2D4763"/><circle cx="50" cy="51" r="5" fill="#EC6158"/></g>`).join('')}<circle cx="74" cy="26" r="15" fill="#F0B429"/><text direction="ltr" x="74" y="33" font-size="20" font-weight="900" text-anchor="middle" fill="#5B2C78">?</text></svg>`,
   init:n=>({dl:n-1,hands:Array(n).fill(''),pile:'',rk:0,lp:null,fin:-1,rv:null,ph:'play',last:''}),
   start:(d,base)=>c2chDeal(d),
   mask:c2shMask,
@@ -348,7 +348,7 @@ function c2scShow(d,b31){const al=aliveSeats(d),val=d.pl.map((_,s)=>d.out[s]==='
 // the next deal: the seats with no lives left are taken out (d.out) only now, so the summary still shows everybody
 function c2scNext(d){const out=d.dead||d.out;const x={...d,out,dead:null};return {...c2scDeal({...x,dl:nextSeat(x,x.dl)}),last:''};}
 GAMES.c_scat={name:'واحد وثلاثين',cat:'cards',lbc:'#C7662B',outDone:false,
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C7662B"/><circle cx="50" cy="50" r="40" fill="#D97A3E"/>${['A','K','T'].map((r,k)=>`<g transform="rotate(${-16+k*16} 50 84)"><rect x="35" y="26" width="30" height="44" rx="5" fill="#fff"/><text x="50" y="52" font-size="15" font-weight="800" text-anchor="middle" fill="#D43C33">${r==='T'?'10':r}♥</text></g>`).join('')}<rect x="30" y="74" width="40" height="18" rx="9" fill="#2D4763"/><text x="50" y="88" font-size="14" font-weight="900" text-anchor="middle" fill="#fff">31</text></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C7662B"/><circle cx="50" cy="50" r="40" fill="#D97A3E"/>${['A','K','T'].map((r,k)=>`<g transform="rotate(${-16+k*16} 50 84)"><rect x="35" y="26" width="30" height="44" rx="5" fill="#fff"/><text direction="ltr" x="42" y="40" font-size="12" font-weight="900" text-anchor="middle" fill="#D43C33">${r==='T'?'10':r}</text><text direction="ltr" x="42" y="52" font-size="11" text-anchor="middle" fill="#D43C33">♥</text></g>`).join('')}<rect x="30" y="74" width="40" height="18" rx="9" fill="#2D4763"/><text direction="ltr" x="50" y="88" font-size="14" font-weight="900" text-anchor="middle" fill="#fff">31</text></svg>`,
   init:n=>({dl:n-1,hands:Array(n).fill(''),dk:'',disc:'',lives:Array(n).fill(3),kn:-1,left:0,ph:'draw',took:'',last:''}),
   start:(d,base)=>c2scDeal(d),
   mask:c2shMask,
@@ -429,7 +429,7 @@ function c2prEnd(d){const n=d.pl.length,ord=d.fin.split('').map(Number),sc=[...d
 const c2prNextR=d=>({...c2prDeal(d),last:d.last});
 const c2prKeyT='pr';
 GAMES.c_pres={name:'الرئيس والوزير',cat:'cards',lbc:'#9C7A1E',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9C7A1E"/><circle cx="50" cy="54" r="38" fill="#B38F2A"/><g transform="rotate(-12 38 60)"><rect x="22" y="38" width="30" height="42" rx="4" fill="#fff"/><text x="37" y="65" font-size="17" font-weight="800" text-anchor="middle" fill="#2D4763">2♠</text></g><g transform="rotate(10 62 60)"><rect x="48" y="38" width="30" height="42" rx="4" fill="#fff"/><text x="63" y="65" font-size="17" font-weight="800" text-anchor="middle" fill="#D43C33">2♥</text></g><path d="M30 30l7-14 13 10 13-10 7 14z" fill="#F7CF5A" stroke="#7A5C10" stroke-width="2" stroke-linejoin="round"/><rect x="30" y="29" width="40" height="7" rx="2" fill="#E5A81F"/></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#9C7A1E"/><circle cx="50" cy="54" r="38" fill="#B38F2A"/><g transform="rotate(-12 38 60)"><rect x="22" y="38" width="30" height="42" rx="4" fill="#fff"/><text direction="ltr" x="37" y="65" font-size="17" font-weight="800" text-anchor="middle" fill="#2D4763">2♠</text></g><g transform="rotate(10 62 60)"><rect x="48" y="38" width="30" height="42" rx="4" fill="#fff"/><text direction="ltr" x="63" y="65" font-size="17" font-weight="800" text-anchor="middle" fill="#D43C33">2♥</text></g><path d="M30 30l7-14 13 10 13-10 7 14z" fill="#F7CF5A" stroke="#7A5C10" stroke-width="2" stroke-linejoin="round"/><rect x="30" y="29" width="40" height="7" rx="2" fill="#E5A81F"/></svg>`,
   init:n=>({dl:n-1,hands:Array(n).fill(''),tp:'',tc:0,tr:-1,lead:-1,pa:'0'.repeat(n),fin:'',order:'',ph:'play',sw:null,sc:Array(n).fill(0),rd:0,last:''}),
   start:(d,base)=>c2prDeal(d),
   mask:c2shMask,
@@ -522,7 +522,7 @@ function c2kkLay(d,groups){const t=d.turn;let hc=cardsOf(d.hands[t]);const melds
     took:d.took&&groups.some(g=>g.includes(d.took))?'':d.took,last:`${nm(d,t)} نزّل ${groups.length===1?'مجموعة':groups.length+' مجموعات'}${opening?` بـ ${val}`:''}`}};}
 const c2kkKey=d=>d.gid+':'+d.r+':'+d.turn+':'+d.hands[d.turn]+d.melds.length;
 GAMES.c_konkan={name:'كونكان',cat:'cards',lbc:'#7B2D4F',
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B2D4F"/><circle cx="50" cy="50" r="40" fill="#8E3A5E"/>${[0,1,2,3].map(k=>`<rect x="${14+k*18}" y="${30+k*3}" width="22" height="32" rx="3" fill="#fff" stroke="#5A1F39" stroke-width="1.2"/><text x="${25+k*18}" y="${51+k*3}" font-size="13" font-weight="800" text-anchor="middle" fill="${k%2?'#D43C33':'#2D4763'}">${['9','10','J','Q'][k]}</text>`).join('')}<rect x="28" y="74" width="44" height="14" rx="7" fill="#F0B429"/><text x="50" y="85" font-size="11" font-weight="900" text-anchor="middle" fill="#5A1F39">51</text></svg>`,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B2D4F"/><circle cx="50" cy="50" r="40" fill="#8E3A5E"/>${[0,1,2,3].map(k=>`<rect x="${14+k*18}" y="${30+k*3}" width="22" height="32" rx="3" fill="#fff" stroke="#5A1F39" stroke-width="1.2"/><text direction="ltr" x="${25+k*18}" y="${51+k*3}" font-size="13" font-weight="800" text-anchor="middle" fill="${k%2?'#D43C33':'#2D4763'}">${['9','10','J','Q'][k]}</text>`).join('')}<rect x="28" y="74" width="44" height="14" rx="7" fill="#F0B429"/><text direction="ltr" x="50" y="85" font-size="11" font-weight="900" text-anchor="middle" fill="#5A1F39">51</text></svg>`,
   init:n=>({dl:n-1,...c2kkDealCore(n),tot:Array(n).fill(0),r:1,last:'الجولة 1 من 5'}),
   start:d=>c2kkRound({...d,dl:((d.turn||0)+d.pl.length-1)%d.pl.length}),
   hide:{seat:['hands'],all:['dk']},net:{ui:['kk']},
