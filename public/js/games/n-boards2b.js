@@ -117,10 +117,10 @@ function b2goScore(d){const A=b2goArea(d.b,d.dead);return [A.sc[0],A.sc[1]+B2GK]
 function b2goToMark(d,why){const dead=b2goDead(d.b,d.sd,d.ko,70);return {...d,ph:'mark',dead,ok:0,ps:0,mvn:(d.mvn||0)+1,last:why};}
 function b2goDo(d,m){const s=d.sd;
   if(m.pass){const ps=(d.ps||0)+1;const nd=b2Pass(d,s,{ps,ko:-1,lm:null,lc:[],nmv:(d.nmv||0)+1,last:`${tmName(d,s)} مرّر`});
-    return ps>=2?b2goToMark(nd,'مرّروا الاثنين: علّموا الحجار الميتة ووافقوا على النتيجة'):nd;}
+    return ps>=2?b2goToMark(nd,'مرّروا الاثنين: نحسب النتيجة'):nd;}
   const r=b2goPlay(d.b,m.i,s,d.ko);if(!r)return d;const cap=[...d.cap];cap[s]+=r.caps.length;
   const nd=b2Pass(d,s,{b:r.b,ko:r.ko,ps:0,cap,lm:[m.i],lc:r.caps.map(q=>[q,s?1:0]),nmv:(d.nmv||0)+1,last:`${tmName(d,s)} حط حجر${r.caps.length?` وأكل ${r.caps.length}`:''}`});
-  return nd.nmv>=240?b2goToMark(nd,'طالت اللعبة: علّموا الحجار الميتة ووافقوا على النتيجة'):nd;}
+  return nd.nmv>=240?b2goToMark(nd,'طالت اللعبة: نحسب النتيجة'):nd;}
 function b2goTog(d,i){if(d.b[i]==='.')return d;const g=b2goGroup([...d.b],i).st;const v=d.dead[i]==='1'?'0':'1';let dead=d.dead;for(const q of g)dead=setAt(dead,q,v);return {...d,dead,ok:0,mvn:(d.mvn||0)+1,last:`${tmName(d,d.sd)} غيّر علامة مجموعة`};}
 function b2goOk(d){const s=d.sd;if(!d.ok)return b2Pass(d,s,{ok:1,last:`${tmName(d,s)} وافق على النتيجة، الحين دور الثاني`});
   const [k,w]=b2goScore(d);return b2Won({...d,res:[k,w]},k>w?0:1,'score');}
@@ -146,7 +146,7 @@ GAMES.b_go={...B2TEAM,name:'قو',cat:'board',lbc:'#3B3B3B',
   onTimeout(d){if(d.ph==='mark')return b2goOk(d);const ms=b2goLegal(d.b,d.sd,d.ko).filter(i=>B2GNB[i].some(q=>d.b[q]!==String(d.sd)));return b2goDo(d,ms.length?{i:b2Rnd(ms)}:{pass:1});},
   points:d=>d.pl.map((_,s)=>`${s%2?'⚪':'⚫'} أكل ${d.cap[s%2]}`),
   winText(d){if(d.end==='score'&&d.res){const [k,w]=d.res;return `فاز ${k>w?'الأسود':'الأبيض'}: ${k} مقابل ${w}`;}return b2WinTxt(d,B2GON,{});},
-  status(d,ctx){if(d.ph==='mark'){const [k,w]=b2goScore(d);return b2Stat(d,ctx,B2GON,`<br><small>اضغط مجموعة عشان تعلّمها ميتة أو حية • الأسود ${k}، الأبيض ${w}</small>`,0);}
+  status(d,ctx){if(d.ph==='mark'){const [k,w]=b2goScore(d);return b2Stat(d,ctx,B2GON,`• الأسود ${k}، الأبيض ${w}`,0);}
     return b2Stat(d,ctx,B2GON,d.ps?'<br><small>الخصم مرّر: إذا مرّرت تنتهي اللعبة</small>':'',0);},
   render(d,ctx){const my=ctx.my,s=d.sd,flip=b2Flip(d,ctx);const mark=d.ph==='mark';const lg=my&&!mark?new Set(b2goLegal(d.b,s,d.ko)):new Set();
     const own=mark?b2goArea(d.b,d.dead).own:null;
@@ -155,6 +155,7 @@ GAMES.b_go={...B2TEAM,name:'قو',cat:'board',lbc:'#3B3B3B',
       if(mark&&own[i]>=0&&(v==='.'||dd))p+=`<u class="b2tr t${own[i]}"></u>`;
       return {q:i,x,y,i:tap?i:null,c:(d.lm&&d.lm[0]===i?'lm lmt':'')+(i===d.ko&&!mark?' ko':'')+(tap&&!mark?' gp':''),p};});
     let h=b2Board('b2go bd-b2',100,100,10.6,B2GBG,pts,flip,my);
+    if(mark)h+=`<p class="note">${d.ok?'الخصم وافق على العلامات. ':''}اضغط مجموعة حجار عشان تعلّمها ميتة أو حية، والمربعات الصغيرة مساحة كل لون</p>`;
     if(my&&mark)h+=`<div class="row chact"><button class="btn green" data-ga="ok">${d.ok?'أوافق، احسبوا النتيجة':'موافق على العلامات'}</button><button class="btn" data-ga="resume">كمّلوا اللعب</button></div>`;
     else if(my)h+=`<div class="row chact"><button class="btn" data-ga="pass">مرّر</button><button class="btn" data-ga="resign">استسلم</button></div>`;
     return h;},

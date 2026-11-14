@@ -132,3 +132,4 @@ button.b2pt{cursor:pointer}
 .bd-tv.b2mb .tvk.pnd circle:nth-child(2){stroke:#E0A42A;stroke-width:1.6}
 .bd-tv.b2mb .tvk.fresh{transform-box:fill-box;transform-origin:center;animation:b2pop .3s ease-out}
 .chside.mbr{background:#7A2B26;color:#fff;box-shadow:none}
+.b2bd+.note,.b2bd+p.note{margin-top:18px}
