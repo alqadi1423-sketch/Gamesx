@@ -496,7 +496,7 @@ function renderNear(){
   OUT=`${topBar('قريب بدون نت','home')}
   ${D.length?`<div class="panel ndiag">${act.map(x=>`<div class="nd"><p>${x.t}</p><button class="btn" data-a="nset" data-w="${x.a}">${x.b}</button></div>`).join('')}${other&&!act.length?'<div class="nd"><p>ما قدرنا نشغّل اللعب القريب على هالجوال</p></div>':''}<button class="big green" data-a="near">حاول مرة ثانية</button></div>`:''}
   <div class="panel">${pTitle('me','navy','اسمك')}<input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off"></div>
-  <div class="panel"><button class="big red" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
+  <button class="big red mkroom" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button>
   <div class="panel">${pTitle('near','green','الغرف القريبة')}${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><i>ادخل</i></button>`).join('')}</div>`:S.nearScan?`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`:''}</div>
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}
   ${S.nearLog?`${D.length?`<pre class="nlog">${escH(D.map(x=>x.raw||x.t).join('\n'))}</pre>`:''}${NEARROOM.log.length?`<pre class="nlog">${escH(NEARROOM.log.join('\n'))}</pre>`:''}`:''}`;
@@ -536,7 +536,7 @@ function renderLobby(){
   const sv=loadSaved();
   OUT=`${topBar('أونلاين','home')}
   <div class="panel">${pTitle('me','navy','اسمك وصورتك')}<input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="مثلًا: محمد" autocomplete="off">${avPicker()}</div>
-  <div class="panel"><button class="big red" data-a="create" ${S.joining?'disabled':''}>أنشئ غرفة</button></div>
+  <button class="big red mkroom" data-a="create" ${S.joining?'disabled':''}>أنشئ غرفة</button>
   <div class="panel">${pTitle('key','blue','عندك رمز؟')}<input class="code" id="code" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="······" aria-label="رمز الغرفة"><button class="big blue" data-a="join" ${S.joining?'disabled':''}>ادخل</button></div>
   ${sv&&sv.code&&sv.via!=='near'?`<button class="hx-cont room" data-a="resume"><i class="pic blue">${PIC.key}</i><span class="mode-tx"><small>ارجع لغرفتك</small><b class="ltr">${sv.code}</b></span><i class="hx-play"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M7 5.5v13L17.5 12z" fill="currentColor"/></svg></i></button>`:''}
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}`;
