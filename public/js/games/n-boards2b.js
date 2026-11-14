@@ -312,8 +312,10 @@ const B2HMBG={};
 function b2hmBg(d){const key=d.K+':'+d.pl.map((_,s)=>col(d,s)).join();if(B2HMBG[key])return B2HMBG[key];
   const P=(q,r)=>`${(72+(q+r/2)*10).toFixed(1)},${(83+r*8.66).toFixed(1)}`;
   let g=`<polygon points="${P(4.6,-9.2)} ${P(4.6,4.6)} ${P(-9.2,4.6)}" class="b2hst"/><polygon points="${P(-4.6,9.2)} ${P(-4.6,-4.6)} ${P(9.2,-4.6)}" class="b2hst"/>`;
-  B2HMCOR[d.K].forEach((c,k)=>{const fill=b2hmCol(d,k);for(const t of [c,(c+3)%6]){const pts=B2HMTR[t].map(i=>B2HMXY[i]);
-      g+=`<g fill="${fill}" opacity="${t===c?.28:.16}">${pts.map(([x,y])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.6"/>`).join('')}</g>`;}});
+  // each side's home point and goal point are tinted with its colour (a soft triangle around the ten holes)
+  B2HMCOR[d.K].forEach((c,k)=>{const fill=b2hmCol(d,k);for(const t of [c,(c+3)%6]){const T=B2HMTR[t],cor=T.filter(i=>B2HMNB[i].filter(n=>T.includes(n)).length<=2).map(i=>B2HMXY[i]);
+      const cx=cor.reduce((a,p)=>a+p[0],0)/3,cy=cor.reduce((a,p)=>a+p[1],0)/3;
+      g+=`<polygon points="${cor.map(([x,y])=>`${(cx+(x-cx)*1.5).toFixed(1)},${(cy+(y-cy)*1.5).toFixed(1)}`).join(' ')}" fill="${fill}" opacity="${t===c?.3:.17}" stroke="${fill}" stroke-width="5" stroke-linejoin="round"/>`;}});
   g+=`<g class="b2hh">${B2HMXY.map(([x,y])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.1"/>`).join('')}</g>`;
   return B2HMBG[key]=`<svg viewBox="0 0 144 166" aria-hidden="true">${g}</svg>`;}
 GAMES.b_halma={teams:'none',name:'القفز',cat:'board',lbc:'#3F7FBF',
