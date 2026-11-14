@@ -554,9 +554,10 @@ function roomBar(full){try{
     s+=`<div class="panel members"><div class="mh"><b>اللاعبين</b><small>${pl.length} من ${MAXP}</small></div>${me}<div class="mlist">${pl.map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${avOf(r)||shapeW(r)}</i>${r===S.me?'أنت':pname(r)}${r===h?' 👑':''}</span>`).join('')}</div></div>`;}
   return s;}catch(e){console.error(e);return '';}
 }
-const NEWG=['baloot','hand','chess','tavla','dama','bara','mafia','wasla'];
+// tile ribbons («جديد» / «مطوّرة»): none for now, nearly every game is new or upgraded and the ribbons only cluttered the list
+const NEWG=[];
 // games rebuilt with new rules or a new look
-const UPG=['tele','cats','sea','camel','luck','wires','hilo','chess','dama','tavla','ttt','snakes','mines','treasure','baloot','uno','hand','domino','rev','memory','liar','arena','duel','mafia','bara','scr','odd','word','war','lowu','n99','fish','stroop','two3','trivia','math','caps','islam','sci','geo','rps','react','nmem','cnt','oddc','sudo','typing','farkle','guess','gomoku','dots','cw','c4','bingo','pig','bj','oldmaid','tanks','dwars','tapwar','ludo','cups','wasla','close','major','tf','prov','num','nim','c31','simon'];
+const UPG=[];
 // the sections of the game list; a game says its own (G.cat), CAT_OF files the older games into the newer, finer sections
 const CATS=[['board','ألعاب لوحة'],['cards','ورق ودومينو'],['dice','زهر'],['party','جماعية'],['quiz','مسابقات'],['words','كلمات وحروف'],
   ['mind','ذكاء وتخمين'],['puzzle','ألغاز وتركيب'],['speed','سرعة وردة فعل'],['fight','قتالية'],['sport','رياضة ومهارة']];
