@@ -74,6 +74,49 @@ button.pv.can:active{transform:scale(.94)}
 .mfe svg{width:58px;height:58px}
 .mfe.r-m{--eb:#B23A3A}.mfe.r-d{--eb:#1E8E6E}.mfe.r-t{--eb:#2F7DB3}.mfe.r-c{--eb:#C98B4B}.mfe.r-q{--eb:#5F7590}
 .mfe.r-m svg{width:64px;height:64px}
+.mfe.r-s{--eb:#6C4BB4}.mfe.r-j{--eb:#D9488A}
+.mfcard.r-s,.mfme.r-s{--rc1:#7A58C4;--rc2:#3D2675}
+.mfcard.r-j,.mfme.r-j{--rc1:#E0609A;--rc2:#8E1F55}
+
+/* the options before the deal */
+.mfchips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0 0 10px}
+.mfchips span{display:flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:99px;background:rgba(255,255,255,.1);font-size:13px;animation:pa-pop var(--t3) var(--spring) both}
+.mfchips .mfe{width:24px;height:24px;box-shadow:none}.mfchips .mfe svg{width:18px;height:18px}
+.mfopts{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(100%,380px);margin:0 auto}
+.mfopt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 10px 9px 28px;border-radius:var(--r-m);text-align:start;background:rgba(255,255,255,.08);color:var(--mfi);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14)}
+.mfopt b{font-size:15px;font-weight:800}.mfopt small{font-size:12px;line-height:1.35;color:var(--mfm)}
+.mfopt i{position:absolute;left:8px;top:9px;width:16px;height:16px;border-radius:5px;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:900;box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)}
+.mfopt.on{background:rgba(240,180,41,.18);box-shadow:inset 0 0 0 2px rgba(240,180,41,.75)}
+.mfopt.on i{background:#F0B429;color:#2B2F45;box-shadow:none}
+.mfopt:disabled{opacity:.5}
+.mfopt:not(:disabled):active{transform:scale(.96)}
+/* accuse, then vote */
+.mfsteps{display:flex;justify-content:center;gap:6px;margin:-2px 0 8px}
+.mfsteps i{font-style:normal;font-size:12px;font-weight:800;padding:2px 10px;border-radius:99px;background:rgba(127,140,160,.14);color:var(--mfm)}
+.mfsteps i.on{background:#F0B429;color:#2B2F45}.mfsteps i.ok{background:rgba(63,174,92,.18);color:#25834a}
+.mfacc{list-style:none;width:min(100%,380px);margin:4px auto 2px;padding:0;display:flex;flex-direction:column;gap:4px}
+.mfacc li{padding:6px 10px;border-radius:var(--r-m);background:rgba(127,140,160,.12);box-shadow:inset 3px 0 0 var(--c);font-size:14px;line-height:1.45;animation:pa-in var(--t3) var(--ease) both}
+.mfacc li:nth-child(2){animation-delay:.05s}.mfacc li:nth-child(3){animation-delay:.1s}.mfacc li:nth-child(4){animation-delay:.15s}
+.mfacc small{display:block;font-size:12.5px;color:var(--mfm)}
+/* what just happened: the night's dead with their role turning over, the vote bars */
+.mfev{width:min(100%,380px);margin:0 auto 8px;padding:8px 10px 10px;border-radius:var(--r-l,16px);background:rgba(127,140,160,.12);animation:pa-in var(--t3) var(--ease) both}
+.mfevh{margin:0 0 6px;text-align:center;font-size:15px;font-weight:800}.mfevh.small{font-size:13px;color:var(--mfm);margin:6px 0 0}
+.mfdl{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.mfdead{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:96px;animation:pa-pop var(--t3) var(--spring) both}
+.mfdead>i{width:40px;height:40px;border-radius:50%;background:var(--c);display:grid;place-items:center;opacity:.85;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
+.mfdead>i svg{width:20px;height:20px}
+.mfdead>b{font-size:14px;font-weight:800}.mfdead>small{font-size:12px;color:var(--mfm)}
+.mfrc{perspective:600px}.mfrc .mfin{display:flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:99px;background:rgba(0,0,0,.18);animation-delay:.25s}
+.mfrc .mfe{width:28px;height:28px;box-shadow:none}.mfrc .mfe svg{width:20px;height:20px}
+.mfrc em{font-style:normal;font-size:13px;font-weight:800}
+.mfbars{display:flex;flex-direction:column;gap:5px;margin-bottom:6px}
+.mfbar{display:grid;grid-template-columns:72px 1fr 22px;align-items:center;gap:6px;font-size:13px}
+.mfbar b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mfbar span{height:12px;border-radius:6px;background:rgba(127,140,160,.18);overflow:hidden}
+.mfbar span i{display:block;height:100%;border-radius:6px;background:var(--c,#8A94A6);transform-origin:right;animation:mf-grow .42s var(--ease) both}
+@keyframes mf-grow{from{transform:scaleX(0)}}
+.mfbar.sk span i{background:#8A94A6}.mfbar.hit b{color:var(--bad)}
+.mfbar em{font-style:normal;font-weight:800;text-align:center}
 
 /* my role, folded: a pill that opens the card again */
 .mfme{width:min(100%,360px);margin:0 auto 4px}
@@ -441,3 +484,18 @@ button.pv.can:active{transform:scale(.94)}
  .pq-tf .opts .opt:nth-child(1){color:#6FD08E}
  .pq-tf .opts .opt:nth-child(2){color:#FF8A80}
 }
+
+/* برة السالفة: what a bot asked or answered, the bots' answers so far, why each voted */
+.bsay{width:min(100%,380px);margin:8px auto 2px;display:flex;flex-direction:column;gap:6px;animation:pa-in var(--t3) var(--ease) both}
+.bsay p{margin:0;padding:8px 12px;border-radius:16px 16px 16px 4px;background:var(--surface);box-shadow:var(--e1);font-size:15px;line-height:1.45;max-width:88%}
+.bsay p.ans{align-self:flex-end;border-radius:16px 16px 4px 16px;background:#FFF1E6;color:#5A2A12;animation:pa-pop var(--t3) var(--spring) .15s both}
+.bhints{width:min(100%,380px);margin:10px auto 0;padding:6px 10px 8px;border-radius:var(--r-m);background:rgba(127,140,160,.1)}
+.bhints>small{display:block;text-align:center;font-size:12px;font-weight:800;color:var(--mut);margin-bottom:4px}
+.bhints p{margin:2px 0;display:flex;gap:8px;align-items:baseline;font-size:14px;padding-inline-start:8px;box-shadow:inset 3px 0 0 var(--c)}
+.bhints p b{flex:none}.bhints p span{color:var(--mut)}
+.bwhy{margin-top:8px}.bwhy small{color:var(--mut)}
+@media (prefers-color-scheme:dark){.bsay p.ans{background:#4A2A18;color:#FFE3CF}.mfsteps i.ok{color:#6FD08E}}
+/* وين شخصيتك؟: the cups slide by transform (their place is set inline), never by left */
+.cupsw .cupb{left:0;transition:transform var(--sp,400ms) ease-in-out}
+/* رتّب الحروف: the word's group as a hint */
+.scrh{display:block;margin-top:6px;font-size:13px;font-weight:800;color:var(--mut)}

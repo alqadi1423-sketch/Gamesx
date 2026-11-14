@@ -16,7 +16,19 @@ const PWB={
 'جسم':'عين:👁️,أذن/اذن:👂,خشم/أنف:👃,فم/شفايف:👄,يد/كف:✋,قدم/رجل:🦶,قلب:❤️,مخ/دماغ:🧠,سن/ضرس:🦷,عظمة:🦴,عضلة/عضلات:💪',
 'شخصيات':'دكتور/طبيب:👨‍⚕️,شرطي/شرطة:👮,إطفائي/رجل إطفاء:🧑‍🚒,طباخ/شيف:👨‍🍳,مزارع/فلاح:👨‍🌾,رائد فضاء:👨‍🚀,طيار:👨‍✈️,معلم/أستاذ:👨‍🏫,نينجا:🥷,ملك:🤴,ملكة/أميرة:👸,عروس:👰,مهرج:🤡,ساحر:🧙,شبح:👻,روبوت:🤖,كائن فضائي/فضائي:👽,مارد/جني:🧞,حورية بحر:🧜‍♀️,بطل خارق/سوبرمان:🦸,زومبي:🧟,قرصان:🏴‍☠️',
 'رياضة':'كرة قدم/كورة:⚽,كرة سلة:🏀,تنس:🎾,بولينج:🎳,جولف:⛳,سباحة:🏊,ملاكمة:🥊,كاراتيه:🥋,تزلج:⛷️,ركوب الأمواج/سيرف:🏄,صيد السمك/صنارة:🎣,قوس وسهم/سهم:🏹,كأس:🏆,ميدالية:🏅,بلياردو:🎱,تنس طاولة/بينج بونج:🏓,كرة طائرة:🏐,رفع أثقال/حديد:🏋️,سباق/علم السباق:🏁,ألعاب نارية:🎆'};
-const PW=[];for(const [cat,list] of Object.entries(PWB))for(const e of list.split(',')){const k=e.lastIndexOf(':');const alts=e.slice(0,k).split('/');PW.push({w:alts[0],alts,em:e.slice(k+1),cat});}
+// more words, kept after the first list so a word's number stays the same
+const PWB2={
+'حيوانات':'لاما/ألبكة:🦙,كوالا:🐨,هامستر:🐹,فقمة:🦭,قندس:🦫,ثور:🐂,جاموس:🐃,بجعة:🦢,فلامنغو/نحام:🦩,ديك رومي/حبش:🦃,كتكوت/صوص:🐤,دودة:🪱,سمكة البالون/سمكة منتفخة:🐡,ماموث:🦣,راكون:🦝,فهد:🐆,ضب/سحلية:🦎,سمكة ملونة/سمكة استوائية:🐠',
+'أكل':'خبز فرنسي/باقيت:🥖,كرواسون:🥐,هوت دوق/هوت دوج:🌭,فلافل:🧆,سلطة:🥗,شوربة/حساء:🍲,أفوكادو:🥑,جوز هند:🥥,كيوي:🥝,خوخ/دراق:🍑,كمثرى/إجاص:🍐,بروكلي:🥦,بصل:🧅,ثوم:🧄,فول سوداني:🥜,كستناء:🌰,بطاطا حلوة:🍠,زبدة:🧈,وافل:🧇,مصاصة/مصاص:🍭,فلفل رومي/فليفلة:🫑',
+'أشياء':'مسبحة/سبحة:📿,دش:🚿,بانيو/حوض استحمام:🛁,مرساة:⚓,فلوس/ورقة نقدية:💵,بطاقة بنكية/كرت:💳,مفك:🪛,برغي/صامولة:🔩,مفتاح ربط/مفتاح انجليزي:🔧,فأس:🪓,سلسلة/جنزير:⛓️,أكياس تسوق/كيس:🛍️,عربة تسوق/عربية:🛒,نظارة شمسية:🕶️,ميزان حرارة/ترمومتر:🌡️,عدسة مكبرة/مكبر:🔍,كشاف/مصباح يدوي:🔦,معداد/عداد:🧮,قلم حبر/ريشة:🖋️,فرشاة رسم:🖌️,لاصق جروح/بلاستر:🩹,سماعة طبيب:🩺,رضاعة:🍼,سطل/دلو:🪣,ملف/مجلد:📁,كتب:📚,دفتر:📓,تذكرة:🎫,كاميرا فيديو:📹,يويو:🪀,قطعة شطرنج/شطرنج:♟️,بازل/أحجية:🧩,بوق/ترومبيت:🎺,ساكسفون:🎷',
+'ملابس':'جاكيت/معطف:🧥,كيمونو:👘,خوذة:⛑️,قبعة تخرج:🎓,نعال/شبشب:🩴,بوت/جزمة طويلة:👢,شورت:🩳,ملابس سباحة/مايوه:🩱,شنطة ظهر/حقيبة ظهر:🎒,برنيطة/قبعة رسمية:🎩,سترة نجاة:🦺,نظارة غوص:🥽',
+'أماكن':'محطة قطار:🚉,مطار:🛫,كوخ:🛖,مخيم/تخييم:🏕️,مدينة/ناطحات سحاب:🏙️,مول/مجمع تجاري:🏬,بقالة/دكان:🏪,بريد/مكتب بريد:🏤,حديقة/منتزه:🏞️,طريق/شارع:🛣️,سكة قطار/سكة حديد:🛤️,تمثال الحرية:🗽,حمام سباحة/مسبح:🏊‍♂️',
+'طبيعة':'عشبة/نبتة:🌿,برسيم/نفل:☘️,توليب/زهرة توليب:🌷,أوراق الخريف/خريف:🍂,ضباب:🌫️,رياح/هواء:💨,شروق/شروق الشمس:🌅,غروب/غروب الشمس:🌇,مجرة/درب التبانة:🌌,جبل ثلجي:🗻,صدفة/محار:🐚,عاصفة رعدية/رعد:⛈️,غيوم وشمس/غائم:⛅',
+'مواصلات':'تلفريك:🚡,قطار سريع:🚄,مترو:🚇,ترام:🚊,سيارة سباق:🏎️,باخرة/سفينة سياحية:🛳️,لنش/زورق سريع:🚤,كانو/قارب تجديف:🛶,قمر صناعي:🛰️,صحن طائر/طبق طائر:🛸,سكيت بورد/لوح تزلج:🛹,فان/باص صغير:🚐,جيب/سيارة دفع رباعي:🚙',
+'جسم':'لسان:👅,عيون:👀,رئة/رئتين:🫁,إصبع/صبع:☝️,قبضة/بوكس:👊,تصفيق:👏,ابتسامة/ضحكة:😄',
+'شخصيات':'موظف/رجل أعمال:🧑‍💼,عالم/باحث:🧑‍🔬,مبرمج:🧑‍💻,رسام/فنان:🧑‍🎨,ميكانيكي:🧑‍🔧,قاضي:🧑‍⚖️,حارس:💂,محقق/تحري:🕵️,عامل بناء:👷,طفل/بيبي:👶,جد/شايب:👴,جدة/عجوز:👵,عداء/راكض:🏃',
+'رياضة':'سباق دراجات/دراجات:🚴,غوص:🤿,هوكي:🏒,كريكيت:🏏,بيسبول:⚾,كرة قدم أمريكية/رقبي:🏈,تزلج على الجليد:⛸️,مصارعة:🤼,مبارزة:🤺,رماية/هدف:🎯,ريشة طائرة/بادمنتون:🏸,تسلق:🧗,يوغا/تأمل:🧘,فروسية/سباق خيل:🏇,جمباز:🤸,كرة يد:🤾'};
+const PW=[];for(const [cat,list] of [...Object.entries(PWB),...Object.entries(PWB2)])for(const e of list.split(',')){const k=e.lastIndexOf(':');const alts=e.slice(0,k).split('/');PW.push({w:alts[0],alts,em:e.slice(k+1),cat});}
 
 // guesses count with or without «ال», hamza, ta marbuta and spaces
 const PNORM=t=>String(t||'').replace(/[ً-ْـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي')
@@ -181,28 +193,29 @@ setInterval(()=>{if(S.st.g!=='tele')return;const d=S.st.d;if(!d||d.win!=null)ret
   if(d.ph==='draw'){const t=document.querySelector('.ptime b');if(t){const l=pLeft(d);t.textContent=l;t.parentNode.classList.toggle('low',l<=10);}
     const rv=document.querySelector('.preveal');if(rv){const k=pShown(d);if(+rv.dataset.k!==k){rv.dataset.k=k;const ord=pTileOrder(d);rv.querySelectorAll('.ptiles i').forEach((e,i)=>e.classList.toggle('off',ord.indexOf(i)<k));}}}},500);
 
+// the places of the cups after the first i swaps
+function cupsAt(P,i){const pos=[...P.start];for(let k=0;k<i&&k<P.swaps.length;k++){const [a,b]=P.swaps[k];const ka=pos.indexOf(a),kb=pos.indexOf(b);pos[ka]=b;pos[kb]=a;}return pos;}
 /* ---------- «وين شخصيتك؟»: every player's character hides under a cup, the cups shuffle, pick yours ---------- */
 GAMES.cups={...spdBase({name:'وين شخصيتك؟',lbc:'#6C3483',icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#884EA0"/>${[18,50,82].map((x,k)=>`<path d="M${x-13} 72L${x-9} 34H${x+9}L${x+13} 72Z" fill="${k===1?'#F5B041':'#F8C471'}" stroke="#6E2C00" stroke-width="2"/>`).join('')}<circle cx="50" cy="84" r="7" fill="#EC6158"/></svg>`,
   title:'شخصيتك بتنحط تحت كوب، والأكواب بتتحرك. ركّز ووين ما وقفت اختار كوبها',
-  start(d,st){st.phase='show';st.run=false;},
-  view(d,ctx,st){const P=GAMES.cups.plan(d);const m=P.m;const me=ctx.v;
-    const pos=st.phase==='go'?P.end:P.start;
-    return `<div class="cupsw"><div class="cups" id="cups">${Array(m).fill(0).map((_,k)=>{const ch=k<d.pl.length?d.pl[k]:-1;
-      return `<button class="cupb" data-ga="pick" data-i="${k}" style="left:${pos[k]*(100/m)}%;width:${100/m}%" ${st.phase==='go'?'':'disabled'}><span class="cupc">${ch>=0?`<i style="background:${COLS[ch]}">${shapeW(ch).replace('<svg ','<svg style="width:18px;height:18px" ')}</i>`:''}</span><span class="cup"></span></button>`;}).join('')}</div></div>
-      <p class="note">${st.phase==='go'?'اختار الكوب اللي تحته شخصيتك':'ركّز على شخصيتك'} <b style="color:${col(d,me)}">●</b></p>`;},
-  click(a,k,d,ctx,st){if(a!=='pick'||st.phase!=='go')return;const P=GAMES.cups.plan(d);spdSubmit(d,ctx,k===ctx.v);}}),
+  start(d,st){st.phase='show';st.run=false;st.i=0;st.lift=true;},
+  /* the shuffle is drawn from st (how many swaps are done): every step is a normal render, the cups slide by transform,
+     so nothing holds the screen and a redraw in the middle shows the same places */
+  view(d,ctx,st){const P=GAMES.cups.plan(d);const m=P.m;
+    const pos=st.phase==='go'?P.end:cupsAt(P,st.i||0);
+    return `<div class="cupsw"><div class="cups ${st.phase==='show'&&st.lift?'lift':''}" id="cups" style="--sp:${P.speed}ms">${Array(m).fill(0).map((_,k)=>{const ch=k<d.pl.length?d.pl[k]:-1;
+      return `<button class="cupb" data-ga="pick" data-i="${k}" style="width:${100/m}%;transform:translateX(${pos[k]*100}%)" ${st.phase==='go'?'':'disabled'}><span class="cupc">${ch>=0?`<i style="background:${COLS[ch]}">${shapeW(ch).replace('<svg ','<svg style="width:18px;height:18px" ')}</i>`:''}</span><span class="cup"></span></button>`;}).join('')}</div></div>
+      <p class="note">${st.phase==='go'?'اختار الكوب اللي تحته شخصيتك':'ركّز على شخصيتك'} <b style="color:${col(d,ctx.v)}">●</b></p>`;},
+  click(a,k,d,ctx,st){if(a!=='pick'||st.phase!=='go')return;spdSubmit(d,ctx,k===ctx.v);}}),
   plan(d){const m=d.pl.length+1+(d.rd>2?1:0);const R=srng(d,'cup'+d.rd);const start=[...Array(m).keys()];const pos=[...start];const swaps=[];
     const nsw=6+d.rd*3;for(let i=0;i<nsw;i++){let a=Math.floor(R()*m),b=Math.floor(R()*(m-1));if(b>=a)b++;swaps.push([a,b]);
       const ka=pos.indexOf(a),kb=pos.indexOf(b);pos[ka]=b;pos[kb]=a;}
     return {m,start,end:pos,swaps,speed:Math.max(220,520-d.rd*70)};},
   resolve(d,picks){const pts=[...d.pts];const ok=[];picks.forEach((p,s)=>{if(p&&p.ok){pts[s]++;ok.push(nm(d,s));}});const rd=d.rd+1;
     return {...d,pts,rd,res:ok.length?`لقوا شخصياتهم: ${ok.join('، ')}`:'محد لقى شخصيته 😅',win:rd>=SPD_ROUNDS?mostPts(pts):null};},
-  after(d,ctx){if(!ctx.my)return;const st=spdState(d,ctx.v);if(st.phase!=='show'||st.run)return;const box=document.getElementById('cups');if(!box)return;st.run=true;S.holdRender=true;
-    const P=GAMES.cups.plan(d);const cups=[...box.querySelectorAll('.cupb')];const pos=[...P.start];const m=P.m;
-    box.classList.add('lift');
-    const place=()=>cups.forEach((c,k)=>{c.style.left=(pos[k]*(100/m))+'%';});
-    let i=0;const step=()=>{if(!S.sp||S.sp.key!==st.key){S.holdRender=false;return;}
-      if(i>=P.swaps.length){setTimeout(()=>{st.phase='go';st.t0=performance.now();S.holdRender=false;render();},300);return;}
-      const [a,b]=P.swaps[i++];const ka=pos.indexOf(a),kb=pos.indexOf(b);pos[ka]=b;pos[kb]=a;cups.forEach(c=>c.style.transitionDuration=P.speed+'ms');place();setTimeout(step,P.speed+40);};
-    setTimeout(()=>{box.classList.remove('lift');setTimeout(step,500);},1600);}
+  after(d,ctx){if(!ctx.my)return;const st=spdState(d,ctx.v);if(st.phase!=='show'||st.run)return;st.run=true;
+    const P=GAMES.cups.plan(d),lite=document.documentElement.classList.contains('lite');const live=()=>S.sp===st;
+    const step=()=>{if(!live())return;if(st.i>=P.swaps.length){setTimeout(()=>{if(!live())return;st.phase='go';st.t0=performance.now();render();},300);return;}
+      st.i++;render();setTimeout(step,(lite?Math.max(P.speed,400):P.speed)+40);};
+    setTimeout(()=>{if(!live())return;st.lift=false;render();setTimeout(step,500);},1600);}
 };
