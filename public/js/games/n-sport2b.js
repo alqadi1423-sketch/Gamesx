@@ -212,7 +212,7 @@ const dhSeg=(ax,ay,bx,by,px,py)=>{const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,t=l?r2Cl
 const dhOk=p=>Number.isInteger(p)&&p>=0&&p<12*1001&&p%1001<=1000;
 GAMES.r_dhow={name:'سباق السفن الشراعية',cat:'sport',lbc:'#1D6FA3',
   icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="r2dh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ED0F2"/><stop offset=".55" stop-color="#CBEBF9"/><stop offset=".56" stop-color="#2F86B8"/><stop offset="1" stop-color="#16557D"/></linearGradient></defs><rect width="100" height="100" fill="url(#r2dh)"/><path d="M18 64h56l-8 12H28z" fill="#8A5A2B"/><path d="M46 64V14" stroke="#6B3E1F" stroke-width="2.5"/><path d="M47 16L76 58H47z" fill="#F7F1E1"/><path d="M30 22L70 12" stroke="#6B3E1F" stroke-width="2"/><path d="M0 84q12-4 25 0t25 0 25 0 25 0" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/><path d="M8 20h14M14 14l8 6-8 6" stroke="#fff" stroke-width="2.5" fill="none"/></svg>`,
-  init:n=>({rd:0,bt:[],pv:[],wd:0,wt:0,last:''}),
+  init:n=>({rd:0,bt:[],pv:[],wd:0,wn:0,last:''}),
   start:d=>{const n=d.pl.length,R=mulberry(seedOf(d.gid+':dh'));return {...d,wd:Math.round(R()*30-15),bt:d.pl.map((_,s)=>[+(30+(n>1?s*40/(n-1):20)).toFixed(1),DH_LY+6,0,0,0]),pv:d.pl.map(()=>null)};},
   privOk:(d,r,o,p)=>p.pick==null||p.pick===NOPICK||dhOk(p.pick),
   viewer:d=>simulViewer(d),coverMsg:d=>d.last||'',
@@ -248,8 +248,8 @@ GAMES.r_dhow={name:'سباق السفن الشراعية',cat:'sport',lbc:'#1D6F
       if(!b[4]&&dhSeg(b[0],b[1],x,y,DH_M[0],DH_M[1])<8)b[4]=1;
       else if(b[4]&&b[1]<DH_LY&&y>=DH_LY){const f=(DH_LY-b[1])/(y-b[1]),cx=b[0]+(x-b[0])*f;if(cx>=18&&cx<=82)fin.push([f,s]);}
       b[0]=+x.toFixed(2);b[1]=+y.toFixed(2);b[2]=h;b[3]=m.side;});
-    const wt=r2Clamp(d.wt+r2N()*3,-6,6),wd=Math.round(r2Clamp(d.wd+wt+r2N()*4,-45,45)),rd=d.rd+1;
-    let x={...d,bt,pv,wt:+wt.toFixed(2),wd,rd,last:`الريح صارت من ${dhWind(wd)}`};
+    const wn=r2Clamp((d.wn||0)+r2N()*3,-6,6),wd=Math.round(r2Clamp(d.wd+wn+r2N()*4,-45,45)),rd=d.rd+1;
+    let x={...d,bt,pv,wn:+wn.toFixed(2),wd,rd,last:`الريح صارت من ${dhWind(wd)}`};
     if(fin.length){fin.sort((a,b)=>a[0]-b[0]);return {...x,win:fin[0][1],last:`${nm(d,fin[0][1])} قطع خط النهاية أول! ⛵`};}
     if(rd>=40)return {...x,win:r2Best(x,bt.map((b,s)=>x.out[s]==='1'?null:b[4]*1000-Math.hypot(b[0]-dhTarget(b)[0],b[1]-dhTarget(b)[1])))};
     return x;},
