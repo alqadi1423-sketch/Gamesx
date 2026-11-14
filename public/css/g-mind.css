@@ -432,11 +432,11 @@
 .gm-num .nhint{display:flex;align-items:center;justify-content:center;gap:8px;margin:0;padding:4px 16px;border-radius:99px;font-weight:800;font-size:15px;color:#fff;background:#6B4FA0;box-shadow:0 3px 0 rgba(0,0,0,.18);animation:mi-pop var(--t3) var(--spring)}
 .gm-num .nhint b{font-size:22px;line-height:1}
 .gm-num .nhint.up{background:#2E8B57}.gm-num .nhint.dn{background:#C0392B}
-.gm-num .nhint.boom{background:#3B3B3B;font-size:20px}
+.gm-num .nhint.nboom{background:#3B3B3B;font-size:20px}
 .gm-num .ngrid.g30{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:8px}
 .gm-num .ngrid.g30 .nc{font-size:17px;aspect-ratio:1.25}
-.gm-num.bomb .ngrid{background:linear-gradient(#4A4F57,#2E3238)}
-.gm-num .ngrid.boom{animation:mi-shake .4s var(--ease)}
+.gm-num.nbomb .ngrid{background:linear-gradient(#4A4F57,#2E3238)}
+.gm-num .ngrid.nboom{animation:mi-shake .4s var(--ease)}
 /* matchsticks: sticks you may not take this turn, and the burning variant */
 .gm-nim .match.far{opacity:.55}
 .gm-nim.mis .pilecard.lm{box-shadow:0 0 0 2px rgba(229,83,75,.7),var(--e1)}
@@ -458,7 +458,7 @@
 .gm-wires .wpt.used{opacity:.75}
 .gm-wires .wpt.scm{background:#1F7A8C}
 .gm-wires .wpt.scm.on{background:var(--gold);color:#2B2B2B}
-.gm-wires .wire.scan .wh{box-shadow:0 0 0 2px rgba(255,216,77,.85),0 2px 3px rgba(0,0,0,.4)}
+.gm-wires .wire.wscn .wh{box-shadow:0 0 0 2px rgba(255,216,77,.85),0 2px 3px rgba(0,0,0,.4)}
 .gm-wires .wire.bad .wh{box-shadow:0 0 0 2px #FF5A4E,0 2px 3px rgba(0,0,0,.4)}
 .gm-wires .wsafe.wbad{background:#C0392B}
 .gm-wires .wsec.wscan{background:#FFF4CC;color:#5B4A00;animation:mi-pop var(--t3) var(--spring)}

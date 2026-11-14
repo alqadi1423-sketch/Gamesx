@@ -167,7 +167,9 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
   host(d){const now=Date.now(),dr=pDrawer(d);
     // a drawer who left the room (not just a short drop) loses the turn
     if(d.ph==='pick'){if(goneLong(d.pl[dr]))return pNext(d);
-      if(now-d.ts>(isBot(d,dr)?1800:30000))return pStart(d,d.ch[rnd(d.ch.length)]);return null;}
+      // a bot drawer: the hard one takes the hardest word (worth double), the medium one a middle or hard one
+      if(now-d.ts>(isBot(d,dr)?1800:30000)){let i=d.ch[rnd(d.ch.length)];if(isBot(d,dr)){const lv=botLv(d,dr),by=t=>d.ch.find(x=>pTier(x)===t);
+        if(lv===3)i=by(2)??i;else if(lv===2)i=(Math.random()<.5?by(1):by(2))??i;}return pStart(d,i);}return null;}
     if(d.ph==='show')return now-d.ts>6000?pNext(d):null;
     if(d.ph!=='draw')return null;
     let x=d;const key=pKey(d),W=PW[d.w];

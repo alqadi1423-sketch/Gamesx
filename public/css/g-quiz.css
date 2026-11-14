@@ -370,3 +370,5 @@ button.opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 va
 .ocg .cg.oc-f{font-size:clamp(20px,6.4vw,28px)}
 .ocg .cg.oc-f i{display:block;font-style:normal}
 .ocg .cg.oc-f i.fl{transform:scaleX(-1)}
+.spd .opts.emo .opt{min-height:84px}
+.spd .opts.emo .opt .ot{font-size:40px;line-height:1}

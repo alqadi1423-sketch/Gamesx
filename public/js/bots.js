@@ -383,7 +383,9 @@ GAMES.wires.bot=(d,s,lv)=>{const left=[...Array(d.k).keys()].filter(i=>!d.cut.in
   const bad=mine.filter(i=>i<-0.5).map(i=>-i-1).find(i=>left.includes(i));const known=bad!=null?left.filter(i=>i!==bad):mine.filter(i=>i>=0&&left.includes(i));
   const unk=left.filter(i=>!known.includes(i)),risk=unk.length?1/unk.length:1,al=aliveSeats(d).filter(x=>x!==s),canPass=d.ps[s]!=='1';
   const cut=l=>botDo(d,s,'cut',pickR(l));
-  const pass=()=>{let to=nextSeat(d,s);if(lv===3){const np=al.filter(x=>d.ps[x]==='1');to=np.length?pickR(np):(al.find(x=>!isBot(d,x))??to);}else if(lv===2&&Math.random()<.5)to=pickR(al);return botDo(d,s,'pass',to);};
+  // with teams the bomb goes to a player of another team
+  const pass=()=>{const fo=al.filter(x=>!sameTeam(d,x,s)),pool=fo.length?fo:al;let to=fo.includes(nextSeat(d,s))||!fo.length?nextSeat(d,s):pickR(fo);
+    if(lv===3){const np=pool.filter(x=>d.ps[x]==='1');to=np.length?pickR(np):(pool.find(x=>!isBot(d,x))??to);}else if(lv===2&&Math.random()<.5)to=pickR(pool);return botDo(d,s,'pass',to);};
   if(lv===1){if(known.length&&Math.random()<.5)return cut(known);if(canPass&&Math.random()<.12)return Math.random()<.5?pass():botDo(d,s,'scan',pickR(left));return cut(left);}
   if(known.length)return cut(known);
   if(canPass&&risk>(lv===3?.25:.4)){

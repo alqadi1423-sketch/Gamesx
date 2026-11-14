@@ -519,7 +519,7 @@ button.pv.can:active{transform:scale(.94)}
 
 /* وصلة polish B: the hint row and its button, the winning row hops once letter by letter */
 .wasla .wrow i.wh{background:repeating-linear-gradient(-45deg,var(--surface-2) 0 5px,var(--surface) 5px 10px);box-shadow:inset 0 0 0 1.5px var(--line)}
-.wasla .wrow.hint i.w2{box-shadow:inset 0 0 0 3px #FFD84D,inset 0 -3px 0 rgba(0,0,0,.16)}
+.wasla .wrow.whn i.w2{box-shadow:inset 0 0 0 3px #FFD84D,inset 0 -3px 0 rgba(0,0,0,.16)}
 .wasla .wrow.won i{animation:pa-wflip .34s var(--ease) both,wa-hop .4s var(--spring) both;animation-delay:calc(var(--i) * 90ms),calc(var(--i) * 90ms + .5s)}
 @keyframes wa-hop{0%,100%{transform:none}40%{transform:translateY(-12px)}}
 .wasla .whint{margin:10px auto 0;padding:8px 16px;border-radius:99px;font-weight:800;font-size:14px;color:#2E5E45;background:#DDF3E6;box-shadow:0 3px 0 #A9D7BC}

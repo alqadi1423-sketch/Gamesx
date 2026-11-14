@@ -385,7 +385,7 @@ GAMES.wasla={name:'وصلة',cat:'mind',lbc:'#2E7D5B',noTimer:false,
   outDone:true,
   render(d,ctx){const v=ctx.v;const gs=d.gs||d.pl.map(()=>[]);const sc=(s,r)=>wSc(d,s,r);
     // a hint row (one per player, it costs a try) shows one letter in its place and blanks for the rest
-    const row=(w,sc,hide,c)=>{const h=!hide&&w&&w.includes('·');return `<div class="wrow ${c||''} ${h?'hint':''}">${[...Array(5)].map((_,i)=>`<i class="${sc?(h&&w[i]==='·'?'wh':'w'+sc[i]):''} ${w&&w[i]&&!sc?'typed':''}" style="--i:${i}">${hide||(w&&w[i])==='·'?'':(w&&w[i])||''}</i>`).join('')}</div>`;};
+    const row=(w,sc,hide,c)=>{const h=!hide&&w&&w.includes('·');return `<div class="wrow ${c||''} ${h?'whn':''}">${[...Array(5)].map((_,i)=>`<i class="${sc?(h&&w[i]==='·'?'wh':'w'+sc[i]):''} ${w&&w[i]&&!sc?'typed':''}" style="--i:${i}">${hide||(w&&w[i])==='·'?'':(w&&w[i])||''}</i>`).join('')}</div>`;};
     const won=s=>d.solved&&d.solved[s]&&(gs[s]||[]).length===d.solved[s];
     if(v==null||v<0)return '<p class="note">ننتظر الباقين…</p>';
     const mine=gs[v]||[];const draft=ctx.my?(S.draft.wl||''):'';

@@ -83,11 +83,11 @@ GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
   // the last guess pops in as a big arrow (keyed by the window, so it plays once); a bomb that went off shakes the board in
   render(d,ctx){const end=d.win!=null,L=d.lo,H=d.hi,T=numTop(d),fresh=!d.last&&!d.nb;
     const lg=/(\d+)، (?:الرقم|القنبلة) (أكبر|أصغر)/.exec(d.last||''),boom=/^💥/.test(d.last||'');
-    let s=`<div class="gm gm-num ${d.vr?'bomb':''}">`;
+    let s=`<div class="gm gm-num ${d.vr?'nbomb':''}">`;
     if(fresh)s+=`<div class="segs numv">${[['0','🎯 كلاسيكية'],['1','💣 القنبلة']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`;
     s+=`<div class="nrng"><b class="ltr">${L}</b><div class="nbar"><i style="inset-inline-start:${(L-1)/T*100}%;width:${(H-L+1)/T*100}%"></i></div><b class="ltr">${H}</b></div>`;
-    s+=lg?`<p class="nhint ${lg[2]==='أكبر'?'up':'dn'}" data-k="h${L}-${H}"><b class="ltr">${lg[1]}</b><span>${lg[2]==='أكبر'?'▲ أكبر':'▼ أصغر'}</span></p>`:boom?`<p class="nhint boom" data-k="b${d.nb}">💥 <span>انفجرت!</span></p>`:'';
-    s+=`<div class="ngrid ${T<100?'g30':''} ${boom?'boom':''}" data-k="g${d.nb||0}">`;
+    s+=lg?`<p class="nhint ${lg[2]==='أكبر'?'up':'dn'}" data-k="h${L}-${H}"><b class="ltr">${lg[1]}</b><span>${lg[2]==='أكبر'?'▲ أكبر':'▼ أصغر'}</span></p>`:boom?`<p class="nhint nboom" data-k="b${d.nb}">💥 <span>انفجرت!</span></p>`:'';
+    s+=`<div class="ngrid ${T<100?'g30':''} ${boom?'nboom':''}" data-k="g${d.nb||0}">`;
     for(let n=1;n<=T;n++){const ok=n>=L&&n<=H;const c=end&&n===d.sec&&!d.vr?'sec':ok?'':n===L-1?'out gs up':n===H+1?'out gs dn':'out';s+=`<button class="nc ${c}" data-ga="m" data-i="${n}" ${ctx.my&&ok?'':'disabled'}>${n}</button>`;}
     s+='</div>';
     // the bomb: one pass per player for every bomb
