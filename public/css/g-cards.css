@@ -408,3 +408,54 @@ button.ustack:active{transform:translate(2px,2px)}
 .shub{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;display:grid;place-items:center;
   background:radial-gradient(circle at 50% 35%,#3C5672,#22344A);box-shadow:0 0 0 6px #1A2533,inset 0 2px 0 rgba(255,255,255,.15);pointer-events:none}
 .shub b{color:#fff;font-size:30px;font-weight:800;line-height:1}
+
+/* =====================================================================
+   16. Motion of the card tables (transform and opacity only, each under 450ms; html.lite and reduced motion turn it off)
+   - a card new in a hand (dealt or drawn) flies in from the pile above; the cards already held keep their nodes (stable ids)
+   - a card or tile just played comes from its player's side: from below for this phone's player (.fm), from above for the others (.fo)
+   ===================================================================== */
+@keyframes cd-in{from{transform:translate(34px,-150px) scale(.7) rotate(-9deg);opacity:0}}
+.uhand>.card[id],.bhand>.bcard[id],.hhand>.hc[id],.dhand>.dom[id],.omhand>[id]{animation:cd-in .34s var(--ease) backwards}
+.uhand>[id]:nth-child(2),.bhand>[id]:nth-child(2),.hhand>[id]:nth-child(2),.dhand>[id]:nth-child(2),.omhand>[id]:nth-child(2){animation-delay:.025s}
+.uhand>[id]:nth-child(3),.bhand>[id]:nth-child(3),.hhand>[id]:nth-child(3),.dhand>[id]:nth-child(3),.omhand>[id]:nth-child(3){animation-delay:.05s}
+.uhand>[id]:nth-child(4),.bhand>[id]:nth-child(4),.hhand>[id]:nth-child(4),.dhand>[id]:nth-child(4),.omhand>[id]:nth-child(4){animation-delay:.075s}
+.uhand>[id]:nth-child(5),.bhand>[id]:nth-child(5),.hhand>[id]:nth-child(5),.dhand>[id]:nth-child(5),.omhand>[id]:nth-child(5){animation-delay:.1s}
+.uhand>[id]:nth-child(n+6),.bhand>[id]:nth-child(n+6),.hhand>[id]:nth-child(n+6),.dhand>[id]:nth-child(n+6),.omhand>[id]:nth-child(n+6){animation-delay:.12s}
+/* the card drawn this turn that may be played at once */
+.uhand>.card.card.card.took{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 0 0 2.5px var(--gold),0 6px 12px rgba(14,28,46,.22)}
+/* uno: the top of the pile comes from whoever played it, and their name sits over the pile */
+@keyframes u-fm{from{transform:translateY(190px) scale(1.12) rotate(10deg);opacity:.35}}
+@keyframes u-fo{from{transform:translateY(-130px) scale(.75) rotate(-14deg);opacity:0}}
+.upile>.utop.fm{animation:u-fm .36s var(--ease)}
+.upile>.utop.fo{animation:u-fo .36s var(--ease)}
+.ulp{position:absolute;top:6px;left:0;right:0;margin:auto;width:max-content;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:var(--c);color:#fff;font-weight:800;font-size:12.5px;line-height:20px;border-radius:99px;padding:0 10px;box-shadow:0 0 0 2px rgba(255,255,255,.85);animation:cd-pop var(--t2) var(--spring)}
+.ulp::before{content:'آخر ورقة: ';font-weight:700;opacity:.85}
+/* dominoes: the tile just laid keeps a ring in its player's colour */
+.chain .dom.dom.lp{box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,0 0 0 2.5px var(--c,var(--gold)),0 3px 8px rgba(0,0,0,.4)}
+@keyframes dm-fm{from{transform:translateY(170px) scale(1.15);opacity:.35}}
+@keyframes dm-fo{from{transform:translateY(-100px) scale(.8);opacity:0}}
+.chain .dom.lp.fm{animation:dm-fm .36s var(--ease)}
+.chain .dom.lp.fo{animation:dm-fo .36s var(--ease)}
+/* baloot: the last trick under the table */
+.blast{display:flex;align-items:center;justify-content:center;gap:8px;width:max-content;max-width:100%;margin:8px auto 0;padding:3px 12px 3px 8px;border-radius:99px;
+  background:var(--surface);box-shadow:var(--e1);font-size:13px;color:var(--mut);font-weight:700;white-space:nowrap}
+.blast small{font-size:12px}
+.blast .lc{display:flex;direction:ltr;gap:2px}
+.blast .lc .card.card.card.mini{--cwm:22px;margin:0;padding:2px 0 0 3px;box-shadow:inset 0 0 0 1px rgba(34,54,77,.25)}
+.blast .lc .card.mini b{font-size:11px}.blast .lc .card.mini .sv{width:8px;height:8px}
+.blast .lc .w .card.card.card.mini{box-shadow:inset 0 0 0 1px rgba(34,54,77,.25),0 0 0 2px var(--gold)}
+.blast b{color:var(--ink);overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.blast em{font-style:normal;color:var(--ok);font-weight:800}
+.blast .bhn{display:none}
+/* old maid: the pair just laid down */
+.ompr{min-height:26px;display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 2px}
+.ompr span{display:flex;direction:ltr;animation:cd-pop var(--t3) var(--spring)}
+.ompr .card.card.card.mini{--cwm:22px;margin:0 1px;padding:2px 0 0 3px}
+.ompr .card.mini b{font-size:11px}.ompr .card.mini .sv{width:8px;height:8px}
+.ompr small{color:rgba(255,255,255,.9);font-weight:700;font-size:12.5px}
+/* bingo: the number just called, as a ball */
+.bball{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;line-height:1;font-size:19px;font-weight:800;color:#2D4763;
+  background:radial-gradient(circle at 35% 30%,#fff 0 30%,#FFE7A3 70%,#F0B429 100%);box-shadow:0 2px 0 rgba(0,0,0,.25);animation:bb-in .38s var(--spring)}
+.bball small{font-size:8px;font-weight:800;color:#8A5A00;margin-bottom:-6px}
+@keyframes bb-in{from{transform:translateY(-40px) rotate(-200deg) scale(.6);opacity:0}}

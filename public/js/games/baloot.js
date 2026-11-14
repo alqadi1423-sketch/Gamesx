@@ -217,6 +217,8 @@ GAMES.baloot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,nam
       // each trick card is keyed by the card, so one just played is a new node and slides in from its seat; the last trick marks its winner
       for(const [hh,c] of show)h+=`<div class="btk ${pos(hh)} ${!tk.length?'old':''} ${!tk.length&&d.lt&&d.lt.w===hh?'win':''}" data-k="${c}">${cardHTML(c)}</div>`;}
     h+='</div></div>';
+    // the last trick stays readable while the next one is played: its four cards in play order, the winner's ringed
+    if(d.ph==='play'&&d.lt&&d.tk)h+=`<div class="blast"><small>آخر لمّة</small><span class="lc">${d.lt.c.map((c,i)=>`<span class="${(d.lt.from+i)%4===d.lt.w?'w':''}">${miniCard(c)}</span>`).join('')}</span><b>${bName(d,d.lt.w)}</b><em>+${d.lt.c.reduce((x,y)=>x+bVal(d,y),0)}</em></div>`;
     // actions
     const my=ctx.my;
     if(d.ph==='bid'&&my){const o=bBidOpts(d);
@@ -235,7 +237,8 @@ GAMES.baloot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,nam
     else if(d.ph!=='sum'){const hc=cardsOf(d.hands[me]);const can=my&&d.ph==='play'&&ah===me;const L=can?bLegal(d,me):[];
       const pj=d.ph==='play'&&cardsOf(d.pd).length<4&&can&&!d.pj[me].length?bProjects(d.hands[me],d.md):[];
       if(pj.length)h+=`<div class="row bopts"><button class="btn green" data-ga="proj">أعلن: ${pj.map(bPName).join(' + ')}</button></div>`;
-      h+=`<div class="bhand">${hc.map(c=>L.includes(c)?`<button class="bcard" data-ga="card" data-i="${hc.indexOf(c)}">${cardHTML(c)}</button>`:`<div class="bcard ${can?'dim':''}">${cardHTML(c)}</div>`).join('')}</div>`;}
+      // every card keeps its node (id): only the cards dealt after the buying fly in, and the hand never redeals itself
+      h+=`<div class="bhand">${hc.map(c=>L.includes(c)?`<button class="bcard" id="bc${me}${c}" data-ga="card" data-i="${hc.indexOf(c)}">${cardHTML(c)}</button>`:`<button class="bcard ${can?'dim':''}" id="bc${me}${c}" disabled>${cardHTML(c)}</button>`).join('')}</div>`;}
     return h;},
   click(a,i,d,ctx){if(!ctx.my)return;
     if(a==='next'&&d.ph==='sum'){act(bNext(d));return;}
@@ -248,3 +251,93 @@ GAMES.baloot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,nam
     if(a==='proj'){const pj=bProjects(d.hands[h],d.md);if(!pj.length)return;const p=[...d.pj];p[h]=pj;act({...d,pj:p,last:`${bName(d,h)} أعلن ${pj.map(bPName).join(' + ')}`});return;}
     if(a==='card'){const c=cardsOf(d.hands[h])[i];if(!c||!bLegal(d,h).includes(c))return;act(bPlay(d,c));}}
 };
+
+/* ---------- the bot: buys from what its hand is worth, doubles when the trumps sit with it, and plays for its partner.
+   It reads only its own hand and what was played on the table (who showed out of which suit), never the other hands ---------- */
+const BB_LV=[0,.55,.2,.04];// how often a bot plays without thinking
+// tricks a hand can expect without trumps: aces, tens kept by their ace, kings under both, length
+function bSunScore(cs){let v=0;for(const s of 'shdc'){const r=cs.filter(c=>c[1]===s).map(c=>c[0]),has=x=>r.includes(x);
+    if(has('A'))v+=1;if(has('T'))v+=has('A')?.9:r.length>=3?.45:.15;if(has('K'))v+=has('A')&&has('T')?.7:(has('A')||has('T'))&&r.length>=3?.3:0;
+    if(r.length>=4&&has('A'))v+=.3*(r.length-3);}
+  return v;}
+// the same with su as trumps: jack and nine of trumps carry it, side aces add, a void with three trumps can ruff
+function bHokmScore(cs,su){const tr=cs.filter(c=>c[1]===su).map(c=>c[0]),has=x=>tr.includes(x);let v=(has('J')?1.6:0)+(has('9')?(has('J')?1.2:.8):0)+(has('A')?.7:0)+(has('T')?.45:0);
+  v+=tr.filter(x=>!'J9AT'.includes(x)).length*.4+(tr.length>=4?.5:0)+(tr.length>=5?.5:0);
+  for(const s of 'shdc'){if(s===su)continue;const r=cs.filter(c=>c[1]===s).map(c=>c[0]);if(r.includes('A'))v+=r.includes('T')?1.1:.8;if(!r.length&&tr.length>=3)v+=.4;}
+  return v;}
+function bBotBid(d,h,lv){const o=bBidOpts(d),b=d.bd,H=cardsOf(d.hands[h]),pub=d.pub,withP=[...H,pub];
+  const pass=()=>bBid(d,'pass');if(Math.random()<BB_LV[lv])return Math.random()<.85?pass():bBid(d,o.includes('hokm')?'hokm':o.includes('sun')?'sun':'pass');
+  const nz=()=>lv===1?Math.random()*.8-.4:lv===2?Math.random()*.4-.2:0;
+  const sunT=[0,3.2,2.9,2.6][lv],hkT=[0,4,3.6,3.3][lv],sun=bSunScore(withP)+nz();
+  const best=b.best,bestOurs=!!best&&bTeam(bOrd(d)[best.pos])===bTeam(h);
+  // a later bidder bought Sun: an earlier one takes it only when clearly better, never from the partner
+  if(b.st==='over')return !bestOurs&&sun>=sunT+.3?bBid(d,'sun'):pass();
+  if(o.includes('sun')&&sun>=(bestOurs?sunT+.7:sunT)){
+    // Ashkal: the exposed card is no help, so it goes to the partner who then declares
+    if(o.includes('ashkal')&&!bestOurs&&'789JQ'.includes(pub[0])&&bSunScore(H)>=sunT-.1&&Math.random()<.5)return bBid(d,'ashkal');
+    return bBid(d,'sun');}
+  if(o.includes('hokm')&&bHokmScore(withP,pub[1])+nz()>=hkT)return bBid(d,'hokm');
+  if(o.includes('hokm2')){let bs=null,bv=-1;for(const x of 'shdc'){if(x===pub[1])continue;const v=bHokmScore(withP,x);if(v>bv){bv=v;bs=x;}}if(bv+nz()>=hkT+.2)return bBid(d,'hokm2',bs);}
+  return pass();}
+// a defender doubles with the trumps behind the buyer; the buyer answers with a very strong hand only
+function bBotDbl(d,h,lv){const o=bDblOpts(d),H=cardsOf(d.hands[h]),T=d.tr,no=()=>bDbl(d,'no');if(lv===1||Math.random()<BB_LV[lv])return no();
+  const k=lv===3?0:1;// a medium bot needs a little more
+  if(d.md==='s')return bSunScore(H)>=4.4+k&&bTeam(h)!==bTeam(d.decl)?bDbl(d,'dbl'):no();
+  const tr=H.filter(c=>c[1]===T).map(c=>c[0]),aces=H.filter(c=>c[0]==='A'&&c[1]!==T).length;
+  const def=(tr.includes('J')?2:0)+(tr.includes('9')?1.5:0)+tr.length*.6+aces*.7;
+  if(o.includes('dblO'))return def>=4.8+k?bDbl(d,'dblO'):no();
+  if(o.includes('three'))return bHokmScore(H,T)>=7+k?bDbl(d,'three'):no();
+  if(o.includes('fourO'))return def>=6.5+k?bDbl(d,'fourO'):no();
+  if(o.includes('gahwa'))return lv===3&&bHokmScore(H,T)>=8.8&&tr.length>=5?bDbl(d,'gahwa'):no();
+  return no();}
+// what the table has shown: for each hand, the suits it is out of
+function bVoids(d){const vd=[{},{},{},{}],pd=cardsOf(d.pd),T=d.md==='h'?d.tr:null;let L=bOrd(d)[0];const done=pd.length-cardsOf(d.tk).length;
+  const mark=(tk,L)=>{tk.forEach((c,i)=>{if(!i)return;const h=(L+i)%4,led=tk[0][1];if(c[1]===led)return;vd[h][led]=1;
+    // out of the led suit with the trick not the partner's and no trump down yet: no trump played means none held
+    if(T&&led!==T&&c[1]!==T){const pre=tk.slice(0,i),w=bTrickWin(d,pre);if(!(i>=2&&w===i-2)&&!pre.some(x=>x[1]===T))vd[h][T]=1;}});};
+  for(let k=0;k+4<=done;k+=4){const tk=pd.slice(k,k+4);mark(tk,L);L=(L+bTrickWin(d,tk))%4;}
+  mark(cardsOf(d.tk),d.tl);return vd;}
+function bBotCard(d,h,L,lv){if(L.length===1)return L[0];
+  const T=d.md==='h'?d.tr:null,me=bTeam(h),part=(h+2)%4,o1=(h+1)%4,o3=(h+3)%4,ours=bTeam(d.decl)===me;
+  const H=cardsOf(d.hands[h]),seen=new Set([...cardsOf(d.pd),...H]),unseen=bDeck().filter(c=>!seen.has(c));
+  const vd=lv===3?bVoids(d):[{},{},{},{}],str=c=>bStr(d,c),val=c=>bVal(d,c);
+  const master=c=>!unseen.some(u=>u[1]===c[1]&&str(u)>str(c));
+  const canRuff=(x,s)=>!!T&&s!==T&&!!vd[x][s]&&!vd[x][T]&&unseen.some(u=>u[1]===T);
+  const oppRuff=s=>canRuff(o1,s)||canRuff(o3,s);
+  const long=s=>H.filter(c=>c[1]===s).length;
+  const low=a=>a.slice().sort((x,y)=>val(x)-val(y)||str(x)-str(y)||long(x[1])-long(y[1]))[0];
+  const tk=cardsOf(d.tk);
+  if(!tk.length){
+    // the buying side draws the trumps while it holds the best one left
+    if(T&&ours&&unseen.some(u=>u[1]===T)&&!(vd[o1][T]&&vd[o3][T])){const mt=L.filter(c=>c[1]===T&&master(c));if(mt.length)return mt.sort((a,b)=>str(b)-str(a))[0];}
+    // a card nobody can beat, in a suit the opponents cannot ruff: the richest first
+    const sure=L.filter(c=>c[1]!==T&&master(c)&&!oppRuff(c[1]));if(sure.length)return sure.sort((a,b)=>val(b)-val(a))[0];
+    // a suit the partner is out of, so the partner ruffs it
+    if(T){const pr=L.filter(c=>c[1]!==T&&canRuff(part,c[1])&&!oppRuff(c[1]));if(pr.length)return low(pr);}
+    // otherwise a low card of a long suit; never a bare ten under an ace still out, and no trump from the defence
+    const safe=L.filter(c=>!(T&&c[1]===T&&!ours)&&!oppRuff(c[1])&&!(val(c)>=10&&!master(c)));
+    return (safe.length?safe:L).slice().sort((a,b)=>val(a)-val(b)||long(b[1])-long(a[1])||str(a)-str(b))[0];}
+  const pos=tk.length,wi=bTrickWin(d,tk),pw=bTeam((d.tl+wi)%4)===me,last=pos===3,pts=tk.reduce((x,c)=>x+val(c),0);
+  const wc=tk[wi],led=tk[0][1],nonT=L.filter(c=>c[1]!==T);
+  const beats=L.filter(c=>bTrickWin(d,[...tk,c])===pos);
+  // the partner's card holds when we play last, or when it is the best left and the next player cannot ruff it
+  if(pw&&(last||(master(wc)&&(wc[1]===T||!canRuff(o1,led))))){
+    // feed it points, keeping the cards that will win tricks of their own
+    const base=nonT.length?nonT:L,give=base.filter(c=>!master(c)||val(c)<10);
+    return (give.length?give:base).slice().sort((a,b)=>val(b)-val(a)||str(a)-str(b))[0];}
+  if(beats.length&&!pw){const cheap=a=>a.slice().sort((x,y)=>str(x)-str(y))[0];
+    if(last)return beats.slice().sort((x,y)=>val(x)-val(y)||str(x)-str(y))[0];
+    // second or third: win with a card that stays best, or ruff; a gamble only for a rich trick
+    const sureB=beats.filter(c=>master(c)&&(c[1]===T||(!canRuff(o1,led)&&(pos===2||!canRuff(o3,led)))));
+    if(sureB.length)return cheap(sureB);
+    const ruff=beats.filter(c=>c[1]===T&&led!==T);if(ruff.length&&(pts>=10||pos===2))return cheap(ruff);
+    if(pts>=14)return cheap(beats);}
+  const dump=L.filter(c=>c[1]!==T&&!master(c));return low(dump.length?dump:nonT.length?nonT:L);}
+GAMES.baloot.bot=(d,s,lv)=>{if(d.ph==='sum')return bNext(d);const h=bActHand(d);
+  if(d.ph==='bid')return bBotBid(d,h,lv);
+  if(d.ph==='dbl')return bBotDbl(d,h,lv);
+  let x=d;if(!x.pd&&!x.bq)x={...x,bq:bQ(x)};
+  if(cardsOf(x.pd).length<4&&!x.pj[h].length&&(lv>1||Math.random()<.5)){const pj=bProjects(x.hands[h],x.md);if(pj.length){const p=[...x.pj];p[h]=pj;x={...x,pj:p,last:`${bName(x,h)} أعلن ${pj.map(bPName).join(' + ')}`};}}
+  const L=bLegal(x,h);return bPlay(x,Math.random()<BB_LV[lv]?L[rnd(L.length)]:bBotCard(x,h,L,lv));};
+// the summary after a deal stays on screen long enough to read
+GAMES.baloot.botDelay=(d,s,lv)=>d.ph==='sum'?8000:d.ph==='play'?700+rnd(700):1000+rnd(800);

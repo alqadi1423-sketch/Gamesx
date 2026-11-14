@@ -38,18 +38,28 @@ const cardsOf=s=>s.match(/.{2}/g)||[];
 /* ---------- memory ---------- */
 const MEMP={2:8,3:10,4:10,5:12,6:12,7:15,8:15},MEMC={8:4,10:5,12:6,15:6};
 const EMO=['🍎','🐪','⚽','🌙','🚗','🎈','🐟','🌴','⭐','☕','🎁','🦅','🍉','🏠','🔑'];
+// picture sets: each game draws one set (d.th) and its pairs from it in a random order (d.em, letters into the set). Both are public:
+// they say which pictures are in play, never where they lie
+const MEMT=[['فواكه',['🍎','🍌','🍇','🍉','🍓','🍒','🍍','🥝','🍑','🍋','🥥','🍐','🥭','🍏','🍈','🌽']],
+  ['حيوانات',['🐪','🐎','🦅','🐑','🐐','🦁','🐢','🐬','🦒','🐘','🦉','🐇','🦊','🐧','🐝','🦋']],
+  ['رياضة',['⚽','🏀','🏐','🎾','🏓','🏸','🥊','🏹','🎳','⛳','🏆','🥇','🛹','🚴','🏊','🎯']],
+  ['مواصلات',['🚗','🚌','🚑','🚒','🚓','🚕','✈️','🚁','🚂','🚢','⛵','🚲','🛵','🚀','🚚','🚜']],
+  ['طبيعة',['🌙','⭐','☀️','🌈','⛅','❄️','⚡','🌊','🌋','🏜️','🌴','🌵','🌹','🌻','🍁','🍄']],
+  ['أكل',['☕','🍵','🍞','🧀','🍕','🍔','🌮','🍩','🍪','🎂','🍿','🥛','🍯','🥚','🍗','🍚']],
+  ['أشياء',['🎈','🎁','🔑','📚','✏️','⏰','📷','🎨','🧸','🪁','🎒','💡','🧭','🔭','⚓','🎲']]];
+const memE=(d,e)=>{const k=e.charCodeAt(0)-97;const T=MEMT[d.th];return T&&typeof d.em==='string'?T[1][d.em.charCodeAt(k)-97]:EMO[k];};
 GAMES.memory={name:'لعبة الذاكرة',cat:'cards',lbc:'#3D8A7A',onTimeout:d=>({...d,open:[],turn:nextSeat(d,d.turn)}),
   // a player who leaves mid-turn takes their open card with them
   onSkip:(nd,d)=>nd.turn!==d.turn?{...nd,open:[]}:nd,
   icon:iconE('#4FB09B','🃏'),
   // '?' is a card nobody has turned over yet: its face is drawn when it is first turned (see click), so the layout is not in the shared state
-  init:n=>{const p=MEMP[n]||15;return {p,dk:'?'.repeat(p*2),own:'.'.repeat(p*2),open:[]};},
-  points:d=>cntSeat(d.own,d.pl.length).map(x=>x/2),status:(d,ctx)=>turnTxt(d,ctx),
+  init:n=>{const p=MEMP[n]||15,th=rnd(MEMT.length);return {p,th,em:shuffle([...Array(MEMT[th][1].length).keys()]).slice(0,p).map(k=>String.fromCharCode(97+k)).join(''),dk:'?'.repeat(p*2),own:'.'.repeat(p*2),open:[]};},
+  points:d=>cntSeat(d.own,d.pl.length).map(x=>x/2),status:(d,ctx)=>turnTxt(d,ctx)+(MEMT[d.th]?`<br><small>صور ${MEMT[d.th][0]} • باقي ${[...d.own].filter(c=>c==='.').length/2} أزواج</small>`:''),
   winExtra(d){const c=cntSeat(d.own,d.pl.length);return 'الأزواج: '+c.map((x,s)=>`${nm(d,s)} ${x/2}`).join('، ');},
   render(d,ctx){const op=d.open||[];const miss=op.length===2&&d.dk[op[0]]!==d.dk[op[1]];
     return `<div class="cellgrid memg c${MEMC[d.p]}" style="grid-template-columns:repeat(${MEMC[d.p]},minmax(0,1fr))">${[...d.dk].map((e,i)=>{
-      const own=d.own[i];if(own!=='.')return `<div class="cg mm own" style="--c:${col(d,+own)};--l:${lit(d,+own)}"><span>${EMO[e.charCodeAt(0)-97]}</span></div>`;
-      if(op.includes(i))return `<div class="cg mm up ${miss?'miss':''}"><span>${EMO[e.charCodeAt(0)-97]}</span></div>`;
+      const own=d.own[i];if(own!=='.')return `<div class="cg mm own" style="--c:${col(d,+own)};--l:${lit(d,+own)}"><span>${memE(d,e)}</span></div>`;
+      if(op.includes(i))return `<div class="cg mm up ${miss?'miss':''}"><span>${memE(d,e)}</span></div>`;
       return `<button class="cg mm dn" data-ga="m" data-i="${i}" ${ctx.my?'':'disabled'} aria-label="ورقة مقلوبة"></button>`;}).join('')}</div>`;},
   click(a,i,d,ctx){
     if(!ctx.my||d.own[i]!=='.')return;let op=d.open||[];if(op.length===2)op=[];if(op.includes(i))return;op=[...op,i];
@@ -205,6 +215,9 @@ function uFace(c){if(UFACE[c])return UFACE[c];const v=c[1],wild=c[0]==='k',f=wil
     else mid+=`<g transform="translate(31.2 43.4)">${uSym(v,UDK)}</g><g transform="translate(30 42)">${uSym(v,f)}</g>`;}
   return UFACE[c]=`<svg class="cf" viewBox="0 0 60 84" aria-hidden="true"><rect x="2.6" y="2.6" width="54.8" height="78.8" rx="5" fill="${f}"/>${mid}${corner}<g transform="rotate(180 30 42)">${corner}</g></svg>`;}
 const uCard=(c,cls,attrs)=>`<${attrs?'button':'div'} class="card uno ${cls||''}" ${attrs||''}>${uFace(c)}</${attrs?'button':'div'}>`;
+// a stable id for each card of a hand (the same card twice gets 2, 3…), so the screen keeps a card's node while the hand changes
+// and only a card that is new in the hand (dealt or drawn) flies in
+const handIds=(cs,pre)=>{const k={};return cs.map(c=>{k[c]=(k[c]||0)+1;return pre+c+k[c];});};
 // the back of the pile: dark card, red oval with the game's name
 const uBack=cls=>`<div class="card uback ${cls||''}"><svg class="cf" viewBox="0 0 60 84" aria-hidden="true"><rect x="2.6" y="2.6" width="54.8" height="78.8" rx="5" fill="${UDK}"/><ellipse cx="30" cy="42" rx="19" ry="31.5" transform="rotate(32 30 42)" fill="#E5483F" stroke="#fff" stroke-width="1.6"/><text x="30" y="47" text-anchor="middle" font-size="15" fill="#FFD84D" stroke="${UDK}" stroke-width="2.4" paint-order="stroke" transform="rotate(-24 30 42)">ألوان</text></svg></div>`;
 const uPlayable=(c,d,hand)=>{const top=d.disc.slice(-2);if(d.drew&&typeof d.drew==='string'&&c!==d.drew)return false;
@@ -225,7 +238,7 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
   winExtra:d=>typeof d.win==='number'?`حصّل ${d.pl.reduce((x,_,s)=>x+cardsOf(d.hands[s]).reduce((y,c)=>y+uPts(c),0),0)} نقطة من ورق الباقين`:'',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2D4763"/>${[['#E5483F',-16,22],['#F0B429',-5,34],['#3FAE5C',6,46],['#3D8FD8',17,58]].map(([c,r,x])=>`<rect x="${x-14}" y="26" width="30" height="46" rx="6" fill="${c}" stroke="#fff" stroke-width="3" transform="rotate(${r} ${x} 50)"/>`).join('')}<text x="62" y="58" font-size="18" font-weight="800" fill="#fff" text-anchor="middle" direction="ltr" transform="rotate(17 58 50)">+2</text></svg>`,
   init:n=>{let a=unoDeck();const hands=[];for(let s=0;s<n;s++){hands.push(a.slice(0,7).join(''));a=a.slice(7);}
-    let i=a.findIndex(c=>/[0-9]/.test(c[1]));const top=a.splice(i,1)[0];return {hands,draw:a.join(''),disc:top,color:top[0],dir:1,drew:false,uno:-1,last:''};},
+    let i=a.findIndex(c=>/[0-9]/.test(c[1]));const top=a.splice(i,1)[0];return {hands,draw:a.join(''),disc:top,color:top[0],dir:1,drew:false,uno:-1,lp:-1,last:''};},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>اللون الحالي: <b style="color:${UC[d.color]}">${UCN[d.color]}</b>، والدور ${d.dir>0?'⟲':'⟳'}</small>`,
@@ -236,13 +249,15 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
     // that shows the direction of play; the top card is keyed by the pile's length so a new one lands
     const under=cardsOf(d.disc).slice(-3,-1),nd=d.disc.length/2;
     s+=`<div class="utable" style="--uc:${UC[d.color]}"><div class="udeck">${canDraw?'<button class="ustack" data-ga="draw" aria-label="اسحب ورقة">':'<div class="ustack">'}${uBack('big')}${canDraw?'</button>':'</div>'}<small>${d.draw.length/2}</small></div>
-      <div class="upile"><svg class="uring ${d.dir>0?'':'ccw'}" viewBox="-50 -50 100 100" aria-hidden="true"><path d="M-43.2-15.7A46 46 0 0 1 39.8-23"/><path d="M43.2 15.7A46 46 0 0 1-39.8 23"/><path class="ah" d="M43.3-16.9 44.1-25.5 35.5-20.5Z"/><path class="ah" d="M-43.3 16.9-44.1 25.5-35.5 20.5Z"/></svg>${under.map((c,k)=>`<div class="uold" style="--r:${((nd-under.length+k)*47)%26-13}deg">${uCard(c,'big')}</div>`).join('')}<div class="utop" data-k="u${nd}">${uCard(top,'big')}</div></div>
-      <span class="ucol"><i></i>${UCN[d.color]}</span></div>`;
+      <div class="upile"><svg class="uring ${d.dir>0?'':'ccw'}" viewBox="-50 -50 100 100" aria-hidden="true"><path d="M-43.2-15.7A46 46 0 0 1 39.8-23"/><path d="M43.2 15.7A46 46 0 0 1-39.8 23"/><path class="ah" d="M43.3-16.9 44.1-25.5 35.5-20.5Z"/><path class="ah" d="M-43.3 16.9-44.1 25.5-35.5 20.5Z"/></svg>${under.map((c,k)=>`<div class="uold" style="--r:${((nd-under.length+k)*47)%26-13}deg">${uCard(c,'big')}</div>`).join('')}<div class="utop ${d.lp==null||d.lp<0?'':d.lp===v?'fm':'fo'}" data-k="u${nd}">${uCard(top,'big')}</div></div>
+      ${d.lp>=0&&d.pl[d.lp]!=null?`<span class="ulp" style="--c:${col(d,d.lp)}" data-k="l${nd}">${d.lp===v&&!ctx.local?'أنت':nm(d,d.lp)}</span>`:''}<span class="ucol"><i></i>${UCN[d.color]}</span></div>`;
     if(v<0)return s;
     const hand=cardsOf(d.hands[v]);
     if(my&&S.wild!=null&&(hand[S.wild]||'')[0]==='k')s+=`<div class="uwild"><p class="lbl">اختر اللون</p><div class="row">${'rgby'.split('').map((c,k)=>`<button class="btn swatch" style="--sw:${UC[c]}" data-ga="wc" data-i="${k}" aria-label="${UCN[c]}"></button>`).join('')}</div></div>`;
     if(d.uno>=0&&d.win==null&&(ctx.local||ctx.v!==d.uno))s+=`<div class="row"><button class="btn red" data-ga="catch">${nm(d,d.uno)} ما قال أونو! امسكه (+2)</button></div>`;
-    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand uhand ${my?'my':''}">${hand.map((c,i)=>my&&uPlayable(c,d,hand)?uCard(c,'pick'+(S.wild===i?' sel':''),`data-ga="play" data-i="${i}"`):uCard(c,my?'dim':'')).join('')}</div>`;
+    // every card is a button (a played-out one is disabled), so a hand that becomes playable keeps its nodes and does not fly in again
+    const ids=handIds(hand,'uc'+v+'-');
+    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand uhand ${my?'my':''}">${hand.map((c,i)=>my&&uPlayable(c,d,hand)?uCard(c,'pick'+(S.wild===i?' sel':'')+(d.drew===c?' took':''),`id="${ids[i]}" data-ga="play" data-i="${i}"`):uCard(c,my?'dim':'',`id="${ids[i]}" disabled`)).join('')}</div>`;
     if(my)s+=`<div class="row">${d.drew?'<button class="btn navy" data-ga="pass">مرّر الدور</button>':'<button class="btn blue" data-ga="draw">اسحب ورقة</button>'}${hand.length===2?`<button class="btn ${S.unoSaid===d.gid+':'+d.disc.length?'green':'red'}" data-ga="say">أونو!</button>`:''}</div>`;
     return s;},
   click(a,i,d,ctx){
@@ -256,7 +271,7 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
     if(a==='play'){const c=cardsOf(d.hands[t])[i];if(!c||!uPlayable(c,d,cardsOf(d.hands[t])))return;if(c[0]==='k'){S.wild=i;render();return;}}
     // a colour choice left over from an earlier turn (that turn ended on the timer) no longer points at a wild card
     if(a==='wc'){const w=cardsOf(d.hands[t])[S.wild];if(S.wild==null||!w||w[0]!=='k'||!'rgby'[i]){S.wild=null;render();return;}idx=S.wild;color='rgby'[i];}
-    S.wild=null;const said=S.unoSaid===d.gid+':'+d.disc.length;const hand=cardsOf(d.hands[t]);const c=hand.splice(idx,1)[0];let nd={...d,hands:[...d.hands],disc:d.disc+c,color:color||c[0],drew:false,uno:hand.length===1&&!said?t:-1};nd.hands[t]=hand.join('');
+    S.wild=null;const said=S.unoSaid===d.gid+':'+d.disc.length;const hand=cardsOf(d.hands[t]);const c=hand.splice(idx,1)[0];let nd={...d,hands:[...d.hands],disc:d.disc+c,color:color||c[0],drew:false,lp:t,uno:hand.length===1&&!said?t:-1};nd.hands[t]=hand.join('');
     let msg=`${nm(d,t)} لعب ${c[0]==='k'?(c[1]==='F'?'+4':'ورقة ألوان')+' واختار '+UCN[nd.color]:uLabel(c[1])}`;
     const alive=aliveSeats(d).length;let turn;
     if(c[1]==='S')turn=uStep(nd,t,2,nd.dir);
@@ -267,6 +282,35 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
     act({...nd,turn,last:msg});
   }
 };
+
+/* the bot: keeps its colour cards for when it needs them, sends +2, skips and +4 at whoever is about to finish, sheds its high
+   numbers, and turns the colour to the one it holds most. A hard bot also remembers the colour a player drew on (he had none of it)
+   and plays toward it; it only sees what a player at the table would see */
+const unoMem=d=>{if(!S.unoM||S.unoM.g!==d.gid)S.unoM={g:d.gid,lack:{}};return S.unoM;};
+GAMES.uno.botSee=nd=>{const d=S.st.d;if(!d||!nd||d.gid!==nd.gid||!Array.isArray(d.hands)||!Array.isArray(nd.hands))return;const t=d.turn,M=unoMem(nd);
+  if(nd.disc.length>d.disc.length){const c=nd.disc.slice(-2);if(M.lack[t])delete M.lack[t][c[0]];return;}
+  if(nd.disc.slice(-2)===d.disc.slice(-2)&&!d.drew&&nd.hands[t].length===d.hands[t].length+2)(M.lack[t]=M.lack[t]||{})[d.color]=1;};
+GAMES.uno.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);
+  // first catch whoever went down to one card without saying «أونو»
+  if(d.uno>=0&&d.uno!==s&&Math.random()<[0,.5,.8,1][lv])return botDo(d,s,'catch',0);
+  // the bot says «أونو» (easy ones often forget) on its own move, not through the shared button flag
+  const say=H.length===2&&Math.random()<[0,.5,.9,1][lv],uno=nd=>nd&&H.length===2&&cardsOf(nd.hands[s]).length===1?{...nd,uno:say?-1:s}:nd;
+  const ok=H.map((c,i)=>uPlayable(c,d,H)?i:-1).filter(i=>i>=0);
+  if(!ok.length)return botDo(d,s,d.drew?'pass':'draw',0);
+  const n1=uStep(d,s,1,d.dir),danger=!sameTeam(d,n1,s)&&d.hands[n1].length/2<=2,two=aliveSeats(d).length===2;
+  const lack=lv===3?(unoMem(d).lack[n1]||{}):{};
+  const C={r:0,g:0,b:0,y:0};H.forEach(x=>{if(x[0]!=='k')C[x[0]]++;});
+  const score=i=>{const c=H[i],v=c[1],left=H.length-1;let sc;
+    if(c[0]==='k')sc=left<=1?8:danger?(v==='F'?7:3):left<=3?1:(v==='F'?-2:-4);
+    else{sc=4+(C[c[0]]-1)*.6+(lack[c[0]]?2.5:0)+(c[0]!==d.color?(C[c[0]]>C[d.color]?1:-.5):0);
+      if('SRD'.includes(v))sc+=danger?5+(v==='D'?1:0):two?2.5:left<=3?1:-.5;else sc+=+v/10;}
+    return sc+Math.random()*(lv===3?.3:1);};
+  let i;if(lvRand(lv))i=pickR(ok);else{ok.sort((a,b)=>score(b)-score(a));i=ok[0];
+    // a drawn colour card is kept for later when the hand is still long
+    if(d.drew&&lv>1&&H[i][0]==='k'&&H.length>4&&!danger)return botDo(d,s,'pass',0);}
+  if(H[i][0]==='k'){const cs='rgby'.split('').sort((a,b)=>(C[b]+(lack[b]?1.5:0))-(C[a]+(lack[a]?1.5:0)));
+    const pick=C[cs[0]]||lack[cs[0]]?cs[0]:'rgby'[rnd(4)];S.wild=i;return uno(botDo(d,s,'wc','rgby'.indexOf(pick)));}
+  return uno(botDo(d,s,'play',i));};
 
 /* ---------- dominoes ---------- */
 const DOMH={2:7,3:6,4:6,5:4,6:4,7:3,8:3};
@@ -280,7 +324,7 @@ const domFits=(t,d)=>{const e=domEnds(d);if(!e)return [true,true];return [t.incl
 GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',hide:{seat:['hands'],all:['bone']},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7A5C45"/><g transform="rotate(-20 50 50)"><rect x="18" y="36" width="64" height="32" rx="6" fill="#fff" stroke="#2D4763" stroke-width="3"/><line x1="50" y1="40" x2="50" y2="64" stroke="#2D4763" stroke-width="2.5"/>${[[28,44],[40,60],[34,52]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.6" fill="#2D4763"/>`).join('')}${[[60,44],[72,44],[60,60],[72,60]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.6" fill="#2D4763"/>`).join('')}</g></svg>`,
   init:n=>{const all=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)all.push(''+a+b);const s=shuffle(all);const k=DOMH[n]||3;const hands=[];for(let p=0;p<n;p++)hands.push(s.slice(p*k,p*k+k).join(''));
-    return {hands,bone:s.slice(n*k).join(''),ch:'',pass:0,last:''};},
+    return {hands,bone:s.slice(n*k).join(''),ch:'',pass:0,lp:-1,ls:'',last:''};},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
@@ -291,11 +335,14 @@ GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',hide:{seat:['hands']
     let s='';
     const ch=d.ch.match(/.{2}/g)||[];
     // the chain is drawn left to right, so its end labels and the side buttons are laid out left to right too
-    const e=domEnds(d);s+=`<div class="table">${ch.length?`<div class="chain">${ch.map((t,i)=>`<span class="dom ${t[0]===t[1]?'dbl':''} ${i===0||i===ch.length-1?'end':''}" data-k="${t}">${t[0]===t[1]?domV(t,54):domSVG(t,56)}</span>`).join('')}</div><div class="ends" style="direction:ltr"><span>اليسار: <b>${e[0]}</b></span><span>اليمين: <b>${e[1]}</b></span></div>`:'<p class="note" style="margin:24px 0">أول قطعة تفتح اللعب</p>'}<span class="bone"><i></i>المخزن ${d.bone.length/2}</span></div>`;
+    // the tile just laid (d.ls: which end it went on) comes from its player's side and keeps a ring in their colour
+    const e=domEnds(d),li=d.lp>=0&&ch.length?(d.ls==='L'?0:ch.length-1):-1,from=d.lp===v&&!ctx.local?'fm':'fo';
+    s+=`<div class="table">${ch.length?`<div class="chain">${ch.map((t,i)=>`<span class="dom ${t[0]===t[1]?'dbl':''} ${i===0||i===ch.length-1?'end':''} ${i===li?'lp '+from:''}" data-k="${t}"${i===li?` style="--c:${col(d,d.lp)}"`:''}>${t[0]===t[1]?domV(t,54):domSVG(t,56)}</span>`).join('')}</div><div class="ends" style="direction:ltr"><span>اليسار: <b>${e[0]}</b></span><span>اليمين: <b>${e[1]}</b></span></div>`:'<p class="note" style="margin:24px 0">أول قطعة تفتح اللعب</p>'}<span class="bone"><i></i>المخزن ${d.bone.length/2}</span></div>`;
     if(v<0)return s;const my=ctx.my&&d.turn===v;const hand=d.hands[v].match(/.{2}/g)||[];
     const any=hand.some(t=>domFits(t,d).some(x=>x));
     if(my&&S.dside!=null&&e)s+=`<div class="acts" style="direction:ltr"><button class="btn navy" data-ga="L" data-i="${S.dside}">⬅ على طرف ${e[0]}</button><button class="btn navy" data-ga="R" data-i="${S.dside}">على طرف ${e[1]} ➡</button></div>`;
-    s+=`<p class="lbl hlbl">قطعك</p><div class="hand dhand">${hand.map((t,i)=>{const f=domFits(t,d).some(x=>x);return my&&f?`<button class="dom pick" data-ga="play" data-i="${i}">${domV(t)}</button>`:`<span class="dom ${my?'dim':''}">${domV(t)}</span>`;}).join('')}</div>`;
+    // each tile keeps its node (id), so only a tile drawn from the boneyard comes in
+    s+=`<p class="lbl hlbl">قطعك</p><div class="hand dhand">${hand.map((t,i)=>{const f=domFits(t,d).some(x=>x);return my&&f?`<button class="dom pick" id="dt${t}" data-ga="play" data-i="${i}">${domV(t)}</button>`:`<button class="dom ${my?'dim':''}" id="dt${t}" disabled>${domV(t)}</button>`;}).join('')}</div>`;
     if(my&&!any)s+=`<div class="row">${d.bone.length?'<button class="btn blue" data-ga="draw">اسحب من المخزن</button>':'<button class="btn navy" data-ga="pass">مرّر الدور</button>'}</div>`;
     return s;},
   click(a,i,d,ctx){
@@ -311,9 +358,30 @@ GAMES.domino={name:'دومينو',cat:'cards',lbc:'#5B4636',hide:{seat:['hands']
     if(!ch)ch=tile;else if(side==='R'){const e=ch[ch.length-1];if(!tile.includes(e))return;ch+=tile[0]===e?tile:tile[1]+tile[0];}
     else{const e=ch[0];if(!tile.includes(e))return;ch=(tile[1]===e?tile:tile[1]+tile[0])+ch;}
     hand.splice(i,1);const hands=[...d.hands];hands[t]=hand.join('');
-    act({...d,hands,ch,pass:0,turn:nextSeat(d,t),win:hand.length?null:t,last:`${nm(d,t)} نزّل ${tile[0]}|${tile[1]}`});
+    act({...d,hands,ch,pass:0,lp:t,ls:d.ch?side:'R',turn:nextSeat(d,t),win:hand.length?null:t,last:`${nm(d,t)} نزّل ${tile[0]}|${tile[1]}`});
   }
 };
+
+/* the bot: weighs every tile on every end. It sheds heavy tiles and doubles, keeps ends it can answer itself, counts the
+   numbers already down, and (hard) remembers the numbers a player drew or passed on, to leave him ends he cannot play */
+const domMem=d=>{if(!S.domM||S.domM.g!==d.gid)S.domM={g:d.gid,lack:{}};return S.domM;};
+GAMES.domino.botSee=nd=>{const d=S.st.d;if(!d||!nd||d.gid!==nd.gid||!d.ch||!Array.isArray(d.hands))return;const t=d.turn;
+  if(nd.ch===d.ch&&(nd.hands[t].length>d.hands[t].length||nd.pass>d.pass)){const L=domMem(nd).lack[t]=domMem(nd).lack[t]||{};L[d.ch[0]]=1;L[d.ch[d.ch.length-1]]=1;}};
+GAMES.domino.bot=(d,s,lv)=>{const H=d.hands[s].match(/.{2}/g)||[];const ok=H.map((t,i)=>domFits(t,d).some(x=>x)?i:-1).filter(i=>i>=0);
+  if(!ok.length)return botDo(d,s,d.bone.length?'draw':'pass',0);
+  if(!d.ch){// the opening: the heaviest double, else the heaviest tile
+    const i=lvRand(lv)?pickR(ok):ok.sort((a,b)=>(+H[b][0]+ +H[b][1]+(H[b][0]===H[b][1]?20:0))-(+H[a][0]+ +H[a][1]+(H[a][0]===H[a][1]?20:0)))[0];return botDo(d,s,'play',i);}
+  const n1=nextSeat(d,s),lack=lv===3&&!sameTeam(d,n1,s)?(domMem(d).lack[n1]||{}):{};
+  // how many tiles with each number nobody has shown yet (not on the table, not in this hand)
+  const unseen=[0,0,0,0,0,0,0];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++){const t=''+a+b;if(domHas(d.ch,t))continue;if(H.includes(t))continue;unseen[a]++;if(b!==a)unseen[b]++;}
+  const opts=[];for(const i of ok){const t=H[i];const [fl,fr]=domFits(t,d);for(const side of ['L','R']){if(side==='L'?!fl:!fr)continue;
+    const e=side==='L'?d.ch[0]:d.ch[d.ch.length-1],o=t[0]===e?t[1]:t[0];const ends=side==='L'?[o,d.ch[d.ch.length-1]]:[d.ch[0],o];
+    const rest=H.filter((_,j)=>j!==i);let v=(+t[0]+ +t[1])*.3+(t[0]===t[1]?2:0);
+    v+=ends.reduce((x,n)=>x+(rest.some(r=>r.includes(n))?1.5:0)+(lv>1?(4-Math.min(4,unseen[n]))*.45:0)+(lack[n]?3:0),0);
+    opts.push({i,side,v:v+Math.random()*(lv===3?.2:1)});}}
+  const m=lvRand(lv)?pickR(opts):opts.sort((a,b)=>b.v-a.v)[0];return botDo(d,s,m.side,m.i);};
+// is tile t (either way round) in the chain string ch (read two by two)?
+const domHas=(ch,t)=>{const r=t[1]+t[0];for(let k=0;k<ch.length;k+=2){const x=ch.slice(k,k+2);if(x===t||x===r)return true;}return false;};
 
 /* ---------- bingo ---------- */
 function seedOf(str){let h=2166136261;for(const ch of String(str)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
@@ -324,13 +392,13 @@ const bingoLines=(card,called)=>BLINES.filter(L=>L.every(i=>called[card[i]-1]===
 GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:nextSeat(d,d.turn)}),hide:{seat:['bs']},
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D45D87"/>${[0,1,2,3,4].map(r=>[0,1,2,3,4].map(c=>`<rect x="${12+c*16}" y="${12+r*16}" width="14" height="14" rx="3" fill="${(r===c)?'#ffd84d':'#fff'}"/>`).join('')).join('')}<path d="M14 14L86 86" stroke="#2D4763" stroke-width="4" stroke-linecap="round"/></svg>`,
   // ln: lines each seat has made, kept in the state so the scores show without the hidden cards
-  init:n=>({called:'0'.repeat(25),bs:Array(n).fill(0).map(()=>rid()+rid()),ln:Array(n).fill(0),last:''}),
+  init:n=>({called:'0'.repeat(25),bs:Array(n).fill(0).map(()=>rid()+rid()),ln:Array(n).fill(0),lc:0,last:''}),
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   points:d=>d.pl.map((r,s)=>(d.ln?d.ln[s]:bingoLines(bingoCard(d,s),d.called))+'/5'),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
   render(d,ctx){const v=ctx.local?(d.win!=null?(typeof d.win==='number'?d.win:0):ctx.v):ctx.v;if(v<0)return '';
     const card=bingoCard(d,v);const lines=BLINES.filter(L=>L.every(i=>d.called[card[i]-1]==='1')).flat();
-    const ln=bingoLines(card,d.called);return `<div class="bingo" style="--c:${col(d,v)};--l:${lit(d,v)}"><div class="bprog"><div><i style="width:${ln*20}%"></i></div><b>${'بنقو'.split('').map((ch,k)=>`<span class="${k<Math.min(ln,4)||ln>=5?'on':''}">${ch}</span>`).join('')}</b></div>
+    const ln=bingoLines(card,d.called);return `<div class="bingo" style="--c:${col(d,v)};--l:${lit(d,v)}"><div class="bprog">${d.lc?`<span class="bball" data-k="b${d.lc}"><small>آخر رقم</small>${d.lc}</span>`:''}<div><i style="width:${ln*20}%"></i></div><b>${'بنقو'.split('').map((ch,k)=>`<span class="${k<Math.min(ln,4)||ln>=5?'on':''}">${ch}</span>`).join('')}</b></div>
     <div class="cellgrid bgrid" style="grid-template-columns:repeat(5,minmax(0,1fr))">${card.map((n,i)=>{const c=d.called[n-1]==='1';
       return c?`<div class="cg bc ${lines.includes(i)?'ln':''}"><span>${n}</span></div>`:`<button class="cg" data-ga="m" data-i="${n}" ${ctx.my?'':'disabled'}>${n}</button>`;}).join('')}</div></div>`;},
   click(a,n,d,ctx){
@@ -338,7 +406,7 @@ GAMES.bingo={name:'بنقو',cat:'cards',lbc:'#B5486E',onTimeout:d=>({...d,turn:
     const ln=d.pl.map((r,s)=>bingoLines(bingoCard(d,s),called));
     const done=d.pl.map((r,s)=>d.out[s]!=='1'&&ln[s]>=5?s:-1).filter(s=>s>=0);
     let win=null;if(done.length)win=done.includes(t)?t:done.length===1?done[0]:'d';
-    act({...d,called,ln,win,turn:nextSeat(d,t),last:`${nm(d,t)} اختار ${n}`});
+    act({...d,called,ln,lc:n,win,turn:nextSeat(d,t),last:`${nm(d,t)} اختار ${n}`+(ln[t]>(d.ln?d.ln[t]:0)?` وكمّل خط ${ln[t]>=5?'🎉':'✓'}`:'')});
   }
 };
 

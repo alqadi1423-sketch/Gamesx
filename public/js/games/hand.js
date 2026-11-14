@@ -56,7 +56,7 @@ function hSwap(m,cards){if(m.jk<0)return null;const rep=m.c[m.jk];
   if(cards.length!==1||cards[0][0]!==nat[0][0]||nat.some(c=>c[1]===cards[0][1]))return null;return {...m,c:[...nat,cards[0]],jk:-1};}
 // everyone gets 14; the starter opens by drawing (that is the 15th card) and then throws one
 function hDealCore(n){const dk=hDeck(n);const hands=[];let k=0;for(let s=0;s<n;s++){hands.push(hSortHand(dk.slice(k,k+14).join('')));k+=14;}
-  return {hands,stock:dk.slice(k).join(''),disc:'',melds:[],op:'0'.repeat(n),req:51,ph:'draw',took:null,tc:0,lo:false,op0:null,sum:null};}
+  return {hands,stock:dk.slice(k).join(''),disc:'',melds:[],op:'0'.repeat(n),req:51,ph:'draw',took:null,ld:-1,tc:0,lo:false,op0:null,sum:null};}
 function hNewRound(d){const n=d.pl.length;let st=(d.st+d.r-1)%n;if(d.out[st]==='1')st=nextSeat(d,st);
   return {...d,...hDealCore(n),turn:st,last:`الجولة ${d.r} من 5: ${nm(d,st)} يبدأ`};}
 function hEndRound(d,w,full){const n=d.pl.length;const pts=d.pl.map((_,s)=>{if(s===w)return full?-60:-30;
@@ -70,7 +70,7 @@ function hDraw(d,fromDisc){const t=d.turn;let stock=d.stock,disc=d.disc,last;
   const c=stock.slice(0,2);stock=stock.slice(2);const hands=[...d.hands];hands[t]=hSortHand(hands[t]+c);
   return {...d,hands,stock,disc,ph:'play',took:null,last:last||`${nm(d,t)} سحب`};}
 function hDiscard(d,c){const t=d.turn,n=d.pl.length;const hc=cardsOf(d.hands[t]);const i=hc.indexOf(c);if(i<0)return null;hc.splice(i,1);
-  const hands=[...d.hands];hands[t]=hc.join('');const nd={...d,hands,disc:d.disc+c,took:null};
+  const hands=[...d.hands];hands[t]=hc.join('');const nd={...d,hands,disc:d.disc+c,took:null,ld:t};
   if(!hc.length)return hEndRound(nd,t,d.op0===false&&!d.lo);
   return {...nd,ph:'draw',turn:nextSeat(d,t),tc:0,lo:false,op0:null,last:`${nm(d,t)} رمى ${hJ(c)?'جوكر':''}`.trim()};}
 // meld cards from the hand: list of card groups, all checked; opening rules applied
@@ -121,7 +121,7 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
     const top=d.disc.slice(-2);const canDraw=my&&d.ph==='draw';
     // the felt holds the stock, the discard (keyed by the pile's length so a new discard lands) and the melds
     h+=`<div class="htable"><div class="hpile"><button class="hstock" data-ga="stock" ${canDraw?'':'disabled'}><div class="card back"></div><small>${d.stock.length/2}</small></button>
-      <${canDraw&&top?'button':'div'} class="hdisc" ${canDraw&&top?'data-ga="take"':''}><span class="hdk" data-k="h${d.disc.length}">${top?hCard(top):'<div class="card hempty"></div>'}</span><small>الأرض</small></${canDraw&&top?'button':'div'}></div>`;
+      <${canDraw&&top?'button':'div'} class="hdisc" ${canDraw&&top?'data-ga="take"':''}><span class="hdk" data-k="h${d.disc.length}">${top?hCard(top):'<div class="card hempty"></div>'}</span><small>${d.ld>=0&&top&&d.pl[d.ld]!=null?`رماها ${nm(d,d.ld)}`:'الأرض'}</small></${canDraw&&top?'button':'div'}></div>`;
     // melds on the table
     if(d.melds.length){const selC=U.sel.map(i=>cardsOf(d.hands[d.turn])[i]);const canAdd=my&&d.ph==='play'&&d.op[d.turn]==='1'&&!d.took&&selC.length;
       h+=`<div class="hmelds">${d.melds.map((m,i)=>{const ok=canAdd&&((selC.length===1&&hAdd(m,selC[0]))||hSwap(m,selC));
@@ -137,7 +137,9 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
     if(show===d.turn)for(const g of U.pend)for(const c of g){const i=all.findIndex((x,j)=>x===c&&!taken[j]);if(i>=0)taken[i]=true;}
     const idx=all.map((_,i)=>i).filter(i=>!taken[i]);
     const act2=my&&show===d.turn&&d.ph==='play';
-    h+=`<p class="lbl" style="text-align:center">ورقك ${d.op[show]==='1'?'<small>(نزّلت)</small>':''}</p><div class="hand hhand">${idx.map(i=>`<${act2?'button':'div'} class="hc ${U.sel.includes(i)?'sel':''} ${d.took&&all[i]===d.took&&show===d.turn?'took':''}" ${act2?`data-ga="sel" data-i="${i}"`:''}>${hCard(all[i])}</${act2?'button':'div'}>`).join('')}</div>`;
+    // each card keeps its node (id, the second copy of a card gets 2), so only a card just drawn or taken flies in
+    const ids=handIds(all,'hc'+show+'-');
+    h+=`<p class="lbl" style="text-align:center">ورقك ${d.op[show]==='1'?'<small>(نزّلت)</small>':''}</p><div class="hand hhand">${idx.map(i=>`<button class="hc ${U.sel.includes(i)?'sel':''} ${d.took&&all[i]===d.took&&show===d.turn?'took':''}" id="${ids[i]}" ${act2?`data-ga="sel" data-i="${i}"`:'disabled'}>${hCard(all[i])}</button>`).join('')}</div>`;
     if(act2){const sel=U.sel.map(i=>all[i]);const m=sel.length>=3?hMeld(sel):null;
       h+=`<div class="row hact"><button class="btn green" data-ga="meld" ${m?'':'disabled'}>نزّل${m?` (${hValue(m)})`:''}</button><button class="btn red" data-ga="disc" ${sel.length===1&&!U.pend.length?'':'disabled'}>ارمِ</button>${d.took&&d.tc===0&&!U.pend.length?'<button class="btn" data-ga="back">رجّع ورقة الأرض</button>':''}</div>`;}
     return h;},
@@ -163,3 +165,65 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
     if(a==='disc'){if(U.pend.length){toast('ثبّت النزول أو تراجع عنه أول');return;}if(d.took){toast('لازم تنزّل ورقة الأرض اللي أخذتها');return;}
       const c=all[U.sel[0]];if(!c)return;const nd=hDiscard(d,c);if(nd){S.hd=null;act(nd);}}}
 };
+
+/* ---------- the bot: finds the richest way to split its hand into melds, opens as soon as it reaches the bar, takes the
+   ground card only when it goes down at once, frees jokers, sheds onto the table, and throws the card least likely to make a
+   meld (a hard bot also keeps back what the next player was seen collecting). It reads only its own hand and the table ---------- */
+const hCnt=cs=>{const m={};for(const c of cs)m[c]=(m[c]||0)+1;return m;};
+const hCardOf=(x,s)=>(x===1||x===14?'A':HRK[x-1])+s;
+// every meld these cards could make: groups of 3 or 4 suits, runs (a joker fills one gap or end)
+function hCands(cs){const m=hCnt(cs),J=m.XX||0,out=[];
+  for(const r of HRK){const su='shdc'.split('').filter(s=>m[r+s]);const subs=k=>{const res=[];const go=(i,a)=>{if(a.length===k){res.push(a.map(s=>r+s));return;}for(let j=i;j<su.length;j++)go(j+1,[...a,su[j]]);};go(0,[]);return res;};
+    for(const k of [3,4])if(su.length>=k)out.push(...subs(k));
+    if(J)for(const k of [2,3])if(su.length>=k)out.push(...subs(k).map(g=>[...g,'XX']));}
+  for(const s of 'shdc'){const has=x=>!!m[hCardOf(x,s)];
+    for(let a=1;a<=12;a++)for(let b=a+2;b<=14;b++){if(a===1&&b===14)continue;let miss=0;for(let x=a;x<=b&&miss<2;x++)if(!has(x))miss++;
+      if(miss>1||(miss&&!J)||!has(a)&&!has(b))continue;const g=[];for(let x=a;x<=b;x++)if(has(x))g.push(hCardOf(x,s));if(miss)g.push('XX');out.push(g);}}
+  return out.map(g=>{const x=hMeld(g);return x?{g,v:hValue(x),p:g.reduce((a,c)=>a+hPen(c),0)}:null;}).filter(Boolean);}
+// the set of melds that takes the most penalty out of the hand and leaves a card to throw (must: a card one of them has to use)
+function hBest(cs,must){const C=hCands(cs).sort((a,b)=>b.p-a.p),cnt=hCnt(cs),n=cs.length;let best={p:0,sets:[],v:0},nodes=0;
+  const go=(i,used,sets,p,v)=>{if(++nodes>5000)return;
+    if(p>best.p&&(!must||sets.some(x=>x.g.includes(must))))best={p,sets:sets.slice(),v};
+    for(let j=i;j<C.length;j++){const c=C[j];if(used+c.g.length>n-1)continue;const need=hCnt(c.g);if(Object.keys(need).some(k=>(cnt[k]||0)<need[k]))continue;
+      for(const k in need)cnt[k]-=need[k];sets.push(c);go(j,used+c.g.length,sets,p+c.p,v+c.v);sets.pop();for(const k in need)cnt[k]+=need[k];}};
+  go(0,0,[],0,0);return best;}
+// how close a card is to a meld with the rest of the hand
+function hNear(c,rest){if(hJ(c))return 99;let u=0;for(const x of rest){if(hJ(x))continue;
+    if(x[0]===c[0]&&x[1]!==c[1])u+=1;else if(x[1]===c[1]&&x!==c){const a=hRank(c),b=hRank(x),g=Math.min(Math.abs(a-b),a===1?Math.abs(14-b):99,b===1?Math.abs(14-a):99);u+=g===1?1:g===2?.6:0;}}
+  return u;}
+// a hard bot notes the ground cards each player took: what they collect
+const handMem=d=>{if(!S.handM||S.handM.g!==d.gid)S.handM={g:d.gid,took:{}};return S.handM;};
+GAMES.hand.botSee=nd=>{const d=S.st.d;if(!d||!nd||d.gid!==nd.gid||d.ph!=='draw'||nd.ph!=='play'||!nd.took)return;(handMem(nd).took[d.turn]=handMem(nd).took[d.turn]||[]).push(nd.took);};
+GAMES.hand.bot=(d,s,lv)=>{if(d.ph==='sum')return hNewRound({...d,r:d.r+1});
+  let x=d;const t=d.turn,opened=()=>x.op[t]==='1';
+  if(x.ph==='draw'){const top=x.disc.slice(-2);
+    if(top&&!hJ(top)&&Math.random()<[0,.4,.85,1][lv]){const b=hBest([...cardsOf(x.hands[t]),top],top);if(b.sets.length&&(opened()||b.v>=x.req))return hDraw(x,true);}
+    if(top&&hJ(top)&&lv>1){const b=hBest([...cardsOf(x.hands[t]),top],top);if(b.sets.length&&(opened()||b.v>=x.req))return hDraw(x,true);}
+    return hDraw(x,false);}
+  // the ground card goes down first; if it cannot, it goes back and the bot draws like everyone else
+  if(x.took){const b=hBest(cardsOf(x.hands[t]),x.took);const r=b.sets.length&&(opened()||b.v>=x.req)?hLay(x,b.sets.map(z=>z.g)):null;
+    if(r&&r.d)x=r.d;else{const hc=cardsOf(x.hands[t]),back=[...x.hands];hc.splice(hc.indexOf(x.took),1);back[t]=hc.join('');x=hDraw({...x,hands:back,disc:x.disc+x.took,took:null,ph:'draw'},false);}}
+  const play=lv>1||Math.random()<.6;
+  // after opening: free a joker when the card it stands for is here
+  if(play&&opened()&&!x.took)for(let i=0;i<x.melds.length;i++){const m=x.melds[i];if(m.jk<0)continue;const hc=cardsOf(x.hands[t]);
+    const tries=m.t==='r'?[[m.c[m.jk]]]:(()=>{const nat=m.c.filter((_,j)=>j!==m.jk),miss='shdc'.split('').filter(q=>!nat.some(c=>c[1]===q)).map(q=>nat[0][0]+q);return nat.length===2?[miss]:miss.map(c=>[c]);})();
+    for(const cs of tries){if(!cs.every(c=>hc.includes(c))||hc.length-cs.length<1)continue;const nm2=hSwap(m,cs);if(!nm2)continue;
+      const h2=[...hc];cs.forEach(c=>h2.splice(h2.indexOf(c),1));h2.push('XX');const melds=[...x.melds];melds[i]={...nm2,o:m.o};const hands=[...x.hands];hands[t]=hSortHand(h2.join(''));
+      x={...x,melds,hands,tc:(x.tc||0)+1,lo:x.lo||m.o!==t,last:`${nm(x,t)} أخذ الجوكر`};break;}}
+  // lay the best melds: before opening only when they reach the bar
+  if(play&&!x.took){const b=hBest(cardsOf(x.hands[t]));if(b.sets.length&&(opened()||b.v>=x.req)){const r=hLay(x,b.sets.map(z=>z.g));if(r.d)x=r.d;}}
+  // shed single cards onto the melds on the table
+  if(play&&opened()){let ch=true,g=0;while(ch&&g++<20){ch=false;const h2=cardsOf(x.hands[t]);if(h2.length<=1)break;
+    for(const c of h2){if(hJ(c)||c===x.took)continue;for(let i=0;i<x.melds.length;i++){const m2=hAdd(x.melds[i],c);if(!m2)continue;
+      const melds=[...x.melds];melds[i]={...m2,o:x.melds[i].o};const h3=[...h2];h3.splice(h3.indexOf(c),1);const hands=[...x.hands];hands[t]=h3.join('');
+      x={...x,melds,hands,tc:(x.tc||0)+1,lo:x.lo||x.melds[i].o!==t,last:`${nm(x,t)} أضاف ورقة`};ch=true;break;}if(ch)break;}}}
+  // the throw: keep what is held for an opening and what is near a meld; with a rival close to going out, the heavy cards go first
+  const hc=cardsOf(x.hands[t]);const keep=opened()?[]:hBest(hc).sets.flatMap(z=>z.g);const kc=hCnt(keep);
+  const free=hc.filter(c=>{if(kc[c]){kc[c]--;return false;}return !hJ(c);});const pool=free.length?free:hc.filter(c=>!hJ(c)).length?hc.filter(c=>!hJ(c)):hc;
+  const rush=x.pl.some((_,o)=>o!==t&&x.out[o]!=='1'&&x.op[o]==='1'&&cardsOf(x.hands[o]).length<=4);
+  const nx=nextSeat(x,t),col=lv===3?(handMem(x).took[nx]||[]):[];
+  const cost=c=>hNear(c,hc.filter((_,j)=>j!==hc.indexOf(c)))*5-hPen(c)*(rush?.6:.25)+(col.some(y=>!hJ(y)&&(y[0]===c[0]||y[1]===c[1]&&Math.abs(hRank(y)-hRank(c))<=2))?3:0)+(lv===1?Math.random()*6:0);
+  const dc=pool.slice().sort((a,b)=>cost(a)-cost(b))[0]||hc[0];
+  return hDiscard(x,dc)||x;};
+// the round scores stay on screen long enough to read
+GAMES.hand.botDelay=(d,s,lv)=>d.ph==='sum'?8000:BOTMS[lv]+rnd(600);

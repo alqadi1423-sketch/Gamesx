@@ -36,6 +36,28 @@ GAMES.rev={name:'عطيل',cat:'board',lbc:'#1F6B4A',onTimeout:d=>{const n=d.pl.
   }
 };
 
+/* the bot: corners are gold, the squares next to an empty corner are poison, edges are good, and fewer moves left to the
+   others is better. Two players: a hard bot looks three moves ahead (the last few empty squares to the end); more players: one ahead */
+function revW(z,b,i){const r=Math.floor(i/z),c=i%z,e=x=>x===0||x===z-1;if(e(r)&&e(c))return 100;
+  const k=[[0,0],[0,z-1],[z-1,0],[z-1,z-1]].find(([a,q])=>Math.abs(a-r)<=1&&Math.abs(q-c)<=1);
+  if(k)return b[k[0]*z+k[1]]==='.'?(r===k[0]||c===k[1]?-20:-40):12;
+  if(e(r)||e(c))return 10;return r===1||c===1||r===z-2||c===z-2?-2:1;}
+function revMoves(b,z,p){const m=[];for(let i=0;i<z*z;i++)if(b[i]==='.'){const f=revFlips(b,z,i,p);if(f.length)m.push([i,f]);}return m;}
+function revPut(b,z,p,i,f){const a=b.split('');a[i]=String(p);for(const k of f)a[k]=String(p);return a.join('');}
+function revEval(b,z,me,n,mob){let v=0;for(let i=0;i<z*z;i++){if(b[i]==='.')continue;const w=revW(z,b,i);v+=b[i]===String(me)?w:-w/(n-1);}return v+(mob||0);}
+function revAB(b,z,me,p,dep,al,be,end){const ms=revMoves(b,z,p),o=1-p;
+  if(!ms.length){const om=revMoves(b,z,o);if(!om.length){const c=cntSeat(b,2);return (c[me]-c[1-me])*1000;}if(!dep)return revEval(b,z,me,2,(p===me?-1:1)*om.length*4);return revAB(b,z,me,o,dep-1,al,be,end);}
+  if(!dep){const om=revMoves(b,z,o).length;return revEval(b,z,me,2,(p===me?1:-1)*(ms.length-om)*4);}
+  let v=p===me?-1e9:1e9;for(const [i,f] of ms){const x=revAB(revPut(b,z,p,i,f),z,me,o,dep-1,al,be,end);
+    if(p===me){if(x>v)v=x;if(v>al)al=v;}else{if(x<v)v=x;if(v<be)be=v;}if(al>=be)break;}return v;}
+GAMES.rev.bot=(d,s,lv)=>{const z=d.z,n=d.pl.length,ms=revMoves(d.b,z,s);if(!ms.length)return GAMES.rev.onTimeout(d);
+  let pick;if(lvRand(lv))pick=pickR(ms);
+  else if(lv===1)pick=ms.sort((a,b)=>b[1].length-a[1].length+Math.random()*3-1.5)[0];
+  else if(n===2&&lv===3){const empty=[...d.b].filter(c=>c==='.').length,dep=empty<=7?empty:3;let bv=-1e9;
+    for(const [i,f] of ms){const v=revAB(revPut(d.b,z,s,i,f),z,s,1-s,dep-1,-1e9,1e9)+Math.random();if(v>bv){bv=v;pick=[i,f];}}}
+  else{const nx=nextSeat(d,s);let bv=-1e9;for(const [i,f] of ms){const b=revPut(d.b,z,s,i,f);const v=revEval(b,z,s,n,lv===3?-revMoves(b,z,nx).length*3:0)+Math.random()*(lv===3?.5:4);if(v>bv){bv=v;pick=[i,f];}}}
+  return botDo(d,s,'m',pick[0]);};
+
 /* ---------- old maid ---------- */
 function omPairs(cards){const by={};cards.forEach(c=>{(by[c[0]]=by[c[0]]||[]).push(c);});const keep=[];for(const r in by){const a=by[r];if(a.length%2)keep.push(a[a.length-1]);}return keep;}
 GAMES.oldmaid={outDone:true,name:'الشايب',cat:'cards',lbc:'#7B3F61',noTimer:true,hide:{seat:['hands']},points:d=>d.hands.map((h,s)=>d.out[s]==='1'?'خلّص ✓':h.length/2+' ورق'),
@@ -56,18 +78,21 @@ GAMES.oldmaid={outDone:true,name:'الشايب',cat:'cards',lbc:'#7B3F61',noTime
     const tg=nextSeat(d,d.turn);const my=ctx.my&&d.turn===v;
     // the felt: the next player's cards face down to draw from (or a fan of how many they hold while waiting)
     const th=cardsOf(d.hands[tg]);
-    s+=`<div class="omt" style="--c:${col(d,tg)}"><p class="lbl">${my&&tg!==d.turn?`اسحب ورقة من ${nameTag(d,tg)}`:`ورق ${nameTag(d,tg)}`}</p><div class="hand omfrom">${my&&tg!==d.turn?th.map((c,i)=>`<button class="card back pick" data-ga="take" data-i="${i}" aria-label="ورقة ${i+1}"></button>`).join(''):th.map(()=>'<div class="card back"></div>').join('')}</div></div>`;
-    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand omhand">${cardsOf(d.hands[v]).map(c=>cardHTML(c)).join('')||'<span class="note">خلّصت</span>'}</div>`;
+    s+=`<div class="omt" style="--c:${col(d,tg)}"><div class="ompr">${d.pr?`<span data-k="p${d.pr}">${cardsOf(d.pr).map(miniCard).join('')}</span><small>زوج ${nm(d,d.pw)} طلع</small>`:''}</div><p class="lbl">${my&&tg!==d.turn?`اسحب ورقة من ${nameTag(d,tg)}`:`ورق ${nameTag(d,tg)}`}</p><div class="hand omfrom">${my&&tg!==d.turn?th.map((c,i)=>`<button class="card back pick" data-ga="take" data-i="${i}" aria-label="ورقة ${i+1}"></button>`).join(''):th.map(()=>'<div class="card back"></div>').join('')}</div></div>`;
+    // each card keeps its node (id), so the card just drawn flies in
+    s+=`<p class="lbl hlbl">أوراقك</p><div class="hand omhand">${cardsOf(d.hands[v]).map(c=>`<span id="om${v}${c}">${cardHTML(c)}</span>`).join('')||'<span class="note">خلّصت</span>'}</div>`;
     return s;},
   click(a,i,d,ctx){
     if(!ctx.my)return;const t=d.turn,tg=nextSeat(d,t);if(tg===t)return;const th=cardsOf(d.hands[tg]);const c=th.splice(i,1)[0];if(!c)return;
     const mine=omPairs([...cardsOf(d.hands[t]),c]);const paired=mine.length<cardsOf(d.hands[t]).length+1;
     const hands=[...d.hands];hands[tg]=th.join('');hands[t]=shuffle(mine).join('');let out=d.out,fin=[...d.fin];
+    // the pair laid down is public, as at a real table
+    const pr=paired?c+cardsOf(d.hands[t]).find(x=>x[0]===c[0]):'';
     for(const s of [t,tg])if(out[s]!=='1'&&!hands[s].length){out=setAt(out,s,'1');fin.push(s);}
     const al=aliveSeats(d,out);
     const last=`${nm(d,t)} سحب من ${nm(d,tg)}${paired?' وطلّع زوج':''}`;
-    if(al.length<=1){act({...d,hands,out,fin,win:fin[0]??'d',loser:al[0]??null,last});return;}
-    act({...d,hands,out,fin,turn:nextSeat(d,t,out),last});
+    if(al.length<=1){act({...d,hands,out,fin,pr,pw:t,win:fin[0]??'d',loser:al[0]??null,last});return;}
+    act({...d,hands,out,fin,pr,pw:t,turn:nextSeat(d,t,out),last});
   }
 };
 
@@ -86,7 +111,8 @@ GAMES.simon={name:'تحدي الألوان',cat:'mind',lbc:'#3B3F8C',noTimer:tru
   after(d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='show'||ss.run||app.querySelector('.cover'))return;ss.run=true;const key=ss.key;const seq=[...d.seq].map(Number);let k=0;
     const flash=()=>{if(!S.simon||S.simon.key!==key)return;if(k>=seq.length){S.simon.phase='input';S.simon.lit=null;render();return;}
       S.simon.lit=seq[k];render();
-      setTimeout(()=>{if(!S.simon||S.simon.key!==key)return;S.simon.lit=null;render();k++;setTimeout(flash,220);},520);};
+      const on=Math.max(280,520-seq.length*18),off=Math.max(120,220-seq.length*8);
+      setTimeout(()=>{if(!S.simon||S.simon.key!==key)return;S.simon.lit=null;render();k++;setTimeout(flash,off);},on);};
     setTimeout(flash,500);},
   click(a,k,d,ctx){const ss=S.simon;if(!ctx.my||!ss||ss.phase!=='input')return;const t=d.turn;const pos=ss.inp.length;
     const tap=ss.tap=(ss.tap||0)+1;ss.lit=k;setTimeout(()=>{if(S.simon===ss&&ss.tap===tap){ss.lit=null;render();}},180);
