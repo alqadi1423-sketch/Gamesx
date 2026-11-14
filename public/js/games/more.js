@@ -370,7 +370,7 @@ GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
     // the pass: with three or more still in, you choose who gets the bomb next (the turn goes on from them)
     // the one move per bomb: scan a wire in secret (then cut), or pass (with three or more: choose who gets the bomb)
     if(my&&d.ps[d.turn]!=='1'){const al=aliveSeats(d).filter(x=>x!==d.turn);
-      s+=`<div class="wpass"><p>ورقة وحدة لكل قنبلة: <b>🔍 افحص</b> سلك بالسر وبعدها قص، أو <b>⏭ مرّر</b></p><div><button class="wpt scm ${scan?'on':''}" data-ga="scm">🔍 ${scan?'إلغاء الفحص':'افحص سلك'}</button>`+
+      s+=`<div class="wpass"><p>حركة وحدة لكل قنبلة: <b>🔍 افحص</b> أو <b>⏭ مرّر</b></p><div><button class="wpt scm ${scan?'on':''}" data-ga="scm">🔍 ${scan?'إلغاء الفحص':'افحص سلك'}</button>`+
         (al.length>1?al.map(x=>`<button class="wpt ${d.ps[x]==='1'?'used':''}" style="--c:${col(d,x)}" data-ga="pass" data-i="${x}">⏭ ${nm(d,x)}${d.ps[x]==='1'?'<small>ما عنده ورقة</small>':''}</button>`).join(''):`<button class="wpt" data-ga="pass" data-i="${al[0]??-1}">⏭ مرّر</button>`)+'</div></div>';}
     return s+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;

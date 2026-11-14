@@ -110,7 +110,8 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
     if(d.ph==='sum')return s+`انتهت الجولة ${d.r}`;
     s+=`${who}: ${d.ph==='draw'?'اسحب أو خذ ورقة الأرض':d.took?'نزّل ورقة الأرض بمجموعة ثم ارمِ':'نزّل أو أضف، ثم ارمِ ورقة'}`;
-    s+=`<br><small>${String(d.last||'').startsWith(`الجولة ${d.r} `)?'':`الجولة ${d.r} من 5`}${(d.op||'')[d.turn]==='1'?'':` • أول نزول ${d.req}+`}</small>`;return s;},
+    const sub=[String(d.last||'').startsWith(`الجولة ${d.r} `)?'':`الجولة ${d.r} من 5`,(d.op||'')[d.turn]==='1'?'':`أول نزول ${d.req}+`].filter(Boolean).join(' • ');
+    if(sub)s+=`<br><small>${sub}</small>`;return s;},
   render(d,ctx){
     const v=ctx.local?d.turn:ctx.v,my=ctx.my;const k=d.gid+':'+d.r+':'+d.turn+':'+d.hands[d.turn]+d.melds.length;
     if(!S.hd||S.hd.k!==k)S.hd={k,sel:[],pend:[]};const U=S.hd;

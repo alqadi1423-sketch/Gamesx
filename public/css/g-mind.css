@@ -452,7 +452,7 @@
 .gm-wires .wpass p{margin:0 0 6px;font-size:13.5px;font-weight:700;text-align:center;color:var(--mut)}
 .gm-wires .wpass p b{color:var(--ink)}
 .gm-wires .wpass>div{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
-.gm-wires .wpt{display:flex;flex-direction:column;align-items:center;padding:7px 12px;border-radius:12px;font-weight:800;font-size:14px;color:#fff;background:var(--c,#2D4763);box-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform var(--t1)}
+.gm-wires .wpt{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40px;padding:7px 12px;border-radius:12px;font-weight:800;font-size:14px;color:#fff;background:var(--c,#2D4763);box-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform var(--t1)}
 .gm-wires .wpt:active{transform:translateY(2px)}
 .gm-wires .wpt small{font-size:10.5px;font-weight:700;opacity:.85}
 .gm-wires .wpt.used{opacity:.75}

@@ -290,3 +290,12 @@ svg.bd-tv{border-radius:12px;box-shadow:0 6px 0 #3E220F,0 12px 24px rgba(0,0,0,.
 @keyframes cw-fly{0%{transform:none;opacity:1}85%{opacity:1}100%{transform:translate(var(--x),var(--y));opacity:0}}
 .bd-cw.cr .cc.hot{box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),inset 0 -3px 0 rgba(0,0,0,.1)}
 .bd-cw.cr .cc.hot.can{box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),0 0 0 2.5px rgba(255,216,77,.9)}
+/* pressed feedback where a tap had none (QA): empty squares, board cells, sudoku cells, backgammon points, marbles */
+.bd-ch .chb.my button.sq:active{box-shadow:inset 0 0 0 3px rgba(255,216,77,.85)}
+.qcat .q:active:not(:disabled){transform:scale(.95)}
+.duel:active{transform:scale(.99)}
+.mboard button.mc:active{box-shadow:inset 0 0 0 2px var(--sel)}
+.sudo button.su:active{background:#FFF4C9}
+.bd-tv .tvhit:active{fill:rgba(255,216,77,.28)}
+.marble.can:active{opacity:.7}
+.bd-tv .tvgh:active{opacity:.6}
