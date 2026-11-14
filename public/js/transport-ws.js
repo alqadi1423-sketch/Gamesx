@@ -7,8 +7,10 @@ window.WSROOM={
   available:()=>WSROOM.app()||/(\.workers\.dev|^localhost|^127\.0\.0\.1)$/.test(location.hostname),
   // inside the Android app the pages come from the phone, so rooms go to the Cloudflare address
   app:()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()),
-  room(){return {join:name=>new Promise((ok,no)=>{
-    const url=WSROOM.app()?'wss://gamesx.alqadi1423.workers.dev/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
+  // opts.create: this phone opens a new room (the server refuses a code already in use: 'taken');
+  // opts.need: joining someone's room, which must already be open (the server refuses a code nobody opened: 'noroom')
+  room(){return {join:(name,opts={})=>new Promise((ok,no)=>{
+    const url=(WSROOM.app()?'wss://gamesx.alqadi1423.workers.dev/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name)+(opts.create?'?c=1':opts.need?'?j=1':'');
     // a ping every PING ms; a socket that hears nothing for DEAD ms is taken as dead (a phone changing networks can keep one open for minutes)
     const PING=20000,DEAD=2*PING-5000;
     let ws=null,me=null,mine={},peers={},hs=[],sts=[],closed=false,opened=false,up=false,ping=null,again=null,tries=0,lastRx=0;
@@ -32,6 +34,9 @@ window.WSROOM={
       if(closed)return;clearTimeout(again);drop();lastRx=Date.now();
       let w;try{w=ws=new WebSocket(url);}catch(e){retry();return;}
       w.onmessage=e=>{if(w!==ws||closed)return;lastRx=Date.now();let m;try{m=JSON.parse(e.data);}catch(x){return;}
+        if(m.t==='noroom'||m.t==='taken'){if(!opened){stop();no(new Error(m.t));}else{stop();tell('bye');}return;}
+        // nobody in the room at all: someone else's room this cannot be (also with a room server older than the 'noroom' rule)
+        if(m.t==='hello'&&!opened&&opts.need&&!(m.peers||[]).length){stop();no(new Error('noroom'));return;}
         if(m.t==='hello'){me=m.peer;peers={};(m.peers||[]).forEach(p=>{peers[p]={};});tries=0;send({t:'p',p:mine});if(!opened){opened=true;up=true;ok(api);}else if(!up){up=true;tell('back');}emit();}
         else if(m.t==='full')retry(true);
         else if(m.t==='join'){peers[m.peer]=peers[m.peer]||{};send({t:'p',p:mine});emit();}

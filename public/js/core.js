@@ -262,9 +262,14 @@ async function enterRoom(code,host,restore,given){
   const room=given||await getRoom();
   if(!room){S.joining=false;S.roomErr='اللعب أونلاين يشتغل من رابط الموقع على Cloudflare، أو من صفحة claude.ai.';render();return;}
   let nr;
-  try{nr=await room.join('g-'+code.toLowerCase());}
-  catch(e){S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
-  netReset();
+  // a new room must get a free code, and joining someone's room needs a room that is open: both are checked before entering
+  try{nr=await room.join('g-'+code.toLowerCase(),{create:!!(host&&!restore),need:!host&&!restore&&!given});}
+  catch(e){const why=e&&e.message;
+    if(why==='taken'&&host&&!restore&&(S.codeTries=(S.codeTries||0)+1)<5){S.joining=false;return enterRoom(genCode(),true);}
+    S.codeTries=0;
+    if(why==='noroom'){S.joining=false;S.roomErr='ما فيه غرفة بهالرمز. تأكد من الرمز، أو أنشئ غرفة جديدة.';render();return;}
+    S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
+  netReset();S.codeTries=0;
   S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatSkip=new Set();S.chatIn={};S.avs={};S.chatJump=false;S.chatTray=false;S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
   S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();tabEnter(code);
   // a saved room: its state, the seat table and the epoch it was at; a saved host takes the room back only if nobody else did (net.js)
@@ -451,6 +456,7 @@ function render(){
   if(fid&&document.activeElement!==app.querySelector(`[data-draft="${fid}"]`)){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(cs,cs);}catch(e){}}}
   const strip=app.querySelector('.players');if(strip&&strip.scrollWidth>strip.clientWidth+2){const on=strip.querySelector('.pt.on');const k=S.st.g+':'+(S.st.d&&S.st.d.turn);if(on&&S.stripKey!==k){S.stripKey=k;const c=strip.getBoundingClientRect(),e=on.getBoundingClientRect();strip.scrollBy({left:(e.left+e.width/2)-(c.left+c.width/2),behavior:'smooth'});}}
   const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(dView(),mkCtx());}catch(e){console.error(e);}
+  noteHere();
 }
 function topBar(title,back,extra){
   return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button></div>`;
@@ -934,8 +940,7 @@ function infoScreen(){
   aspect-ratio: ${sup('aspect-ratio:1')} • color-mix: ${sup('color:color-mix(in srgb,red,blue)')}<br>
   screen: ${screen.width}x${screen.height} • dpr: ${devicePixelRatio} • font: ${getComputedStyle(document.documentElement).fontSize}<br>
   v: ${(document.querySelector('script[src*="core.js"]')||{}).src||''}</div>`;}
-/* ================= loading the games after the first screen =================
-   index.html keeps the game styles and scripts inert in <template id="later-css"> and <template id="later-js">. Right after the
+/* ================= loading the games after the first screen ==========   index.html keeps the game styles and scripts inert in <template id="later-css"> and <template id="later-js">. Right after the
    home screen is drawn they are added to the page: the styles before perf.css (the order they always had), the scripts in their
    order (async=false). Anything that needs a game (the game list, a room, a saved game) waits for them, with a loading note */
 function loadGames(){
@@ -954,6 +959,18 @@ function whenGames(f){if(GREADY){f();return;}GWAIT.push(f);if(!S.gload){S.gload=
 function saveMeta(){try{const ids=[...recentGames(),...favGames(),...NEWG];const l=loadLocal();if(l)ids.push(l.st.g);const g={};
   for(const k of new Set(ids))if(GAMES[k]){const ic=String(GAMES[k].icon||'');g[k]={n:GAMES[k].name,i:ic.length<8000?ic:''};}
   const m={n:Object.keys(GAMES).length,g};lsSet(LSK.meta,JSON.stringify(m));Object.assign(META,m);}catch(e){}}
+// where this tab is (home, lobby, the game list, a game, a room), kept for this tab only, so reloading the page comes back to it
+const HEREK='alaabna.here';
+function noteHere(){try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);}}catch(e){}}
+function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)||'null');}catch(e){}if(!h||typeof h!=='object')return false;
+  if(h.m==='local'){const l=h.g&&loadLocal();if(l){localResume();if(h.b){S.browse=true;render();}return true;}if(h.g)return false;
+    S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0,...localTeams()}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();return true;}
+  if(h.m==='online'){const sv=loadSaved();if(sv&&sv.code&&sv.code===h.c&&sv.via!=='near'){S.mode='lobby';render();enterRoom(sv.code,false,sv);return true;}S.mode='lobby';render();getRoom();return true;}
+  if(h.m==='lobby'){S.mode='lobby';render();getRoom();return true;}
+  if(h.m==='stats'){S.mode='stats';render();return true;}
+  return false;}
+// a screen to come back to after a reload (it needs the games, so it waits for them)
+function hereSaved(){try{const h=JSON.parse(sessionStorage.getItem(HEREK)||'null');return !!h&&['local','online','lobby','stats'].includes(h.m);}catch(e){return false;}}
 function boot(){if(/[?&]info\b/.test(location.search)){infoScreen();return;}
   if(document.getElementById('later-js'))GREADY=false;
-  navInit();render();loadGames();if(isApp())appSetup();}
+  navInit();render();loadGames();if(hereSaved())whenGames(()=>{if(!restoreHere())render();});if(isApp())appSetup();}
