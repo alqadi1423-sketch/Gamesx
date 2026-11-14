@@ -349,3 +349,78 @@
 .gm-war .whand.hand{gap:4px;padding-top:6px}
 .gm-war .whand.hand>*+*{margin-left:0}
 .gm-war .whand.hand>.card.wc{width:calc((100% - 24px) / 7);max-width:54px;height:auto;aspect-ratio:5/7;transform:none}
+
+/* ================= development pass: new parts of the mind games ================= */
+/* guess the word: the length, a solved word in gold, and the box to type the whole word */
+.gm-word .wcat .wlen{font-style:normal;font-size:12px;font-weight:700;color:var(--mut)}
+.gm-word .wordbox .wl.sol{background:linear-gradient(#F6CD4F,#E9A92A);color:#5A3B00;box-shadow:0 3px 0 #B9801A;animation:mi-flip var(--t3) var(--ease)}
+.gm-word .wsolve{display:flex;gap:8px;width:100%;max-width:400px}
+.gm-word .wsolve .field{flex:1;min-width:0;margin:0;text-align:center;font-size:17px;font-weight:700}
+.gm-word .wsolve .btn{flex:none;margin:0;padding-inline:14px;white-space:nowrap}
+
+/* card war: the carried prize, the prizes still to come, last round's cards, and the cards the others still hold */
+.gm-war .wprize{position:relative}
+.gm-war .wprize em{position:absolute;bottom:-12px;inset-inline:-14px;font-style:normal;font-size:11px;font-weight:800;text-align:center;padding:2px 4px;border-radius:99px;background:#5A3B00;color:#FFE7A6;white-space:nowrap}
+.gm-war .wnext{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;max-width:150px}
+.gm-war .wnext small{width:100%;text-align:center;font-size:11px;font-weight:700;color:#E3F5E9;opacity:.85}
+.gm-war .wnext i,.gm-war .wfoes i{font-style:normal;display:grid;place-items:center;width:20px;height:26px;border-radius:5px;font-size:13px;font-weight:800}
+.gm-war .wnext i{background:linear-gradient(#F8D978,#E9B33A);color:#5A3B00}
+.gm-war .wlast,.gm-lowu .llast{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;width:100%;max-width:440px}
+.gm-war .wl1,.gm-lowu .llast span{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;max-width:72px;animation:mi-deal var(--t3) var(--ease) both;animation-delay:calc(var(--j,0) * 60ms)}
+.gm-war .wl1 b,.gm-lowu .llast b{display:grid;place-items:center;width:40px;height:54px;border-radius:8px;font-size:22px;font-weight:800;background:var(--surface);color:var(--ink);box-shadow:inset 0 -3px 0 var(--c),var(--e1)}
+.gm-lowu .llast b{width:44px;height:44px;border-radius:50%}
+.gm-war .wl1 small,.gm-lowu .llast small{max-width:100%;font-size:11px;font-weight:700;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.gm-war .wl1.win b,.gm-lowu .llast .win b{background:linear-gradient(#F8D978,#E9B33A);color:#5A3B00;box-shadow:0 0 0 3px var(--c),var(--e1)}
+.gm-war .wfoes{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:100%;max-width:440px}
+.gm-war .wfoes span{display:flex;align-items:center;gap:3px;min-width:0;padding:3px 6px;border-radius:var(--r-m);background:var(--surface);box-shadow:inset 3px 0 0 var(--c),var(--e1)}
+.gm-war .wfoes b{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.gm-war .wfoes i{background:var(--bg,#EEF2F6);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.gm-war .whand .card.wc.sel{transform:translateY(-8px);box-shadow:0 0 0 3px var(--gold),var(--e2)}
+.gm-war .wmine{margin:0;font-size:13px;font-weight:700;color:var(--mut)}
+.gm-war .wmine b{color:var(--ink);font-size:16px}
+
+/* lowest unique: the prize ball, spent numbers, the chosen one */
+.gm-lowu .lhead{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
+.gm-lowu .lprize{display:flex;align-items:center;gap:8px;padding:4px 16px;border-radius:99px;background:linear-gradient(#F8D978,#E9B33A);color:#5A3B00;box-shadow:0 3px 0 #B9801A;animation:mi-pop var(--t2) var(--spring)}
+.gm-lowu .lprize small{font-size:13px;font-weight:800}
+.gm-lowu .lprize b{font-size:26px;line-height:1.1;font-weight:800}
+.gm-lowu .lprize em{font-style:normal;font-size:12px;font-weight:800;opacity:.8}
+.gm-lowu .lnum.used{opacity:.25;text-decoration:line-through}
+.gm-lowu .lnum.sel{opacity:1;background:linear-gradient(#F8D978,#E9B33A);color:#5A3B00}
+.gm-lowu .lleft{margin:0;font-size:13px;font-weight:700;color:var(--mut)}
+
+/* two thirds: this round's target, and last round on a line from 0 to 100 */
+.gm-two3 .t3goal{display:flex;flex-direction:column;align-items:center;padding:6px 18px;border-radius:var(--r-l);background:#5D4E9E;color:#fff;box-shadow:0 3px 0 #43377A;animation:mi-pop var(--t2) var(--spring)}
+.gm-two3 .t3goal small{font-size:12px;font-weight:700;opacity:.85}
+.gm-two3 .t3goal b{font-size:21px}
+.gm-two3 .t3line{width:100%;max-width:420px;display:flex;flex-direction:column;gap:6px}
+.gm-two3 .t3line p{margin:0;font-size:12px;line-height:1.5;color:var(--mut);text-align:center}
+.gm-two3 .t3bar{position:relative;height:30px;margin:14px 12px 0;border-bottom:3px solid var(--line)}
+.gm-two3 .t3bar i{position:absolute;bottom:-9px;width:16px;height:16px;margin-right:-8px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface);animation:mi-pop var(--t2) var(--spring) both;animation-delay:calc(var(--j,0) * 50ms)}
+.gm-two3 .t3bar i.win{width:20px;height:20px;margin-right:-10px;bottom:-11px;box-shadow:0 0 0 3px var(--gold)}
+.gm-two3 .t3bar .t3tg{width:2px;height:34px;margin-right:-1px;bottom:-3px;border-radius:0;background:var(--gold);box-shadow:none;z-index:1}
+.gm-two3 .t3bar .t3tg b{position:absolute;bottom:100%;right:50%;transform:translateX(50%);padding:0 6px;border-radius:99px;font-size:12px;background:var(--gold);color:#5A3B00;white-space:nowrap}
+
+/* 99: the card just played lands on the pile; the players with their lives; two ways to play an ace or a 10 */
+.gm-n99 .n9pile{width:44px;height:62px;display:grid;place-items:center;border-radius:8px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.2)}
+.gm-n99 .n9pile .card{width:42px;height:60px;margin:0}
+.gm-n99 .n9last{animation:mi-deal var(--t3) var(--ease)}
+.gm-n99 .n9lv{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;width:100%;max-width:440px}
+.gm-n99 .n9lv span{display:flex;align-items:center;gap:4px;min-width:0;max-width:46%;padding:2px 10px;border-radius:99px;font-size:13px;background:var(--surface);box-shadow:inset 3px 0 0 var(--c),var(--e1);transition:transform var(--t2)}
+.gm-n99 .n9lv span.on{transform:translateY(-2px);box-shadow:inset 3px 0 0 var(--c),0 0 0 2px var(--c),var(--e1)}
+.gm-n99 .n9lv span.out{opacity:.4}
+.gm-n99 .n9lv b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.gm-n99 .n9lv em{font-style:normal;color:#E5483F;letter-spacing:1px}
+.gm-n99 .n9lv em u{text-decoration:none;opacity:.25}
+.gm-n99 .n9two{display:flex;gap:3px}
+.gm-n99 .n9two button{border:0;font:inherit;font-size:12px;font-weight:800;padding:2px 8px;border-radius:99px;background:#7D3C98;color:#fff;box-shadow:0 2px 0 #5B2C6F;cursor:pointer}
+.gm-n99 .n9two button:active{transform:translateY(2px);box-shadow:none}
+
+/* go fish: the ranks a player is known to hold (they asked for them) */
+.gm-fish .fkn{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:2px;font-size:11px;font-weight:700;opacity:.95}
+.gm-fish .fkn b{padding:0 4px;border-radius:4px;background:#fff;color:#1F6F8B;font-size:11px}
+
+/* colour words: the question that asks for the word itself stands out */
+.gm-stroop .sth.alt{display:inline-block;margin-top:2px;padding:2px 12px;border-radius:99px;background:#A33C77;color:#fff;font-weight:800}
+
+@media (prefers-color-scheme:dark){.gm-war .wfoes i{background:#26323f}.gm-two3 .t3goal{background:#4A3E85}}
