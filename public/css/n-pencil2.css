@@ -1,0 +1,131 @@
+/* ===== pencil2: pencil-and-paper and combinatorial games (n-pencil2.js). Paper, ink and wooden pieces ===== */
+@keyframes pnin{0%{opacity:0}100%{opacity:1}}
+@keyframes pnpop{0%{transform:scale(.55);opacity:0}100%{transform:none;opacity:1}}
+@keyframes pnland{0%{transform:scale(1.18)}100%{transform:none}}
+@keyframes pnwin{0%,100%{opacity:.25}50%{opacity:.55}}
+@keyframes pnfall{0%{transform:none;opacity:1}100%{transform:rotate(78deg) translate(34%,-6%);opacity:.3}}
+
+/* shared: the two side chips, the legend under a board, the options row before the first move */
+.pnchip{display:inline-block;padding:0 9px;border-radius:9px;color:#fff;font-weight:800;font-size:14px;line-height:21px;vertical-align:middle}
+.pnchip.c0{background:#D9433A}.pnchip.c1{background:#2F74D0}
+.pnleg{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:8px 0 2px;font-size:14px;color:var(--mut)}
+.pnleg span{display:flex;align-items:center;gap:6px}
+.pnopt{width:min(100%,380px);margin:0 auto 8px}
+.pnnote{text-align:center;color:var(--mut);font-size:14px;font-weight:700;margin:6px 0 0}
+.pnhint{display:block;width:100%;text-align:center;color:var(--mut);font-size:13px}
+.pnpaper{background:#FBF7EE;background-image:linear-gradient(rgba(70,120,170,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(70,120,170,.10) 1px,transparent 1px);background-size:14px 14px;
+ border-radius:16px;box-shadow:0 0 0 1px #E3D8C2,0 5px 0 #D8CBB0,0 10px 20px rgba(60,40,10,.12)}
+@media (prefers-color-scheme:dark){.pnleg{color:var(--mut)}}
+
+/* ---------- Sim ---------- */
+.pnsim{width:min(100%,360px);margin:4px auto;padding:4px;border-radius:18px;background:#FBF7EE;background-image:linear-gradient(rgba(70,120,170,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(70,120,170,.10) 1px,transparent 1px);background-size:14px 14px;
+ box-shadow:0 0 0 1px #E3D8C2,0 5px 0 #D8CBB0,0 10px 20px rgba(60,40,10,.12)}
+.pnsim svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.pnsl{stroke-width:3.4;stroke-linecap:round}
+.pnsl.s0{stroke:#D9433A}.pnsl.s1{stroke:#2F74D0}
+.pnsl.nw{animation:pnin .3s ease-out}
+.pnslm{stroke:#F0B429;stroke-width:7.5;stroke-linecap:round;opacity:.55}
+.pnsg{stroke:#BFB096;stroke-width:1.1;stroke-dasharray:1.6 1.8}
+.pnsim.my .pnsg{stroke:#9C8C70}
+.pnsim.my.t0 .pnsg.dz{stroke:#D9433A;opacity:.45;stroke-dasharray:.4 2.4;stroke-width:1.6;stroke-linecap:round}
+.pnsim.my.t1 .pnsg.dz{stroke:#2F74D0;opacity:.45;stroke-dasharray:.4 2.4;stroke-width:1.6;stroke-linecap:round}
+.pnsg.sel{stroke:#F0B429!important;opacity:1!important;stroke-width:3!important;stroke-dasharray:none!important}
+.pnsh{stroke:transparent;stroke-width:9;stroke-linecap:round;cursor:pointer}
+.pnsd{fill:#2D3B4C;stroke:#FBF7EE;stroke-width:1.4}
+.pnsd.tr{stroke:#F0B429;stroke-width:2}
+.pnstri{opacity:.3;animation:pnwin 1.1s ease-in-out 2}
+.pnstri.s0{fill:#D9433A}.pnstri.s1{fill:#2F74D0}
+
+/* ---------- domineering: a wooden tray with red (up and down) and blue (across) tiles ---------- */
+.pndm{position:relative;width:min(100%,380px);aspect-ratio:1;margin:4px auto 6px;direction:ltr;padding:0;border-radius:10px;
+ background:linear-gradient(135deg,#F1DDB4,#E4C690);box-shadow:0 0 0 3px #9A6B3C,0 0 0 8px #7A5129,0 9px 0 6px rgba(0,0,0,.14),0 14px 22px 6px rgba(0,0,0,.14)}
+.pndg{position:absolute;inset:0;display:grid}
+.pndc{position:relative;padding:0;background:none;border-radius:0;box-shadow:inset 0 0 0 .5px rgba(122,81,41,.35)}
+.pndm.my .pndc.can::after{content:'';position:absolute;left:50%;top:50%;width:16%;height:16%;margin:-8% 0 0 -8%;border-radius:50%;background:rgba(122,81,41,.28)}
+.pndm.my.t0 .pndc.can:active{background:rgba(217,67,58,.18)}.pndm.my.t1 .pndc.can:active{background:rgba(47,116,208,.18)}
+.pndc.sel{background:rgba(240,180,41,.45)}
+.pndm.t0 .pndc.to{background:rgba(217,67,58,.28)}.pndm.t1 .pndc.to{background:rgba(47,116,208,.28)}
+.pndc.to::after{background:rgba(255,255,255,.8)!important}
+.pndp{position:absolute;display:block;pointer-events:none;padding:3px}
+.pndp::before{content:'';position:absolute;inset:3px;border-radius:7px}
+.pndp.s0::before{background:linear-gradient(90deg,#E8665C,#C7372E);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 2px 3px rgba(60,10,0,.3)}
+.pndp.s1::before{background:linear-gradient(180deg,#5A95E3,#2A63B5);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 2px 3px rgba(0,20,60,.3)}
+.pndp::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:rgba(255,255,255,.45)}
+.pndp{animation:pnpop .22s var(--ease)}
+.pndp.lm::before{outline:2.5px solid #F0B429;outline-offset:0}
+
+/* ---------- Kayles: a bowling lane with a row of pins ---------- */
+.pnkl{width:min(100%,430px);margin:4px auto 4px;padding:18px 8px 14px;border-radius:14px;direction:ltr;
+ background:linear-gradient(90deg,rgba(0,0,0,.05) 1px,transparent 1px) 0 0/18px 100%,linear-gradient(180deg,#EBC98F,#DDB070);box-shadow:0 0 0 3px #A47336,0 7px 0 3px rgba(0,0,0,.14),0 12px 20px rgba(0,0,0,.14)}
+.pnkr{display:flex;align-items:flex-end;gap:1px}
+.pnkp{position:relative;flex:1 1 0;min-width:0;height:min(96px,22vw);padding:0;background:none;border-radius:8px}
+.pnkp i{position:absolute;left:12%;right:12%;top:4%;bottom:6%;display:block;transform-origin:50% 95%;transition:transform var(--t2) var(--ease);
+ background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 60' preserveAspectRatio='none'%3E%3Cpath d='M10 1.5C14 1.5 14.6 9 13.1 14C12.2 17 12.2 18.5 13.6 22C18 32 17.2 48 14.6 58.5H5.4C2.8 48 2 32 6.4 22C7.8 18.5 7.8 17 6.9 14C5.4 9 6 1.5 10 1.5Z' fill='%23FBF7EE' stroke='%239C8F78' stroke-width='.8'/%3E%3Cpath d='M7 15.4H13M7 18.6H13' stroke='%23D9433A' stroke-width='1.5'/%3E%3Cpath d='M8.2 4Q9 2.8 10.6 3' stroke='%23fff' stroke-width='1' fill='none'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.pnkp::after{content:'';position:absolute;left:18%;right:18%;bottom:2%;height:7%;border-radius:50%;background:rgba(80,45,10,.25)}
+.pnkp.dn i{transform:rotate(78deg) translate(34%,-6%);opacity:.3}
+.pnkp.dn i[data-k]{animation:pnfall .38s ease-in}
+.pnkp.dn::after{opacity:.4}
+.pnkl.my .pnkp.up:active i{transform:translateY(-3px)}
+.pnkp.sel i{transform:translateY(-8px)}
+.pnkp.sel::after,.pnkp.to::after{background:rgba(240,180,41,.9);height:9%}
+.pnkp.to i{transform:translateY(-4px)}
+.pnkp.lm.up::after{background:rgba(240,180,41,.55)}
+
+/* ---------- light cycles: a night arena with glowing trails ---------- */
+.pncy{width:min(100%,400px);margin:4px auto 6px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 3px #22314F,0 7px 0 3px rgba(0,0,0,.18),0 12px 22px rgba(0,0,0,.2)}
+.pncy svg{display:block;width:100%;height:auto}
+.pncbg{fill:#0F1A2E}
+.pncgr{stroke:#1E2D49;stroke-width:.6;fill:none}
+.pnct{fill:none;stroke-width:3.6;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
+.pnct.dead{opacity:.35;stroke-dasharray:4 2.4}
+.pnct.nw{stroke-width:5.2;opacity:.55;animation:pnin .35s ease-out}
+.pncpl{fill:none;stroke-width:2.2;stroke-dasharray:2.6 2.2;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
+.pncx{stroke:#FF5A4E;stroke-width:2.2;stroke-linecap:round}
+.pnch rect:first-child{stroke:#fff;stroke-width:.9}
+.pnch.me rect:first-child{stroke:#FFD84D;stroke-width:1.4}
+.pncb{animation:pnpop .35s var(--spring)}
+.pncc{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:4px}
+.pncs{display:flex;gap:8px;direction:ltr}
+.pncs b{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;font-weight:900;color:var(--mut);background:var(--surface-2);box-shadow:inset 0 0 0 1.5px var(--edge)}
+.pncs b.on{background:var(--c);color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2);animation:pnpop .2s var(--ease)}
+.pncpad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(2,46px);gap:6px;direction:ltr}
+.pncd{border-radius:14px;background:var(--navy);color:#fff;font-size:24px;font-weight:900;box-shadow:0 4px 0 rgba(0,0,0,.25);transition:transform var(--t1) var(--ease)}
+.pncd:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.pncd:disabled{opacity:.3;box-shadow:none}
+.pncd.k0{grid-column:2;grid-row:1}.pncd.k1{grid-column:3;grid-row:2}.pncd.k2{grid-column:2;grid-row:2}.pncd.k3{grid-column:1;grid-row:2}
+@media (prefers-color-scheme:dark){.pncd{background:#3A5578}}
+.btn.pngo{background:var(--ok);color:#fff}
+
+/* ---------- knight isolation: a lilac board whose squares fall away ---------- */
+.pnnb{display:grid;width:min(100%,390px);aspect-ratio:1;margin:4px auto 6px;direction:ltr;padding:6px;gap:0;border-radius:12px;
+ background:#4B3470;box-shadow:0 0 0 3px #2F1F4A,0 8px 0 3px rgba(0,0,0,.16),0 12px 22px rgba(0,0,0,.18)}
+.pnnc{position:relative;display:grid;place-items:center;padding:0;border-radius:0;background:#EEE3FA}
+.pnnc.dk{background:#CDB3EC}
+.pnnc.gone{background:radial-gradient(circle at 50% 45%,#1D1230 30%,#2E1F47 75%);box-shadow:inset 0 3px 6px rgba(0,0,0,.6)}
+.pnnc.lmf.gone{box-shadow:inset 0 3px 6px rgba(0,0,0,.6),inset 0 0 0 2.5px rgba(240,180,41,.7)}
+.pnnc.lmt{box-shadow:inset 0 0 0 3px rgba(240,180,41,.9)}
+.pnnc.to::after{content:'';position:absolute;width:32%;height:32%;border-radius:50%;background:var(--c);opacity:.6;box-shadow:0 0 0 2px rgba(255,255,255,.75)}
+.pnnk{position:relative;z-index:1;width:78%;height:78%;fill:var(--c);stroke:rgba(0,0,0,.45);stroke-width:1.6;stroke-linejoin:round}
+.pnnk.on{stroke:#FFD84D;stroke-width:2.4}
+.pnnc.lmt .pnnk{animation:pnland .3s var(--ease)}
+
+/* ---------- race of the kings: a stone yard, goal strips round the board, grey stone bars ---------- */
+.pnrm{width:min(100%,380px);margin:0 auto 6px}
+.pnrw{position:relative;width:min(100%,380px);margin:10px auto 6px;padding:9px}
+.pnrg{position:absolute;display:flex;gap:3px}
+.pnrg i{flex:1;border-radius:4px}
+.pnrg.gt,.pnrg.gb{left:9px;right:9px;height:6px}.pnrg.gt{top:0}.pnrg.gb{bottom:0}
+.pnrg.gl,.pnrg.gr{top:9px;bottom:9px;width:6px;flex-direction:column}.pnrg.gl{left:0}.pnrg.gr{right:0}
+.pnrb{position:relative;aspect-ratio:1;direction:ltr;border-radius:8px;background:#F6E7C8;box-shadow:0 0 0 2px #B98B4E,0 6px 0 2px rgba(0,0,0,.14),0 10px 18px rgba(0,0,0,.14)}
+.pnrgd{position:absolute;inset:0;display:grid}
+.pnrc{position:relative;display:grid;place-items:center;padding:0;border-radius:0;background:none;box-shadow:inset 0 0 0 .5px rgba(150,110,60,.35)}
+.pnrc.to::after{content:'';position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(122,81,41,.4);box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.pnrc.an::after{content:'';position:absolute;width:14%;height:14%;border-radius:50%;background:rgba(90,80,70,.35)}
+.pnrc.gh{background:rgba(125,116,102,.55)}
+.pnrc.lm{background:rgba(240,180,41,.28)}
+.pnrk{position:relative;z-index:2;width:82%;height:82%;fill:var(--c);stroke:rgba(0,0,0,.45);stroke-width:2;stroke-linejoin:round}
+.pnrk.on{stroke:#FFD84D;stroke-width:3}
+.pnrs{position:absolute;display:block;pointer-events:none}
+.pnrs::before{content:'';position:absolute;inset:3px;border-radius:6px;background:linear-gradient(160deg,#A39A8A,#7D7466);box-shadow:inset 0 2px 0 rgba(255,255,255,.3),inset 0 -2px 0 rgba(0,0,0,.2),0 2px 3px rgba(0,0,0,.3)}
+.pnrs::after{content:'';position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px rgba(255,255,255,.7)}
+.pnrs.nw{animation:pnpop .25s var(--ease)}
