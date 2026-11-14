@@ -114,12 +114,16 @@ GAMES.chess={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name
       const cls=['sq',dark?'dk':'lt',d.lm&&d.lm.includes(i)?'lm':'',d.lm&&d.lm[1]===i?'lmt':'',sel===i?'sel':'',i===kc?'kc':'',t?(p!=='.'||t.ep?'cap':'to'):''].join(' ');
       const lab=(flip?r===0:r===7)?`<i class="fl">${'abcdefgh'[c]}</i>`:'',lab2=(flip?c===7:c===0)?`<i class="rk">${8-r}</i>`:'';
       const can=my&&(t||mv||sel!=null);
-      h+=`<${can?'button':'div'} class="${cls}" ${can?`data-ga="sq" data-i="${i}"`:''}>${p!=='.'?chPiece(p):''}${lab}${lab2}</${can?'button':'div'}>`;}
+      h+=`<${can?'button':'div'} class="${cls}" data-q="${i}" ${can?`data-ga="sq" data-i="${i}"`:''}>${p!=='.'?chPiece(p):''}${lab}${lab2}</${can?'button':'div'}>`;}
     h+=`</div>${chTaken(d,flip?1:0)}</div>`;
     if(my&&S.chPromo&&S.chPromo.k===d.hist.length+':'+d.b)h+=`<p class="lbl" style="text-align:center">رقّ الجندي إلى</p><div class="chpro">${'qrbn'.split('').map(x=>`<button data-ga="pro" data-i="${'qrbn'.indexOf(x)}">${chPiece(s?x:x.toUpperCase())}<span>${CHN[x]}</span></button>`).join('')}</div>`;
     if(my){h+=`<div class="row chact">${d.offer!=null&&d.offer!==s?'<button class="btn green" data-ga="draw" data-i="1">أقبل التعادل</button>':`<button class="btn" data-ga="draw" data-i="0" ${d.offer===s?'disabled':''}>${d.offer===s?'عرضت تعادل':'اعرض تعادل'}</button>`}<button class="btn" data-ga="resign">استسلم</button></div>`;}
     else if(d.offer!=null&&d.win==null)h+=`<p class="note">${d.offer?'الأسود':'الأبيض'} عرض تعادل</p>`;
     return h;},
+  // the piece that just moved slides from its old square (and the rook too when castling)
+  after(d){const k=d.gid+':'+d.hist.length+':'+d.b;if(S.chFx===k)return;S.chFx=k;if(!d.lm)return;const [f,t]=d.lm,q=x=>app.querySelector(`.chb [data-q="${x}"]`);
+    const go=(a,b)=>{const el=q(b),from=q(a);if(el&&from)bdFly(el.querySelector('.chp'),[from],240);};go(f,t);
+    if('Kk'.includes(d.b[t])&&Math.abs(t-f)===2)go(t>f?f+3:f-4,t>f?f+1:f-1);},
   click(a,i,d,ctx){if(!ctx.my)return;const s=d.sd,k=d.hist.length+':'+d.b;
     if(a==='resign'){if(!S.chSure){S.chSure=1;toast('اضغط استسلم مرة ثانية للتأكيد');setTimeout(()=>{S.chSure=0;},2500);return;}S.chSure=0;act({...d,...tmWin(d,1-s),end:'resign',last:`${tmName(d,s)} استسلم`});return;}
     if(a==='draw'){if(i===1&&d.offer===1-s){act({...d,win:'d',end:'agree'});return;}if(d.offer==null)act({...d,offer:s,last:`${tmName(d,s)} عرض تعادل`});return;}
@@ -133,6 +137,70 @@ function chTaken(d,side){// pieces of `side` that are off the board
   const full={p:8,n:2,b:2,r:2,q:1};const on={};for(const p of d.b)if(chSide(p)===side){const t=p.toLowerCase();on[t]=(on[t]||0)+1;}
   let h='';for(const t of 'qrbnp'){const k=Math.max(0,full[t]-(on[t]||0));for(let j=0;j<k;j++)h+=chPiece(side?t:t.toUpperCase());}
   return `<div class="chtk">${h}</div>`;}
+
+/* ---------- chess bot: a small engine (negamax alpha-beta, quiescence on captures, killer moves) on a plain array.
+   It thinks for a short, fixed time only (the bot runs on the page itself). Easy sees one move ahead and nothing of the
+   recapture, with a lot of noise; medium sees two moves and the exchanges; hard searches deeper with the same time cap ---------- */
+const CHV={p:100,n:320,b:330,r:500,q:900,k:0};
+// squares from white's side, index 0 = a8 (black reads them mirrored)
+const CHT={
+  p:[0,0,0,0,0,0,0,0,50,50,50,50,50,50,50,50,10,10,20,30,30,20,10,10,5,5,10,25,25,10,5,5,0,0,0,20,20,0,0,0,5,-5,-10,0,0,-10,-5,5,5,10,10,-20,-20,10,10,5,0,0,0,0,0,0,0,0],
+  n:[-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,0,0,0,-20,-40,-30,0,10,15,15,10,0,-30,-30,5,15,20,20,15,5,-30,-30,0,15,20,20,15,0,-30,-30,5,10,15,15,10,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-40,-30,-30,-30,-30,-40,-50],
+  b:[-20,-10,-10,-10,-10,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,10,10,5,0,-10,-10,5,5,10,10,5,5,-10,-10,0,10,10,10,10,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],
+  r:[0,0,0,0,0,0,0,0,5,10,10,10,10,10,10,5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,0,0,0,5,5,0,0,0],
+  q:[-20,-10,-10,-5,-5,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,5,5,5,0,-10,-5,0,5,5,5,5,0,-5,0,0,5,5,5,5,0,-5,-10,5,5,5,5,5,0,-10,-10,0,5,0,0,0,0,-10,-20,-10,-10,-5,-5,-10,-10,-20],
+  k:[-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-20,-30,-30,-40,-40,-30,-30,-20,-10,-20,-20,-20,-20,-20,-20,-10,20,20,0,0,0,0,20,20,20,30,10,0,0,10,30,20],
+  e:[-50,-40,-30,-20,-20,-30,-40,-50,-30,-20,-10,0,0,-10,-20,-30,-30,-10,20,30,30,20,-10,-30,-30,-10,30,40,40,30,-10,-30,-30,-10,30,40,40,30,-10,-30,-30,-10,20,30,30,20,-10,-30,-30,-30,0,0,0,0,-30,-30,-50,-30,-30,-30,-30,-30,-30,-50]};
+// the position from white's side: material, squares, the bishop pair; the king walks to the centre as the pieces come off
+function chScore(B){let v=0,npm=0,bw=0,bb=0,kw=0,kb=0;
+  for(let i=0;i<64;i++){const p=B[i];if(p==='.')continue;const t=p.toLowerCase(),w=p!==t;
+    if(t==='k'){if(w)kw=i;else kb=i;continue;}if(t!=='p')npm+=CHV[t];if(t==='b'){if(w)bw++;else bb++;}
+    const x=CHV[t]+CHT[t][w?i:i^56];v+=w?x:-x;}
+  const ph=Math.min(1,npm/5200);v+=Math.round((CHT.k[kw]-CHT.k[kb^56])*ph+(CHT.e[kw]-CHT.e[kb^56])*(1-ph));
+  if(bw>1)v+=30;if(bb>1)v-=30;return v;}
+const CHMATE=100000;
+function chThink(d,lv){
+  const B=[...d.b],K=[B.indexOf('K'),B.indexOf('k')];let side=d.sd,cr=d.cr,ep=d.ep,nodes=0,lim=Infinity;
+  const STOP={},kill=[],qsOn=lv>1,t0=performance.now(),budget=[0,60,220,480][lv]||220;
+  const gen=()=>chPseudo({b:B,cr,ep},side).filter(m=>!m.pr||m.pr==='q');
+  function make(m){const p=B[m.f],cs=m.ep?m.t+(side?-8:8):m.t,u={m,p,cap:B[cs],cs,cr,ep,k0:K[0],k1:K[1]};
+    B[m.t]=m.pr?(side?m.pr:m.pr.toUpperCase()):p;B[m.f]='.';if(m.ep)B[cs]='.';
+    if(m.cs==='k'){B[m.f+1]=B[m.f+3];B[m.f+3]='.';}else if(m.cs==='q'){B[m.f-1]=B[m.f-4];B[m.f-4]='.';}
+    if(p==='K'){K[0]=m.t;cr=cr.replace('K','').replace('Q','');}else if(p==='k'){K[1]=m.t;cr=cr.replace('k','').replace('q','');}
+    if(cr)for(const [sq,ch] of [[63,'K'],[56,'Q'],[7,'k'],[0,'q']])if(m.f===sq||m.t===sq)cr=cr.replace(ch,'');
+    ep=m.dbl?(m.f+m.t)/2:-1;side=1-side;return u;}
+  function undo(u){const m=u.m;side=1-side;B[m.f]=u.p;B[m.t]='.';B[u.cs]=u.cap;
+    if(m.cs==='k'){B[m.f+3]=B[m.f+1];B[m.f+1]='.';}else if(m.cs==='q'){B[m.f-4]=B[m.f-1];B[m.f-1]='.';}
+    cr=u.cr;ep=u.ep;K[0]=u.k0;K[1]=u.k1;}
+  const ev=()=>{const v=chScore(B);return side?-v:v;};
+  const val=m=>{const c=m.ep?'p':B[m.t];return (c!=='.'?10000+CHV[c.toLowerCase()]*10-CHV[B[m.f].toLowerCase()]/10:0)+(m.pr?9000:0);};
+  const order=(ms,ply)=>{const k=kill[ply];for(const m of ms)m.o=val(m)+(k===m.f*64+m.t?5000:0);ms.sort((a,b)=>b.o-a.o);return ms;};
+  // a node cap too, so a stalled clock (or a very slow phone) can never keep it thinking
+  const cap=[0,4000,40000,150000][lv]||40000,tick=()=>{if(!(++nodes&255)&&(performance.now()>lim||lim<Infinity&&nodes>cap))throw STOP;};
+  function qs(a,b,ply){tick();const st=ev();if(!qsOn||st>=b||ply>24)return st;if(st>a)a=st;
+    for(const m of order(gen().filter(m=>B[m.t]!=='.'||m.ep||m.pr),ply)){const u=make(m);
+      if(chAttacked(B,K[1-side],side)){undo(u);continue;}const v=-qs(-b,-a,ply+1);undo(u);if(v>=b)return v;if(v>a)a=v;}
+    return a;}
+  function nega(dep,a,b,ply){tick();const inC=chAttacked(B,K[side],1-side);if(inC&&ply<8)dep++;
+    if(dep<=0)return qs(a,b,ply);let any=false,best=-Infinity;
+    for(const m of order(gen(),ply)){const u=make(m);if(chAttacked(B,K[1-side],side)){undo(u);continue;}any=true;
+      const v=-nega(dep-1,-b,-a,ply+1);undo(u);if(v>best)best=v;if(v>a)a=v;if(a>=b){if(u.cap==='.')kill[ply]=m.f*64+m.t;break;}}
+    if(!any)return inC?-(CHMATE-ply):0;return best;}
+  // root: every legal move with a fixed nudge for this level; a move that repeats the position a third time is a draw
+  const ns=[0,170,35,6][lv]||35,root=[];
+  for(const m of order(gen(),0)){const u=make(m);const ok=!chAttacked(B,K[1-side],side);const rep=ok&&(d.hist||[]).filter(k=>k===chKey(B.join(''),side,cr,ep)).length>=2;undo(u);if(ok)root.push({m,n:Math.random()*ns,v:0,rep});}
+  if(!root.length)return null;if(root.length===1)return root[0].m;
+  let best=root[0].m;const maxD=[0,1,2,6][lv]||2;
+  for(let dep=1;dep<=maxD;dep++){lim=dep===1?Infinity:t0+budget;let bv=-Infinity,bm=null;
+    try{for(const o of root){if(o.rep){o.v=o.n;}else{const u=make(o.m);try{o.v=-nega(dep-1,-Infinity,-(bv-o.n),1)+o.n;}finally{undo(u);}}if(o.v>bv){bv=o.v;bm=o.m;}}}
+    catch(e){if(e!==STOP)throw e;if(bm)best=bm;break;}
+    best=bm;root.sort((x,y)=>y.v-x.v);if(Math.abs(bv)>CHMATE-100||performance.now()-t0>budget*.45)break;}
+  return best;}
+GAMES.chess.bot=(d,s,lv)=>{const side=d.sd;
+  // a draw offered by the other side is taken when the bot stands worse
+  if(d.offer!=null&&d.offer!==side){const v=chScore([...d.b]);if((side?-v:v)<(lv===1?-60:-180))return {...d,win:'d',end:'agree'};}
+  const m=chThink(d,lv);return m?chMove(d,m):GAMES.chess.onTimeout(d);};
+GAMES.chess.botDelay=(d,s,lv)=>500+rnd(500);
 
 /* ---------- dama (Arabic / Turkish draughts) ---------- */
 // board: 64 chars, '0'/'1' men of side 0 (bottom, moves up) / side 1, 'A'/'B' kings, '.' empty
@@ -178,16 +246,21 @@ GAMES.dama={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:
     const nexts=new Set(okNow.map(m=>m.path[P.path.length]).filter(x=>x!=null));
     const starts=new Set(ms.map(m=>m.f));
     const gone=new Set();if(P)okNow[0]&&okNow[0].caps.slice(0,P.path.length).forEach(x=>gone.add(x));
-    const order=[...Array(64).keys()];if(flip)order.reverse();
+    const order=[...Array(64).keys()];if(flip)order.reverse();const lc={};for(const [q,x] of d.lc||[])lc[q]=x;
     let h=`<div class="chwrap bd-ch"><div class="chb dmb ${my?'my':''}">`;
     for(const i of order){let p=d.b[i];if(P&&i===P.f&&P.path.length)p='.';if(P&&i===at&&P.path.length)p=d.b[P.f];
       const can=my&&(nexts.has(i)||(!P||!P.path.length)&&starts.has(i));
       const cls=['sq',d.lm&&d.lm.includes(i)?'lm':'',d.lm&&d.lm[d.lm.length-1]===i?'lmt':'',at===i?'sel':'',nexts.has(i)?'to':'',gone.has(i)?'gone':'',can&&at!==i&&!nexts.has(i)?'mv':''].join(' ');
-      h+=`<${can?'button':'div'} class="${cls}" ${can?`data-ga="sq" data-i="${i}"`:''}>${p!=='.'?`<span class="dmp ${dmSide(p)?'bk':'wh'} ${dmKing(p)?'kg':''}">${dmKing(p)?DMCROWN:''}</span>`:''}</${can?'button':'div'}>`;}
+      // a piece taken by the last move fades out where it stood (drawn invisible when there is no motion)
+      const gh=p==='.'&&d.b[i]==='.'&&lc[i]?`<span class="dmp ${dmSide(lc[i])?'bk':'wh'} ghost" data-k="g${d.mvn||0}"></span>`:'';
+      h+=`<${can?'button':'div'} class="${cls}" data-q="${i}" ${can?`data-ga="sq" data-i="${i}"`:''}>${p!=='.'?`<span class="dmp ${dmSide(p)?'bk':'wh'} ${dmKing(p)?'kg':''}">${dmKing(p)?DMCROWN:''}</span>`:gh}</${can?'button':'div'}>`;}
     h+='</div></div>';
     if(my&&P&&P.path.length)h+='<div class="row chact"><button class="btn" data-ga="undo">تراجع عن الأكلة</button></div>';
     if(my)h+=`<div class="row chact"><button class="btn" data-ga="resign">استسلم</button></div>`;
     return h;},
+  // the piece that just moved hops along its whole path, one square of the jump after the other
+  after(d){const k=d.gid+':'+(d.mvn||0)+':'+d.b;if(S.dmFx===k)return;S.dmFx=k;const L=d.lm;if(!L||L.length<2)return;const q=x=>app.querySelector(`.dmb [data-q="${x}"]`);
+    const el=q(L[L.length-1]),via=L.slice(0,-1).map(q);if(el&&via.every(Boolean))bdFly(el.querySelector('.dmp'),via,Math.min(450,190+110*(L.length-2)));},
   click(a,i,d,ctx){if(!ctx.my)return;const s=d.sd,k=d.b+d.sd,ms=dmMoves(d.b,s);
     if(a==='resign'){if(!S.chSure){S.chSure=1;toast('اضغط استسلم مرة ثانية للتأكيد');setTimeout(()=>{S.chSure=0;},2500);return;}S.chSure=0;act({...d,...tmWin(d,1-s),end:'resign',last:`${tmName(d,s)} استسلم`});return;}
     if(a==='undo'){S.dm=null;render();return;}
@@ -201,9 +274,36 @@ GAMES.dama={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,name:
 };
 function dmDo(d,m){const s=d.sd,a=dmApply(d,m),ns=1-s;const to=m.path[m.path.length-1];
   const quiet=m.caps.length?0:d.quiet+1;
-  const nd={...d,b:a.b,sd:ns,lm:[m.f,...m.path],quiet,...tmPass(d,s),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرك'}${a.crown?' وصار عنده شيخ':''}`};
+  const nd={...d,b:a.b,sd:ns,lm:[m.f,...m.path],lc:m.caps.map(x=>[x,d.b[x]]),mvn:(d.mvn||0)+1,quiet,...tmPass(d,s),last:`${tmName(d,s)}${m.caps.length?` أكل ${m.caps.length}`:' تحرك'}${a.crown?' وصار عنده شيخ':''}`};
   if(!dmMoves(a.b,ns).length)return {...nd,...tmWin(d,s),end:dmCount(a.b,ns)?'block':'all'};
   const pc=s=>[...a.b].filter(p=>dmSide(p)===s);const w=pc(0),k=pc(1);
   if((w.length===1&&k.length===1)&&(dmKing(w[0])!==dmKing(k[0])))return {...nd,win:'d',end:'km'};
   if(quiet>=100)return {...nd,win:'d',end:'q'};
   return nd;}
+
+/* ---------- dama bot: alpha-beta that plays every capture out before it judges a position, for a short fixed time.
+   A man is worth more the closer it gets to crowning, a king (flying) is worth three men, and men left on the home row guard it ---------- */
+function dmScore(b,side){let v=0,n0=0,n1=0;for(let i=0;i<64;i++){const p=b[i],sd=dmSide(p);if(sd<0)continue;const r=i>>3,c=i&7;
+    let x;if(dmKing(p))x=300;else{const adv=sd?r-1:6-r;x=100+adv*adv*2+(adv>=5?20:0)+(c>1&&c<6?3:0)+((sd?r===1:r===6)?4:0);}
+    if(sd)n1++;else n0++;v+=sd===side?x:-x;}
+  // ahead in material: trading down helps
+  const me=side?n1:n0,op=side?n0:n1;if(me!==op)v+=(me-op)*Math.round(120/(me+op));return v;}
+function dmThink(d,lv){const side=d.sd,ms=dmMoves(d.b,side);if(ms.length===1)return ms[0];
+  const t0=performance.now(),budget=[0,40,160,420][lv]||160,STOP={};let lim=Infinity,nodes=0;
+  const cap=[0,3000,30000,120000][lv]||30000;
+  function srch(b,turn,dep,a,z,q){if(!(++nodes&127)&&(performance.now()>lim||lim<Infinity&&nodes>cap))throw STOP;const mv=dmMoves(b,turn);
+    if(!mv.length)return -(9000+dep);
+    // a position with a capture to make is never judged: the captures are played out first
+    if(dep<=0&&(!mv[0].caps.length||q>6))return dmScore(b,turn);
+    const qn=dep<=0?q+1:q;let best=-Infinity;
+    for(const m of mv){const v=-srch(dmApply({b},m).b,1-turn,dep-1,-z,-a,qn);if(v>best)best=v;if(v>a)a=v;if(a>=z)break;}return best;}
+  const ns=[0,90,25,4][lv]||25,ord=ms.map(m=>({m,n:Math.random()*ns,v:0}));let best=ms[0];const maxD=[0,1,3,9][lv]||3;
+  for(let dep=1;dep<=maxD;dep++){lim=dep===1?Infinity:t0+budget;let bv=-Infinity,bm=null;
+    try{for(const o of ord){o.v=-srch(dmApply(d,o.m).b,1-side,dep-1,-Infinity,-(bv-o.n),0)+o.n;if(o.v>bv){bv=o.v;bm=o.m;}}}
+    catch(e){if(e!==STOP)throw e;if(bm)best=bm;break;}
+    best=bm;ord.sort((x,y)=>y.v-x.v);if(Math.abs(bv)>8000||performance.now()-t0>budget*.45)break;}
+  return best;}
+GAMES.dama.bot=(d,s,lv)=>{const ms=dmMoves(d.b,d.sd);if(!ms.length)return GAMES.dama.onTimeout(d);
+  // easy misses things now and then: a random move, but it still takes what it must
+  if(lv===1&&Math.random()<.3)return dmDo(d,ms[rnd(ms.length)]);return dmDo(d,dmThink(d,lv));};
+GAMES.dama.botDelay=(d,s,lv)=>450+rnd(450);

@@ -30,15 +30,51 @@ function lineBot(d,s,lv,R,C,k,cells){const sc=cells.map(i=>({i,v:lineScore(d.b,R
   if(lvRand(lv))return pickR(cells);sc.sort((a,b)=>b.v-a.v);
   // easy and medium bots sometimes miss a block
   if(lv===2&&sc.length>1&&sc[0].v<1e7&&Math.random()<.15)return sc[1].i;return sc[0].i;}
-function tttMinimax(b,me,turn,n){const w=lineWin(b,3,3);if(w)return w.w===me?10:-10;if(!b.includes('.'))return 0;let best=turn===me?-99:99;
-  for(let i=0;i<9;i++)if(b[i]==='.'){const v=tttMinimax(setAt(b,i,String(turn)),me,(turn+1)%n,n);best=turn===me?Math.max(best,v):Math.min(best,v);}return best;}
+// two players on 3x3 (classic or vanishing): a full search with a cut-off, from the side to move (+ it wins, - it loses).
+// The classic board is small enough to see to the end; the vanishing one looks a few marks ahead
+function tttSearch(d,dep,a,z,memo){const k=d.b+d.turn+dep;if(!d.vr&&memo.has(k))return memo.get(k);let best=-99;
+  for(let i=0;i<9;i++){if(d.b[i]!=='.')continue;const nd=tttPut(d,i);let v;
+    if(nd.win===d.turn)v=20+dep;else if(nd.win==='d')v=0;else if(dep<=1)v=0;else v=-tttSearch({...nd,turn:1-d.turn},dep-1,d.vr?-z:-99,d.vr?-a:99,memo);
+    if(v>best)best=v;if(v>a)a=v;if(d.vr&&a>=z)break;}
+  if(best===-99)best=0;if(!d.vr)memo.set(k,best);return best;}
 GAMES.ttt.bot=(d,s,lv)=>{const cells=[...d.b].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);let i;
-  if(lv===3&&d.sz===3&&d.pl.length===2){let bv=-99;for(const c of cells){const v=tttMinimax(setAt(d.b,c,String(s)),s,(s+1)%2,2)+Math.random()*.1;if(v>bv){bv=v;i=c;}}}
+  if(d.sz===3&&d.pl.length===2&&!(lv===1&&Math.random()<.6)&&!(lv===2&&Math.random()<.2)){
+    // easy and medium look less far, so they walk into forks a person would see
+    const dep=lv===3?(d.vr?7:9):lv===2?(d.vr?3:4):2,memo=new Map();let bv=-1e9;
+    for(const c of cells){const nd=tttPut(d,c);const v=(nd.win===s?40:nd.win==='d'?0:-tttSearch({...nd,turn:1-s},dep-1,-99,99,memo))+Math.random()*.5;if(v>bv){bv=v;i=c;}}}
   else i=lineBot(d,s,lv,d.sz,d.sz,d.k,cells);return botDo(d,s,'m',i);};
 GAMES.gomoku.bot=(d,s,lv)=>{const z=d.z;let cells=[...d.b].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);
   const near=cells.filter(i=>{const r=Math.floor(i/z),c=i%z;for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){const rr=r+dr,cc=c+dc;if(rr>=0&&rr<z&&cc>=0&&cc<z&&d.b[rr*z+cc]!=='.')return true;}return false;});
-  if(near.length)cells=near;else cells=[Math.floor(z/2)*z+Math.floor(z/2)];return botDo(d,s,'m',lineBot(d,s,lv,z,z,5,cells));};
+  if(near.length)cells=near;else cells=[Math.floor(z/2)*z+Math.floor(z/2)];
+  // hard also sees open fours (four in a row with both ends free cannot be stopped): it makes its own and blocks those of the others
+  if(lv===3){const me=String(s),foes=d.pl.map((_,o)=>o).filter(o=>!sameTeam(d,o,s)).map(String);
+    const four=(i,p)=>{const r0=Math.floor(i/z),c0=i%z;for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]){let n=1,ends=0;
+        for(const k of [1,-1]){let r=r0+dr*k,c=c0+dc*k;while(r>=0&&r<z&&c>=0&&c<z&&d.b[r*z+c]===p){n++;r+=dr*k;c+=dc*k;}if(r>=0&&r<z&&c>=0&&c<z&&d.b[r*z+c]==='.')ends++;}
+        if(n>=4&&ends===2)return true;}return false;};
+    const sc=cells.map(i=>({i,v:lineScore(d.b,z,z,5,i,s)}));if(!sc.some(x=>x.v>=1e6)){
+      const mine=cells.filter(i=>four(i,me));if(mine.length)return botDo(d,s,'m',pickR(mine));
+      const blk=cells.filter(i=>foes.some(p=>four(i,p)));if(blk.length)return botDo(d,s,'m',blk.sort((a,b)=>lineScore(d.b,z,z,5,b,s)-lineScore(d.b,z,z,5,a,s))[0]);}}
+  return botDo(d,s,'m',lineBot(d,s,lv,z,z,5,cells));};
+// two players: hard searches ahead (negamax, alpha-beta, middle columns first) for a short fixed time
+function c4Think(d,s){const C=d.C,R=d.R,b=[...d.b].map(x=>x==='.'?-1:+x),h=[];for(let c=0;c<C;c++){let r=R-1;while(r>=0&&b[r*C+c]>=0)r--;h.push(r);}
+  const ord=[...Array(C).keys()].sort((x,y)=>Math.abs(x-(C-1)/2)-Math.abs(y-(C-1)/2)),STOP={},t0=performance.now();let lim=Infinity,nodes=0;
+  const at=(r,c)=>r<0||r>=R||c<0||c>=C?-2:b[r*C+c];
+  const won=(r,c,p)=>{for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]){let n=1;for(const k of [1,-1]){let rr=r+dr*k,cc=c+dc*k;while(at(rr,cc)===p){n++;rr+=dr*k;cc+=dc*k;}}if(n>=4)return true;}return false;};
+  // every window of four that only one side uses: three of four counts a lot, two a little; the middle column a bit
+  const ev=p=>{let v=0;for(let r=0;r<R;r++)for(let c=0;c<C;c++){if(b[r*C+c]===p&&Math.abs(c-(C-1)/2)<1)v+=3;
+      for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]){if(at(r+dr*3,c+dc*3)===-2)continue;let m=0,o=0;for(let k=0;k<4;k++){const x=b[(r+dr*k)*C+c+dc*k];if(x===p)m++;else if(x>=0)o++;}
+        if(m&&!o)v+=m===3?40:m===2?5:0;else if(o&&!m)v-=o===3?45:o===2?5:0;}}return v;};
+  function ng(p,dep,a,z,left){if(!(++nodes&255)&&(performance.now()>lim||lim<Infinity&&nodes>150000))throw STOP;if(!left)return 0;
+    for(const c of ord){const r=h[c];if(r<0)continue;b[r*C+c]=p;const w=won(r,c,p);b[r*C+c]=-1;if(w)return 1e6+dep;}
+    if(!dep)return ev(p);
+    let best=-Infinity;for(const c of ord){const r=h[c];if(r<0)continue;b[r*C+c]=p;h[c]--;const v=-ng(1-p,dep-1,-z,-a,left-1);h[c]++;b[r*C+c]=-1;if(v>best)best=v;if(v>a)a=v;if(a>=z)break;}return best;}
+  const free=b.filter(x=>x<0).length;let best=ord.find(c=>h[c]>=0);
+  for(let dep=1;dep<=Math.min(12,free);dep++){lim=dep<=2?Infinity:t0+300;let bv=-Infinity,bm=null;
+    try{for(const c of ord){const r=h[c];if(r<0)continue;b[r*C+c]=s;h[c]--;let v;try{v=won(r,c,s)?1e7:-ng(1-s,dep-1,-Infinity,-bv,free-1);}finally{h[c]++;b[r*C+c]=-1;}v+=Math.random()*.5;if(v>bv){bv=v;bm=c;}}}
+    catch(e){if(e!==STOP)throw e;break;}best=bm;if(Math.abs(bv)>9e5||performance.now()-t0>120)break;}
+  return best;}
 GAMES.c4.bot=(d,s,lv)=>{const C=d.C,R=d.R;const cols=[],cells=[];for(let c=0;c<C;c++){for(let r=R-1;r>=0;r--)if(d.b[r*C+c]==='.'){cols.push(c);cells.push(r*C+c);break;}}
+  if(lv===3&&d.pl.length===2){const c=c4Think(d,s);if(c!=null)return botDo(d,s,'m',c);}
   let pick=lineBot(d,s,lv,R,C,4,cells);
   // do not hand the cell above to someone who wins there
   if(lv>=2){const safe=cells.filter(i=>{const up=i-C;if(up<0)return true;const b2=setAt(d.b,i,String(s));return !d.pl.some((_,o)=>!sameTeam(d,o,s)&&lineScore(b2,R,C,4,up,o)>=1e7);});
@@ -46,14 +82,31 @@ GAMES.c4.bot=(d,s,lv)=>{const C=d.C,R=d.R;const cols=[],cells=[];for(let c=0;c<C
   const col=cols[cells.indexOf(pick)];return botDo(d,s,'m',col)||botDo(d,s,'c',col)||GAMES.c4.onTimeout&&GAMES.c4.onTimeout(d);};
 
 /* ---------- dots and boxes ---------- */
-GAMES.dots.bot=(d,s,lv)=>{const B=d.B;const lines=[];for(let i=0;i<d.h.length;i++)if(d.h[i]==='.')lines.push(['h',i]);for(let i=0;i<d.v.length;i++)if(d.v[i]==='.')lines.push(['v',i]);
-  const sides=(h,v,r,c)=>(h[r*B+c]!=='.')+(h[(r+1)*B+c]!=='.')+(v[r*(B+1)+c]!=='.')+(v[r*(B+1)+c+1]!=='.');
-  const boxesOf=([a,i])=>{const out=[];if(a==='h'){const r=Math.floor(i/B),c=i%B;if(r>0)out.push([r-1,c]);if(r<B)out.push([r,c]);}else{const r=Math.floor(i/(B+1)),c=i%(B+1);if(c>0)out.push([r,c-1]);if(c<B)out.push([r,c]);}return out;};
-  const take=lines.filter(l=>boxesOf(l).some(([r,c])=>sides(d.h,d.v,r,c)===3));
-  const safe=lines.filter(l=>boxesOf(l).every(([r,c])=>sides(d.h,d.v,r,c)<2));
-  let l;if(lvRand(lv))l=pickR(lines);else if(take.length&&(lv>1||Math.random()<.6))l=pickR(take);else if(safe.length&&(lv>1||Math.random()<.5))l=pickR(safe);
-  else{// give away the fewest boxes
-    l=lines.map(x=>({x,c:boxesOf(x).filter(([r,c])=>sides(d.h,d.v,r,c)===2).length+Math.random()})).sort((a,b)=>a.c-b.c)[0].x;}
+// lines are ['h',i] or ['v',i]; a board is {h,v}
+function dtSides(B,g,r,c){return (g.h[r*B+c]!=='.')+(g.h[(r+1)*B+c]!=='.')+(g.v[r*(B+1)+c]!=='.')+(g.v[r*(B+1)+c+1]!=='.');}
+function dtBoxes(B,[a,i]){const out=[];if(a==='h'){const r=Math.floor(i/B),c=i%B;if(r>0)out.push([r-1,c]);if(r<B)out.push([r,c]);}else{const r=Math.floor(i/(B+1)),c=i%(B+1);if(c>0)out.push([r,c-1]);if(c<B)out.push([r,c]);}return out;}
+const dtDraw=(g,[a,i])=>a==='h'?{h:setAt(g.h,i,'x'),v:g.v}:{h:g.h,v:setAt(g.v,i,'x')};
+function dtLines(g){const L=[];for(let i=0;i<g.h.length;i++)if(g.h[i]==='.')L.push(['h',i]);for(let i=0;i<g.v.length;i++)if(g.v[i]==='.')L.push(['v',i]);return L;}
+const dtTakes=(B,g,l)=>dtBoxes(B,l).some(([r,c])=>dtSides(B,g,r,c)===3);
+// the boxes a player takes in a row from here by closing every box he can, and the board he leaves
+function dtGreedy(B,g){let n=0;for(let k=0;k<200;k++){const l=dtLines(g).find(x=>dtTakes(B,g,x));if(!l)break;n+=dtBoxes(B,l).filter(([r,c])=>dtSides(B,g,r,c)===3).length;g=dtDraw(g,l);}return {n,g};}
+const dtSafe=(B,g)=>dtLines(g).filter(l=>dtBoxes(B,l).every(([r,c])=>dtSides(B,g,r,c)<2));
+// the fewest boxes the other player can then take in a row, over the lines that close nothing
+const dtGive=(B,g,l)=>dtGreedy(B,dtDraw(g,l)).n;
+GAMES.dots.bot=(d,s,lv)=>{const B=d.B,g={h:d.h,v:d.v};const lines=dtLines(g);
+  const take=lines.filter(l=>dtTakes(B,g,l)),safe=dtSafe(B,g);
+  let l;if(lvRand(lv))l=pickR(lines);
+  else if(take.length&&(lv>1||Math.random()<.6)){l=pickR(take);
+    // hard keeps control at the end: with the last two boxes of a chain it hands them over with one line (a double-cross),
+    // so the other player has to open the next long chain for it
+    if(lv===3){const all=dtGreedy(B,g);if(all.n===2&&!dtSafe(B,all.g).length&&dtLines(all.g).length){
+        const dd=lines.filter(x=>!dtTakes(B,g,x)&&(()=>{const g2=dtDraw(g,x);const r=dtGreedy(B,g2);return r.n===2&&dtLines(r.g).length===dtLines(all.g).length;})());
+        const rest=dtLines(all.g);const worst=Math.min(...rest.map(x=>dtGive(B,all.g,x)));
+        if(dd.length&&worst>=3)l=dd[0];}}}
+  else if(safe.length&&(lv>1||Math.random()<.5))l=pickR(safe);
+  // no safe line left: open the shortest chain (medium and hard count it out, easy only looks at the next box)
+  else if(lv>1)l=lines.map(x=>({x,c:dtGive(B,g,x)+Math.random()*.5})).sort((a,b)=>a.c-b.c)[0].x;
+  else l=lines.map(x=>({x,c:dtBoxes(B,x).filter(([r,c])=>dtSides(B,g,r,c)===2).length+Math.random()})).sort((a,b)=>a.c-b.c)[0].x;
   return botDo(d,s,l[0],l[1]);};
 
 /* ---------- reversi: its bot is in games/extra.js ---------- */
@@ -70,42 +123,11 @@ function botDeep(ms,maxD,ns,val){if(ms.length===1)return ms[0];const t0=performa
     best=bm;ord.sort((a,b)=>b.v-a.v);if(performance.now()-t0>BOTBUDGET*.4)break;}
   return best;}
 
-/* ---------- chess: alpha-beta search ---------- */
-const CHVAL={p:100,n:310,b:330,r:500,q:900,k:0};
-function chEval(b,side){let v=0;for(let i=0;i<64;i++){const p=b[i];if(p==='.')continue;const t=p.toLowerCase(),sd=chSide(p);let x=CHVAL[t];
-    const r=i>>3,c=i&7;if(t==='p')x+=(sd?r-1:6-r)*8;if(t==='n'||t==='b')x+=(3.5-Math.abs(3.5-c))*4+(3.5-Math.abs(3.5-r))*4;v+=sd===side?x:-x;}return v;}
-// big captures by small pieces first, then queen promotions
-const chMvv=(b,m)=>{const t=b[m.t];return (t!=='.'?CHVAL[t.toLowerCase()]*10+1000-CHVAL[b[m.f].toLowerCase()]/10:m.ep?1990:0)+(m.pr==='q'?900:0);};
-function chSearch(d,depth,a,b,side){botTick();const max=d.sd===side,ms=chPseudo(d,d.sd);let any=false;
-  if(depth)ms.sort((x,y)=>chMvv(d.b,y)-chMvv(d.b,x));
-  for(const m of ms){const ap=chApply(d,m);if(chCheck(ap.b,d.sd))continue;any=true;if(!depth)break;
-    const v=chSearch({...d,...ap,sd:1-d.sd},depth-1,a,b,side);if(max){if(v>a)a=v;}else{if(v<b)b=v;}if(a>=b)break;}
-  if(!any)return chCheck(d.b,d.sd)?(d.sd===side?-99999-depth:99999+depth):0;// a sooner mate counts more
-  return depth?(max?a:b):chEval(d.b,side);}
-GAMES.chess.bot=(d,s,lv)=>{const side=d.sd;if(d.offer!=null&&d.offer!==side){if(chEval(d.b,side)<-250)return {...d,win:'d',end:'agree'};}
-  const ms=chLegal(d,side);if(!ms.length)return GAMES.chess.onTimeout(d);if(lv===1&&Math.random()<.5)return chMove(d,pickR(ms));
-  const rm=ms.filter(m=>!m.pr||m.pr==='q').sort((x,y)=>chMvv(d.b,y)-chMvv(d.b,x));
-  return chMove(d,botDeep(rm,lv===3?3:lv===2?2:1,lv===3?2:25,(m,dep,a)=>chSearch({...d,...chApply(d,m),sd:1-side},dep-1,a,1e9,side)));};
-GAMES.chess.botDelay=(d,s,lv)=>600+rnd(500);
+/* ---------- chess: the engine and its bot are in games/chess.js (chThink) ---------- */
 
-/* ---------- dama ---------- */
-function dmEval(b,side){let v=0;for(const p of b){const sd=dmSide(p);if(sd<0)continue;v+=(dmKing(p)?3:1)*(sd===side?1:-1);}return v;}
-function dmSearch(b,turn,depth,side,a,z){botTick();const ms=dmMoves(b,turn);if(!ms.length)return turn===side?-999-depth:999+depth;if(!depth)return dmEval(b,side);
-  const max=turn===side;for(const m of ms){const v=dmSearch(dmApply({b},m).b,1-turn,depth-1,side,a,z);if(max){if(v>a)a=v;}else{if(v<z)z=v;}if(a>=z)break;}return max?a:z;}
-GAMES.dama.bot=(d,s,lv)=>{const side=d.sd;const ms=dmMoves(d.b,side);if(lvRand(lv))return dmDo(d,pickR(ms));
-  return dmDo(d,botDeep(ms,lv===3?4:2,.3,(m,dep,a)=>dmSearch(dmApply(d,m).b,1-side,dep-1,side,a,Infinity)));};
+/* ---------- dama: its bot is in games/chess.js (dmThink) ---------- */
 
-/* ---------- backgammon ---------- */
-function tvEvalPos(t,s){let v=0;const one=s?-1:1;// fewer pips to go, more points made, fewer blots
-  let pip=0,opp=0;for(let i=0;i<24;i++){const x=t.pts[i];if(tvOwn(x,s)){pip+=tvCnt(x)*(s?24-i:i+1);if(tvCnt(x)===1)v-=6;else v+=3;}else if(x){opp+=tvCnt(x)*(s?i+1:24-i);}}
-  pip+=t.bar[s]*25;opp+=t.bar[1-s]*25;return v+(opp-pip)*1+t.off[s]*4;}
-GAMES.tavla.bot=(d,s,lv)=>{const side=d.sd;
-  if(d.ph==='open')return tvOpen(d,1+rnd(6));
-  if(d.ph==='dbl'){const e=tvEvalPos(d,side===d.sd?1-d.sd:d.sd);return tvAnswer(d,lv===1||e>-25);}
-  if(d.ph==='roll'){if(lv===3&&(d.own===-1||d.own===side)&&d.cube<8&&tvEvalPos(d,side)>40&&Math.random()<.5)return {...d,ph:'dbl',turn:tmNow(d,1-side),last:`${tmName(d,side)} طلب مضاعفة`};return tvRolled(d,[1+rnd(6),1+rnd(6)]);}
-  if(d.ph==='move'){const al=tvAllowed(d,side,d.mv);if(!al.length)return tvAuto(d);if(lvRand(lv))return tvPlay(d,pickR(al));
-    let best=al[0],bv=-1e9;for(const m of al){const t=tvMove(d,side,m.from,m.to);const v=tvEvalPos({...d,...t},side)+(t.hit?8:0)+Math.random();if(v>bv){bv=v;best=m;}}return tvPlay(d,best);}
-  return tvAuto(d);};
+/* ---------- backgammon: its bot is in games/tavla.js (tvPlans, tvJudge) ---------- */
 
 /* ---------- baloot: its bot is in games/baloot.js ---------- */
 
@@ -148,9 +170,14 @@ GAMES.hilo.bot=(d,s,lv)=>{const cur=d.dk.slice(d.p*2,d.p*2+2);const r=rv(cur);
   const ph=hi/tot,pl=lo/tot,best=Math.max(ph,pl);
   if(d.stk>0){const need=d.goal-d.pts[s];const risk=1-best;const stop=lv===1?d.stk>=1+rnd(4):lv===2?(d.stk>=3||risk>.42):(d.stk>=need||risk*(d.stk+1)>best*1.1||(d.stk>=4&&risk>.3));if(stop)return botDo(d,s,'bank',0);}
   return botDo(d,s,lvRand(lv)?(Math.random()<.5?'hi':'lo'):ph>=pl?'hi':'lo',0);};
-GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);
-  const clues=[...d.o].map((c,i)=>c>='a'&&c<='z'?[i,c.charCodeAt(0)-97]:null).filter(Boolean);
-  const ok=free.filter(i=>clues.every(([j,k])=>Math.abs(Math.floor(i/z)-Math.floor(j/z))+Math.abs(i%z-j%z)===k));
+GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);const ok=trFits(d);
+  // the radar first while many cells still fit: hard puts it where it cuts them closest to half, medium now and then anywhere useful
+  if(lv>1&&(d.rdr||'')[s]==='1'&&ok.length>=(lv===3?5:9)&&(lv===3||Math.random()<.5)){
+    const v=c=>{const y=ok.filter(j=>trNear(z,j,c)).length;return Math.abs(ok.length/2-y)+(lv===3?Math.random()*.5:Math.random()*4);};
+    const c=free.map(c=>[c,v(c)]).sort((a,b)=>a[1]-b[1])[0];if(c)return botDo(d,s,'r',c[0]);}
+  if(lv===3&&ok.length>1){// every fitting cell wins as often; hard digs the one whose clue tells the next player the least
+    const left=c=>{const g={};for(const j of ok)if(j!==c){const k=Math.abs(Math.floor(j/z)-Math.floor(c/z))+Math.abs(j%z-c%z);g[k]=(g[k]||0)+1;}return Object.values(g).reduce((a,x)=>a+x*x,0);};
+    return botDo(d,s,'m',ok.map(c=>[c,left(c)+Math.random()]).sort((a,b)=>b[1]-a[1])[0][0]);}
   return botDo(d,s,'m',(ok.length&&!lvRand(lv)&&(lv===3||Math.random()<.6)?pickR(ok):pickR(free)));};
 // each bot remembers the cards it has seen turned over; easy bots forget most of them
 const memOf=(d,s)=>{if(!S.botMem||S.botMem.g!==d.gid)S.botMem={g:d.gid,m:{}};return S.botMem.m[s]||(S.botMem.m[s]={});};
@@ -253,6 +280,8 @@ GAMES.mines.bot=(d,s,lv)=>{const z=d.z,N=z*z;const unk=[];for(let i=0;i<N;i++)if
   const mine=new Set(),safe=new Set();for(let i=0;i<N;i++)if(d.rv[i]!=='.'&&d.m[i]==='1')mine.add(i);
   for(let ch=true,g=0;ch&&g<50;g++){ch=false;for(const i of open){const k=mineCount(d.m,z,i),ns=nb(i);const u=ns.filter(j=>d.rv[j]==='.'&&!mine.has(j)&&!safe.has(j));if(!u.length)continue;
       const km=ns.filter(j=>mine.has(j)).length;if(km===k){u.forEach(j=>safe.add(j));ch=true;}else if(km+u.length===k){u.forEach(j=>mine.add(j));ch=true;}}}
+  // a mine it is sure of is worth a flag (+3): hard always takes it, medium half the time
+  const km=unk.filter(j=>mine.has(j));if(km.length&&(lv===3||lv===2&&Math.random()<.5))return botDo(d,s,'f',pickR(km));
   const sf=unk.filter(j=>safe.has(j));if(sf.length&&(lv===3||Math.random()<.75))return botDo(d,s,'m',pickR(sf));
   const total=(MNS[d.pl.length]||[10,20])[1];const rest=Math.max(0,total-[...mine].length),cand=unk.filter(j=>!mine.has(j));
   const p=j=>{let x=-1;for(const i of nb(j)){if(d.rv[i]==='.'||d.m[i]==='1')continue;const ns=nb(i);const u=ns.filter(q=>d.rv[q]==='.'&&!mine.has(q)).length;const km=ns.filter(q=>mine.has(q)).length;if(u)x=Math.max(x,(mineCount(d.m,z,i)-km)/u);}
@@ -262,7 +291,14 @@ GAMES.mines.bot=(d,s,lv)=>{const z=d.z,N=z*z;const unk=[];for(let i=0;i<N;i++)if
 
 /* ---------- colour war: take the move that leaves the most of the board ---------- */
 GAMES.cw.botEval=(nd,s)=>{const ts=String(s);let v=0;for(let i=0;i<nd.o.length;i++){if(nd.o[i]===ts)v+=3+ +nd.n[i]*.3;else if(nd.o[i]!=='.')v-=1;}return v;};
-GAMES.cw.bot=(d,s,lv)=>botGreedy(GAMES.cw,d,s,lv);
+// every move a seat can make (first move: an empty cell, later: one of its own cells)
+const cwOpts=(d,s)=>[...d.o].map((c,i)=>(d.mv[s]===0?c==='.':c===String(s))?i:-1).filter(i=>i>=0);
+// hard looks one reply ahead: the move whose worst answer from the next player still leaves it best
+GAMES.cw.bot=(d,s,lv)=>{if(lv<3||lvRand(lv))return botGreedy(GAMES.cw,d,s,lv);let best=null,bv=-Infinity;
+  for(const i of cwOpts(d,s)){const nd=botDo(d,s,'m',i);if(!nd)continue;if(nd.win===s)return nd;let v=Infinity;
+    if(nd.win==null&&nd.out[s]!=='1'){const o=nd.turn;for(const j of cwOpts(nd,o)){const n2=botDo(nd,o,'m',j);if(!n2)continue;const e=n2.out[s]==='1'?-1e6:GAMES.cw.botEval(n2,s);if(e<v)v=e;if(v<=bv)break;}}
+    if(v===Infinity)v=GAMES.cw.botEval(nd,s);v+=Math.random()*.3;if(v>bv){bv=v;best=nd;}}
+  return best||botGreedy(GAMES.cw,d,s,lv);};
 
 /* ---------- ultimate tic tac toe: its bot is in more.js ---------- */
 
@@ -291,6 +327,11 @@ function seaAim(d,s,o,lv,avoid){const sh=d.sh[o],f=seaFleet(d,o)||'.'.repeat(64)
       if(bk>=0&&bk<64&&live.includes(bk)&&(Math.abs(dl)!==1||Math.floor(bk/8)===Math.floor(h/8)))sc[n]+=3;}
     const c=Object.keys(sc).map(Number);if(c.length)return c.sort((a,b)=>sc[b]-sc[a]+(Math.random()-.5)*.1)[0];}
   let free=[...Array(64).keys()].filter(i=>ok(i)&&!blocked.has(i));
+  // hard hunts where the ships still afloat fit in the most ways (misses, sunk ships and the water around them ruled out)
+  if(lv===3&&free.length){const left=SHIPS.filter((L,k)=>!sunk.has(SL[k])),cnt=Array(64).fill(0),open=i=>sh[i]==='.'&&!blocked.has(i);
+    for(const L of left)for(let r=0;r<8;r++)for(let c=0;c<8;c++)for(const hz of [0,1]){if(hz?c+L>8:r+L>8)continue;const cs=[];for(let k=0;k<L;k++)cs.push(hz?r*8+c+k:(r+k)*8+c);
+      if(cs.every(open))cs.forEach(x=>cnt[x]++);}
+    const mx=Math.max(...free.map(i=>cnt[i]));if(mx>0){const top=free.filter(i=>cnt[i]>=mx-.5);return pickR(top);}}
   if(lv>=2){const par=free.filter(i=>(Math.floor(i/8)+i%8)%2===0);if(par.length)free=par;}
   if(!free.length)free=[...Array(64).keys()].filter(ok);return free.length?pickR(free):null;}
 // the opponent worth shooting: one with a wounded ship, otherwise the one closest to sinking
