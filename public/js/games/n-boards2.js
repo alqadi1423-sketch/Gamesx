@@ -291,7 +291,7 @@ function b2sgEnd(nd,b){const a=b2sgCnt(b,0),z=b2sgCnt(b,1);return a===z?{...nd,w
 // after side s moved: taken all, the other side blocked (s moves again), both blocked, or too long without a take
 function b2sgAfter(x,s,took){const b=x.b,o=1-s;const quiet=took?0:(x.quiet||0)+1;
   if(!b2sgCnt(b,o))return b2Won({...x,quiet},s,'all');
-  if(!b2sgMoves(b,o,-1).length){if(!b2sgMoves(b,s,-1).length)return b2sgEnd({...x,quiet,mvn:(x.mvn||0)+1},b);return {...x,quiet,ch:-1,mvn:(x.mvn||0)+1,last:x.last+'، والخصم محبوس فيلعب مرة ثانية'};}
+  if(!b2sgMoves(b,o,-1).length){if(!b2sgMoves(b,s,-1).length||quiet>=60)return b2sgEnd({...x,quiet,mvn:(x.mvn||0)+1},b);return {...x,quiet,ch:-1,mvn:(x.mvn||0)+1,last:x.last+'، والخصم محبوس فيلعب مرة ثانية'};}
   const nd=b2Pass(x,s,{quiet,ch:-1});if(quiet>=60)return b2sgEnd(nd,b);return nd;}
 function b2sgPlace(d,i){const s=d.sd,b=setAt(d.b,i,String(s)),hand=[...d.hand];hand[s]--;const pp=(d.pp||0)+1;
   const x={...d,b,hand,lm:[i],lc:[],last:`${tmName(d,s)} حط حجر`};
@@ -303,7 +303,7 @@ function b2sgDo(d,m){const s=d.sd,c=String(s);if(m.stop)return b2sgAfter({...d,l
   if(m.caps.length&&b2sgCnt(b,1-s)&&b2sgMoves(b,s,m.t).length)return {...x,ch:m.t,quiet:0,mvn:(d.mvn||0)+1,last:x.last+'، ويقدر يكمّل بنفس الحجر'};
   return b2sgAfter(x,s,m.caps.length>0);}
 function b2sgNext(b,s,took,q){const o=1-s;q=took?0:(q||0)+1;if(!b2sgCnt(b,o))return {b,sd:o,ch:-1,q,w:s};
-  if(!b2sgMoves(b,o,-1).length){if(!b2sgMoves(b,s,-1).length){const a=b2sgCnt(b,0),z=b2sgCnt(b,1);return {b,sd:o,ch:-1,q,w:a===z?'d':a>z?0:1};}return {b,sd:s,ch:-1,q,w:null};}
+  if(!b2sgMoves(b,o,-1).length){if(!b2sgMoves(b,s,-1).length||q>=60){const a=b2sgCnt(b,0),z=b2sgCnt(b,1);return {b,sd:o,ch:-1,q,w:a===z?'d':a>z?0:1};}return {b,sd:s,ch:-1,q,w:null};}
   if(q>=60){const a=b2sgCnt(b,0),z=b2sgCnt(b,1);return {b,sd:o,ch:-1,q,w:a===z?'d':a>z?0:1};}return {b,sd:o,ch:-1,q,w:null};}
 const B2SGP={moves:p=>{const ms=b2sgMoves(p.b,p.sd,p.ch);return p.ch>=0?[...ms,{stop:1}]:ms;},
   play(p,m){const s=p.sd,o=1-s;if(m.stop)return b2sgNext(p.b,s,true,p.q);const b=b2sgApply(p.b,m,String(s));
@@ -472,7 +472,7 @@ GAMES.b_tablut={...B2TEAM,name:'حصار الملك',cat:'board',lbc:'#5C4A8A',
     if(P){const m=ms.find(x=>x.f===P.f&&x.t===i);if(m){S.b2=null;act(b2tbDo(d,m));return;}}b2Pick(d,ms.some(x=>x.f===i)&&(!P||P.f!==i)?{f:i}:null);},
   bot(d,s,lv){const ms=b2tbMoves(d.b,d.sd);if(lv===1&&Math.random()<.25)return b2tbDo(d,b2Rnd(ms));
     // a king that can reach the edge always goes, and an attacker always blocks the last open line it can
-    const m=b2Think({b:d.b,sd:d.sd,w:null},B2TBP,lv,{dep:[0,1,2,4],cap:[0,1500,10000,35000],ns:[0,140,30,2]});return b2tbDo(d,m||b2Rnd(ms));},
+    const m=b2Think({b:d.b,sd:d.sd,w:null},B2TBP,lv,{dep:[0,1,2,4],cap:[0,1500,8000,22000],ns:[0,140,30,2]});return b2tbDo(d,m||b2Rnd(ms));},
   botDelay:()=>500+rnd(400)};
 HELP.b_tablut='حصار الملك (تابلوت، من ألعاب الشمال القديمة): لوحة 9×9. المهاجمين (16 حجر أسود) يحاصرون، والمدافعين (8 حجار بيض) يحمون الملك اللي بالوسط على العرش. المهاجمين يبدأون. كل حجر يمشي أي عدد من المربعات بخط مستقيم مثل القلعة في الشطرنج، بدون ما يقفز. العرش (المربع اللي بالوسط) للملك بس، وما أحد يعدّي من فوقه. تاكل حجر الخصم إذا حطيته بين حجرك وحجر ثاني لك على نفس الخط (والعرش الفاضي يحسب كأنه حجر ضده)، والملك يشارك في الأكل. يفوز المدافعين إذا وصل الملك لأي مربع على طرف اللوحة. يفوز المهاجمين إذا حاصروا الملك: من الجهات الأربع وهو على العرش، ومن الثلاث جهات الباقية إذا كان جنب العرش، وبين حجرين إذا كان بعيد. اللي ما عنده حركة يخسر. تعادل إذا تكرر نفس الوضع 3 مرات أو طالت اللعبة 200 حركة. إذا أكثر من لاعبين: فريقين يتناوبون.';
 

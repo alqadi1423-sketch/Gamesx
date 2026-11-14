@@ -10,29 +10,32 @@ const B2HXNB={};const b2hxN=(n,i)=>(B2HXNB[n]||(B2HXNB[n]=[...Array(n*n)].map((_
 function b2hxWin(b,n,s){const c=String(s),start=[],prev=new Map();for(let k=0;k<n;k++){const i=s?k*n:k;if(b[i]===c){start.push(i);prev.set(i,-1);}}
   while(start.length){const i=start.shift();const r=i/n|0,cc=i%n;if(s?cc===n-1:r===n-1){const L=[];for(let x=i;x>=0;x=prev.get(x))L.push(x);return L;}
     for(const q of b2hxN(n,i))if(b[q]===c&&!prev.has(q)){prev.set(q,i);start.push(q);}}return null;}
-// the fewest stones side s still needs (own stones cost nothing, two own stones joined by a free bridge count as joined)
-const B2HXBR=[[-1,-1,2,[-1,0],[0,-1]],[-2,1,0,[-1,0],[-1,1]],[-1,2,0,[-1,1],[0,1]],[1,1,0,[0,1],[1,0]],[2,-1,0,[1,-1],[1,0]],[1,-2,0,[0,-1],[1,-1]]];
-function b2hxDist(b,n,s){const c=String(s),e=String(1-s),N=n*n,D=new Int16Array(N).fill(999);const dq=[];
+// how many more stones side s needs from one of its edges to each cell (own stones cost nothing; two own stones with a free
+// bridge between them count as joined, and so does a stone on the second line with both edge cells free)
+const B2HXBR=[[-1,-1,[-1,0],[0,-1]],[-2,1,[-1,0],[-1,1]],[-1,2,[-1,1],[0,1]],[1,1,[0,1],[1,0]],[2,-1,[1,-1],[1,0]],[1,-2,[0,-1],[1,-1]]];
+function b2hxField(b,n,s,far){const c=String(s),e=String(1-s),N=n*n,D=new Int16Array(N).fill(999),dq=[];
   const push=(i,v,front)=>{if(v<D[i]){D[i]=v;front?dq.unshift(i):dq.push(i);}};
-  for(let k=0;k<n;k++){const i=s?k*n:k;if(b[i]!==e)push(i,b[i]===c?0:1,b[i]===c);
-    // a stone on the second line with both edge points free is already joined to the edge
-    const j=s?k*n+1:n+k;if(b[j]===c){const a=s?[k*n,(k+1)*n]:[k,k+1];if(a.every(x=>x>=0&&x<N&&(s?x%n===0:x<n)&&b[x]==='.'))push(j,0,true);}}
-  while(dq.length){const i=dq.shift(),v=D[i],r=i/n|0,cc=i%n;if(s?cc===n-1:r===n-1)return v;
-    if(b[i]===c&&(s?cc===n-2&&r>0&&b[i+1]==='.'&&b[i-n+1]==='.':r===n-2&&cc>0&&b[i+n]==='.'&&b[i+n-1]==='.'))return v;
+  const onE=i=>{const r=i/n|0,k=i%n;return s?(far?k===n-1:k===0):(far?r===n-1:r===0);},on2=i=>{const r=i/n|0,k=i%n;return s?(far?k===n-2:k===1):(far?r===n-2:r===1);};
+  for(let i=0;i<N;i++){if(onE(i)&&b[i]!==e)push(i,b[i]===c?0:1,b[i]===c);
+    if(on2(i)&&b[i]===c){const ed=b2hxN(n,i).filter(onE);if(ed.length===2&&ed.every(x=>b[x]==='.'))push(i,0,true);}}
+  while(dq.length){const i=dq.shift(),v=D[i],r=i/n|0,cc=i%n;
     for(const q of b2hxN(n,i)){if(b[q]===e)continue;push(q,v+(b[q]===c?0:1),b[q]===c);}
-    if(b[i]===c)for(const [dr,dc,,x,y] of B2HXBR){const rr=r+dr,c2=cc+dc,ra=r+x[0],ca=cc+x[1],rb=r+y[0],cb=cc+y[1];
+    if(b[i]===c)for(const [dr,dc,x,y] of B2HXBR){const rr=r+dr,c2=cc+dc,ra=r+x[0],ca=cc+x[1],rb=r+y[0],cb=cc+y[1];
       if(rr<0||rr>=n||c2<0||c2>=n||ra<0||ra>=n||ca<0||ca>=n||rb<0||rb>=n||cb<0||cb>=n)continue;const q=rr*n+c2;
       if(b[q]===c&&b[ra*n+ca]==='.'&&b[rb*n+cb]==='.')push(q,v,true);}}
-  let best=999;for(let k=0;k<n;k++){const i=s?k*n+n-1:(n-1)*n+k;if(D[i]<best)best=D[i];}return best;}
-const b2hxEv=(b,n,s)=>{const me=b2hxDist(b,n,s),op=b2hxDist(b,n,1-s);if(me===0||op>=999)return 1e5;if(op===0||me>=999)return -1e5;return (op-me)*100;};
+  return D;}
+// the stones still needed, and how many empty cells lie on a shortest way (more ways are harder to block)
+function b2hxNeed(b,n,s){const A=b2hxField(b,n,s,false),Z=b2hxField(b,n,s,true),c=String(s),e=String(1-s);let best=999,w=0;
+  for(let i=0;i<n*n;i++){if(b[i]===e)continue;const t=A[i]+Z[i]-(b[i]===c?0:1);if(t<best){best=t;w=0;}if(t===best&&b[i]==='.')w++;}return [best,w];}
+const b2hxEv=(b,n,s)=>{const [me,wm]=b2hxNeed(b,n,s),[op,wo]=b2hxNeed(b,n,1-s);if(op>=999)return 1e5;if(me>=999)return -1e5;if(me===0)return 5e4-op;return (op-me)*100+Math.min(wm,20)*2-Math.min(wo,20)*2;};
 function b2hxThink(d,lv){const n=d.n,s=d.sd,c=String(s),b=d.b,N=n*n;const free=[];for(let i=0;i<N;i++)if(b[i]==='.')free.push(i);
   if(!d.nmv){const ctr=(n-1)/2;const ring=free.filter(i=>{const r=i/n|0,k=i%n,dd=Math.max(Math.abs(r-ctr),Math.abs(k-ctr));return dd>=1.5&&dd<=2.5;});return {i:b2Rnd(ring)};}
   // the second side swaps a strong first stone (one near the middle)
   if(d.nmv===1&&!d.swp&&lv>1){const f=b.search(/[01]/),r=f/n|0,k=f%n,ctr=(n-1)/2;if(Math.max(Math.abs(r-ctr),Math.abs(k-ctr))<=n/4)return {swap:1};}
   const ns=[0,140,40,4][lv];const sc=free.map(i=>{const nb=setAt(b,i,c);return {i,v:b2hxEv(nb,n,s)+Math.random()*ns};}).sort((x,y)=>y.v-x.v);
-  if(lv<3||sc[0].v>5e4)return sc[0];
-  let best=sc[0],bv=-Infinity,budget=1600;const o=String(1-s);
-  for(const m of sc.slice(0,10)){const nb=setAt(b,m.i,c);let worst=Infinity;
+  if(lv<3||sc[0].v>=5e4)return sc[0];
+  let best=sc[0],bv=-Infinity,budget=2600;const o=String(1-s);
+  for(const m of sc.slice(0,12)){const nb=setAt(b,m.i,c);let worst=Infinity;
     const rep=[];for(let i=0;i<N;i++)if(nb[i]==='.')rep.push(i);
     for(const r of rep){if(budget--<=0)break;const v=b2hxEv(setAt(nb,r,o),n,s);if(v<worst)worst=v;if(worst<=bv)break;}
     if(worst>bv){bv=worst;best=m;}if(budget<=0)break;}
@@ -124,7 +127,7 @@ function b2goOk(d){const s=d.sd;if(!d.ok)return b2Pass(d,s,{ok:1,last:`${tmName(
 function b2goResume(d){return {...d,ph:'play',dead:null,ok:0,ps:0,rz:(d.rz||0)+1,mvn:(d.mvn||0)+1,last:`${tmName(d,d.sd)} يبي يكمّل اللعب`};}
 // the bot: flat Monte Carlo with all-moves-as-first (AMAF) statistics, a fixed number of playouts per level
 function b2goThink(d,lv){const s=d.sd,me=s+1,b=d.b;const cands=b2goLegal(b,s,d.ko).filter(i=>{for(const q of B2GNB[i])if(b[q]!==String(s))return true;return false;});
-  if(!cands.length)return {pass:1};const N=[0,120,500,1400][lv]||500,M=b2goMC();
+  if(!cands.length)return {pass:1};const N=[0,120,400,1100][lv]||400,M=b2goMC();
   const K=cands.length,W=new Float32Array(K),V=new Float32Array(K),AW=new Float32Array(81),AV=new Float32Array(81),idx=new Int16Array(81).fill(-1);cands.forEach((i,k)=>{idx[i]=k;});
   let total=0;const win=()=>{const o=M.owner();let sc=0;for(let i=0;i<81;i++)if(o[i]===1)sc++;else if(o[i]===2)sc--;sc-=B2GK;return me===1?sc>0:sc<0;};
   for(let n=0;n<N;n++){let k;if(n<K)k=n;else{let bv=-1;for(let j=0;j<K;j++){const v=W[j]/V[j]+.6*Math.sqrt(Math.log(total)/V[j]);if(v>bv){bv=v;k=j;}}}
@@ -369,7 +372,9 @@ function b2mbAllowed(t,s,dice){const memo=new Map(),mx=b2mbDepth(t,s,dice,memo);
   let c=b2mbSingles(t,s,dice).filter(m=>{const nt=b2mbMove(t,s,m.from,m.to),rest=[...dice];rest.splice(rest.indexOf(m.die),1);return 1+b2mbDepth(nt,s,rest,memo)===mx;});
   if(mx===1&&dice.length===2&&dice[0]!==dice[1]){const big=Math.max(...dice);if(c.some(m=>m.die===big))c=c.filter(m=>m.die===big);}return c;}
 const b2mbT=d=>({a0:d.a0,a1:d.a1,pin:d.pin,off:d.off});
-function b2mbNoMove(d,s,dice){return b2Pass(d,s,{ph:'roll',dice,mv:[],last:`${tmName(d,s)} رمى ${dice[0]} و${dice[1]} وما عنده حركة`});}
+function b2mbNoMove(d,s,dice){const nd=b2Pass(d,s,{ph:'roll',dice,mv:[],nm:(d.nm||0)+1,last:`${tmName(d,s)} رمى ${dice[0]} و${dice[1]} وما عنده حركة`});
+  // both sides locked by pins for 20 turns in a row: more checkers off wins, then the shorter way home
+  if(nd.nm<20)return nd;const t=b2mbT(nd),k=t.off[0]-t.off[1]||b2mbPips(t,1)-b2mbPips(t,0);return k?{...nd,...tmWin(d,k>0?0:1),wpts:1,end:'lock',ph:'end'}:{...nd,win:'d',end:'lock',ph:'end'};}
 function b2mbRolled(d,dice){const s=d.sd,mv=dice[0]===dice[1]?[dice[0],dice[0],dice[0],dice[0]]:[...dice];
   if(!b2mbAllowed(b2mbT(d),s,mv).length)return b2mbNoMove(d,s,dice);return {...d,ph:'move',dice,mv,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} رمى ${dice[0]} و${dice[1]}`};}
 function b2mbOpen(d,r){const o=[...d.op];o[d.sd]=r;
@@ -378,7 +383,7 @@ function b2mbOpen(d,r){const o=[...d.op];o[d.sd]=r;
   const s=o[0]>o[1]?0:1,dice=[o[0],o[1]];const nd={...d,op:o,sd:s,turn:tmNow(d,s),ph:'move',dice,mv:dice,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} يبدأ بـ ${o[0]} و${o[1]}`};
   return b2mbAllowed(b2mbT(nd),s,dice).length?nd:b2mbNoMove(nd,s,dice);}
 function b2mbPlay(d,m){const s=d.sd,t=b2mbMove(d,s,m.from,m.to),mv=[...d.mv];mv.splice(mv.indexOf(m.die),1);
-  let nd={...d,...t,mv,lm:[m.from,m.to,s],hp:t.pinned?m.to:-1,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} لعب ${d.dice[0]} و${d.dice[1]}${t.pinned?' وحبس حجر 🔒':''}`};delete nd.pinned;
+  let nd={...d,...t,mv,nm:0,lm:[m.from,m.to,s],hp:t.pinned?m.to:-1,mvn:(d.mvn||0)+1,last:`${tmName(d,s)} لعب ${d.dice[0]} و${d.dice[1]}${t.pinned?' وحبس حجر 🔒':''}`};delete nd.pinned;
   if(t.off[s]===15){const k=d.off[1-s]?1:2;return {...nd,...tmWin(d,s),wpts:k,end:k>1?'mars':'',ph:'end'};}
   const left=mv.length?b2mbAllowed(b2mbT(nd),s,mv):[];if(!left.length)nd={...nd,ph:'roll',mv:[],sd:1-s,...tmPass(d,s)};return nd;}
 function b2mbAuto(d){const me=d.sd;let x=d,g=0;while(g++<8&&x.win==null){
@@ -392,7 +397,7 @@ function b2mbJudge(t,s,lv){const o=1-s;let v=b2mbPips(t,o)-b2mbPips(t,s)+(t.off[
   for(let i=0;i<24;i++){const p=t.pin[i];if(p===o)v+=14+(o?24-i:i+1)*.9+(o?i<6:i>17)*14;else if(p===s)v-=14+(s?24-i:i+1)*.9+(s?i<6:i>17)*14;
     const me=b2mbOf(t,s)[i];if(me>=2&&p!==s)v+=3+((s?i>=18:i<=5)?2:0);}
   // own single checkers the other side can reach and pin
-  const wt=[0,.3,.6,.8][lv]||.6,src=[];const oa=b2mbOf(t,o);for(let i=0;i<24;i++)if(oa[i]-(t.pin[i]===o?1:0)>0)src.push(i);
+  const wt=[0,.3,.6,.6][lv]||.6,src=[];const oa=b2mbOf(t,o);for(let i=0;i<24;i++)if(oa[i]-(t.pin[i]===o?1:0)>0)src.push(i);
   const ma=b2mbOf(t,s);for(let i=0;i<24;i++){if(ma[i]!==1||oa[i])continue;const ds=src.map(q=>o?i-q:q-i).filter(x=>x>0&&x<=24);if(!ds.length)continue;
     let hits=0;for(const r of TVR)if(r.some(x=>ds.includes(x)))hits++;v-=wt*hits/36*(16+(s?24-i:i+1)*.9);}
   return v;}
@@ -400,8 +405,9 @@ function b2mbPlans(d,s){const out=new Map();const rec=(t,dice,first,dep)=>{const
     if(!al.length||dep>=4){const k=b2mbKey(t,[])+'|'+t.off;if(!out.has(k))out.set(k,{t,first});return;}
     const seen=new Set();for(const m of al){const sk=m.from+':'+m.die;if(seen.has(sk))continue;seen.add(sk);const nt=b2mbMove(t,s,m.from,m.to),rest=[...dice];rest.splice(rest.indexOf(m.die),1);rec(nt,rest,first||m,dep+1);}};
   rec(b2mbT(d),d.mv,null,0);return [...out.values()].filter(x=>x.first);}
-function b2mbReply(t,o,lv,cap){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];let bo=-1e9;
-    for(const x of b2mbPlans({...t,mv},o)){if(cap.n--<=0)break;const v=x.t.off[o]===15?1e5:b2mbJudge(x.t,o,lv);if(v>bo)bo=v;}if(bo===-1e9)bo=b2mbJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
+// (the same number of answers for every roll and every plan, so no plan looks better only because fewer answers were seen)
+function b2mbReply(t,o,lv){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];let bo=-1e9;
+    for(const x of b2mbPlans({...t,mv},o).slice(0,25)){const v=x.t.off[o]===15?1e5:b2mbJudge(x.t,o,lv);if(v>bo)bo=v;}if(bo===-1e9)bo=b2mbJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
 // where the j-th checker of a stack on point p (1..24 as side 0 counts, 25 borne off) sits, in board units
 const B2MB={W:340,H:280,PW:24,L:6,BAR:20,OFF:26,TOP:8,CR:10.5};
 function b2mbXY(flip,p,side,j){const {H,PW,L,BAR,OFF,TOP,CR}=B2MB,offX=L+12*PW+BAR+8;j=Math.max(0,j);
@@ -438,7 +444,7 @@ GAMES.b_mahbusa={...B2TEAM,name:'المحبوسة',cat:'board',lbc:'#7A2B26',
   // the dice are thrown on the host; choosing a checker stays on the phone
   net:{host:['roll','open'],ui:['b2']},
   points:d=>d.pl.map((_,s)=>`${s%2?'🟤':'⚪'} برّا ${d.off[s%2]}`),
-  winText(d){if(d.win==='d')return 'تعادل';const sd=d.win%2;return `فاز ${sd?'الأحمر':'الأبيض'}${d.end==='mars'?' مارس (نقطتين)':d.end==='resign'?' بالاستسلام':d.end==='left'?'، الخصم طلع':''}`;},
+  winText(d){if(d.win==='d')return d.end==='lock'?'تعادل: الحجار انحبست من الطرفين':'تعادل';const sd=d.win%2;return `فاز ${sd?'الأحمر':'الأبيض'}${d.end==='mars'?' مارس (نقطتين)':d.end==='lock'?': الحجار انحبست، وطلّع أكثر أو طريقه أقصر':d.end==='resign'?' بالاستسلام':d.end==='left'?'، الخصم طلع':''}`;},
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;const who=me?'<b class="yt">دورك</b>':`دور ${tmName(d,d.sd)}`;
     const side=`<span class="chside ${d.sd?'mbr':''}">${d.sd?'الأحمر':'الأبيض'}</span>`;
     if(d.ph==='open')return s+`${who} ${side}: ارمِ زهرة وحدة، الأعلى يبدأ`;if(d.ph==='roll')return s+`${who} ${side}: ارمِ الزهر`;
@@ -469,9 +475,9 @@ GAMES.b_mahbusa={...B2TEAM,name:'المحبوسة',cat:'board',lbc:'#7A2B26',
     if(lv===1&&Math.random()<.35)return b2mbPlay(d,b2Rnd(al));
     const k=d.gid+':'+b2mbKey(d,d.mv);const P=S.b2mbPlan;if(P&&P.k===k){const m=al.find(x=>x.from===P.m.from&&x.to===P.m.to&&x.die===P.m.die);if(m)return b2mbPlay(d,m);}
     const ns=[0,8,3,.5][lv];let best=null,bv=-1e9;const all=b2mbPlans(d,side);for(const x of all){x.v=b2mbJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
-    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;const cap={n:6000};for(const x of all.slice(0,5)){const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv,cap);if(v>bv){bv=v;best=x;}if(cap.n<=0)break;}}
+    if(lv===3&&all.length>1){all.sort((a,b)=>b.v-a.v);bv=-1e9;for(const x of all.slice(0,3)){const v=x.t.off[side]===15?1e6:b2mbReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
     if(!best)return b2mbPlay(d,al[0]);const nd=b2mbPlay(d,best.first);S.b2mbPlan=null;
     if(nd.ph==='move'&&nd.sd===side){const rest=b2mbPlans(nd,side).find(x=>b2mbKey(x.t,[])===b2mbKey(best.t,[])&&x.t.off+''===best.t.off+'');if(rest)S.b2mbPlan={k:nd.gid+':'+b2mbKey(nd,nd.mv),m:rest.first};}
     return nd;},
   botDelay:(d)=>d.ph==='move'?450+rnd(300):700+rnd(400)};
-HELP.b_mahbusa='المحبوسة: على لوحة الطاولة، وكل واحد عنده 15 حجر تبدأ كلها في أول خانة من طريقه (الخانة 24 من جهته)، والاثنين يمشون بعكس بعض لين يوصلون بيتهم (آخر 6 خانات) ويطلّعونها. في البداية كل واحد يرمي زهرة والأعلى يبدأ بالرقمين، والدبل يتلعب أربع مرات، ولازم تستخدم الزهرين إذا تقدر (وإذا ما تقدر إلا واحد لازم الأكبر). ما فيه ضرب: إذا نزلت على خانة فيها حجر واحد للخصم تحبسه تحت حجرك 🔒، والمحبوس ما يتحرك لين يمشي آخر حجر للي حابسه من فوقه. ما تنزل على خانة فيها حجرين أو أكثر للخصم، ولا على خانة الخصم حابس فيها حجر لك. ما تطلّع حجارك إلا إذا كل الـ15 صارت في بيتك (المحبوس منها يحسب). أول واحد يطلّع كل حجاره يفوز: نقطة، أو نقطتين (مارس) إذا الخصم ما طلّع ولا حجر. إذا أكثر من لاعبين: فريقين يتناوبون.';
+HELP.b_mahbusa='المحبوسة: على لوحة الطاولة، وكل واحد عنده 15 حجر تبدأ كلها في أول خانة من طريقه (الخانة 24 من جهته)، والاثنين يمشون بعكس بعض لين يوصلون بيتهم (آخر 6 خانات) ويطلّعونها. في البداية كل واحد يرمي زهرة والأعلى يبدأ بالرقمين، والدبل يتلعب أربع مرات، ولازم تستخدم الزهرين إذا تقدر (وإذا ما تقدر إلا واحد لازم الأكبر). ما فيه ضرب: إذا نزلت على خانة فيها حجر واحد للخصم تحبسه تحت حجرك 🔒، والمحبوس ما يتحرك لين يمشي آخر حجر للي حابسه من فوقه. ما تنزل على خانة فيها حجرين أو أكثر للخصم، ولا على خانة الخصم حابس فيها حجر لك. ما تطلّع حجارك إلا إذا كل الـ15 صارت في بيتك (المحبوس منها يحسب). أول واحد يطلّع كل حجاره يفوز: نقطة، أو نقطتين (مارس) إذا الخصم ما طلّع ولا حجر. وإذا انحبست حجار الطرفين وما أحد يقدر يتحرك 20 دور ورا بعض، يفوز اللي طلّع حجار أكثر، وإذا تساووا اللي طريقه أقصر. إذا أكثر من لاعبين: فريقين يتناوبون.';
