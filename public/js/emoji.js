@@ -1,8 +1,8 @@
 'use strict';
 /* our own emoji: one look on every phone (Unicode emoji differ between phones). Each is a small flat SVG in the app's palette,
    viewBox 0 0 64 64, no ids or filters, so it can show many times on one screen. A reaction, a chat sticker and an avatar travel
-   as an index into EMO only, never as markup: KEEP THE ORDER, add new ones at the end. */
-const EMO=(()=>{
+   as an index into EMJ only, never as markup: KEEP THE ORDER, add new ones at the end. */
+const EMJ=(()=>{
   const N='#2D4763',R='#EC6158',B='#4AB1E8',G='#F0B429',GD='#D99A1B';
   const face=(c,d)=>`<circle cx="32" cy="35" r="26" fill="${d||GD}"/><circle cx="32" cy="32" r="26" fill="${c||'#F7C548'}"/><ellipse cx="23" cy="16" rx="9" ry="4.5" fill="#fff" opacity=".35"/>`;
   const eyes=(y,r)=>`<circle cx="23" cy="${y||28}" r="${r||4}" fill="${N}"/><circle cx="41" cy="${y||28}" r="${r||4}" fill="${N}"/>`;
@@ -45,6 +45,6 @@ const EMO=(()=>{
   return L.map(([n,s])=>({n,svg:`<svg viewBox="0 0 64 64" aria-hidden="true">${s}</svg>`}));
 })();
 // the faces and characters (not the word stickers) can be an avatar
-const EMO_AV=EMO.map((_,i)=>i).filter(i=>i<20);
-const emoOk=i=>Number.isInteger(i)&&i>=0&&i<EMO.length;
-const emoSVG=i=>emoOk(i)?EMO[i].svg:'';
+const EMJ_AV=EMJ.map((_,i)=>i).filter(i=>i<20);
+const emoOk=i=>Number.isInteger(i)&&i>=0&&i<EMJ.length;
+const emoSVG=i=>emoOk(i)?EMJ[i].svg:'';

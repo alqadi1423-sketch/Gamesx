@@ -115,11 +115,11 @@ function onPeers(ch){
   else if(!H&&!amHost())maybeTakeOver();
   if(S.mode!=='online')return;
   // names, avatars, reactions and chat; a peer speaks only for the seat its key holds. A reaction or a sticker is an index into
-  // our own emoji (checked), a line of text is cut to CHMAX and only ever shown escaped
+  // our own emoji (checked), a line of text is cut to CHAT_MAX and only ever shown escaped
   for(const fp in P){const pr=P[fp].pr,r=roleOfFp(fp),n=typeof pr.n==='string'?pr.n.slice(0,14):'';
-    if(r>=0){if(typeof pr.n==='string')S.names[r]=n;S.avs[r]=EMO_AV.includes(pr.av)?pr.av:-1;
+    if(r>=0){if(typeof pr.n==='string')S.names[r]=n;S.avs[r]=EMJ_AV.includes(pr.av)?pr.av:-1;
       const rx=pr.rx;if(rx&&typeof rx==='object'&&emoOk(rx.e)&&typeof rx.t==='number'&&isFinite(rx.t)&&rx.t>(S.rxSeen[r]||0)){S.rxSeen[r]=rx.t;if(Math.abs(Date.now()-rx.t)<8000)setTimeout(()=>floatRx(r,rx.e),0);}}
-    if(Array.isArray(pr.ch))for(const m of pr.ch.slice(-CHN)){if(!m||typeof m!=='object'||typeof m.i!=='string'||!/^\w{1,40}$/.test(m.i)||m.s===1)continue;
+    if(Array.isArray(pr.ch))for(const m of pr.ch.slice(-CHAT_N)){if(!m||typeof m!=='object'||typeof m.i!=='string'||!/^\w{1,40}$/.test(m.i)||m.s===1)continue;
       const stk=emoOk(m.k),txt=typeof m.x==='string'&&m.x.trim()!=='';if(stk===txt)continue;
       const o=S.chat[m.i];if(o){if(o.r===-1&&r>=0&&o.f===fp)o.r=r;continue;}
       if(S.chatSkip.has(m.i))continue;
@@ -128,7 +128,7 @@ function onPeers(ch){
       // one phone gets at most 10 new lines in 10 s here, so a flood cannot bury the chat
       const now=Date.now(),inT=(S.chatIn[fp]||[]).filter(t=>now-t<10000);if(inT.length>=10){S.chatSkip.add(m.i);S.chatIn[fp]=inT;continue;}inT.push(now);S.chatIn[fp]=inT;
       const t=typeof m.t==='number'&&isFinite(m.t)&&m.t<=now&&m.t>now-864e5?m.t:now;
-      S.chat[m.i]={i:m.i,r:r>=0?r:-1,n,f:fp,t,...(stk?{k:m.k}:{x:m.x.slice(0,CHMAX)})};
+      S.chat[m.i]={i:m.i,r:r>=0?r:-1,n,f:fp,t,...(stk?{k:m.k}:{x:m.x.slice(0,CHAT_MAX)})};
       if(S.chatReady&&S.modal!=='chat'&&!(S.browse||!S.st.g)&&!hideSet().has(fp))chatPop(S.chat[m.i]);}}
   {const ks=Object.keys(S.chat);if(ks.length>300){ks.sort((a,b)=>S.chat[a].t-S.chat[b].t);for(const k of ks.slice(0,ks.length-300))delete S.chat[k];}if(S.chatSkip.size>500)S.chatSkip=new Set([...S.chatSkip].slice(-200));}
   recomputeRoles();S.chatReady=true;if(peers.some(p=>!p.sameTab))S.roomEmpty=false;
@@ -312,7 +312,7 @@ async function doPublish(){
   // this tab was asleep and the same browser opened the room in a newer tab meanwhile: give way before saying anything
   {const x=otherTab(S.code);if(x&&(x.since||0)>(S.tabSince||0)){tabMark(null);leaveRoom(TAB_MSG);return;}}
   const hb=Math.max(Date.now(),(S.lastHb||0)+1);S.lastHb=hb;
-  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-CHN),hb};const av=myAv();if(av>=0)o.av=av;
+  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-CHAT_N),hb};const av=myAv();if(av>=0)o.av=av;
   if(S.pubRx){o.rx=S.pubRx;S.pubRx=null;}
   if(amHost()){const G=GAMES[S.st.g],d=S.st.d,me=SEAL.fp,small=(nr.max||3800)<8000;
     const pubD=d?viewOf(G,d,-1):null;const pp={},pubX={};
