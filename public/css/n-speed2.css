@@ -156,7 +156,7 @@
 .s2ch-ring{position:relative;width:min(100%,330px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#FCE7B2 0 30%,#F6D58E 31% 62%,#EDC170 63%);box-shadow:0 6px 0 #B9862E,inset 0 0 0 5px rgba(255,255,255,.3)}
 @media (prefers-color-scheme:dark){.s2ch-ring{background:radial-gradient(circle,#4A3A1E 0 30%,#5C4723 31% 62%,#6B5328 63%);box-shadow:0 6px 0 #2B2010}}
 .s2ch-ring.bad{animation:s2-shake 240ms}
-.s2ch-n{position:absolute;width:58px;height:58px;margin:-29px;border-radius:50%;background:var(--c);color:#fff;font-style:normal;font-size:12px;font-weight:800;display:grid;place-items:center;text-align:center;line-height:1.1;box-shadow:0 3px 0 rgba(0,0,0,.2),inset 0 0 0 3px rgba(255,255,255,.35);overflow:visible}
+.s2ch-n{position:absolute;width:58px;height:58px;margin:-29px;padding:0 2px;border-radius:50%;background:var(--c);color:#fff;font-style:normal;font-size:11px;word-break:break-word;font-weight:800;display:grid;place-items:center;text-align:center;line-height:1.1;box-shadow:0 3px 0 rgba(0,0,0,.2),inset 0 0 0 3px rgba(255,255,255,.35);overflow:visible}
 .s2ch-n.trap{font-size:22px}
 .s2ch-n.me{width:68px;height:68px;margin:-34px;font-size:15px;box-shadow:0 3px 0 rgba(0,0,0,.2),inset 0 0 0 4px #fff}
 .s2ch-n u{position:absolute;inset:-9px;border-radius:50%;border:5px solid #FFF3C4;opacity:0;transform:scale(.7);transition:opacity 90ms,transform 120ms var(--ease)}

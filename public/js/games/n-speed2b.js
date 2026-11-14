@@ -147,7 +147,7 @@ GAMES.s_chain={...s2Base({name:'ردة الفعل الجماعية',cls:'s2ch',l
     s2T(st,1000,next);},
   view(d,ctx,st){const Q=s2chQ(d),N=Q.nodes.length,on=st.k>=0?Q.a[st.k]:null;
     const node=(x,j)=>{const an=-Math.PI/2+j*2*Math.PI/N,l=(50+38*Math.cos(an)).toFixed(1),t=(50+38*Math.sin(an)).toFixed(1),me=x===ctx.v,trap=x>=100;
-      return `<i class="s2ch-n ${trap?'trap':''} ${me?'me':''} ${on===x?'on':''}" style="left:${l}%;top:${t}%;--c:${trap?'#5D6D7E':col(d,x)}"><u></u>${trap?'💣':me?'أنت':escH([...String(nm(d,x)).replace(/^\S*🤖\S*\s*/u,'')].slice(0,5).join(''))}</i>`;};
+      return `<i class="s2ch-n ${trap?'trap':''} ${me?'me':''} ${on===x?'on':''}" style="left:${l}%;top:${t}%;--c:${trap?'#5D6D7E':col(d,x)}"><u></u>${trap?'💣':me?'أنت':escH((t=>t.length>9?t.slice(0,8).join('')+'…':t.join(''))([...String(nm(d,x)).replace(/^\S*🤖\S*\s*/u,'')]))}</i>`;};
     return `<div class="s2ch-top"><span>${st.k<0?'استعد…':on===ctx.v?'عندك! التقطها ⚡':on>=100?'قنبلة! لا تضغط':'انتظر دورك'}</span><span>${'❤️'.repeat(Math.max(0,d.hp[ctx.v]))}</span></div>
       <div class="s2ch-ring ${st.fx}">${Q.nodes.map(node).join('')}<b class="s2ch-c">${Math.max(0,st.k+1)}/${Q.a.length}</b></div>
       <button class="s2ch-go ${on===ctx.v&&!st.got?'hot':''}" data-ga="tap">التقط ⚡</button>`;},

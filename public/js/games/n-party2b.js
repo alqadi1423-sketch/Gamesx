@@ -412,7 +412,7 @@ GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
   privOk:(d,r,o,p)=>p.pick==null||p.pick===NOPICK||p.rd!==d.rd||Number.isInteger(p.pick)&&p.pick>=0&&p.pick<=d.co[d.pl.indexOf(r)],
   net:{local:[]},
   viewer:d=>d.win==null&&d.ph==='bid'?simulViewer(d):null,coverMsg:d=>d.res||'',
-  status(d,ctx){const s=d.res?`<small>${d.res}</small><br>`:'';return s+`<small>الصندوق ${d.i+1} من ${d.B} • 👁 ${nm(d,d.pk)} شاف داخله</small><br>`+(d.ph==='bid'?'زايدوا بالسر':'انفتح الصندوق');},
+  status(d,ctx){return (d.ph!=='bid'&&d.res?`<small>${d.res}</small><br>`:`<small>الصندوق ${d.i+1} من ${d.B} • 👁 ${nm(d,d.pk)} شاف داخله</small><br>`)+(d.ph==='bid'?'زايدوا بالسر':'انفتح الصندوق');},
   render(d,ctx){const v=ctx.v;let h='<div class="p2 p2-auc">';
     h+=`<div class="p2-boxes">${d.bx.map((x,i)=>{const open=i<d.i||i===d.i&&d.ph==='show';return `<i class="${i===d.i?'now':''} ${open?'open '+p2AuBox(x):''}" data-k="bx${i}">${open?p2Sg(x):i===d.i?'🎁':''}</i>`;}).join('')}</div>`;
     const left=p2AuLeft(d);h+=`<div class="p2-left"><small>القيم الباقية بالصناديق</small><span>${left.map(x=>`<b class="${p2AuBox(x)}">${p2Sg(x)}</b>`).join('')}</span></div>`;

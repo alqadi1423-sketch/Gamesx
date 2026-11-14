@@ -695,7 +695,7 @@ function w2LgWords(L){if(W2LGB[L])return W2LGB[L];const cnt={};for(const c of L)
 const w2LgFits=(L,w)=>{const cnt={};for(const c of L)cnt[c]=(cnt[c]||0)+1;for(const c of w){if(!cnt[c])return false;cnt[c]--;}return true;};
 const W2LGT=45000;
 function w2LgSum(d){if(!d.lr)return '';const rows=d.pl.map((r,s)=>{const [w,g]=String(d.lr[s]||':0').split(':');return {s,g:+g||0,t:w?`<i>${escH(w2LDisp(w))}</i> ${w2Len(w)} حروف`:'ما ثبّت كلمة'};});
-  return `<div class="w2sum"><div class="w2sh">حروف الجولة: <b class="w2pl">${escH(d.pL||'')}</b></div>${w2RaceRows(d,rows)}${d.best?`<p class="w2miss">أطول كلمة نعرفها منها: <b>${escH(w2LDisp(d.best))}</b> (${w2Len(d.best)})</p>`:''}</div>`;}
+  return `<div class="w2sum"><div class="w2sh">حروف الجولة: <b class="w2pl">${escH([...(d.pL||'')].join(' '))}</b></div>${w2RaceRows(d,rows)}${d.best?`<p class="w2miss">أطول كلمة نعرفها منها: <b>${escH(w2LDisp(d.best))}</b> (${w2Len(d.best)})</p>`:''}</div>`;}
 GAMES.w_long={name:'أطول كلمة',cat:'words',lbc:'#A23B5A',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#C24E72"/>${['م','س','ت','ش','ف','ى'].map((c,k)=>`<rect x="${8+k*14.5}" y="30" width="13" height="18" rx="3" fill="${k%2?'#FFE0EA':'#fff'}"/><text x="${14.5+k*14.5}" y="44" font-size="11" font-weight="900" fill="#7A2340" text-anchor="middle">${c}</text>`).join('')}<path d="M10 64h80" stroke="#FFE08A" stroke-width="5" stroke-linecap="round"/><path d="M10 58v12M90 58v12" stroke="#FFE08A" stroke-width="4" stroke-linecap="round"/><text x="50" y="88" font-size="14" font-weight="900" fill="#fff" text-anchor="middle">مستشفى</text></svg>`,
   init:n=>({r:0,R:4,L:'',pL:'',ph:'pick',rd:0,pts:Array(n).fill(0),lr:null,best:'',ts:0,last:''}),

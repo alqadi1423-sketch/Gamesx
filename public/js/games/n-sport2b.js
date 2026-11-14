@@ -83,7 +83,7 @@ function fcFly(d,t,k,v){const c=fcC(d),w=fcW(d,k)/2,e=Math.abs(v-c),[n0,p0,,,cos
   if(lx.r===0){const x={...d,sta,sid,lx,bag:d.bag+p0,fl:d.fl+1,pr:fcOpts(),last:`${nm(d,t)}: الصقر صاد ${n0}! (+${p0})`};
     return Math.min(...x.pr.map(q=>FC_P[q][4]))>sta[t]?fcHome(x,t,' • الصقر تعب'):x;}
   if(lx.r===1)return fcHome({...d,sta,sid,lx,last:`${nm(d,t)}: فاته ${n0} ورجع`},t,'');
-  sta[t]=Math.max(0,sta[t]-1);return fcNext({...d,sta,sid,lx,last:`${nm(d,t)}: الصقر لحق ${n0} بعيد وما رجع إلا بالليل! راحت الحصيلة (${d.bag})`},t);}
+  sta[t]=Math.max(0,sta[t]-1);return fcNext({...d,sta,sid,lx,last:`${nm(d,t)}: الصقر ما رجع إلا بالليل، راحت الحصيلة (${d.bag})`},t);}
 function fcHome(d,t,why){const pts=[...d.pts];pts[t]+=d.bag;return fcNext({...d,pts,last:d.last+why+(d.bag?` • رجع المخيم بـ${d.bag}`:'')},t);}
 const fcOk=(d,t,k)=>Number.isInteger(k)&&d.pr.includes(k)&&FC_P[k][4]<=d.sta[t];
 // the chance a stop lands in [0,w] off the centre for a hand that scatters by sig
@@ -231,13 +231,13 @@ GAMES.r_dhow={name:'سباق السفن الشراعية',cat:'sport',lbc:'#1D6F
       ${d.pv.map((p,s)=>p&&d.out[s]!=='1'?`<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)}L${d.bt[s][0].toFixed(1)} ${d.bt[s][1].toFixed(1)}" stroke="#fff" stroke-width=".5" stroke-dasharray="1 1" opacity=".55"/>`:'').join('')}
       ${me&&my?`<path d="M${b[0].toFixed(1)} ${b[1].toFixed(1)}l${(Math.sin(h*Math.PI/6)*12).toFixed(1)} ${(-Math.cos(h*Math.PI/6)*12).toFixed(1)}" stroke="#FFD84D" stroke-width=".8" stroke-dasharray="1.6 1"/>`:''}
       ${d.bt.map((bb,s)=>d.out[s]==='1'?'':boat(s,bb,s===v?'me':'')).join('')}</svg>`;
-    s+=`<div class="dt-list">${d.pl.map((_,i)=>{const bb=d.bt[i],tg=dhTarget(bb);return `<span class="${i===v?'on':''}" style="--c:${col(d,i)}">${nm(d,i)} ${bb[4]?'⬇':'⬆'} <b>${Math.round(Math.hypot(bb[0]-tg[0],bb[1]-tg[1]))}</b></span>`;}).join('')}</div>`;
+    const ls=`<div class="dt-list">${d.pl.map((_,i)=>{const bb=d.bt[i],tg=dhTarget(bb);return `<span class="${i===v?'on':''}" style="--c:${col(d,i)}">${nm(d,i)} ${bb[4]?'⬇':'⬆'} <b>${Math.round(Math.hypot(bb[0]-tg[0],bb[1]-tg[1]))}</b></span>`;}).join('')}</div>`;
     if(my){const m=r2mPar(key,1150),cur=b[2];
       s+=`<p class="r2lbl">${b[4]?'ارجع لخط النهاية تحت':'روح للمنارة فوق ودور حولها'}: اختر اتجاهك</p><div class="dh-rose">${[...Array(12).keys()].map(k=>{const tw=Math.abs(dhDiff(k*30,d.wd)),sp=dhPol(tw),sd=dhDiff(k*30,d.wd)>=0?1:-1,tk=b[3]&&sd!==b[3];
         return `<button class="dh-h ${k===h?'on':''} ${sp<.3?'dead':''}" data-ga="dh" data-i="${k}" style="--a:${k*30}deg;--q:${Math.round(sp*100)}%"><i></i><small>${tw<30?'✋':Math.round(sp*10)}${tk?'↺':''}</small></button>`;}).join('')}<div class="dh-mid"><b>${h===cur?'نفس الاتجاه':'اتجاه جديد'}</b><small>↺ = تغيير جهة الشراع (يبطّي)</small></div></div>
         ${r2Meter(key,m,[[0,1000,'z0'],[220,780,'z1'],[380,620,'z2']],sv==null,sv,'ضبط الشراع: كل ما قربت للنص أسرع')}${r2Stop(key,'sail','⛵ أبحر',sv==null)}`;}
     else if(me&&d.win==null)s+=`<p class="note">${hasPicked(d,v)?'اخترت، ننتظر الباقين…':''}</p>`;
-    return s+'</div>';},
+    return s+ls+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
     if(a==='dh'){if(Number.isInteger(i)&&i>=0&&i<12){S.draft.dh=String(i);render();}return;}
     if(a==='sail'){const v=r2Read(i);r2Hold(d.gid+':'+d.rd+':'+ctx.v,v,ctx);simulPick(d,ctx.v,r2Dr('dh',0,11,d.bt[ctx.v][2])*1001+v);S.draft.dh=undefined;}},
