@@ -380,7 +380,8 @@ function p2Q20Bot(d,s,lv){const cands=p2Q20Cands(d);const kn=p2Q20Known(d);
   const guess=x=>p2Q20Act(d,s,'g',x);
   if(d.qn>=P2Q20-1||cands.length===1&&lv>1)return guess(p2Pick(cands));
   if(lv===1){if((cands.length<=4&&Math.random()<.5)||Math.random()<.08)return guess(p2Pick(cands));return qs.length?p2Q20Act(d,s,isC?'c':'a',p2Pick(qs)):guess(p2Pick(cands));}
-  if(lv===2&&cands.length<=2)return guess(p2Pick(cands));
+  // a guess among a few is worth more than a question the next asker profits from
+  if(cands.length<=(lv===3?3:2))return guess(p2Pick(cands));
   const best=lv===2&&Math.random()<.3?p2Pick(qs):p2TqBest(cands,qs,val);
   if(best==null)return guess(p2Pick(cands));return p2Q20Act(d,s,isC?'c':'a',best);}
 function p2Q20Act(d,s,k,v){if(k==='g'){if(v===d.it)return p2Q20Show({...d,ql:[...d.ql,[s,'g',v,1]],qn:d.qn+1},s);return {...p2Q20After(d,[s,'g',v,0]),last:`${nm(d,s)} خمّن غلط`};}

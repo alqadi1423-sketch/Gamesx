@@ -222,7 +222,7 @@ GAMES.p_fake={name:'الرسام المزيف',cat:'party',lbc:'#5B2C6F',teams:'
     const cur=drawMe&&S.draft.p2fs&&p2FkOkStroke(S.draft.p2fs)?[[d.turn,S.draft.p2fs]]:[];
     h+=`<div class="p2-easel ${drawMe?'live':''}"><svg viewBox="0 0 63 63" class="p2-drw ${drawMe?'pad':''}" ${drawMe?'id="p2pad"':''}>${p2FkSvg(d,d.sk)}${p2FkSvg(d,cur)}</svg>${d.ph==='draw'?`<small class="p2-kind">${kind?'النوع: '+kind:''}</small>`:''}</div>`;
     h+=`<div class="p2-legend">${d.pl.map((r,s)=>`<span class="${d.ph==='draw'&&s===d.turn?'on':''}" style="--c:${COLS[r]}">${nm(d,s)} <b>${d.sk.filter(x=>x[0]===s).length}</b></span>`).join('')}</div>`;
-    if(d.ph==='draw'){if(drawMe)h+=cur.length?`<div class="p2-row"><button class="btn red" data-ga="fok">✓ اعتمد الخط</button><button class="btn soft" data-ga="fclr">↶ أعد</button></div>`:'<p class="note">ارسم خط واحد بإصبعك (بدون ما ترفعه)</p>';
+    if(d.ph==='draw'){if(drawMe)h+=cur.length?`<div class="p2-row"><button class="btn red" data-ga="fok">✓ اعتمد الخط</button><button class="btn soft" data-ga="fclr">↶ أعد</button></div>`:'<p class="note">ارسم خط واحد بإصبعك (بدون ما ترفعه)</p><button class="sm p2-fskip" data-ga="fskip">ما عندي فكرة، عدّني ⏭</button>';
       else h+=`<p class="note">${isBot(d,d.turn)?'🤖 ':''}${nm(d,d.turn)} يرسم…</p>`;}
     if(d.ph==='vote'){if(!ctx.my||v==null||v<0)h+='<p class="note">ننتظر الأصوات…</p>'+p2Wait(d);
       else h+=`<p class="p2-lead small">${nm(d,v)}، مين المزيف؟</p>`+p2Tiles(d,{v,ga:'v',can:s=>s!==v&&d.out[s]!=='1'});}
@@ -238,6 +238,7 @@ GAMES.p_fake={name:'الرسام المزيف',cat:'party',lbc:'#5B2C6F',teams:'
     if(a==='ok'&&d.ph==='see'&&ctx.my){simulPick(d,v,1);return;}
     if(a==='fclr'){S.draft.p2fs='';render();return;}
     if(a==='fok'&&d.ph==='draw'&&(ctx.local||v===d.turn)&&!isBot(d,d.turn)){const e=String(S.draft.p2fs||'');if(!p2FkOkStroke(e)){toast('ارسم خط أول');return;}S.draft.p2fs='';act(GAMES.p_fake.add(d,d.turn,e));return;}
+    if(a==='fskip'&&d.ph==='draw'&&(ctx.local||v===d.turn)&&!isBot(d,d.turn)){S.draft.p2fs='';act(GAMES.p_fake.add(d,d.turn,''));return;}
     if(a==='v'&&d.ph==='vote'&&ctx.my&&i!==v&&d.out[i]!=='1'){simulPick(d,v,i);return;}
     if(a==='g'&&d.ph==='guess'&&(ctx.local||v===d.fk)&&!isBot(d,d.fk)&&d.opts.includes(i)){act(p2FkEnd({...d,gs:i},i===d.w,i===d.w?'المزيف عرف الكلمة!':'المزيف ما عرف الكلمة'));}},
   resolve(d,picks){if(d.ph==='see')return {...d,ph:'draw',turn:d.st,rd:d.rd+1};
