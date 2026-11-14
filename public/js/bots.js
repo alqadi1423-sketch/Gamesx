@@ -265,7 +265,8 @@ GAMES.hilo.bot=(d,s,lv)=>{const cur=d.dk.slice(d.p*2,d.p*2+2);const r=rv(cur);
   if(d.stk>0){const need=d.goal-d.pts[s];const risk=1-best;const stop=lv===1?d.stk>=1+rnd(4):lv===2?(d.stk>=3||risk>.42):(d.stk>=need||risk*(d.stk+1)>best*1.1||(d.stk>=4&&risk>.3));if(stop)return botDo(d,s,'bank',0);}
   return botDo(d,s,lvRand(lv)?(Math.random()<.5?'hi':'lo'):ph>=pl?'hi':'lo',0);};
 GAMES.war.botPick=(d,s,lv)=>{const used=(S.priv[d.pl[s]]||{}).used||[];const free=[1,2,3,4,5,6,7].filter(c=>!used.includes(c));if(!free.length)return null;
-  const pr=d.prizes[d.rd];const pick=lv===1?pickR(free):free.sort((a,b)=>Math.abs(a-pr-(lv===3?rnd(2):0))-Math.abs(b-pr-(lv===3?rnd(2):0)))[0];
+  // the prize of this round is d.prize (drawn when the round starts, see more.js)
+  const pr=d.prize!=null?d.prize:4;const pick=lv===1?pickR(free):free.sort((a,b)=>Math.abs(a-pr-(lv===3?rnd(2):0))-Math.abs(b-pr-(lv===3?rnd(2):0)))[0];
   const p=S.priv[d.pl[s]]||{};S.priv[d.pl[s]]={...p,gid:d.gid,used:[...used,pick]};return pick;};
 GAMES.word.bot=(d,s,lv)=>{const F='اليمنوتبرعهدسقكحفجشصطخثزغضذظ';const left=[...F].filter(c=>!d.g.includes(c)&&ALPHA.includes(c));const c=lvRand(lv)?pickR(left):left[0];return botDo(d,s,'k',ALPHA.indexOf(c));};
 GAMES.treasure.bot=(d,s,lv)=>{const z=d.z;const free=[...d.o].map((c,i)=>c==='.'?i:-1).filter(i=>i>=0);
