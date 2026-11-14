@@ -18,6 +18,8 @@
 .card.red>.cf,.card.red .sv{color:#CC2F2A}
 .card.blk>.cf,.card.blk .sv{color:#1F3249}
 .card .cf text{font-family:'Baloo Bhaijaan 2',system-ui,sans-serif;font-weight:800;direction:ltr;unicode-bidi:bidi-override}
+/* the Arabic word on the back of the deck: the left-to-right rule above is for the corner signs (+2, +4) and would spell it backwards */
+.card.uback .cf text{direction:rtl;unicode-bidi:normal}
 .card:not(.uno):not(.uback) .cf text{fill:currentColor}
 .card .cf .cp{fill:#FFF7E3;stroke:currentColor;stroke-opacity:.45;stroke-width:.8}
 .card .cf .cl{stroke:currentColor;stroke-opacity:.3;stroke-width:.6}
