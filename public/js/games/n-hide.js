@@ -1,341 +1,445 @@
 'use strict';
 /* =====================================================================================================
-   «غميضة الحارة» (hide): the owner's own design. Street hide-and-seek on a 4×4 neighbourhood, all in turns and taps.
-   One seat seeks («الغمّاض», the next seat next round), the others hide in secret, one hider per place.
-   Each turn: the seeker secretly searches a place or guards the house; then the hiders still hidden secretly stay or
-   run home; then all is revealed. Runners reach the house (+20) unless the house was guarded (caught, −15). A hider found
-   in the searched place is caught (seeker +15, hider −15). An empty search gives a public hot/cold hint about the nearest
-   hider still hidden (Chebyshev distance 1/2/3). Once per game the seeker may «اسمع» a 2×2 square (public yes/no).
-   Searches: min(12, 6 + hiders). The game lasts 3 minutes, every step 15 seconds, hiding 25 seconds.
-   Points move with d.dsc at the round's end (the engine floors totals at 0); d.pd shows them live during the round.
+   «غميضة الحارة» (hide): the owner's street hide-and-seek, played on an illustrated night map of a Saudi حارة.
+   Built on the shared kit KH (js/kit-hara.js): the art, the kids, the footpaths, the walking and the sounds.
 
-   Secrets online: d.at (every hider's place) is masked per seat: a hider sees their own, with 4+ players also their
-   team-mates' (the hiders are one team), a caught hider's place is public; the seeker sees none. d.ch (the seeker's
-   choice this turn) is the seeker's alone until the reveal. d.tk (the place a colliding hider learnt is taken) is the
-   colliding hider's alone. Picks (places, stay/run) travel as private picks of a simultaneous round.
+   One seat seeks («الغمّاض», the next seat next round); the others hide in secret, one hider per place.
+   العدّ: the seeker covers their eyes and counts to ten while the hiders pick a spot and walk to it (25 s).
+   التفتيش, each turn: the seeker secretly searches a place, guards the house, or (once) lights a zone with «الكشاف»;
+   then every hider still hidden secretly stays, sneaks to a free neighbouring spot on the footpaths, or runs home;
+   then all is revealed: runners first (guarded: caught −15, else safe +20), then sneaks (a sneak can be heard: the
+   zone is told; near the cat it meows), then the search (found: +15/−15) and a public hot/cold hint about the nearest
+   hider by footpath steps (1 حار, 2 دافي, 3+ بارد). «اسمع» (once) tells whether anyone hides in a zone.
+   Surprises drawn by the host, each at most once a round: the cat (meows at a sneak near it), the dog (barks when the
+   seeker's secret choice is near it: a warning), «أبو سعد» at the grocery (the first search there finds nobody).
+   In the last 40 s the mother calls «العشا جاهز!»: the steps get shorter. النهاية: everyone's path on the map.
+   Searches min(12, 6 + hiders); 3 minutes; 15 s a step (10 s after the call). Points move through d.dsc.
+
+   Secrets online: d.at (places) and d.hp (each hider's walked path) are masked per seat: a hider sees their own and,
+   with 4+ players, their team-mates'; caught places are public; the seeker sees none. d.ch (the seeker's choice) is the
+   seeker's alone until the reveal. d.tk (a place taken while hiding) and d.bl (a blocked sneak) only their hider's.
    ===================================================================================================== */
-const HD_T={hide:25000,step:15000,game:180000};
+const HD_T={hide:25000,step:15000,fast:10000,game:180000,mom:40000};
 const HDN=['سطح','حوش','ورا السيارة','برميل','بقالة','دكان','صندوق','بيت مهجور','مزرعة','استراحة','خزان','تحت الدرج','مخزن','ورا التريلة','حديقة','ورا الباب'];
+const HD_HOME=16;
 const HDH=['','حار','دافي','بارد'];
-const HDHE=['','🔥','🌤','❄️'];
-const hdDist=(a,b)=>Math.max(Math.abs((a>>2)-(b>>2)),Math.abs((a&3)-(b&3)));
-// the 9 squares of 2×2 places, by their top-right place (row r, column c in reading order)
-const hdSq=k=>{const p=Math.floor(k/3)*4+k%3;return [p,p+1,p+4,p+5];};
+/* ---------- the map: where each place is, where its name goes, the footpaths, the zones ---------- */
+const HDP=[[240,50],[288,96],[262,212],[140,224],[64,168],[137,168],[18,212],[181,410],[66,422],[58,326],[252,312],[349,150],[325,314],[64,240],[298,422],[252,166],[180,272]];
+const HDLB=[[240,26],[288,134],[262,252],[140,198],[60,84],[137,108],[24,234],[181,466],[66,466],[58,374],[252,348],[322,192],[325,366],[64,284],[298,466],[238,192],[180,326]];
+const HDE=[[0,1],[0,11,[[349,60]]],[1,15],[1,11,[[330,104]]],[11,15,[[349,182],[252,182]]],[11,2,[[349,190],[300,206]]],[15,2,[[252,190]]],
+  [2,10,[[262,262]]],[2,16,[[220,244]]],[4,5,[[100,180]]],[4,6],[5,6,[[90,190]]],[5,3,[[137,200]]],[6,3,[[80,214]]],[6,13,[[30,232]]],[3,13,[[100,232]]],
+  [3,16,[[160,246]]],[13,9,[[64,290]]],[13,16,[[130,262]]],[9,8,[[24,374]]],[9,7,[[120,374]]],[8,7,[[124,428]]],[7,14,[[240,420]]],[7,16,[[230,376],[230,292]]],
+  [14,12,[[325,374]]],[12,10,[[290,330]]],[10,16,[[214,290]]]];
+const HG=KH.graph({pos:HDP,edges:HDE});
+const HDZ=[{n:'بيت الجيران',p:[0,1,11,15],poly:[[206,6],[358,6],[358,200],[206,200]]},
+  {n:'جهة البقالة',p:[4,5,6],poly:[[4,6],[156,6],[156,190],[44,190],[44,222],[4,222]]},
+  {n:'الشارع العام',p:[2,3,13],poly:[[4,228],[110,228],[110,208],[300,208],[300,236],[160,236],[160,262],[4,262]]},
+  {n:'جهة المزارع',p:[7,8,9],poly:[[4,290],[118,290],[118,378],[232,378],[232,480],[4,480]]},
+  {n:'جهة الخزان',p:[10,12,14],poly:[[226,290],[358,290],[358,480],[244,480],[244,378],[226,378]]}];
+const HDZC=[[282,100],[80,100],[200,250],[92,420],[300,420]];
+const hdZoneOf=p=>HDZ.findIndex(z=>z.p.includes(p));
+const hdDist=(a,b)=>HG.D[a][b];
+const hdHint=x=>x<=1?1:x===2?2:3;
 const hdMaxN=n=>Math.min(12,6+(n-1));
 const hdFmt=ms=>{const t=Math.ceil(Math.max(0,ms)/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
 const hdClock=d=>d.end>0?Math.max(0,d.end-Date.now()):Math.max(0,d.gl);
 const hdHidden=d=>d.pl.map((_,s)=>s).filter(s=>s!==d.sk&&d.hs[s]==='h');
 const hdLocal=()=>S.mode==='local';
-
-/* ---------- the little drawings of the neighbourhood (40×40 each, a few shapes) ---------- */
-const HDI=[
-  // سطح: a roof with its parapet, a dish and the moon
-  '<path d="M3 31h34v6H3z" fill="#B97A43"/><path d="M5 19h30v12H5z" fill="#EBC995"/><path d="M5 15h5v4H5zm8.3 0h5v4h-5zm8.4 0h5v4h-5zm8.3 0h5v4h-5z" fill="#C98B4E"/><path d="M9 25h7v6H9z" fill="#8A5A2B"/><path d="M27 13a5 5 0 0 1 7-6" stroke="#9AA5B1" stroke-width="2.4" fill="none"/><circle cx="33" cy="6" r="3" fill="#F7D774"/>',
-  // حوش: a courtyard wall with an arched gate and a tree over it
-  '<circle cx="29" cy="11" r="7" fill="#5DAA5A"/><path d="M3 15h34v22H3z" fill="#E2B57A"/><path d="M3 15h34v3H3z" fill="#C98B4E"/><path d="M14 37V26a6 6 0 0 1 12 0v11z" fill="#6E4524"/><path d="M20 26v11" stroke="#8A5A2B" stroke-width="1.5"/>',
-  // ورا السيارة: a red car
-  '<path d="M3 29v-7l6-8h19l7 8h2v7z" fill="#E5534B"/><path d="M11 16h7v6H8zm10 0h5.5l4.5 6H21z" fill="#CFEAF8"/><path d="M3 25h34" stroke="#B83A33" stroke-width="1.5"/><circle cx="11" cy="30" r="4.2" fill="#2D3640"/><circle cx="29" cy="30" r="4.2" fill="#2D3640"/><circle cx="11" cy="30" r="1.6" fill="#AEB9C4"/><circle cx="29" cy="30" r="1.6" fill="#AEB9C4"/>',
-  // برميل: a blue barrel
-  '<rect x="10" y="7" width="20" height="29" rx="5" fill="#3E7CB1"/><path d="M10 15h20M10 28h20" stroke="#2C5A84" stroke-width="2.6"/><ellipse cx="20" cy="8.5" rx="9.5" ry="2.6" fill="#6BA6D8"/><path d="M14 18v8" stroke="#79B2E2" stroke-width="2" stroke-linecap="round"/>',
-  // بقالة: a grocery with a striped awning
-  '<rect x="5" y="16" width="30" height="21" fill="#F6E7C8"/><path d="M3 9h34l-2 8H5z" fill="#3FAE5C"/><path d="M10 9l-1 8m8-8v8m7-8l1 8m7-8l1.5 8" stroke="#fff" stroke-width="2.4"/><rect x="8" y="22" width="9" height="15" fill="#7A4E2A"/><rect x="20" y="22" width="12" height="8" fill="#BFE3F5"/><path d="M22 27h8" stroke="#E5534B" stroke-width="2"/>',
-  // دكان: a small shop with its shutter half down and a yellow sign
-  '<rect x="5" y="13" width="30" height="24" fill="#D9A86A"/><rect x="8" y="19" width="24" height="18" fill="#3B2F2A"/><path d="M8 19h24v9H8z" fill="#9AA5B1"/><path d="M8 22h24M8 25h24" stroke="#7D8894" stroke-width="1.4"/><rect x="9" y="6" width="22" height="7" rx="1.5" fill="#F0B429"/><path d="M13 9.5h14" stroke="#8A5A2B" stroke-width="1.6"/>',
-  // صندوق: a wooden crate
-  '<rect x="7" y="12" width="26" height="23" fill="#D69A5C"/><path d="M8 13l24 21M32 13L8 34" stroke="#9A6532" stroke-width="2.6"/><rect x="7" y="12" width="26" height="23" fill="none" stroke="#8A5A2B" stroke-width="3"/>',
-  // بيت مهجور: a cracked old house, a boarded window
-  '<path d="M5 37V18L20 7l15 11v19z" fill="#A89584"/><path d="M5 18L20 7l15 11" stroke="#6B5B4E" stroke-width="2.2" fill="none"/><path d="M10 21h8v7h-8z" fill="#3B2F2A"/><path d="M9 22l10 5M9 27l10-5" stroke="#C9B49B" stroke-width="1.8"/><path d="M24 26h7v11h-7z" fill="#5A463A"/><path d="M28 12l-2 5 3 3" stroke="#6B5B4E" stroke-width="1.4" fill="none"/>',
-  // مزرعة: a palm over a green field
-  '<path d="M2 33h36v5H2z" fill="#8DBF55"/><path d="M19.5 34c1.2-8 1.2-15 0-21" stroke="#8A5A2B" stroke-width="3.2" fill="none"/><path d="M19.5 13c-6-4-12-3-15.5 1.5 5-1.2 10.5 0 15.5 2zm0 0c6-4 12-3 15.5 1.5-5-1.2-10.5 0-15.5 2zm0 0c-3-6-8-8.5-12.5-7.5 4.5 1 8.5 4 12.5 8.5zm0 0c3-6 8-8.5 12.5-7.5-4.5 1-8.5 4-12.5 8.5z" fill="#3FAE5C"/><circle cx="18" cy="15" r="1.6" fill="#B9742F"/><circle cx="21" cy="15.5" r="1.6" fill="#B9742F"/>',
-  // استراحة: a tent with string lights
-  '<path d="M3 35L20 9l17 26z" fill="#F2E3C6"/><path d="M20 9l-6 26h12z" fill="#C98B4E"/><path d="M6 21q14 9 28 0" stroke="#6E4524" stroke-width="1.2" fill="none"/><circle cx="11" cy="24" r="1.9" fill="#F7D774"/><circle cx="20" cy="25.6" r="1.9" fill="#EC6158"/><circle cx="29" cy="24" r="1.9" fill="#4AB1E8"/>',
-  // خزان: a water tank on legs
-  '<path d="M11 24l-4 13M29 24l4 13M15 24l-1 13M25 24l1 13M9 31h22" stroke="#7A8794" stroke-width="2.2"/><rect x="7" y="7" width="26" height="18" rx="9" fill="#E3EAF1"/><path d="M7 16h26" stroke="#AEB9C4" stroke-width="2"/><path d="M12 11h6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
-  // تحت الدرج: stairs and the dark nook under them
-  '<path d="M3 37h34V7h-8v7.5h-8.7V22h-8.6v7.5H3z" fill="#DDB07A"/><path d="M3 37h17.3V22h-8.6v7.5H3z" fill="#4A3424" opacity=".55"/><path d="M29 7h8M20.3 14.5h8.7M11.7 22h8.6M3 29.5h8.7" stroke="#8A5A2B" stroke-width="2.4"/>',
-  // مخزن: a store-house with a rolling door
-  '<path d="M3 37V16l17-9 17 9v21z" fill="#B7C3CF"/><path d="M3 16l17-9 17 9" stroke="#7D8894" stroke-width="2.2" fill="none"/><rect x="10" y="20" width="20" height="17" fill="#7D8894"/><path d="M10 24h20M10 28h20M10 32h20" stroke="#5E6873" stroke-width="1.5"/>',
-  // ورا التريلة: a truck with its trailer
-  '<rect x="2" y="11" width="25" height="17" rx="1.5" fill="#F0B429"/><path d="M5 15h19" stroke="#D99A14" stroke-width="2"/><path d="M27 17h6l5 6v5H27z" fill="#2F80ED"/><rect x="29" y="18.5" width="4.5" height="4.5" fill="#CFEAF8"/><circle cx="8" cy="30" r="3.6" fill="#2D3640"/><circle cx="19" cy="30" r="3.6" fill="#2D3640"/><circle cx="32" cy="30" r="3.6" fill="#2D3640"/>',
-  // حديقة: a tree, a bench and a flower
-  '<circle cx="13" cy="14" r="9.5" fill="#4CB97F"/><circle cx="9" cy="11" r="3" fill="#6FD09A"/><rect x="11.5" y="20" width="3" height="16" fill="#8A5A2B"/><rect x="20" y="25" width="17" height="3.2" rx="1" fill="#C98B4E"/><path d="M22 28v8M35 28v8" stroke="#8A5A2B" stroke-width="2.2"/><circle cx="31" cy="12" r="2.6" fill="#E57AAE"/><path d="M31 15v7" stroke="#3FAE5C" stroke-width="1.8"/>',
-  // ورا الباب: a wooden door left ajar
-  '<rect x="9" y="3" width="22" height="34" rx="2" fill="#5A3A1E"/><path d="M11 5h18v32H11z" fill="#9A6532"/><rect x="13.5" y="8" width="13" height="11" rx="1" fill="#B47A40"/><rect x="13.5" y="22" width="13" height="12" rx="1" fill="#B47A40"/><circle cx="26" cy="21" r="1.7" fill="#F0B429"/>'];
-const hdIco=p=>`<svg viewBox="0 0 40 40" aria-hidden="true">${HDI[p]}</svg>`;
-const HD_HOUSE='<svg viewBox="0 0 64 44" aria-hidden="true"><path d="M6 42V19L32 4l26 15v23z" fill="#F3D9A8"/><path d="M2 21L32 3l30 18" stroke="#B97A43" stroke-width="4" fill="none" stroke-linecap="round"/><rect x="25" y="22" width="14" height="20" rx="7" fill="#FFD36B"/><rect x="27.5" y="25" width="9" height="17" rx="4.5" fill="#FFE9A8"/><rect x="10" y="24" width="9" height="8" rx="1.5" fill="#FFD36B"/><rect x="45" y="24" width="9" height="8" rx="1.5" fill="#FFD36B"/></svg>';
-const HD_EYE='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z" fill="#fff"/><circle cx="12" cy="12" r="3.6" fill="#2D3640"/><circle cx="13.2" cy="10.8" r="1.1" fill="#fff"/></svg>';
+const hdStepT=d=>d.mo?HD_T.fast:HD_T.step;
 
 /* ---------- who sees what ---------- */
-// may seat `me` see where seat s hides? (the seeker never; a hider their own place and, with 4+ players, their team-mates')
-function hdSees(d,me,s){if(d.win!=null)return true;if(s===d.sk)return false;if(d.hs[s]==='c')return true;if(me<0||me>=d.pl.length)return false;
+function hdSees(d,me,s){if(d.win!=null)return true;if(s===d.sk)return false;if(d.hs[s]==='c'||d.hs[s]==='g'||d.hs[s]==='s')return true;if(me<0||me>=d.pl.length)return false;
   if(s===me)return true;return me!==d.sk&&d.pl.length>=4;}
-// must seat s hand in a pick in this simultaneous step?
 function hdNeed(d,s){if(d.win!=null||s===d.sk||d.out[s]==='1'||d.hs[s]!=='h')return false;return d.ph==='hide'?d.at[s]<0:d.ph==='rn';}
-// a seat with nothing to choose in a simultaneous step passes by itself (the seeker, a placed hider, one already home)
 const hdAuto=(d,s)=>d.win==null&&(d.ph==='hide'||d.ph==='rn')&&d.out[s]!=='1'&&!hdNeed(d,s);
+// where hider s may sneak to: a neighbour on the footpaths (never the house; the house is a run)
+const hdNbr=p=>p>=0&&p<16?HG.adj[p].filter(q=>q<16):[];
 
 /* ---------- the clocks ---------- */
-// online the host fixes the step's deadline now; on one phone it starts when the player holding it sees the screen
 const hdArm=(d,T)=>hdLocal()?{...d,dl:0,dv:-2,T}:{...d,dl:Date.now()+T,dv:-1,T};
-// on one phone the 3 minutes run only while the seeker chooses
 const hdPause=d=>hdLocal()&&d.end>0?{...d,gl:Math.max(0,d.end-Date.now()),end:0}:d;
 
 /* ---------- the rules ---------- */
-function hdSeek(d){const x={...d,ph:'sk',turn:d.sk,ch:-1};if(!hdLocal()&&!(x.end>0))x.end=Date.now()+HD_T.game;return hdArm(x,HD_T.step);}
-// the hiding step: lower seats keep a place two hiders chose; the other one is told (only them) and picks again
-function hdPlace(d,picks){const n=d.pl.length,at=d.at.slice(),tk=Array(n).fill(-1);let again=false;const used=new Set(at.filter(p=>p>=0));
+function hdSeek(d){const x={...d,ph:'sk',turn:d.sk,ch:-1};if(!hdLocal()&&!(x.end>0))x.end=Date.now()+HD_T.game;return hdArm(x,hdStepT(x));}
+function hdPlace(d,picks){const n=d.pl.length,at=d.at.slice(),tk=Array(n).fill(-1),hp=d.hp.map(x=>x.slice());let again=false;const used=new Set(at.filter(p=>p>=0));
   const need=d.pl.map((_,s)=>hdNeed(d,s));
   for(let s=0;s<n;s++){if(!need[s])continue;const p=picks[s];if(!(Number.isInteger(p)&&p>=0&&p<16))continue;if(used.has(p)){tk[s]=p;again=true;}else{at[s]=p;used.add(p);}}
-  // a hider who gave no place (time ran out) gets a free one at random
   for(let s=0;s<n;s++)if(need[s]&&at[s]<0&&tk[s]<0){const free=[...Array(16).keys()].filter(p=>!used.has(p));const p=free[rnd(free.length)];at[s]=p;used.add(p);}
-  const nd={...d,at,tk,rd:d.rd+1};
+  for(let s=0;s<n;s++)if(need[s]&&at[s]>=0)hp[s]=[HD_HOME,at[s]];
+  const nd={...d,at,tk,hp,rd:d.rd+1};
   if(again)return hdArm(nd,HD_T.step);
   return hdSeek(nd);}
-// the seeker decides (a place 0..15, the house 16): secret until the hiders still hidden choose
-function hdChoose(d,ch){const x=hdPause(d);return hdArm({...x,ph:'rn',ch,rd:d.rd+1,turn:d.sk},HD_T.step);}
-// «اسمع»: is anyone hiding in this 2×2 square? (public; the seeker still has to search or guard)
-function hdListen(d,k){const q=hdSq(k);const hid=hdHidden(d);return {...d,lq:k,lr:hid.some(s=>q.includes(d.at[s]))?1:0,lh:hid.length,lk:d.ek+1};}
-// the reveal: runners first, then the search, then the hint
-function hdTurn(d,ch,runs){const sk=d.sk,pd=d.pd.slice();let hs=d.hs,out=d.out,lg=d.lg;const ev={k:d.ek+1,p:ch,f:-1,s:[],g:[],h:0};
-  if(ch>=0)d.pl.forEach((_,s)=>{if(!runs[s]||!hdNeed(d,s))return;
-    if(ch===16){hs=setAt(hs,s,'g');out=setAt(out,s,'1');pd[sk]+=15;pd[s]-=15;ev.g.push(s);}else{hs=setAt(hs,s,'s');pd[s]+=20;ev.s.push(s);}});
-  if(ch>=0&&ch<16){const f=d.pl.findIndex((_,s)=>s!==sk&&hs[s]==='h'&&d.at[s]===ch);
-    if(f>=0){hs=setAt(hs,f,'c');out=setAt(out,f,'1');pd[sk]+=15;pd[f]-=15;ev.f=f;}
-    else{const left=d.pl.map((_,s)=>s).filter(s=>s!==sk&&hs[s]==='h'&&d.at[s]>=0);ev.h=left.length?Math.min(3,...left.map(s=>hdDist(ch,d.at[s]))):4;}
-    lg=[...lg,[ch,f>=0?0:ev.h,d.pl.filter((_,s)=>s!==sk&&hs[s]==='h').length]];}
-  const nd={...d,hs,out,pd,lg,ev,ek:ev.k,n:d.n+1,ch:-1,gc:d.gc+(ch===16?1:0),gs:ch===16&&!ev.g.length?(d.gs||0)+1:0,to:d.to+(ch<0?1:0)};
+// the seeker decides: a place 0..15, the house 16, «الكشاف» on zone z = 100+z. The dog barks once when the choice is near it
+function hdChoose(d,ch){const x=hdPause(d);let bk=-1,dk=d.dk;
+  if(ch>=0&&ch<16&&!d.dk&&d.dg>=0&&hdDist(ch,d.dg)<=1){bk=hdZoneOf(d.dg);dk=1;}
+  return hdArm({...x,ph:'rn',ch,bk,dk,rd:d.rd+1,turn:d.sk},hdStepT(d));}
+// «اسمع»: is anyone hiding in this zone? (public; the seeker still has to choose)
+function hdListen(d,z){const hid=hdHidden(d);return {...d,lq:z,lr:hid.some(s=>HDZ[z].p.includes(d.at[s]))?1:0,lh:hid.length,lk:d.ek+1,lt:d.n};}
+/* the reveal. picks per seat: 0 stay, 1 run home, 2+p sneak to p. Runners first, then sneaks, then the search */
+function hdTurn(d,ch,picks){const sk=d.sk,n=d.pl.length,pd=d.pd.slice(),at=d.at.slice(),hp=d.hp.map(x=>x.slice()),bl=Array(n).fill(-1);let hs=d.hs,out=d.out,lg=d.lg,cu=d.cu,gu=d.gu,tc=d.tc,sil=-1,sp=d.sp;
+  const ev={k:d.ek+1,p:ch,f:-1,s:[],g:[],h:0,fs:-1,ft:'',gr:0,tz:-1,tp:-1,bk:d.bk,mv:0};
+  const pk=s=>picks&&Number.isInteger(picks[s])?picks[s]:0;
+  if(ch>=0){
+    // runners
+    for(let s=0;s<n;s++){if(!hdNeed(d,s)||pk(s)!==1)continue;hp[s].push(HD_HOME);
+      if(ch===HD_HOME){hs=setAt(hs,s,'g');out=setAt(out,s,'1');pd[sk]+=15;pd[s]-=15;ev.g.push(s);}else{hs=setAt(hs,s,'s');pd[s]+=20;ev.s.push(s);}}
+    // sneaks: to a free neighbouring place (a place someone stays in, or another sneaker claimed first, blocks it)
+    const stay=new Set(),claim=new Set(),noisy=[];
+    for(let s=0;s<n;s++)if(s!==sk&&hs[s]==='h'&&at[s]>=0)stay.add(at[s]);
+    for(let s=0;s<n;s++){const q=pk(s)-2;if(!hdNeed(d,s)||hs[s]!=='h'||q<0)continue;const from=at[s];
+      if(!hdNbr(from).includes(q)||stay.has(q)||claim.has(q)){bl[s]=q;continue;}
+      claim.add(q);at[s]=q;hp[s].push(q);ev.mv++;
+      const nearCat=d.ct>=0&&!cu&&(hdDist(from,d.ct)<=1||hdDist(q,d.ct)<=1);
+      if(nearCat&&Math.random()<.75){cu=1;noisy.push([q,'cat']);}else if(Math.random()<.35)noisy.push([q,'step']);}
+    if(noisy.length){const c=noisy.find(x=>x[1]==='cat')||noisy[rnd(noisy.length)];ev.fs=hdZoneOf(c[0]);ev.ft=c[1];}
+    // the search, the guard or the torch
+    if(ch===HD_HOME)sp=HD_HOME;
+    else if(ch>=100){const z=ch-100;tc=1;const inz=d.pl.map((_,s)=>s).filter(s=>s!==sk&&hs[s]==='h'&&HDZ[z].p.includes(at[s]));ev.tz=z;
+      if(inz.length){ev.tp=at[inz[rnd(inz.length)]];sil=ev.tp;}}
+    else if(ch<16){sp=ch;const hid=d.pl.map((_,s)=>s).filter(s=>s!==sk&&hs[s]==='h');
+      if(ch===4&&d.gr&&!gu){gu=1;ev.gr=1;lg=[...lg,[ch,-2,hid.length,d.n]];}
+      else{const f=hid.find(s=>at[s]===ch);
+        if(f!=null){hs=setAt(hs,f,'c');out=setAt(out,f,'1');pd[sk]+=15;pd[f]-=15;ev.f=f;}
+        else{const left=hid;ev.h=left.length?hdHint(Math.min(...left.map(s=>hdDist(ch,at[s])))):4;}
+        lg=[...lg,[ch,f!=null?0:ev.h,hid.length,d.n]];}}}
+  const nd={...d,at,hp,bl,hs,out,pd,lg,ev,ek:ev.k,cu,gu,tc,sil,sp,bk:-1,n:d.n+1,ch:-1,gc:d.gc+(ch===HD_HOME?1:0),gs:ch===HD_HOME&&!ev.g.length?(d.gs||0)+1:0,to:d.to+(ch<0?1:0)};
   if(!hdHidden(nd).length)return hdEnd(nd,'');
   if(nd.n>=nd.N)return hdEnd(nd,'خلصت الفتشات');
   return hdSeek(nd);}
-/* the round's end: the seeker who caught everyone gets +10 more; else every hider still hidden gets +15 and the hiders
-   win (with 4+ players the whole team, with 3 the ones not caught). d.dsc moves the session points */
 function hdEnd(d,why){const sk=d.sk,pd=d.pd.slice(),H=d.pl.map((_,s)=>s).filter(s=>s!==sk);
   const alive=H.filter(s=>d.hs[s]==='h'||d.hs[s]==='s'),caught=H.filter(s=>d.hs[s]==='c'||d.hs[s]==='g');let win,wins;
   if(!alive.length){if(!caught.length)return {...d,ph:'end',win:'d',why,dl:0,end:0};pd[sk]+=10;win=sk;wins=[sk];}
   else{H.forEach(s=>{if(d.hs[s]==='h')pd[s]+=15;});wins=d.pl.length>=4?H.filter(s=>d.hs[s]!=='x'):alive;win=alive[0];}
-  return {...d,ph:'end',pd,dsc:pd,win,wins,why,dl:0,end:0,ch:-1};}
+  return {...d,ph:'end',pd,dsc:pd,win,wins,why,dl:0,end:0,ch:-1,bk:-1};}
 
-/* ---------- bots ---------- */
-// this phone's memory for the session: where each seeker searched, how often they guard, where each hider hid, how often hiders run
+/* ---------- bots (they read only GAMES.hide.mask(d, seat)) ---------- */
 function hdMem(){return S.hdMem||(S.hdMem={sk:{},hp:{},run:{n:0,r:0},seen:{},ns:0});}
-/* the seeker's map: for every place the chance that a hider still hidden is there, from what everyone can see
-   (empty searches, hot/cold, «اسمع»). Every hint says all the hiders hidden then are at least that far, and one of them
-   exactly that far (sure while nobody has left since). The hard seeker also leans on where these hiders liked to hide */
-function hdProb(d,lv){const key=d.gid+':'+d.n+':'+d.lq+':'+d.hs+':'+lv;if(S.hdPC&&S.hdPC.k===key)return S.hdPC.r;const r=hdProb0(d,lv);S.hdPC={k:key,r};return r;}
-function hdProb0(d,lv){const hid=hdHidden(d),h=hid.length,P=Array(16).fill(0);if(!h)return {P,A:[],h};
-  const done=new Set(d.lg.map(e=>e[0])),hints=d.lg.filter(e=>e[1]>=1&&e[1]<=3),sq=d.lq>=0?hdSq(d.lq):null;
-  let A=[];for(let p=0;p<16;p++){if(done.has(p))continue;if(hints.some(e=>hdDist(e[0],p)<e[1]))continue;if(sq&&!d.lr&&sq.includes(p))continue;A.push(p);}
-  if(A.length<h)A=[...Array(16).keys()].filter(p=>!done.has(p));
-  const w=Array(16).fill(1);
-  if(lv>=3){const M=hdMem();hid.forEach(s=>{const hp=M.hp[d.pl[s]];if(!hp)return;const t=hp.reduce((a,b)=>a+b,0);if(t>=2)for(let p=0;p<16;p++)w[p]+=1.2*hp[p]/t;});}
-  const wit=hints.map(e=>({set:A.filter(p=>hdDist(p,e[0])===e[1]),hard:e[2]===h}));
-  if(sq&&d.lr)wit.push({set:A.filter(p=>sq.includes(p)),hard:d.lh===h});
-  let tot=0,nodes=0;const acc=Array(16).fill(0),cur=[];
-  const rec=(i,wt)=>{if(++nodes>60000)return;
-    if(cur.length===h){let f=wt;for(const W of wit)if(!cur.some(p=>W.set.includes(p))){if(W.hard)return;f*=.3;}tot+=f;for(const p of cur)acc[p]+=f;return;}
-    for(let j=i;j<=A.length-(h-cur.length);j++){cur.push(A[j]);rec(j+1,wt*w[A[j]]);cur.pop();}};
-  rec(0,1);
-  if(tot>0)for(let p=0;p<16;p++)P[p]=acc[p]/tot;else A.forEach(p=>{P[p]=h/A.length;});
-  return {P,A,h};}
+/* what the public facts say: for every place, how likely a hider still hidden is there (summing to the hiders left).
+   Hints age: hiders can sneak one step a turn, so an old hint allows that many steps of slack */
+function hdBelief(v,lv){const key=v.gid+':'+v.n+':'+v.lq+':'+v.hs+':'+v.sil+':'+(v.ev&&v.ev.k)+':'+lv;if(S.hdPC&&S.hdPC.k===key)return S.hdPC.r;
+  const hid=hdHidden(v),h=hid.length,w=Array(16).fill(1);
+  for(const [p,code,hh,t] of v.lg){const age=Math.max(1,v.n-t),slack=age-1;
+    if(code===-2){w[p]*=1.5;continue;}if(code===0)continue;
+    w[p]*=slack===0?.03:Math.min(1,.2+.25*slack);
+    for(let q=0;q<16;q++){if(q===p)continue;const dd=hdDist(p,q);
+      if(dd<code-slack)w[q]*=.05;else if(code<3&&Math.abs(dd-code)<=slack)w[q]*=1+2.4/(Math.max(1,hh)*(1+slack));else if(code===3&&dd<3)w[q]*=.4;}}
+  if(v.lq>=0){const age=v.n-(v.lt||0),zp=HDZ[v.lq].p;for(let q=0;q<16;q++){if(zp.includes(q))w[q]*=v.lr?1+3/(h||1)/(1+age):Math.min(1,.05+.3*age);}}
+  const e=v.ev;if(e&&e.k===v.ek&&e.fs>=0)for(const q of HDZ[e.fs].p)w[q]*=2.4;
+  if(v.sil>=0){w[v.sil]*=30;for(const q of hdNbr(v.sil))w[q]*=3;}
+  if(lv>=3){const M=hdMem();hid.forEach(s=>{const hp=M.hp[v.pl[s]];if(!hp)return;const t=hp.reduce((a,b)=>a+b,0);if(t>=2)for(let p=0;p<16;p++)w[p]*=1+1.2*hp[p]/t;});}
+  const tot=w.reduce((a,b)=>a+b,0),P=w.map(x=>tot>0?Math.min(1,x/tot*h):0);const r={P,h};S.hdPC={k:key,r};return r;}
 const hdArgmax=(xs,f)=>{let b=-Infinity,o=[];for(const x of xs){const v=f(x);if(v>b+1e-9){b=v;o=[x];}else if(Math.abs(v-b)<=1e-9)o.push(x);}return o.length?o[rnd(o.length)]:null;};
 const hdWPick=(xs,f)=>{const w=xs.map(f),t=w.reduce((a,b)=>a+b,0);if(!(t>0))return xs[rnd(xs.length)];let r=Math.random()*t;for(let i=0;i<xs.length;i++){r-=w[i];if(r<=0)return xs[i];}return xs[xs.length-1];};
-// how likely this seeker guards the house this turn, as a hider reads it: more while many hiders still have their run,
-// and what this seeker did this round and in earlier rounds on this phone
 function hdGuardP(d){const m=hdMem().sk[d.pl[d.sk]],h=hdHidden(d).length;let g=.08+.06*Math.min(h,6);
   if(m&&m.t){const w=m.t/(m.t+5);g=(1-w)*g+w*(m.g+.3)/(m.t+.6);}if(d.n)g=.7*g+.3*d.gc/d.n;if(d.N-d.n<=1)g+=.06;return Math.max(.04,Math.min(.85,g));}
-// the hiders' rule for running now (q: the chance the seeker searches their place now, g: that it guards). Staying keeps
-// the run for later, so mid-round a hider thinks of running only when the seeker is closing in (and then a sharp one
-// runs only half the time); on the last search it weighs +20/−15 for running against +15 for lasting
 const hdRunX=(q,g,last,lv)=>last?(20-35*g)-(15-30*q*(1-g)):q*(1-g)-g*(lv===3?.9:1.1);
-const hdAim=(P,C)=>{const sum=C.reduce((a,p)=>a+Math.pow(P[p],3),0)||1;return p=>C.includes(p)?Math.pow(P[p],3)/sum:0;};
-/* the seeker bot: «اسمع» while its map is flat. The hard one reads the hiders' minds: from the same public facts it
-   predicts which places hold a hider about to run, and weighs guarding the house (the runners it would catch) against
-   searching (a hider who stays). It does not keep guarding when guarding caught nobody */
-function hdSeekBot(d,s,lv){const v=GAMES.hide.mask(d,s),{P,A,h}=hdProb(v,lv),rem=v.N-v.n;
-  const C=A.length?A:[...Array(16).keys()].filter(p=>!v.lg.some(e=>e[0]===p));const mx=Math.max(0,...C.map(p=>P[p]));
-  if(v.lq<0&&rem>=2&&C.length>4){const flat=mx<1.35*h/C.length;
-    if(lv===1?Math.random()<.15:flat&&Math.random()<(lv===3?.9:.5)){
-      const k=lv===1?rnd(9):hdArgmax([...Array(9).keys()],k=>-Math.abs(.5-(1-hdSq(k).reduce((a,p)=>a*(1-Math.min(.98,P[p])),1)))+Math.random()*.02);
-      return hdListen(d,k);}}
-  if(lv===1){if(h>=1&&Math.random()<.07)return hdChoose(d,16);const p=Math.random()<.5?C[rnd(C.length)]:hdWPick(C,x=>P[x]+1e-6);return hdChoose(d,p==null?C[0]:p);}
-  const M=hdMem(),g=hdGuardP(v),aim=hdAim(P,C),last=rem<=1||hdClock(v)<16000;
+const hdAim=P=>{const sum=P.reduce((a,x)=>a+Math.pow(x,3),0)||1;return p=>Math.pow(P[p],3)/sum;};
+const hdZoneMass=(P,z)=>1-HDZ[z].p.reduce((a,p)=>a*(1-Math.min(.98,P[p])),1);
+function hdSeekBot(d,s,lv){const v=GAMES.hide.mask(d,s),{P,h}=hdBelief(v,lv),rem=v.N-v.n,all=[...Array(16).keys()];
+  const mx=Math.max(...P),flat=mx<1.5*h/16;
+  if(v.lq<0&&rem>=2&&(lv===1?Math.random()<.12:flat&&Math.random()<(lv===3?.85:.5))){
+    const z=lv===1?rnd(HDZ.length):hdArgmax([...HDZ.keys()],z=>-Math.abs(.5-hdZoneMass(P,z))+Math.random()*.02);return hdListen(d,z);}
+  if(!v.tc&&rem>=3&&h>=1){const zb=hdArgmax([...HDZ.keys()],z=>hdZoneMass(P,z));
+    if(lv===1?Math.random()<.06:lv===2?(flat&&Math.random()<.25):(mx<.45&&hdZoneMass(P,zb)>.6&&Math.random()<.7))return hdChoose(d,100+zb);}
+  if(lv===1){if(h>=1&&Math.random()<.07)return hdChoose(d,HD_HOME);const p=Math.random()<.5?rnd(16):hdWPick(all,x=>P[x]+1e-6);return hdChoose(d,p);}
+  const M=hdMem(),g=hdGuardP(v),aim=hdAim(P),last=rem<=1||hdClock(v)<16000;
   const base=Math.max(.03,Math.min(.5,(M.run.r+.5)/(M.run.n+8)))*(last?1.6:1);
   const rp=p=>Math.min(.9,hdRunX(aim(p),g,last,3)>0?(last?.8:.5):base);
-  let gv=C.reduce((a,p)=>a+P[p]*rp(p),0);if((v.gs||0)>=2)gv*=.45;
-  const best=hdArgmax(C,p=>P[p]*(1-rp(p))+(lv===2?Math.random()*.08:0));const sv=best==null?0:P[best]*(1-rp(best))+(rem>2?.06:0);
-  if(h>=1&&(lv===3?gv>sv:gv>sv*1.35)!==(Math.random()<(lv===3?.08:.15)))return hdChoose(d,16);
-  return hdChoose(d,best==null?C[0]:best);}
-// a hider bot hides away from where this seeker likes to search, varies its own habits and spreads from its team-mates
+  let gv=all.reduce((a,p)=>a+P[p]*rp(p),0);if((v.gs||0)>=2)gv*=.45;
+  const best=hdArgmax(all,p=>P[p]*(1-rp(p))+(lv===2?Math.random()*.08:0));const sv=P[best]*(1-rp(best))+(rem>2?.06:0);
+  if(h>=1&&(lv===3?gv>sv:gv>sv*1.35)!==(Math.random()<(lv===3?.08:.15)))return hdChoose(d,HD_HOME);
+  return hdChoose(d,best);}
 function hdHideBot(d,s,lv){const v=GAMES.hide.mask(d,s),M=hdMem(),m=M.sk[d.pl[d.sk]],mine=M.hp[d.pl[s]];
   const busy=new Set(v.at.filter((p,x)=>p>=0&&x!==s));if(v.tk[s]>=0)busy.add(v.tk[s]);
   const free=[...Array(16).keys()].filter(p=>!busy.has(p));if(!free.length)return rnd(16);if(lv===1)return free[rnd(free.length)];
   const mates=v.at.filter((p,x)=>p>=0&&x!==s&&x!==d.sk),mt=mine?mine.reduce((a,b)=>a+b,0):0;
   return hdArgmax(free,p=>{let x=Math.random()*(lv===3?1:3);if(m&&m.t)x-=(lv===3?7:3)*m.p[p]/m.t;if(mt)x-=(lv===3?3:1.5)*mine[p]/mt;
-    if(mates.length)x+=.3*Math.min(...mates.map(q=>hdDist(p,q)));return x;});}
-// a hider bot stays or runs by the rule above, reading the seeker's map from the public facts
-function hdRunBot(d,s,lv){const v=GAMES.hide.mask(d,s),my=v.at[s];if(my<0)return 0;if(lv===1)return Math.random()<.13?1:0;
-  const {P,A}=hdProb(v,2),C=A.length?A:[my],rem=v.N-v.n,last=rem<=1||hdClock(v)<16000;
-  let x=hdRunX(hdAim(P,C)(my),hdGuardP(v),last,lv);if(lv===2)x+=(Math.random()-.5)*(last?10:.3);
-  // cornered mid-round, a sharp hider keeps the seeker guessing: a seeker who expects the run guards the house
-  return x>0&&(last||Math.random()<(lv===3?.5:.75))?1:0;}
+    if(mates.length)x+=.3*Math.min(...mates.map(q=>hdDist(p,q)));if(lv===3){x+=.15*hdNbr(p).length;if(p===4&&v.gr)x+=.6;if(v.ct>=0&&hdDist(p,v.ct)<=1)x-=.4;}return x;});}
+// stay (0), run (1) or sneak (2+p): a bot sneaks away when the seeker gets warm around it
+function hdRunBot(d,s,lv){const v=GAMES.hide.mask(d,s),my=v.at[s];if(my<0)return 0;
+  const known=new Set(v.at.filter((p,x)=>p>=0&&x!==s&&x!==v.sk&&v.hs[x]==='h'));const opts=hdNbr(my).filter(q=>!known.has(q));
+  if(lv===1){const r=Math.random();if(r<.12)return 1;if(r<.24&&opts.length)return 2+opts[rnd(opts.length)];return 0;}
+  const {P}=hdBelief(v,2),rem=v.N-v.n,last=rem<=1||hdClock(v)<16000;
+  let x=hdRunX(hdAim(P)(my),hdGuardP(v),last,lv);if(lv===2)x+=(Math.random()-.5)*(last?10:.3);
+  if(x>0&&(last||Math.random()<(lv===3?.5:.75)))return 1;
+  const warm=(v.sp>=0&&v.sp<16&&hdDist(v.sp,my)<=1)||(v.bk>=0&&HDZ[v.bk].p.includes(my))||v.sil===my||P[my]>.45;
+  if(warm&&opts.length&&Math.random()<(lv===3?.85:.6)){
+    const q=hdArgmax(opts,q=>-P[q]*3+(v.sp>=0?.4*hdDist(v.sp,q):0)-(v.ct>=0&&!v.cu&&hdDist(q,v.ct)<=1?1.2:0)-(v.sil===q?5:0)+Math.random()*(lv===3?.2:.8));return 2+q;}
+  return 0;}
 
 /* ---------- drawing ---------- */
-const hdName=p=>p===16?'البيت':HDN[p]||'';
-function hdKid(d,s,cls){return `<i class="hd-kid ${cls||''}" style="--c:${col(d,s)}">${shapeW(d.pl[s])}</i>`;}
-// the evening sky over the map: the 3 minutes, the searches used, «اسمع», and the step's shrinking bar
-function hdSky(d){const fin=d.win!=null,l=hdClock(d),run=(d.ph==='sk'||d.ph==='rn')&&!fin,on=!fin&&d.dl>0;
+const hdName=p=>p===HD_HOME?'البيت':p>=100?'«'+HDZ[p-100].n+'»':HDN[p]||'';
+const HDW=360,HDHt=484;
+function hdArt(){const A=KH.art;let s=A.defs()+`<rect width="${HDW}" height="${HDHt}" fill="${KH.C.ground}"/>`;
+  const blk=(x,y,w,h)=>`<rect x="${x-4}" y="${y-4}" width="${w+8}" height="${h+8}" rx="12" fill="${KH.C.walk}"/><rect x="${x-4}" y="${y-4}" width="${w+8}" height="${h+8}" rx="12" fill="none" stroke="#F0B429" stroke-width="3" stroke-dasharray="8 8" opacity=".7"/><rect x="${x+5}" y="${y+5}" width="${w-10}" height="${h-10}" rx="8" fill="${KH.C.yard}"/>`;
+  s+=blk(0,-20,156,222)+blk(202,-20,158,222)+blk(0,278,360,226);
+  s+=`<rect x="160" y="0" width="38" height="210" fill="${KH.C.asph}"/><rect x="0" y="206" width="360" height="66" fill="${KH.C.asph}"/><path d="M0 239H360" stroke="#8C9BB6" stroke-opacity=".4" stroke-width="2.4" stroke-dasharray="12 10"/>`+
+    `<path d="M170 210v58M178 210v58M186 210v58" stroke="#fff" stroke-opacity=".08" stroke-width="4"/>`;
+  s+=A.pool(158,204,80)+A.pool(206,276,74)+A.pool(330,206,60)+A.pool(40,276,60)+A.pool(110,372,54)+A.pool(250,372,54);
+  // the faint footpaths
+  s+=`<g fill="none" stroke="#E9D9B8" stroke-opacity=".28" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="1 6">${HDE.map(([a,b])=>`<path d="M${HG.edge(a,b).map(p=>p.join(' ')).join('L')}"/>`).join('')}</g>`;
+  // neighbours' Najdi house: roof, courtyard, door, stairs
+  s+=A.roof(208,18,138,120,{face:20,wins:[18,98,122],doors:[[44,'#7A4A2A']]})+A.court(258,64,60,58)+A.tree(288,93,13)+`<rect x="222" y="34" width="16" height="10" rx="2" fill="#7F93A8" stroke="${KH.OL}" stroke-width="1.2"/><circle cx="326" cy="34" r="8" fill="#E7EEF6" stroke="${KH.OL}" stroke-width="1.4"/>`;
+  let steps='';for(let i=0;i<9;i++)steps+=`<rect x="347" y="${70+i*10}" width="13" height="10" fill="${i%2?'#C9A57A':'#DDBE92'}" stroke="${KH.OL}"/>`;s+=`<rect x="349" y="76" width="11" height="92" fill="#060B16" opacity=".55"/>`+steps;
+  // grocery, دكان, crates
+  s+=A.shop(8,24,104,110,{awning:1})+A.roof(118,62,38,72,{roof:'#93785A',face:24})+`<rect x="122" y="138" width="30" height="16" rx="2" fill="#8EA0B8" stroke="${KH.OL}" stroke-width="1.3"/><path d="M124 142h26M124 146h26M124 150h26" stroke="#5D6E86" stroke-width="1.2"/>`;
+  s+=A.crate(16,200)+A.crate(32,208,14,18)+A.crate(20,216,12,-10);
+  // street: barrels, car, trailer
+  s+=A.barrel(130,226)+A.barrel(150,232,'#2E6FB0')+A.barrel(140,244)+A.car(262,226,'#F4F6FA',1.05)+A.trailer(60,254,.9);
+  // the house (البيت): safe mat, roof, door, flag
+  s+=`<circle cx="180" cy="270" r="26" fill="#3FAE5C" opacity=".25"/><circle cx="180" cy="270" r="26" fill="none" stroke="#7BEA9C" stroke-width="2.6" stroke-dasharray="6 5"/>`;
+  s+=A.roof(138,292,84,70,{par:'#E6C89E',roof:'#BC986D'})+A.door(180,292,18)+A.court(166,312,28,24)+`<path d="M212 298v-16" stroke="${KH.OL}" stroke-width="2"/><path d="M212 282l14 4-14 4z" fill="#3FAE5C" stroke="${KH.OL}" stroke-width="1.2"/>`;
+  // استراحة, خزان, مخزن
+  s+=A.tent(8,292,100,72)+A.tank(252,312)+A.shed(296,288,58,46);
+  // مزرعة, بيت مهجور, حديقة
+  s+=A.field(8,386,120,92)+A.palm(30,406,.85)+A.palm(104,430,.95,20)+A.palm(52,458,.75,40);
+  s+=A.ruin(136,384,92,64);
+  s+=`<rect x="238" y="386" width="116" height="92" rx="16" fill="${KH.C.green}"/><path d="M238 460q40-6 54-40t62-26" fill="none" stroke="#C9B48E" stroke-width="8" stroke-linecap="round"/>`+A.tree(258,404,14)+A.tree(336,452,16,'#43A06E')+A.tree(258,456,11)+`<rect x="304" y="400" width="22" height="7" rx="2" fill="#C98F58" stroke="${KH.OL}" stroke-width="1.2"/><circle cx="282" cy="436" r="2.6" fill="#EE7FB3"/><circle cx="289" cy="443" r="2.6" fill="#F0B429"/>`;
+  s+=A.palm(186,40,.7,20)+A.palm(352,250,.75)+A.palm(232,284,.62,15)+A.palm(126,286,.6,40);
+  s+=`<rect width="${HDW}" height="${HDHt}" fill="url(#v)"/>`;
+  s+=A.lamp(158,204)+A.lamp(206,276)+A.lamp(330,206)+A.lamp(40,276)+A.lamp(110,372)+A.lamp(250,372);
+  return s;}
+let HD_BG='';
+const hdBg=()=>HD_BG||(HD_BG=KH.bg('hide',HDW,HDHt,hdArt()));
+// a name on a solid pill (13 px or more on a phone); o.sel bigger and gold
+function hdPill(x,y,t,o={}){const fs=o.fs||14,w=KH.tw(t,fs)+14,h=fs+10;const c=o.cls||'';x=Math.max(w/2*(o.sel?1.2:1)+3,Math.min(HDW-3-w/2*(o.sel?1.2:1),x));
+  return `<g class="hd-pl ${c}" transform="translate(${x} ${y})${o.sel?' scale(1.2)':''}"><rect x="${KH.f(-w/2)}" y="${-h/2}" width="${KH.f(w)}" height="${h}" rx="${h/2}"/><text y="${KH.f(fs*.36)}" font-size="${fs}">${t}</text></g>`;}
+// where a place's hot/cold badge goes: next to the spot, clear of every name (worked out once)
+let HD_BADGE=null;
+function hdBadgeAt(p){if(!HD_BADGE){const box=(q)=>{const t=q===16?'البيت':HDN[q],fs=q===16?15:14,w=Math.max(KH.tw(t,fs),[...t].length*fs*.42+4)+14,h=fs+10;const x=Math.max(w/2+3,Math.min(HDW-3-w/2,HDLB[q][0]));return [x-w/2,HDLB[q][1]-h/2,x+w/2,HDLB[q][1]+h/2];};
+  const L=[...Array(17).keys()].map(box),hit=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3],taken=[];HD_BADGE=[];
+  for(let q=0;q<16;q++){const [x,y]=HDP[q];const C=[[20,-20],[-20,-20],[20,18],[-20,18],[0,-26],[0,26],[34,0],[-34,0],[44,10],[-44,10],[44,-12],[-44,-12],[0,-40]].map(([dx,dy])=>[Math.max(24,Math.min(HDW-24,x+dx)),Math.max(12,y+dy)]);
+    const ok=C.find(([bx,by])=>{const b=[bx-23,by-11,bx+23,by+11];return !L.some(l=>hit(l,b))&&!taken.some(t=>hit(t,b));})||C[0];HD_BADGE[q]=ok;taken.push([ok[0]-23,ok[1]-11,ok[0]+23,ok[1]+11]);}}
+  return HD_BADGE[p];}
+function hdHintBadge(x,y,c){const m={1:['حار','#E5484D'],2:['دافي','#F28C38'],3:['بارد','#3D8FD1'],[-2]:['أبو سعد','#8A5A2B']}[c];if(!m)return '';
+  const w=c===-2?64:44;return `<g class="hd-hb" transform="translate(${x} ${y})"><rect x="${-w/2}" y="-10" width="${w}" height="20" rx="10" fill="${m[1]}" stroke="#fff" stroke-width="2"/><text y="4.6" font-size="12.5">${m[0]}</text></g>`;}
+// one character, positioned with a CSS transform so it can walk (KH.walk) along the footpaths
+const hdCh=(k,node,x,y,inner,o={})=>`<g class="kh-ch ${o.cls||''}" data-k="${k}" data-n="${node}"${o.from!=null?` data-f="${o.from}"`:''} data-ox="${KH.f(x-HDP[node][0])}" data-oy="${KH.f(y-HDP[node][1])}" style="transform:translate(${KH.f(x)}px,${KH.f(y)}px)">${inner}</g>`;
+const BANTER={found:['ياخي لقيتني!','حظي زفت!','كان بغيت أركض!'],safe:['أمان! أمان!','وصلت البيت!','ما لحقتني!'],hot:['قرّب منا… اسكت!','لا تتنفس!','وش ذا القرب!'],cold:['بعيد عنا، ارتاح','هو ضايع!','ما يدري وينّا'],guard:['ما أحد ركض؟','حارس البيت يطالع…'],bark:['اششش يا الكلب!','الكلب بيفضحنا!'],meow:['القطوة فضحتنا!','بس يا قطوة!'],steps:['سمعت خطوات!','فيه أحد يتحرك…'],grocer:['أبو سعد ستر عليه!','أبو سعد: ما عندي أحد'],torch:['نوّر الكشاف!','وش هالضو!']};
+const hdLine=(kind,k)=>{const L=BANTER[kind];return L?L[k%L.length]:'';};
+
+/* the map, as seat `me` may see it. o: pick(p) selectable, sel, mode ('lsn'|'torch'|'sneak'), zsel */
+function hdMapSVG(d,ctx,o){const me=o.me,fin=d.win!=null,e=d.ev,n=d.pl.length,P=HDP;let s='';
+  const zoneP=z=>`M${HDZ[z].poly.map(p=>p.join(' ')).join('L')}Z`;
+  // zones: tappable in «اسمع»/«الكشاف» mode; the last «اسمع» answer; the torch's zone
+  let znames='';if(o.mode==='lsn'||o.mode==='torch')HDZ.forEach((z,i)=>{s+=`<path class="hd-zn ${o.zsel===i?'on':''} ${o.mode}" d="${zoneP(i)}" data-ga="zsel" data-i="${i}"/>`;znames+=`<g class="hd-zl" data-ga="zsel" data-i="${i}">${hdPill(HDZC[i][0],HDZC[i][1],z.n,{fs:15,cls:'zone '+(o.zsel===i?'sel':'')})}</g>`;});
+  else{if(d.lq>=0&&!fin&&d.lk>=d.ek)s+=`<path class="hd-zn res ${d.lr?'yes':'no'}" d="${zoneP(d.lq)}"/>`;
+    if(e&&e.tz>=0&&!fin&&e.k===d.ek)s+=`<path class="hd-zn torch on" d="${zoneP(e.tz)}"/>`;
+    if(e&&e.fs>=0&&!fin&&e.k===d.ek)s+=`<path class="hd-zn heard" d="${zoneP(e.fs)}"/>`;
+    if(d.bk>=0&&!fin)s+=`<path class="hd-zn heard" d="${zoneP(d.bk)}"/>`;}
+  // bright paths: my sneak options, my run home, the seeker's last walk, everyone's path at the end
+  const line=(pts,cls,c)=>`<path class="hd-path ${cls}" d="M${pts.map(p=>p.map(KH.f).join(' ')).join('L')}"${c?` style="--c:${c}"`:''}/>`;
+  if(o.mode==='sneak'&&o.from>=0)for(const q of hdNbr(o.from))if(o.pick(q))s+=line(HG.edge(o.from,q),'sneak'+(o.sel===q?' on':''));
+  if(o.runFrom>=0)s+=line(HG.pts(o.runFrom,HD_HOME),'run');
+  if(!fin&&e&&e.k===d.ek&&o.walkFrom!=null&&o.walkFrom!==d.sp)s+=line(HG.pts(o.walkFrom,d.sp),'seek');
+  if(fin)d.pl.forEach((_,sx)=>{const h=d.hp[sx];if(sx===d.sk||!h||h.length<2)return;const pts=[];for(let i=1;i<h.length;i++)pts.push(...HG.pts(h[i-1],h[i]).slice(i>1?1:0));s+=line(pts,'trail',col(d,sx));});
+  // searched spots and their hints (the last search of each place)
+  const last={};d.lg.forEach(([p,c])=>{last[p]=c;});
+  for(const p in last){const [x,y]=P[p];const c=last[p];s+=`<g class="hd-dust" transform="translate(${x} ${y+8})"><path d="M-12 4c-2-4 2-7 5-5 1-4 7-5 9-1 3-2 8 0 7 4 3 0 4 3 2 4z"/></g>`;if(c!==0){const [bx,by]=hdBadgeAt(+p);s+=hdHintBadge(bx,by,c);}}
+  // the street lamp by the car flickers once at every reveal
+  if(!fin)s+=`<circle class="hd-flick" data-k="fl${d.ek}" cx="330" cy="206" r="46" fill="url(#kh-glow)"/>`;
+  // the cat, the dog, the grocer
+  if(d.ct>=0){const [x,y]=P[d.ct];s+=KH.sprite('cat',x+22,y+10,{s:.75});}
+  if(d.dg>=0){const [x,y]=P[d.dg];s+=KH.sprite('dog',x-22,y+14,{s:.7,flip:x>180});}
+  if(d.gr){s+=KH.sprite('grocer',P[4][0]-26,P[4][1]-6,{s:.55});if(d.gu)s+=`<text class="hd-tag" x="${P[4][0]-26}" y="${P[4][1]+12}">✓</text>`;}
+  // the hiders this seat may see
+  const kids=[];
+  d.pl.forEach((_,sx)=>{if(sx===d.sk)return;const st=d.hs[sx],p=d.at[sx];const c=col(d,sx),k='ch'+sx;
+    if(st==='s'){kids.push(hdCh(k,HD_HOME,P[16][0]-30+sx*9,P[16][1]+6,KH.sprite('cheer',0,0,{who:d.pl[sx],c,s:.62})+(sx===me?hdMeTag(0,-44):''),{cls:'safe'}));return;}
+    if(st==='g'){kids.push(hdCh(k,HD_HOME,P[16][0]+24-sx*7,P[16][1]+10,KH.sprite('caught',0,0,{who:d.pl[sx],c,s:.62}),{cls:'got'}));return;}
+    if(p<0||!hdSees(d,me,sx)){if(d.ph==='hide'&&hdSees(d,me,sx)&&st==='h')kids.push(hdCh(k,HD_HOME,P[16][0]-36+sx*10,P[16][1]+12,KH.sprite('stand',0,0,{who:d.pl[sx],c,s:.6})+(sx===me?hdMeTag(0,-40):'')));return;}
+    const [x,y]=P[p];
+    if(st==='c')kids.push(hdCh(k,p,x,y+4,KH.sprite('caught',0,0,{who:d.pl[sx],c,s:.7}),{cls:'got'}));
+    else kids.push(hdCh(k,p,x,y,KH.sprite('peek',0,0,{who:d.pl[sx],c,s:1.05,flip:x>200})+(sx===me?hdMeTag(0,-20):''),{cls:sx===me?'me':'mate',from:d.n===0||d.hp[sx].length<=2?HD_HOME:null}));});
+  if(d.sil>=0&&!fin){const [x,y]=P[d.sil];s+=`<g class="hd-sil" data-k="sil${d.ek}">${KH.sprite('sil',x,y,{s:1.1})}<text x="${x}" y="${y-18}">؟</text></g>`;}
+  s+=kids.join('');
+  // the seeker: counting at the house, walking with the torch, guarding the door
+  let top='';
+  {const c=col(d,d.sk),sp=d.ph==='hide'?HD_HOME:d.sp;const [x,y]=P[sp];const ox=sp===HD_HOME?0:16,oy=sp===HD_HOME?-2:16;const flip=x>200;
+    let inner;
+    if(d.ph==='hide'&&!fin){inner=KH.sprite('count',0,0,{who:d.pl[d.sk],c,s:.85});top+=`<g class="hd-cnt">${KH.say(x+10,y-48,'واحد…',{fs:15,w:112,dx:30})}</g>`;}
+    else inner=(fin?'':KH.beam(flip?-14:14,-24*.8,flip?200:-20,80,26))+KH.sprite(fin?'stand':'torch',0,0,{who:d.pl[d.sk],c,s:.8,flip});
+    s+=hdCh('chsk',sp,x+ox,y+oy,inner,{cls:'sk'});}
+  if(d.mo&&!fin)s+=KH.sprite('mom',P[16][0]+38,P[16][1]+30,{s:.75})+`<g class="hd-mom" data-k="mom">${KH.say(P[16][0]+48,P[16][1]-2,'العشا جاهز!',{fs:13,dx:-10})}</g>`;
+  // the names (every place, the house), the selection bigger and gold
+  const pill=p=>p===HD_HOME?hdPill(HDLB[16][0],HDLB[16][1],'البيت',{fs:15,sel:o.sel===HD_HOME,cls:'home '+(o.sel===HD_HOME?'sel ':'')+(o.pick(HD_HOME)?'can':'')}):hdPill(HDLB[p][0],HDLB[p][1],HDN[p],{sel:o.sel===p,cls:(o.sel===p?'sel ':'')+(o.pick(p)?'can':'')+(o.mode==='sneak'&&o.sel!==p&&o.pick(p)?' sn':'')});
+  for(let p=0;p<=16;p++)if(p!==o.sel)s+=pill(p);if(o.sel>=0&&o.sel<=16)s+=pill(o.sel);
+  // what just happened on the map
+  if(e&&e.k===d.ek&&!fin){
+    if(e.f>=0){const [x,y]=P[e.p];s+=`<g class="hd-fx" data-k="fx${e.k}">${KH.burst(x,y-34,'لقيتك!',{c:'#EC6158',s:.72})}</g>`;}
+    if(e.s.length)s+=`<g class="hd-fx" data-k="sf${e.k}">${KH.say(P[16][0]-30,P[16][1]-14,'أمان!',{fill:'#3FAE5C',col:'#fff',fs:14})}</g>`;
+    if(e.g.length)s+=`<g class="hd-fx" data-k="gd${e.k}">${KH.burst(P[16][0]+30,P[16][1]-30,'لقيتك!',{s:.62})}</g>`;
+    if(e.ft==='cat'&&d.ct>=0)s+=`<g class="hd-fx" data-k="mw${e.k}">${KH.say(P[d.ct][0]+22,P[d.ct][1]-6,'مياو!',{fs:12})}</g>`;
+    if(e.gr)s+=`<g class="hd-fx" data-k="gr${e.k}">${KH.say(P[4][0]-20,P[4][1]-26,'ما عندي أحد!',{fs:12,dx:16})}</g>`;}
+  if(d.bk>=0&&d.dg>=0&&!fin)s+=`<g class="hd-fx" data-k="bk${d.rd}">${KH.say(P[d.dg][0]-20,P[d.dg][1]-6,'هاو هاو!',{fs:12})}</g>`;
+  s+=znames+top;
+  // tap areas: 48×48 around each selectable place and on its name
+  for(let p=0;p<=16;p++){if(!o.pick(p))continue;const [x,y]=P[p],[lx,ly]=HDLB[p];
+    s+=`<g class="hd-tap" data-ga="sel" data-i="${p}"><rect x="${x-24}" y="${y-24}" width="48" height="48"/><rect x="${lx-30}" y="${ly-14}" width="60" height="28"/></g>`;}
+  if(o.sel>=0&&o.sel<=16&&o.pick(o.sel)){const [x,y]=P[o.sel];s+=`<circle class="hd-ring" cx="${x}" cy="${y}" r="22"/>`;}
+  return `<div class="hd-map ${hdBg()} ${o.mode?'m-'+o.mode:''}" data-k="map"><svg viewBox="0 0 ${HDW} ${HDHt}" aria-label="خريطة الحارة">${s}</svg></div>`;}
+const hdMeTag=(x,y)=>`<g class="hd-me-tag" transform="translate(${x} ${y})"><rect x="-14" y="-9" width="28" height="18" rx="9"/><text y="4.4">أنا</text></g>`;
+
+/* the HUD: the 3 minutes, the searches left, the step's seconds, the powers */
+function hdHud(d,me,near){const fin=d.win!=null,l=hdClock(d),run=(d.ph==='sk'||d.ph==='rn')&&!fin,on=!fin&&d.dl>0;
+  const frac=Math.max(0,Math.min(1,l/HD_T.game)),C=2*Math.PI*15;const left=d.N-d.n;
   const step=on?Math.max(0,Math.min(1,(d.dl-Date.now())/(d.T||HD_T.step))):1;
-  return `<div class="hd-sky"><span class="hd-clk ${run&&l<=30000?'low':''} ${d.end>0&&!fin?'on':''}" aria-label="وقت اللعبة"><i>⏱</i><b>${hdFmt(l)}</b></span>
-    <span class="hd-pips" aria-label="الفتشات ${d.n} من ${d.N}"><small>🔦</small>${[...Array(d.N)].map((_,k)=>`<i class="${k<d.n?'u':''}"></i>`).join('')}</span>
-    <span class="hd-sec ${on?'':'off'}" aria-label="ثواني الخطوة"><b ${on?`data-until="${d.dl}"`:''}>${on?Math.ceil(Math.max(0,d.dl-Date.now())/1000):Math.round((d.T||HD_T.step)/1000)}</b><small>ث</small></span>
-    <span class="hd-ear ${d.lq>=0?'u':''}" aria-label="${d.lq>=0?'اسمع انستخدم':'اسمع متاح'}">👂</span></div>
+  const role=near?`<span class="hd-role beat" data-k="bt${d.ek}">💓 قريب منك!</span>`:me<0||me===d.sk||d.hs[me]==='h'?'':d.hs[me]==='s'?`<span class="hd-role ok">🏠 بأمان</span>`:d.hs[me]==='c'||d.hs[me]==='g'?`<span class="hd-role out">😵 انمسكت</span>`:'';
+  return `<div class="hd-hud"><span class="hd-clk ${run&&l<=HD_T.mom?'low':''}"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" class="tr"/><circle cx="18" cy="18" r="15" class="fg" stroke-dasharray="${KH.f(C*frac)} ${KH.f(C)}" transform="rotate(-90 18 18)"/></svg><b>${hdFmt(l)}</b></span>
+    <span class="hd-left" aria-label="باقي ${left} فتشات"><b>${left}</b><small>فتشات</small><i class="hd-pips">${[...Array(d.N)].map((_,k)=>`<u class="${k<left?'on':''}"></u>`).join('')}</i></span>
+    <span class="hd-pw ${d.lq>=0?'used':''}" title="اسمع">👂</span><span class="hd-pw ${d.tc?'used':''}" title="الكشاف">🔦</span>${role}
+    <span class="hd-sec ${on?'':'off'}"><b ${on?`data-until="${d.dl}"`:''}>${on?Math.ceil(Math.max(0,d.dl-Date.now())/1000):Math.round((d.T||HD_T.step)/1000)}</b></span></div>
     <div class="hd-bar ${on?'':'idle'}"><i style="transform:scaleX(${step.toFixed(3)})"></i></div>`;}
-// what just happened, for everyone
-function hdEvTxt(d,html){const e=d.ev,sk=d.sk,N=s=>html?nameTag(d,s):pname(d.pl[s]);if(!e)return '';const parts=[];
-  if(e.p<0)parts.push(`⏱ راحت الفتشة على ${N(sk)}، ما اختار بالوقت`);
-  else if(e.p===16)parts.push(e.g.length?`🛡 ${N(sk)} حرس البيت ومسك ${e.g.map(N).join(' و')} وهو يركض!`:`🛡 ${N(sk)} حرس البيت… وما ركض أحد`);
-  else if(e.f>=0)parts.push(`🔦 فتّش «${HDN[e.p]}» ولقى ${N(e.f)}! لقيتك!`);
-  else parts.push(`🔦 فتّش «${HDN[e.p]}»: فاضي${e.h>=1&&e.h<=3?` • ${HDHE[e.h]} ${HDH[e.h]}`:''}`);
-  if(e.s.length)parts.push(`🏃 ${e.s.map(N).join(' و')} وصل البيت! +20`);
-  return parts.join(html?'<br>':' • ');}
-function hdBanner(d,me){const e=d.ev;if(d.win!=null)return '';
-  if(d.lq>=0&&d.lk===d.ek+1&&(d.ph==='sk'||d.ph==='rn'))return `<div class="hd-ev ls" data-k="ls${d.lk}"><i>👂</i><span>${nameTag(d,d.sk)} سمع… <b>${d.lr?'فيه أحد بالمربع!':'ما فيه أحد بالمربع'}</b></span></div>`;
-  if(!e){if(d.ph==='hide')return `<div class="hd-ev"><i>🙈</i><span>${me===d.sk?'غمّض عيونك… الكل يتخبّى':'تخبّوا بسرعة قبل ما يفتّح!'}</span></div>`;return '';}
-  const cls=e.p<0?'to':e.p===16?(e.g.length?'got':'gd'):e.f>=0?'got':'h'+e.h;
-  return `<div class="hd-ev ${cls}" data-k="ev${e.k}"><i>${e.p<0?'⏱':e.p===16?'🛡':e.f>=0?'🎯':HDHE[e.h]||'🔦'}</i><span>${hdEvTxt(d,true)}</span></div>`;}
-/* the map: 16 places and the house. o.me = the seat whose eyes we use, o.pick = what is selectable, o.sel = the selection */
-function hdMap(d,ctx,o){const me=o.me,fin=d.win!=null,e=d.ev,n=d.pl.length;
-  const occ=Array.from({length:16},()=>[]);d.at.forEach((p,s)=>{if(p>=0&&p<16&&hdSees(d,me,s))occ[p].push(s);});
-  const srch={};d.lg.forEach(([p,c])=>{srch[p]=c;});
-  const myP=me>=0&&me!==d.sk?d.at[me]:-1;const hot=!fin&&myP>=0&&d.hs[me]==='h'&&e&&e.p>=0&&e.p<16&&hdDist(e.p,myP)===1;
-  const sq=d.lq>=0?d.lq:-1,pv=o.lsn&&o.sel>=100?o.sel-100:-1;
-  const tiles=HDN.map((nmP,p)=>{const can=o.pick(p),sel=o.sel===p,c=srch[p];const who=occ[p];let badge='',kids='',cls=[];
-    if(can)cls.push('can');if(sel)cls.push('sel');if(c!=null)cls.push(c===0?'found':'done');
-    if(who.length)cls.push('occ');if(myP===p&&(d.hs[me]==='h'||d.hs[me]==='c'))cls.push('mine');if(o.ch===p)cls.push('aim');if(o.tk===p)cls.push('tk');
-    if(c!=null&&c>=1&&c<=3)badge=`<u class="hd-hb h${c}">${HDHE[c]} ${HDH[c]}</u>`;
-    if(c!=null&&c!==0)badge+='<svg class="hd-dust" viewBox="0 0 30 14" aria-hidden="true"><path d="M3 12c-2-4 2-7 5-5 1-4 7-5 9-1 3-2 8 0 7 4 3 0 4 3 2 4z" fill="currentColor"/></svg>';
-    for(const s of who){const st=d.hs[s];kids+=hdKid(d,s,(st==='c'?'got ':st==='s'||st==='g'?'gone ':'')+(s===me?'me':'mate'));}
-    if(o.tk===p)badge+='<u class="hd-x">مأخوذ</u>';
-    if(o.ch===p)badge+='<u class="hd-aim">🔦</u>';
-    const fx=e&&e.p===p&&!fin?`<i class="hd-fx" data-k="fx${e.k}"></i>${e.f>=0?`<i class="hd-pop" data-k="pop${e.k}" style="--c:${col(d,e.f)}">لقيتك!</i>`:''}`:'';
-    const beat=hot&&myP===p?`<i class="hd-beat" data-k="bt${e.k}"></i>`:'';
-    return `<button class="hd-t ${cls.join(' ')}" data-ga="sel" data-i="${p}" ${can?'':'disabled'} aria-label="${nmP}${c===0?'، انمسك فيه أحد':c!=null?'، انفتّش':''}"><span class="hd-ic">${hdIco(p)}</span><b>${nmP}</b>${badge}${kids?`<span class="hd-kids">${kids}</span>`:''}${fx}${beat}</button>`;}).join('');
-  const box=(k,cls,inner)=>{const r=Math.floor(k/3),c=k%3;return `<div class="hd-sq ${cls}" style="top:calc(${r*25}% + ${r*1.5}px);inset-inline-start:calc(${c*25}% + ${c*1.5}px)">${inner||''}</div>`;};
-  let over='';
-  if(sq>=0)over+=box(sq,'ls '+(d.lr?'yes':'no'),`<span>👂 ${d.lr?'فيه أحد':'ما فيه أحد'}</span>`);
-  if(o.lsn){for(let k=0;k<9;k++)if(k!==pv)over+=box(k,'jn',`<button class="hd-jn" data-ga="lsel" data-i="${k}" aria-label="المربع ${k+1}">👂</button>`);if(pv>=0)over+=box(pv,'pv',`<span>👂 هنا؟</span>`);}
-  // the house: who reached it, who was caught at its door, the seeker on guard
-  const home=d.pl.map((_,s)=>s).filter(s=>d.hs[s]==='s'),door=d.pl.map((_,s)=>s).filter(s=>d.hs[s]==='g');
-  const guard=(o.ch===16)||(e&&e.p===16&&!fin&&d.ph!=='hide');const hcan=o.pick(16),hsel=o.sel===16;
-  const house=`<button class="hd-home ${hcan?'can':''} ${hsel?'sel':''} ${guard?'guard':''}" data-ga="sel" data-i="16" ${hcan?'':'disabled'} aria-label="البيت">
-    <span class="hd-hs">${HD_HOUSE}</span><span class="hd-ht"><b>البيت</b><small>${guard&&o.ch===16?'بتحرسه 🛡':guard?'الغمّاض كان يحرسه 🛡':'المكان الآمن، اركض له وخذ +20'}</small></span>
-    <span class="hd-kids">${home.map(s=>hdKid(d,s,'safe'+(s===me?' me':''))).join('')}${door.map(s=>hdKid(d,s,'got')).join('')}${guard?`<i class="hd-kid sk" style="--c:${col(d,d.sk)}">${HD_EYE}</i>`:''}</span>
-    ${e&&e.p===16&&!fin?`<i class="hd-fx" data-k="hfx${e.k}"></i>`:''}${e&&e.s.length&&!fin?`<i class="hd-pop safe" data-k="hp${e.k}">وصل! +20</i>`:''}</button>`;
-  return `<div class="hd-map ${o.lsn?'lsn':''} ${o.seek?'seek':''}"><div class="hd-grid">${tiles}${over}</div>${house}</div>`;}
-// the line with this player's own role and live points
-function hdMe(d,me,hot){if(me<0||me>=d.pl.length)return '';const x=d.pd[me],st=d.hs[me],p=d.at[me];
-  const t=me===d.sk?'أنت الغمّاض 👀':st==='c'?'انمسكت 😵':st==='g'?'انمسكت وأنت تركض 😵':st==='s'?'وصلت البيت 🏠':st==='x'?'':p>=0?`متخبّي في «${HDN[p]}» 🙈`:'ما تخبيت للحين';
-  const team=hot?'<small class="hot">💓 الغمّاض فتّش جنبك!</small>':d.pl.length>=4&&me!==d.sk?'<small>فريق المتخبّين: تشوف أماكن ربعك</small>':'';
-  return `<div class="hd-me ${me===d.sk?'sk':''}" style="--c:${col(d,me)}"><i>${me===d.sk?HD_EYE:shapeW(d.pl[me])}</i><span><b>${t}</b>${team}</span>${x?`<em class="${x>0?'up':'dn'}">${x>0?'+':'−'}${Math.abs(x)}</em>`:''}</div>`;}
-// the round's end: everyone's place, what happened to them and the points they moved
+// what just happened (shown in the status card): {i:icon, t:title, x:detail, c:class}
+function hdEvent(d,me){const e=d.ev,N=s=>pname(d.pl[s]);
+  if(d.ph==='hide')return {i:'🙈',t:me===d.sk?'غمّض عيونك وعدّ للعشرة!':'العدّ بدأ! تخبّى قبل «عشرة»',x:`${N(d.sk)} الغمّاض هالجولة`,c:'count'};
+  if(d.mo&&d.mk===d.ek)return {i:'🍲',t:'«العشا جاهز!» الأم تنادي',x:'آخر الوقت، الخطوات أقصر',c:'mom'};
+  if(d.bk>=0&&d.ph==='rn')return {i:'🐕',t:'الكلب ينبح!',x:`في «${HDZ[d.bk].n}»: الغمّاض قريب منه`,c:'bark'};
+  if(d.lq>=0&&d.lk===d.ek+1)return {i:'👂',t:`${d.lr?'فيه أحد':'ما فيه أحد'} في «${HDZ[d.lq].n}»`,x:`${N(d.sk)} تسمّع`,c:'ls '+(d.lr?'yes':'no')};
+  if(!e)return {i:'🔦',t:'خلص العدّ! التفتيش بدأ',x:`${d.N} فتشات و3 دقايق`,c:'go'};
+  let i='🔦',t='',x='',c='h'+e.h;
+  if(e.p<0){i='⏱';t=`راحت الفتشة على ${N(d.sk)}`;x='ما اختار بالوقت';c='to';}
+  else if(e.p===HD_HOME){i='🛡';t=e.g.length?`حرس البيت ومسك ${e.g.map(N).join(' و')}!`:'حرس البيت… وما ركض أحد';x=hdLine(e.g.length?'found':'guard',e.k);c=e.g.length?'got':'gd';}
+  else if(e.p>=100){i='🔦';t=e.tp>=0?`الكشاف نوّر «${HDZ[e.tz].n}»: فيه ظل!`:`الكشاف نوّر «${HDZ[e.tz].n}»: ما فيه أحد`;x=hdLine('torch',e.k);c='tz';}
+  else if(e.gr){i='🏪';t='أبو سعد: «ما عندي أحد!»';x='يستر مرة وحدة بالجولة';c='gr';}
+  else if(e.f>=0){i='🎯';t=`لقيتك يا ${N(e.f)}!`;x=`في «${HDN[e.p]}» +15`;c='got';}
+  else{i=e.h===1?'🔥':e.h===2?'🌤':'❄️';t=`«${HDN[e.p]}» فاضي: ${HDH[e.h]||''}`;x=hdLine(e.h===1?'hot':'cold',e.k);}
+  if(e.s.length)x=`🏠 ${e.s.map(N).join(' و')} وصل البيت +20`+(x?' • '+x:'');
+  if(e.fs>=0)x=(e.ft==='cat'?'🐈 القطوة ماوت في ':'👣 سمع خطوات في ')+`«${HDZ[e.fs].n}»`;
+  return {i,t,x,c};}
+// the round's end: everyone, what happened, and the points
 function hdSum(d){const out=s=>s===d.sk?'الغمّاض 👀':({h:'صمد للآخر 🙈',c:'انمسك 😵',g:'انمسك وهو يركض 😵',s:'وصل البيت 🏠',x:'طلع'})[d.hs[s]]||'';
-  return `<div class="hd-sum">${d.pl.map((r,s)=>{const x=(d.dsc||d.pd)[s]||0;return `<div class="hd-sr ${s===d.sk?'sk':d.hs[s]}" style="--c:${col(d,s)}"><i>${s===d.sk?HD_EYE:shapeW(r)}</i><b>${nm(d,s)}</b><span>${out(s)}${s!==d.sk&&d.at[s]>=0?` • «${HDN[d.at[s]]}»`:''}</span><em class="${x>0?'up':x<0?'dn':''}">${x>0?'+'+x:x<0?'−'+(-x):'0'}</em></div>`;}).join('')}</div>`;}
+  return `<div class="hd-sum">${d.pl.map((r,s)=>{const x=(d.dsc||d.pd)[s]||0;const h=d.hp[s]||[];return `<div class="hd-sr ${s===d.sk?'sk':d.hs[s]}" style="--c:${col(d,s)}"><i>${KH.face({who:r,ring:1,size:30,mood:s===d.sk?(d.win===d.sk?'g':'sad'):d.hs[s]==='c'||d.hs[s]==='g'?'sad':'g'})}</i><b>${nm(d,s)}</b><span>${out(s)}${s!==d.sk&&h.length>1?` • ${h.slice(1).map(hdName).join(' ← ')}`:''}</span><em class="${x>0?'up':x<0?'dn':''}">${x>0?'+'+x:x<0?'−'+(-x):'0'}</em></div>`;}).join('')}</div>`;}
 
 GAMES.hide={name:'غميضة الحارة',cat:'party',lbc:'#C0612B',minP:3,teams:'none',noTimer:true,
-  // a kid peeking from behind a wall in the neighbourhood, at dusk
-  icon:`<svg viewBox="0 0 100 100"><defs><linearGradient id="hdsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46377A"/><stop offset=".62" stop-color="#D46A6E"/><stop offset="1" stop-color="#F4A85C"/></linearGradient></defs><rect width="100" height="100" fill="url(#hdsk)"/><path d="M84 8a10 10 0 1 0 9 15 8 8 0 1 1-9-15z" fill="#FFE9A8"/><circle cx="58" cy="11" r="1.4" fill="#fff"/><circle cx="70" cy="24" r="1" fill="#fff"/><circle cx="40" cy="20" r="1.1" fill="#fff" opacity=".8"/><path d="M22 60c2.4-14 2.4-26 0-38" stroke="#5A3A1E" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M22 22c-8-6-15-4.5-19 1 6.5-1.4 13 0 19 2.4zm0 0c8-6 15-4.5 19 1-6.5-1.4-13 0-19 2.4zm0 0c-4-7.5-10.5-10-16-8.6 5.5 1 11 5 16 10zm0 0c4-7.5 10.5-10 16-8.6-5.5 1-11 5-16 10z" fill="#2E7D4F"/><rect y="88" width="100" height="12" fill="#B97A43"/><path d="M61 100V79c0-7 5.5-10.5 12-10.5S85 72 85 79v21z" fill="#F4F6F8"/><path d="M73 69v31" stroke="#DCE2E8" stroke-width="2"/><circle cx="73" cy="56" r="13" fill="#F2C29B"/><path d="M60 54.5a13 13 0 0 1 26 0c-4-2.4-8.4-3.4-13-3.4s-9 1-13 3.4z" fill="#3B2A1E"/><circle cx="70.5" cy="57.5" r="2.6" fill="#2D3640"/><circle cx="79" cy="57.5" r="2.6" fill="#2D3640"/><circle cx="69.6" cy="56.4" r="1" fill="#fff"/><circle cx="78.1" cy="56.4" r="1" fill="#fff"/><path d="M72 65q3.2 2.2 6.4 0" stroke="#B5654A" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="3" y="44" width="63" height="56" fill="#EBC995"/><rect x="1" y="40" width="67" height="7" rx="2" fill="#D4A56A"/><path d="M3 60h63M3 76h63M3 92h63M24 47v13M45 47v13M13 60v16M34 60v16M55 60v16M24 76v16M45 76v16" stroke="#D4A56A" stroke-width="2"/><g fill="#F2C29B"><rect x="59" y="58" width="10" height="4.4" rx="2.2"/><rect x="59" y="63.4" width="10" height="4.4" rx="2.2"/><rect x="60" y="68.8" width="8.5" height="4.2" rx="2.1"/></g></svg>`,
-  init:n=>({ph:'hide',sk:0,hs:'',at:Array(n).fill(-1),tk:Array(n).fill(-1),ch:-1,n:0,N:hdMaxN(n),lg:[],gc:0,to:0,lq:-1,lr:0,lh:0,lk:0,gs:0,ev:null,ek:0,pd:Array(n).fill(0),dl:0,dv:-2,T:HD_T.hide,end:0,gl:HD_T.game,rd:0,why:''}),
-  // the seeker is the round's starter: «جولة جديدة» moves it to the next seat
-  start(d){const n=d.pl.length,sk=d.st%n;return hdArm({...d,sk,turn:sk,hs:d.pl.map((_,s)=>s===sk?'k':'h').join(''),ph:'hide',rd:1},HD_T.hide);},
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#22324F"/><circle cx="80" cy="18" r="9" fill="#FFF1C2"/><circle cx="85" cy="14" r="8" fill="#22324F"/><circle cx="20" cy="14" r="1.4" fill="#fff"/><circle cx="48" cy="9" r="1.1" fill="#fff"/><ellipse cx="28" cy="70" rx="34" ry="22" fill="#FFD873" opacity=".22"/><path d="M28 34v-8q0-4 4-4h6" stroke="#3A4860" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="38" cy="24" r="4" fill="#FFE7A0"/><rect y="84" width="100" height="16" fill="#1B2537"/><path d="M0 92h100" stroke="#8C9BB6" stroke-width="2" stroke-dasharray="7 6" opacity=".6"/><path d="M58 100V78c0-8 6-12 13-12s13 4 13 12v22z" fill="#EC6158"/><circle cx="71" cy="56" r="13" fill="#F2C29B" stroke="#17233A" stroke-width="2"/><path d="M57.5 54a13.5 13.5 0 0 1 27 0z" fill="#EC6158" stroke="#17233A" stroke-width="2"/><path d="M71 51h16a3 3 0 0 1 0 6H71z" fill="#EC6158" stroke="#17233A" stroke-width="2"/><ellipse cx="66" cy="59" rx="3.4" ry="4" fill="#fff"/><ellipse cx="75" cy="59" rx="3.4" ry="4" fill="#fff"/><circle cx="67.5" cy="60" r="2" fill="#17233A"/><circle cx="76.5" cy="60" r="2" fill="#17233A"/><rect x="2" y="40" width="62" height="60" fill="#D6B588" stroke="#17233A" stroke-width="2"/><path d="M2 40h62" stroke="#EED7AE" stroke-width="5" stroke-dasharray="6 4"/><path d="M10 54l4-6 4 6zM22 54l4-6 4 6zM34 54l4-6 4 6zM46 54l4-6 4 6z" fill="#4A3424" opacity=".7"/><rect x="22" y="66" width="20" height="34" rx="2" fill="#7A4A2A" stroke="#17233A" stroke-width="2"/><g fill="#F2C29B" stroke="#17233A" stroke-width="1.6"><circle cx="61" cy="66" r="4"/><circle cx="61" cy="74" r="4"/></g></svg>`,
+  init:n=>({ph:'hide',sk:0,hs:'',at:Array(n).fill(-1),tk:Array(n).fill(-1),bl:Array(n).fill(-1),hp:Array.from({length:n},()=>[]),ch:-1,n:0,N:hdMaxN(n),lg:[],gc:0,to:0,lq:-1,lr:0,lh:0,lk:0,lt:0,gs:0,ev:null,ek:0,pd:Array(n).fill(0),dl:0,dv:-2,T:HD_T.hide,end:0,gl:HD_T.game,rd:0,why:'',
+    ct:-1,cu:0,dg:-1,dk:0,bk:-1,gr:0,gu:0,tc:0,sil:-1,sp:HD_HOME,mo:0,mk:-1}),
+  // the seeker is the round's starter; the host draws where the cat and the dog are, and whether أبو سعد is in his shop
+  start(d){const n=d.pl.length,sk=d.st%n;const pl=[...Array(16).keys()],ct=pl.splice(rnd(16),1)[0],dg=pl.filter(p=>hdDist(p,ct)>=2)[rnd(pl.filter(p=>hdDist(p,ct)>=2).length)];
+    return hdArm({...d,sk,turn:sk,hs:d.pl.map((_,s)=>s===sk?'k':'h').join(''),ph:'hide',rd:1,ct,dg:dg==null?-1:dg,gr:Math.random()<.7?1:0},HD_T.hide);},
   simulNow:d=>d.ph==='hide'||d.ph==='rn',
-  mask(d,seat){if(d.win!=null)return d;return {...d,at:d.at.map((p,s)=>hdSees(d,seat,s)?p:-1),tk:d.tk.map((x,s)=>s===seat?x:-1),ch:seat>=0&&seat===d.sk?d.ch:-1};},
+  mask(d,seat){if(d.win!=null)return d;const sees=s=>hdSees(d,seat,s);
+    return {...d,at:d.at.map((p,s)=>sees(s)?p:-1),hp:d.hp.map((h,s)=>sees(s)?h:[]),tk:d.tk.map((x,s)=>s===seat?x:-1),bl:d.bl.map((x,s)=>s===seat?x:-1),ch:seat>=0&&seat===d.sk?d.ch:-1};},
   privInit:(d,r)=>{const s=d.pl.indexOf(r);return s>=0&&hdAuto(d,s)?{rd:d.rd,pick:NOPICK}:{};},
   privStale:(d,p,r)=>{const s=d.pl.indexOf(r);return s>=0&&hdAuto(d,s)&&!(p.rd===d.rd&&p.pick===NOPICK);},
   privOk:(d,r,o,p)=>{if(p.pick==null||p.pick===NOPICK||p.rd!==d.rd)return true;const s=d.pl.indexOf(r);if(s<0||!hdNeed(d,s))return false;
-    return d.ph==='hide'?Number.isInteger(p.pick)&&p.pick>=0&&p.pick<16:p.pick===0||p.pick===1;},
-  net:{local:['sel','lsn','lsel'],ui:['hdSel','hdL']},
+    if(d.ph==='hide')return Number.isInteger(p.pick)&&p.pick>=0&&p.pick<16;
+    return p.pick===0||p.pick===1||(Number.isInteger(p.pick)&&hdNbr(d.at[s]).includes(p.pick-2));},
+  net:{local:['sel','mode','zsel','back'],ui:['hdSel','hdM','hdZ']},
   viewer:d=>d.win!=null?null:d.ph==='sk'?(isBot(d,d.sk)?null:d.sk):simulViewer(d),
-  coverMsg:d=>d.ph==='sk'?(d.ev?hdEvTxt(d,false)+' — ':'خلصوا التخبية! ')+'دورك تدوّر 👀':d.ph==='rn'?'الغمّاض اختار بالسر… تبقى ولا تركض؟':d.ph==='hide'?(d.rd>1?'تخبّى بالسر 🙈 (اللي انأخذ مكانه يختار غيره)':'تخبّى بالسر 🙈'):'',
+  coverMsg:d=>d.ph==='hide'?`<span class="hd-cv">الغمّاض يعدّ: <b class="hd-cnt-t">واحد…</b></span>${d.rd>1?'<br>اللي انأخذ مكانه يختار غيره':''}`:d.ph==='sk'?(d.ev?hdEvTxt(d)+' — ':'خلص العدّ! ')+'دورك تدوّر 👀':d.ph==='rn'?'الغمّاض اختار بالسر… تبقى، تتسلّل، ولا تركض؟':'',
   points:d=>d.pl.map((_,s)=>{const x=d.pd[s],st=d.hs[s];const ic=s===d.sk?'👀':st==='c'||st==='g'?'😵':st==='s'?'🏠':st==='x'?'':'🙈';return (ic+(x?' '+(x>0?'+'+x:'−'+(-x)):'')).trim();}),
   winText:d=>d.win==='d'?'انتهت الجولة':d.win===d.sk?`${nm(d,d.sk)} لقاهم كلهم! 👀`:d.pl.length>=4?'فاز فريق المتخبّين! 🙈':`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')}! 🙈`,
   winExtra:d=>`${d.why?d.why+' • ':''}`+d.pl.map((_,s)=>{const x=(d.dsc||d.pd)[s]||0;return `${nm(d,s)} ${x>0?'+'+x:x<0?'−'+(-x):'0'}`;}).join('، '),
-  status(d,ctx){const v=ctx.v,iSk=v===d.sk,sk=nameTag(d,d.sk);
-    if(d.ph==='hide')return `<small>${sk} الغمّاض هالجولة</small><br>`+(iSk?'<b class="yt">غمّض عيونك! 🙈</b>':ctx.my?`<b class="yt">${d.tk[v]>=0?'المكان مأخوذ، اختر غيره':'تخبّى بالسر'}</b>`:'الكل يتخبّى…');
-    const top=`<small>الفتشة ${Math.min(d.n+1,d.N)} من ${d.N}</small><br>`;
-    if(d.ph==='sk')return top+(iSk&&ctx.my?'<b class="yt">دورك: فتّش مكان أو احرس البيت</b>':`${sk} يدوّر 👀`);
-    if(d.ph==='rn')return top+(ctx.my?'<b class="yt">تبقى ولا تركض للبيت؟</b>':iSk?'اخترت… ننتظرهم يقررون':'المتخبّين يقررون…');
-    return '';},
+  status(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1,iSk=me===d.sk,e=hdEvent(d,me),hidden=me>=0&&!iSk&&d.hs[me]==='h';
+    let todo='';
+    if(d.ph==='hide')todo=iSk?'عيونك مسكّرة… الكل يتخبّى':ctx.my?(d.tk[v]>=0?'المكان مأخوذ، اختر غيره':'اختر مخباك من الخريطة'):'الكل يتخبّى…';
+    else if(d.ph==='sk')todo=iSk&&ctx.my?'دورك: فتّش مكان، احرس البيت، أو نوّر جهة':`${pname(d.pl[d.sk])} يدوّر بالسر 👀`;
+    else if(d.ph==='rn')todo=ctx.my&&hidden?'تبقى، تتسلّل، ولا تركض للبيت؟':iSk?'اخترت… ننتظرهم يقررون':'المتخبّين يقررون…';
+    return `<div class="hd-st ${e.c}"><i>${e.i}</i><span><b>${e.t}</b>${e.x?`<small>${e.x}</small>`:''}</span></div>`+(todo?`<p class="hd-todo ${ctx.my?'yt':''}">${todo}</p>`:'');},
   render(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1,fin=d.win!=null,iSk=me===d.sk;
-    // a selection belongs to one step
-    const key=d.gid+':'+d.ph+':'+d.rd+':'+d.n+':'+me;if(S.hdKey!==key){S.hdKey=key;S.hdSel=-1;S.hdL=false;}
-    const sel=Number.isInteger(S.hdSel)?S.hdSel:-1,lsn=!!S.hdL&&d.ph==='sk'&&iSk&&ctx.my&&d.lq<0;
-    const done=new Set(d.lg.map(e=>e[0]));const myPick=me>=0&&ctx.priv&&ctx.priv[d.pl[me]]&&ctx.priv[d.pl[me]].rd===d.rd?ctx.priv[d.pl[me]].pick:null;
-    const mates=new Set(d.at.filter((p,s)=>p>=0&&s!==me&&hdSees(d,me,s)));
+    const key=d.gid+':'+d.ph+':'+d.rd+':'+d.n+':'+me;if(S.hdKey!==key){S.hdKey=key;S.hdSel=-1;S.hdM='';S.hdZ=-1;}
+    let sel=Number.isInteger(S.hdSel)?S.hdSel:-1,mode=S.hdM||'',zsel=Number.isInteger(S.hdZ)?S.hdZ:-1;
+    const myP=me>=0&&!iSk?d.at[me]:-1,hidden=me>=0&&!iSk&&d.hs[me]==='h';
+    const mates=new Set(d.at.filter((p,s)=>p>=0&&s!==me&&s!==d.sk&&hdSees(d,me,s)&&d.hs[s]==='h'));
+    const myPick=me>=0&&ctx.priv&&ctx.priv[d.pl[me]]&&ctx.priv[d.pl[me]].rd===d.rd?ctx.priv[d.pl[me]].pick:null;
     let pick=()=>false;
     if(!fin&&ctx.my&&d.ph==='hide'&&me>=0&&!iSk)pick=p=>p<16&&!mates.has(p)&&d.tk[me]!==p;
-    if(!fin&&ctx.my&&d.ph==='sk'&&iSk&&!lsn)pick=p=>p===16||!done.has(p);
-    if(!fin&&sel>=0&&!pick(sel)&&!(lsn&&sel>=100)){S.hdSel=-1;}
-    const sl=Number.isInteger(S.hdSel)?S.hdSel:-1;
-    // a sound for what just happened (once per event, on the phone that shows it)
-    if(d.ev&&!fin){const k=d.gid+':'+d.ev.k;if(S.hdSnd!==k){S.hdSnd=k;if(d.ev.f>=0||d.ev.g.length)sfx(me>=0&&(me===d.ev.f||d.ev.g.includes(me))?'lose':'pop');else if(d.ev.s.length)sfx('turn');}}
-    let h=`<div class="hd ${iSk?'is-sk':me>=0?'is-hd':''} ph-${d.ph}" style="--me:${me>=0?col(d,me):'#C0612B'}">`+hdSky(d)+hdBanner(d,me);
-    if(d.ph==='hide'&&iSk&&!fin){h+=`${hdMe(d,me)}<div class="hd-blind"><div class="hd-eyes">🙈</div><b>غمّض عيونك وعدّ!</b><p>الباقين يتخبّون الحين بالحارة… بعدها تبدأ تدوّر، وعندك ${d.N} فتشات</p><div class="hd-blind-map">${HDN.map((x,p)=>`<i>${hdIco(p)}</i>`).join('')}</div></div></div>`;return h;}
-    h+=hdMap(d,ctx,{me,pick,sel:sl,lsn,seek:iSk,ch:iSk&&d.ph==='rn'?d.ch:-1,tk:me>=0&&!iSk&&d.ph==='hide'?d.tk[me]:-1});
+    if(!fin&&ctx.my&&d.ph==='sk'&&iSk&&!mode)pick=p=>p<=16;
+    if(!fin&&ctx.my&&d.ph==='rn'&&hidden&&mode==='sneak')pick=p=>hdNbr(myP).includes(p)&&!mates.has(p);
+    if(sel>=0&&!pick(sel)){sel=-1;S.hdSel=-1;}
+    // sounds, once per event on the phone that shows it
+    this.sounds(d,me);
+    const near=hidden&&myP>=0&&(d.ph==='sk'||d.ph==='rn')&&d.sp>=0&&hdDist(d.sp,myP)<=1&&d.n>0;
+    let h=`<div class="hd kh ${iSk?'is-sk':me>=0?'is-hd':''} ph-${d.ph} ${d.mo?'late':''}" style="--me:${me>=0?col(d,me):'#C0612B'}">`+hdHud(d,me,near);
+    h+=`<div class="hd-stage">`;
+    const sw=S.hdSw&&S.hdSw.gid===d.gid?S.hdSw:(S.hdSw={gid:d.gid,sp:d.sp,ek:d.ek,from:null});if(sw.ek!==d.ek){sw.from=sw.sp!==d.sp?sw.sp:null;sw.sp=d.sp;sw.ek=d.ek;}const walkFrom=sw.from;
+    h+=hdMapSVG(d,ctx,{me,pick,sel,mode,zsel,from:myP,runFrom:ctx.my&&d.ph==='rn'&&hidden&&S.hdRunPv?myP:-1,walkFrom});
+    h+='</div>';
     if(fin)return h+hdSum(d)+'</div>';
-    const e=d.ev,myP=me>=0&&me!==d.sk?d.at[me]:-1;h+=hdMe(d,me,!!(e&&e.p>=0&&e.p<16&&myP>=0&&d.hs[me]==='h'&&hdDist(e.p,myP)===1));
+    // the action bar
+    let a='';
     if(d.ph==='hide'){
-      if(me>=0&&!iSk&&ctx.my){const ok=sl>=0&&sl<16;h+=`<button class="big hd-go hide" data-ga="hp" data-i="${ok?sl:0}" ${ok?'':'disabled'}>${ok?`اختبي في «${HDN[sl]}» 🤫`:d.tk[me]>=0?`«${HDN[d.tk[me]]}» مأخوذ، اختر غيره`:'اختر مخباك من الخريطة'}</button>`;}
-      else if(me>=0&&!iSk)h+=`<p class="hd-wait">${myPick!=null&&myPick!==NOPICK&&d.at[me]<0?`اخترت «${HDN[myPick]}» ✓ `:''}ننتظر الباقين يتخبّون…</p>`;
-      else h+='<p class="hd-wait">الكل يتخبّى…</p>';}
+      if(me>=0&&!iSk&&ctx.my){const ok=sel>=0&&sel<16;a=`<button class="big hd-go hide" data-ga="hp" data-i="${ok?sel:-1}" ${ok?'':'disabled'}>${ok?`اختبي في «${HDN[sel]}» 🤫`:d.tk[me]>=0?`«${HDN[d.tk[me]]}» مأخوذ، اختر غيره`:'اختر مخباك من الخريطة'}</button>`;}
+      else if(iSk)a=`<p class="hd-wait">🙈 عيونك مسكّرة… <b class="hd-cnt-t">واحد…</b></p>`;
+      else a=`<p class="hd-wait">${myPick!=null&&myPick!==NOPICK&&d.at[me]<0?`اخترت «${HDN[myPick]}» ✓ `:''}الكل يتخبّى…</p>`;}
     else if(d.ph==='sk'){
       if(iSk&&ctx.my){
-        if(lsn){const k=sl>=100?sl-100:-1;h+=`<div class="hd-acts"><button class="big hd-go ear" data-ga="ls" data-i="${k>=0?k:0}" ${k>=0?'':'disabled'}>${k>=0?'👂 اسمع هنا':'اختر مربع على الخريطة'}</button><button class="sm hd-back" data-ga="lsn">رجوع</button></div><p class="hd-tip">تعرف هل فيه أحد بالمربع (بدون المكان بالضبط)، والكل يشوف النتيجة</p>`;}
-        else{const ok=sl>=0&&sl<=16;h+=`<div class="hd-acts"><button class="big hd-go ${sl===16?'guard':''}" data-ga="go" data-i="${ok?sl:0}" ${ok?'':'disabled'}>${sl===16?'🛡 احرس البيت':ok?`🔦 فتّش «${HDN[sl]}»`:'اختر مكان تفتّشه أو البيت'}</button>${d.lq<0?'<button class="sm hd-lsn" data-ga="lsn">👂 اسمع<small>مرة وحدة</small></button>':''}</div>`;}}
-      else h+=`<p class="hd-wait">${nameTag(d,d.sk)} يختار بالسر… بعدها ${me>=0&&!iSk&&d.hs[me]==='h'?'تقرر: تبقى ولا تركض':'يقرر المتخبّين'}</p>`;}
+        if(mode==='lsn'||mode==='torch'){const ok=zsel>=0;a=`<div class="hd-acts"><button class="big hd-go ${mode}" data-ga="${mode==='lsn'?'ls':'tz'}" data-i="${ok?zsel:-1}" ${ok?'':'disabled'}>${ok?(mode==='lsn'?`👂 اسمع «${HDZ[zsel].n}»`:`🔦 نوّر «${HDZ[zsel].n}»`):'اختر جهة من الخريطة'}<small>${mode==='lsn'?'تعرف فيها أحد ولا لا • ما تروح فتشة':'يبين ظل واحد فيها • ياخذ فتشة'}</small></button><button class="sm hd-back" data-ga="back">رجوع</button></div>`;}
+        else{const ok=sel>=0&&sel<16;a=`<div class="hd-acts sk"><button class="big hd-go" data-ga="go" data-i="${ok?sel:-1}" ${ok?'':'disabled'}>🔦 فتّش<small>${ok?`«${HDN[sel]}»`:'اختر مكان'}</small></button><button class="big hd-guard ${sel===HD_HOME?'on':''}" data-ga="go" data-i="16">🛡 احرس<small>البيت</small></button>`+
+          `<button class="big hd-pw2" data-ga="mode" data-i="1" ${d.lq>=0?'disabled':''} aria-label="اسمع">👂<small>${d.lq>=0?'انستخدم':'اسمع'}</small></button><button class="big hd-pw2" data-ga="mode" data-i="2" ${d.tc?'disabled':''} aria-label="الكشاف">🔦<small>${d.tc?'انستخدم':'الكشاف'}</small></button></div>`;}}
+      else a=`<p class="hd-wait">${nameTag(d,d.sk)} يختار بالسر… ${hidden?'بعدها تقرر: تبقى، تتسلّل، ولا تركض':''}</p>`;}
     else if(d.ph==='rn'){
-      if(ctx.my&&me>=0&&!iSk){const g=hdGuardP(d);h+=`<div class="hd-two"><button class="big hd-stay" data-ga="st">🤫 أبقى مكاني<small>تصمد للآخر +15</small></button><button class="big hd-run" data-ga="run">🏃 أركض للبيت<small>+20، ولو حارس −15</small></button></div><p class="hd-tip">باقي ${d.N-d.n} فتشات${d.n?` • حرس البيت ${d.gc} من ${d.n}`:''}</p>`;void g;}
-      else if(iSk)h+=`<p class="hd-wait">اخترت ${d.ch===16?'تحرس البيت 🛡':d.ch>=0?`تفتّش «${HDN[d.ch]}» 🔦`:''}… ننتظرهم يقررون</p>`;
-      else if(me>=0&&d.hs[me]==='h')h+=`<p class="hd-wait">${myPick===1?'قررت تركض 🏃':myPick===0?'قررت تبقى 🤫':''} ننتظر الباقين…</p>`;
-      else h+='<p class="hd-wait">المتخبّين يقررون…</p>';}
-    return h+'</div>';},
+      if(ctx.my&&hidden){
+        if(mode==='sneak'){const ok=sel>=0&&sel<16;a=`<div class="hd-acts"><button class="big hd-go sneak" data-ga="sn" data-i="${ok?sel:-1}" ${ok?'':'disabled'}>${ok?`👣 تسلّل لـ«${HDN[sel]}»`:'اختر مكان جنبك'}<small>ممكن ينسمع صوتك${d.ct>=0&&!d.cu?' • انتبه للقطوة':''}</small></button><button class="sm hd-back" data-ga="back">رجوع</button></div>`;}
+        else a=`<div class="hd-three"><button class="big hd-stay" data-ga="st">🤫 أبقى<small>اسكت ولا تتحرك</small></button><button class="big hd-sneak" data-ga="mode" data-i="3" ${hdNbr(myP).some(q=>!mates.has(q))?'':'disabled'}>👣 تسلّل<small>لمكان جنبك</small></button><button class="big hd-run" data-ga="run">🏃 أركض للبيت<small>+20، ولو حارس −15</small></button></div>${d.bl[me]>=0?`<p class="hd-tip">«${HDN[d.bl[me]]}» كان مشغول، رجعت مكانك</p>`:''}`;}
+      else if(iSk)a=`<p class="hd-wait">اخترت ${d.ch===HD_HOME?'تحرس البيت 🛡':d.ch>=100?`تنوّر «${HDZ[d.ch-100].n}» 🔦`:d.ch>=0?`تفتّش «${HDN[d.ch]}» 🔦`:''}… ننتظرهم يقررون</p>`;
+      else if(hidden)a=`<p class="hd-wait">${myPick===1?'قررت تركض 🏃':myPick===0?'قررت تبقى 🤫':myPick>=2?`قررت تتسلّل لـ«${HDN[myPick-2]}» 👣`:''} ننتظر الباقين…</p>`;
+      else a='<p class="hd-wait">المتخبّين يقررون…</p>';}
+    return h+`<div class="hd-dock">${a}</div></div>`;},
+  sounds(d,me){if(d.win!=null)return;const e=d.ev;
+    if(e){const k=d.gid+':'+e.k;if(S.hdSnd!==k){S.hdSnd=k;if(e.f>=0||e.g.length){KH.snd('found');}else if(e.s.length)KH.snd('safe');if(e.ft==='cat')setTimeout(()=>KH.snd('meow'),300);
+      const myP=me>=0&&me!==d.sk?d.at[me]:-1;if(myP>=0&&d.hs[me]==='h'&&d.sp>=0&&hdDist(d.sp,myP)<=1)setTimeout(()=>KH.snd('heart'),700);}}
+    if(d.bk>=0){const k=d.gid+':bk';if(S.hdSndB!==k){S.hdSndB=k;KH.snd('bark');}}
+    if(d.mo){const k=d.gid+':mo';if(S.hdSndM!==k){S.hdSndM=k;KH.snd('call');}}},
+  // walking: a character whose place changed walks there along the footpaths
+  after(d,ctx){const box=document.querySelector('.hd-map svg');if(!box)return;const pos=S.hdPos&&S.hdPos.gid===d.gid?S.hdPos:(S.hdPos={gid:d.gid,m:{}});let delay=0;
+    for(const el of box.querySelectorAll('.kh-ch')){const k=el.getAttribute('data-k'),n=+el.getAttribute('data-n'),f0=el.getAttribute('data-f');const prev=pos.m[k];pos.m[k]=n;
+      const from=prev!=null?prev:(f0!=null&&f0!==''?+f0:null);if(from==null||from===n||!(from>=0&&from<=16))continue;
+      const ox=+el.getAttribute('data-ox')||0,oy=+el.getAttribute('data-oy')||0;const pts=HG.pts(from,n).map(([x,y])=>[x+ox,y+oy]);
+      KH.walk(el,pts,{delay,step:()=>KH.snd('step')});delay+=120;}},
   click(a,i,d,ctx){const v=ctx.v;
-    if(a==='sel'){if(!ctx.my||d.win!=null)return;S.hdSel=S.hdSel===i?-1:i;S.hdL=false;render();return;}
-    if(a==='lsn'){if(!ctx.my||d.ph!=='sk'||v!==d.sk||d.lq>=0)return;S.hdL=!S.hdL;S.hdSel=-1;render();return;}
-    if(a==='lsel'){if(!ctx.my||d.ph!=='sk'||v!==d.sk||!(i>=0&&i<9))return;S.hdSel=100+i;render();return;}
+    if(a==='sel'){if(!ctx.my||d.win!=null)return;
+      // a second tap on the chosen place confirms it
+      if(S.hdSel===i){if(d.ph==='hide')return this.click('hp',i,d,ctx);if(d.ph==='sk'&&v===d.sk)return this.click('go',i,d,ctx);if(d.ph==='rn'&&S.hdM==='sneak')return this.click('sn',i,d,ctx);}
+      S.hdSel=i;render();return;}
+    if(a==='mode'){if(!ctx.my)return;const m=i===1?'lsn':i===2?'torch':i===3?'sneak':'';if(m==='lsn'&&d.lq>=0||m==='torch'&&d.tc)return;S.hdM=S.hdM===m?'':m;S.hdSel=-1;S.hdZ=-1;render();return;}
+    if(a==='zsel'){if(!ctx.my||d.ph!=='sk'||v!==d.sk||!(i>=0&&i<HDZ.length))return;if(S.hdZ===i)return this.click(S.hdM==='lsn'?'ls':'tz',i,d,ctx);S.hdZ=i;render();return;}
+    if(a==='back'){S.hdM='';S.hdSel=-1;S.hdZ=-1;render();return;}
     if(a==='hp'){if(d.ph!=='hide'||!ctx.my||v==null||v<0||v===d.sk||!(Number.isInteger(i)&&i>=0&&i<16)||d.tk[v]===i)return;S.hdSel=-1;simulPick(d,v,i);return;}
-    if(a==='go'){if(d.ph!=='sk'||!ctx.my||v!==d.sk||!(Number.isInteger(i)&&i>=0&&i<=16)||(i<16&&d.lg.some(e=>e[0]===i)))return;S.hdSel=-1;act(hdChoose(d,i));return;}
-    if(a==='ls'){if(d.ph!=='sk'||!ctx.my||v!==d.sk||d.lq>=0||!(Number.isInteger(i)&&i>=0&&i<9))return;S.hdSel=-1;S.hdL=false;act(hdListen(d,i));return;}
-    if(a==='st'||a==='run'){if(d.ph!=='rn'||!ctx.my||v==null||v<0||v===d.sk)return;simulPick(d,v,a==='run'?1:0);}},
-  resolve(d,picks){if(d.ph==='hide')return hdPlace(d,picks);if(d.ph==='rn')return hdTurn(d,d.ch,picks.map(p=>p===1));return d;},
-  onSkip(nd,d){let x={...nd,win:null,wins:undefined,turn:d.sk};delete x.wins;let hs=x.hs;
+    if(a==='go'){if(d.ph!=='sk'||!ctx.my||v!==d.sk||!(Number.isInteger(i)&&i>=0&&i<=16))return;S.hdSel=-1;act(hdChoose(d,i));return;}
+    if(a==='ls'){if(d.ph!=='sk'||!ctx.my||v!==d.sk||d.lq>=0||!(Number.isInteger(i)&&i>=0&&i<HDZ.length))return;S.hdM='';S.hdZ=-1;act(hdListen(d,i));return;}
+    if(a==='tz'){if(d.ph!=='sk'||!ctx.my||v!==d.sk||d.tc||!(Number.isInteger(i)&&i>=0&&i<HDZ.length))return;S.hdM='';S.hdZ=-1;act(hdChoose(d,100+i));return;}
+    if(a==='st'||a==='run'){if(d.ph!=='rn'||!ctx.my||v==null||v<0||v===d.sk)return;simulPick(d,v,a==='run'?1:0);return;}
+    if(a==='sn'){if(d.ph!=='rn'||!ctx.my||v==null||v<0||v===d.sk||!hdNbr(d.at[v]).includes(i))return;S.hdM='';S.hdSel=-1;simulPick(d,v,2+i);}},
+  resolve(d,picks){if(d.ph==='hide')return hdPlace(d,picks);if(d.ph==='rn')return hdTurn(d,d.ch,picks);return d;},
+  onSkip(nd,d){let x={...nd,win:null,turn:d.sk};delete x.wins;let hs=x.hs;
     for(let s=0;s<d.pl.length;s++)if(nd.out[s]==='1'&&d.out[s]!=='1'){if(s===d.sk)return hdEnd({...x,hs},'الغمّاض طلع');hs=setAt(hs,s,'x');}
     x.hs=hs;if(!hdHidden(x).length)return hdEnd(x,'');return x;},
   bot(d,s,lv){if(d.win!=null||d.ph!=='sk'||s!==d.sk)return d;return hdSeekBot(d,s,lv);},
   botPick(d,s,lv){if(!hdNeed(d,s))return NOPICK;return d.ph==='hide'?hdHideBot(d,s,lv):hdRunBot(d,s,lv);},
   botDelay:(d,s,lv)=>d.ph==='sk'?900+rnd(900):BOTMS[lv]+rnd(d.ph==='hide'?1800:1300)};
-// the bots' memory: every reveal and every round's end, as this phone saw them
+function hdEvTxt(d){const e=d.ev,N=s=>pname(d.pl[s]);if(!e)return '';
+  if(e.p<0)return `راحت الفتشة على ${N(d.sk)}`;if(e.p===HD_HOME)return e.g.length?`${N(d.sk)} حرس البيت ومسك ${e.g.map(N).join(' و')}`:`${N(d.sk)} حرس البيت`;
+  if(e.p>=100)return `الكشاف نوّر «${HDZ[e.tz].n}»`;if(e.gr)return 'أبو سعد ستر على البقالة';
+  return e.f>=0?`لقى ${N(e.f)} في «${HDN[e.p]}»!`:`«${HDN[e.p]}» فاضي • ${HDH[e.h]||''}`;}
 GAMES.hide.botSee=nd=>{try{const M=hdMem();if(M.ns>400){M.seen={};M.ns=0;}
   const e=nd.ev,k=nd.gid+':'+nd.ek;if(e&&!M.seen[k]){M.seen[k]=1;M.ns++;const r=nd.pl[nd.sk],m=M.sk[r]||(M.sk[r]={p:Array(16).fill(0),g:0,t:0});
-    if(e.p>=0){m.t++;if(e.p<16)m.p[e.p]++;else m.g++;const had=hdHidden(nd).length+(e.f>=0?1:0)+e.s.length+e.g.length;M.run.n+=had;M.run.r+=e.s.length+e.g.length;}}
-  if(nd.win!=null&&!M.seen['w'+nd.gid]){M.seen['w'+nd.gid]=1;M.ns++;nd.at.forEach((p,s)=>{if(s===nd.sk||!(p>=0&&p<16))return;const r=nd.pl[s];(M.hp[r]=M.hp[r]||Array(16).fill(0))[p]++;});}}catch(e){}};
+    if(e.p>=0&&e.p<=16){m.t++;if(e.p<16)m.p[e.p]++;else m.g++;const had=hdHidden(nd).length+(e.f>=0?1:0)+e.s.length+e.g.length;M.run.n+=had;M.run.r+=e.s.length+e.g.length;}}
+  if(nd.win!=null&&!M.seen['w'+nd.gid]){M.seen['w'+nd.gid]=1;M.ns++;nd.at.forEach((p,s)=>{if(s===nd.sk||!(p>=0&&p<16))return;const r=nd.pl[s];(M.hp[r]=M.hp[r]||Array(16).fill(0))[(nd.hp[s]&&nd.hp[s][1]!=null&&nd.hp[s][1]<16)?nd.hp[s][1]:p]++;});}}catch(e){}};
 
-/* the clocks: the 3 minutes and the step's bar move every half second, and only the enforcer (this phone, or the room's
-   host) acts when a deadline passes. On one phone a step's 15 seconds start when its player sees the screen */
+/* the clocks: only the enforcer (this phone, or the room's host) acts when a deadline passes */
+const HD_NUM=['واحد…','اثنين…','ثلاثة…','أربعة…','خمسة…','ستة…','سبعة…','ثمانية…','تسعة…','عشرة!'];
 function hdTick(d,now){const local=hdLocal();
   if(local&&(S.browse||S.modal||app.querySelector('.cover')))return;
   if((d.ph==='sk'||d.ph==='rn')&&d.end>0&&now>=d.end){act(hdEnd(hdPause(d),'خلص الوقت ⏱'));return;}
+  // the mother calls in the last 40 seconds
+  if((d.ph==='sk'||d.ph==='rn')&&!d.mo&&hdClock(d)<=HD_T.mom&&(d.end>0||!local)){act({...d,mo:1,mk:d.ek});return;}
   if(local){const ctx=mkCtx();const who=d.ph==='sk'?d.sk:(ctx.my&&ctx.v>=0?ctx.v:-1);
     if(d.dl===0||who!==d.dv){const nd={...d,dl:now+(d.T||HD_T.step),dv:who};if(d.ph==='sk'&&!(d.end>0))nd.end=now+Math.max(0,d.gl);
-      // arming a clock is not a move: it does not tap, bump the round or wake the bots
       S.st={...S.st,d:nd};save();render();return;}}
   if(!(d.dl>0)||now<d.dl)return;
   if(d.ph==='sk'){act(hdTurn(hdPause(d),-1,[]));return;}
   if(local&&d.dv>=0){const v=d.dv;if(d.out[v]!=='1'&&!hasPicked(d,v)&&hdNeed(d,v)){S.st={...S.st,d:{...d,dl:0,dv:-2}};simulPick(S.st.d,v,d.ph==='rn'?0:NOPICK);return;}}
   act(GAMES.hide.resolve(d,simulPicks(d).map(x=>x===undefined?null:x)));}
 setInterval(()=>{if(S.st.g!=='hide')return;const d=S.st.d;if(!d||d.win!=null||!GAMES.hide)return;const now=Date.now();
-  const ck=document.querySelector('.hd-clk b');if(ck){const l=hdClock(d),t=hdFmt(l);if(ck.textContent!==t)ck.textContent=t;ck.parentNode.classList.toggle('low',(d.ph==='sk'||d.ph==='rn')&&l<=30000);}
+  const ck=document.querySelector('.hd-clk b');if(ck){const l=hdClock(d),t=hdFmt(l);if(ck.textContent!==t)ck.textContent=t;}
   const bar=document.querySelector('.hd-bar i');if(bar){const f=d.dl>0?Math.max(0,Math.min(1,(d.dl-now)/(d.T||HD_T.step))):1;bar.style.transform=`scaleX(${f.toFixed(3)})`;bar.parentNode.classList.toggle('low',d.dl>0&&d.dl-now<5000);}
+  // the seeker's count, «واحد… عشرة!», during the hiding (on the map, the cover and the seeker's own screen)
+  if(d.ph==='hide'){const k=d.gid;if(!S.hdCnt||S.hdCnt.k!==k)S.hdCnt={k,t0:now,last:-1};const i=Math.min(9,Math.floor((now-S.hdCnt.t0)/1000));const t=i>=9&&now-S.hdCnt.t0>12000?'جاهزين؟ جاي!':HD_NUM[i];
+    for(const el of document.querySelectorAll('.hd-cnt text,.hd-cnt-t'))if(el.textContent!==t)el.textContent=t;if(i!==S.hdCnt.last){S.hdCnt.last=i;if(document.querySelector('.hd-cnt,.hd-cnt-t'))KH.snd('count');}}
   if(!isEnforcer()||S.holdRender||(S.mode!=='local'&&S.mode!=='online'))return;
   try{hdTick(d,now);}catch(e){console.error('hide tick',e);}},500);
 
-HELP.hide='واحد «الغمّاض» يدوّر والباقين يتخبّون، وكل جولة يصير الغمّاض اللي بعده. الحارة فيها 16 مخبأ و«البيت» برّاها، وهو المكان الآمن. كل متخبّي يختار مخباه بالسر خلال 25 ثانية، وما يتخبّى اثنين بمكان واحد. عند الغمّاض فتشات بعدد 6 + عدد المتخبّين (أقصاها 12). كل دور يختار الغمّاض بالسر: يفتّش مكان 🔦 أو يحرس البيت 🛡. بعده كل متخبّي يقرر بالسر: يبقى مكانه 🤫 أو يركض للبيت 🏃. إذا ركضت والغمّاض يحرس البيت تنمسك، وإذا كان يفتّش توصل البيت بأمان. وإذا فتّش مكانك وأنت باقي فيه يلقاك. المكان الفاضي يعطي الكل تلميح عن أقرب متخبّي: 🔥 حار يعني جنبه، 🌤 دافي قريب، ❄️ بارد بعيد. «اسمع 👂» مرة وحدة باللعبة: يختار الغمّاض مربع 2×2 ويعرف فيه أحد ولا لا، والكل يشوف النتيجة. كل خطوة لها 15 ثانية: الغمّاض اللي ما يختار تروح عليه الفتشة، والمتخبّي اللي ما يختار يبقى مكانه. اللعبة كلها 3 دقايق، وإذا خلصت وفيه أحد ما انمسك يفوزون المتخبّين. النقاط: يلقى الغمّاض واحد = +15 له و−15 على اللي انمسك (وما تنزل نقاطك تحت الصفر)، توصل البيت = +20، تصمد للآخر بدون ما تنمسك = +15. يلقاهم كلهم = يفوز الغمّاض وياخذ +10 زيادة، ولو صمد واحد أو وصل البيت يفوزون المتخبّين. من 4 لاعبين وفوق المتخبّين فريق واحد: يفوزون سوا ويشوف كل واحد أماكن ربعه. على جوال واحد مرّروا الجوال وغطّوا الشاشة، والوقت يوقف وقت التمرير. من 3 لاعبين وفوق.';
+HELP.hide='غميضة الحارة بالليل: واحد «الغمّاض» يدوّر والباقين يتخبّون، وكل جولة يصير الغمّاض اللي بعده. العدّ: الغمّاض يغمّض ويعدّ للعشرة، وكل متخبّي يختار مخباه بالسر من 16 مكان على الخريطة (مكان لكل واحد) ويمشي له. «البيت» هو المكان الآمن. عند الغمّاض فتشات بعدد 6 + عدد المتخبّين (أقصاها 12). كل دور يختار الغمّاض بالسر: يفتّش مكان 🔦، أو يحرس البيت 🛡، أو مرة وحدة يشغّل «الكشاف» على جهة ويبين ظل واحد متخبّي فيها (ياخذ فتشة). بعدها كل متخبّي يقرر بالسر: يبقى 🤫، أو يتسلّل 👣 لمكان فاضي جنبه على الممرات، أو يركض للبيت 🏃. إذا ركضت والبيت محروس تنمسك، وإذا مو محروس توصل بأمان. التسلّل يسوي صوت: أحيانا يسمع الغمّاض خطوات بالجهة، والقطوة اللي بالخريطة إذا مريت جنبها تموء وتفضحك. المكان الفاضي يعطي الكل تلميح عن أقرب متخبّي بعدد خطوات الممرات: 🔥 حار خطوة، 🌤 دافي خطوتين، ❄️ بارد أبعد. «اسمع 👂» مرة وحدة: يختار الغمّاض جهة من 5 (بيت الجيران، جهة البقالة، الشارع العام، جهة المزارع، جهة الخزان) ويعرف فيها أحد ولا لا، والكل يشوف الجواب. الكلب ينبح إذا الغمّاض اختار مكان قريب منه، وهذا تحذير للمتخبّين. أبو سعد صاحب البقالة يستر على اللي عنده أول مرة تنفتّش. آخر 40 ثانية تنادي الأم «العشا جاهز!» والخطوات تصير 10 ثواني. كل خطوة 15 ثانية واللعبة 3 دقايق، وإذا خلص الوقت وفيه أحد ما انمسك يفوزون المتخبّين. النقاط: يلقى الغمّاض واحد = +15 له و−15 على اللي انمسك (ما تنزل تحت الصفر)، توصل البيت = +20، تصمد للآخر = +15، يلقاهم كلهم = +10 زيادة للغمّاض. من 4 لاعبين وفوق المتخبّين فريق واحد: يفوزون سوا ويشوف كل واحد أماكن ربعه. على جوال واحد مرّروا الجوال وغطّوا الشاشة. من 3 لاعبين وفوق.';

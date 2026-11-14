@@ -1,160 +1,131 @@
-/* «غميضة الحارة» (hide): a Saudi neighbourhood at dusk. Everything is scoped under .hd.
-   Motion is transform/opacity only, at most 450 ms, finite; html.lite (perf.css) turns it off */
-.hd{--sand-1:#FFF4DE;--sand-2:#F0D3A1;--lip:#C99A5E;--brown:#5A3A1E;--ground-1:#E8C38C;--ground-2:#D7A869;
-  --sky:linear-gradient(90deg,#45357A 0%,#9B4F86 48%,#E3765E 78%,#F4A85C 100%);
-  --hot:#E5483F;--warm:#EE8A22;--cold:#3D8FD6;
-  width:min(100%,440px);margin:0 auto;display:flex;flex-direction:column;align-items:stretch}
-@media (prefers-color-scheme:dark){.hd{--sand-1:#F2DDB6;--sand-2:#DDB57A;--lip:#8E6539;--ground-1:#3E3046;--ground-2:#2C2236;
-  --sky:linear-gradient(90deg,#191634 0%,#2E2352 50%,#5B3550 80%,#7A4848 100%)}}
-
-/* the evening sky: game clock, searches, step seconds, «اسمع» */
-.hd-sky{position:relative;display:flex;align-items:center;gap:8px;padding:7px 12px 7px 10px;border-radius:18px 18px 0 0;background:var(--sky);color:#fff;font-weight:800;overflow:hidden}
-.hd-moon{position:absolute;inset-inline-end:34%;top:-10px;width:26px;height:26px;border-radius:50%;box-shadow:-6px 6px 0 0 #FFE7A6;opacity:.55;pointer-events:none}
-.hd-clk{display:flex;align-items:center;gap:4px;padding:2px 10px;border-radius:99px;background:rgba(0,0,0,.22);font-size:17px;font-variant-numeric:tabular-nums;direction:ltr}
-.hd-clk i{font-style:normal;font-size:14px}
-.hd-clk.low{background:var(--hot)}
-.hd-pips{display:flex;align-items:center;gap:3px;flex:1;justify-content:center;flex-wrap:wrap}
-.hd-pips small{font-size:13px;margin-inline-end:2px}
-.hd-pips i{width:8px;height:8px;border-radius:50%;background:#FFE7A6;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
-.hd-pips i.u{background:rgba(255,255,255,.22);box-shadow:none}
-.hd-sec{display:flex;align-items:baseline;gap:1px;padding:1px 8px;border-radius:99px;background:rgba(255,255,255,.18);font-size:16px;min-width:42px;justify-content:center;font-variant-numeric:tabular-nums}
-.hd-sec small{font-size:11px;opacity:.85}
-.hd-sec.off{opacity:.55}
-.hd-ear{font-size:18px;line-height:1}
-.hd-ear.u{opacity:.35}
-.hd-bar{position:relative;height:6px;background:rgba(69,53,122,.25);border-radius:0 0 10px 10px;overflow:hidden}
-.hd-bar i{display:block;height:100%;background:linear-gradient(90deg,#F7C75A,#FFE39A);transform-origin:right center;transition:transform .45s linear}
-.hd-bar.low i{background:var(--hot)}
-.hd-bar.idle i{opacity:.4}
-
-/* what just happened */
-.hd-ev{display:flex;align-items:center;gap:9px;margin:7px 0 0;padding:6px 12px;border-radius:14px;background:var(--surface);box-shadow:var(--e1),inset 4px 0 0 var(--bc,var(--navy));font-weight:700;font-size:14.5px;line-height:1.4;animation:hdin .3s var(--ease) both}
-.hd-ev>i{font-style:normal;font-size:22px;line-height:1}
-.hd-ev.got{--bc:var(--hot)}.hd-ev.h1{--bc:var(--hot)}.hd-ev.h2{--bc:var(--warm)}.hd-ev.h3{--bc:var(--cold)}.hd-ev.h4{--bc:var(--mut)}
-.hd-ev.gd{--bc:#2D4763}.hd-ev.to{--bc:var(--mut)}.hd-ev.ls{--bc:#6A4FA0}
-@keyframes hdin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-
-/* the neighbourhood */
-.hd-map{position:relative;margin-top:7px;padding:7px;border-radius:22px;background:radial-gradient(120% 80% at 50% 0%,var(--ground-1),var(--ground-2));box-shadow:var(--e2)}
-.hd-grid{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:6px}
-.hd-t{position:relative;aspect-ratio:1/.9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 2px 5px;border-radius:14px;
-  background:linear-gradient(180deg,var(--sand-1),var(--sand-2));color:var(--brown);box-shadow:0 3px 0 var(--lip),inset 0 0 0 1px rgba(255,255,255,.55);
-  transition:transform var(--t1) var(--ease),box-shadow var(--t1) var(--ease)}
-.hd-t:disabled{opacity:1;cursor:default}
-.hd-ic{display:block;width:58%;max-width:44px;aspect-ratio:1}
-.hd-ic svg{width:100%;height:100%;display:block}
-.hd-t>b{font-size:11.5px;font-weight:800;line-height:1.15;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.hd-t.can{cursor:pointer;box-shadow:0 3px 0 var(--lip),inset 0 0 0 2px rgba(255,255,255,.95)}
-.hd-t.can:active{transform:translateY(2px);box-shadow:0 1px 0 var(--lip)}
-.hd-t.sel{transform:translateY(-3px);box-shadow:0 0 0 3px var(--sel),0 6px 0 var(--lip);z-index:1}
-.hd-map.seek .hd-t.sel{box-shadow:0 0 0 3px #FFD84D,0 0 0 6px rgba(255,216,77,.35),0 6px 0 var(--lip)}
-.hd-t.done{background:linear-gradient(180deg,#EADBC3,#D5BD97)}
-.hd-t.done .hd-ic{opacity:.5}
-.hd-t.found{background:linear-gradient(180deg,#FFE3DD,#F4B4A7)}
-.hd-t.mine{background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--me) 34%,var(--sand-2)));box-shadow:0 0 0 3px var(--me),0 3px 0 var(--lip)}
-.hd-t.aim{box-shadow:0 0 0 3px #FFD84D,0 3px 0 var(--lip)}
-.hd-t.tk .hd-ic,.hd-t.tk>b{opacity:.45}
-.hd-hb{position:absolute;top:3px;inset-inline-end:3px;padding:0 5px;border-radius:99px;font-size:10px;font-weight:900;line-height:16px;color:#fff;text-decoration:none;white-space:nowrap;box-shadow:0 1px 0 rgba(0,0,0,.18)}
-.hd-hb.h1{background:var(--hot)}.hd-hb.h2{background:var(--warm)}.hd-hb.h3{background:var(--cold)}
-.hd-dust{position:absolute;bottom:3px;inset-inline-start:4px;width:24px;height:11px;color:#B99A70;opacity:.85;pointer-events:none}
-.hd-x,.hd-aim{position:absolute;top:3px;inset-inline-start:3px;padding:0 5px;border-radius:99px;font-size:10px;font-weight:900;line-height:16px;text-decoration:none;color:#fff;background:var(--hot)}
-.hd-aim{background:#2D4763;font-size:11px}
-.hd-kids{position:absolute;top:-7px;inset-inline-start:-5px;display:flex;gap:1px;z-index:2;pointer-events:none}
-.hd-kid{position:relative;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff,0 2px 5px rgba(0,0,0,.25);font-style:normal}
-.hd-kid svg{width:68%;height:68%}
-.hd-kid.me{width:28px;height:28px}
-.hd-kid.mate{width:22px;height:22px;box-shadow:0 0 0 2px #fff,0 0 0 4px color-mix(in srgb,var(--c) 45%,transparent)}
-.hd-kid.got::after{content:'';position:absolute;inset:0;border-radius:50%;background:linear-gradient(45deg,transparent 44%,#fff 44%,#fff 56%,transparent 56%),linear-gradient(-45deg,transparent 44%,#fff 44%,#fff 56%,transparent 56%);opacity:.9}
-.hd-kid.got{opacity:.8}
-.hd-kid.gone{opacity:.4}
-.hd-kid.sk{background:#2D4763}
-/* the reveal: a cover flips off the searched place, the one found pops out */
-.hd-fx{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,#E9C995,#C99A5E);transform-origin:center;animation:hdflip .42s var(--ease) both;pointer-events:none;z-index:3}
-@keyframes hdflip{0%{transform:perspective(240px) rotateY(0);opacity:1}100%{transform:perspective(240px) rotateY(-90deg);opacity:0}}
-.hd-pop{position:absolute;top:-12px;left:50%;padding:1px 9px;border-radius:99px;background:var(--c,var(--hot));color:#fff;font-size:12px;font-weight:900;font-style:normal;white-space:nowrap;box-shadow:0 0 0 2px #fff,0 3px 8px rgba(0,0,0,.25);transform:translateX(-50%);animation:hdpop .4s var(--spring) both;pointer-events:none;z-index:4}
-.hd-pop.safe{--c:var(--ok);top:-10px}
-@keyframes hdpop{from{transform:translateX(-50%) scale(.3);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
-/* a hider's heart when the seeker searched right next to them */
-.hd-beat{position:absolute;inset:-4px;border-radius:17px;box-shadow:0 0 0 3px var(--hot);animation:hdbeat .42s ease-in-out 4 both;pointer-events:none;z-index:2}
-@keyframes hdbeat{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.06);opacity:.35}}
-
-/* «اسمع»: the 2×2 square, its result, and the 9 points to choose from */
-.hd-sq{position:absolute;width:calc(50% - 3px);height:calc(50% - 3px);display:grid;place-items:center;pointer-events:none;z-index:3;border-radius:16px}
-.hd-sq.ls{border:3px dashed rgba(255,255,255,.95);place-items:end center}
-.hd-sq.ls>span{transform:translateY(55%)}
-.hd-sq.ls.yes{border-color:var(--hot);background:rgba(229,72,63,.10)}
-.hd-sq.ls.no{border-color:var(--cold);background:rgba(61,143,214,.08)}
-.hd-sq>span{padding:1px 9px;border-radius:99px;background:#45357A;color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap;box-shadow:0 0 0 2px #fff}
-.hd-sq.ls.yes>span{background:var(--hot)}.hd-sq.ls.no>span{background:var(--cold)}
-.hd-sq.pv{border:3px solid #FFD84D;background:rgba(255,216,77,.2);animation:hdin .2s var(--ease) both}
-.hd-sq.pv>span{background:#6A4FA0}
-.hd-jn{pointer-events:auto;width:36px;height:36px;border-radius:50%;background:rgba(55,40,95,.88);color:#fff;font-size:18px;line-height:1;box-shadow:0 0 0 3px #fff,0 3px 8px rgba(0,0,0,.3);transition:transform var(--t1) var(--ease)}
-.hd-jn:active{transform:scale(.9)}
-.hd-map.lsn .hd-t{opacity:.82}
-
-/* البيت: the safe place outside the map */
-.hd-home{position:relative;display:flex;align-items:center;gap:10px;width:100%;margin-top:7px;padding:4px 12px 4px 10px;border-radius:16px;
-  background:linear-gradient(90deg,#FFF3D6,#F7D8A2);color:var(--brown);box-shadow:0 3px 0 var(--lip);text-align:start;transition:transform var(--t1) var(--ease),box-shadow var(--t1) var(--ease)}
-.hd-home:disabled{opacity:1;cursor:default}
-.hd-home.can{box-shadow:0 3px 0 var(--lip),inset 0 0 0 2px rgba(255,255,255,.95)}
-.hd-home.can:active{transform:translateY(2px)}
-.hd-home.sel{transform:translateY(-2px);box-shadow:0 0 0 3px #FFD84D,0 5px 0 var(--lip)}
-.hd-home.guard{background:linear-gradient(90deg,#E9EEF7,#C9D5EA)}
-.hd-hs{position:relative;flex:none;width:58px;height:40px}
-.hd-hs::before{content:'';position:absolute;left:50%;top:58%;width:46px;height:34px;margin:-17px 0 0 -23px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,214,107,.85),rgba(255,214,107,0));pointer-events:none}
-.hd-hs svg{position:relative;width:100%;height:100%}
-.hd-ht{display:flex;flex-direction:column;line-height:1.25;min-width:0;flex:1}
-.hd-ht b{font-size:17px;font-weight:900}
-.hd-ht small{font-size:12px;font-weight:700;opacity:.8}
-.hd-home .hd-kids{position:static;flex-wrap:wrap;justify-content:flex-end;gap:3px;max-width:45%}
-.hd-home .hd-pop{top:-11px}
-
-/* this player's role and live points */
-.hd-me{display:flex;align-items:center;gap:10px;margin-top:8px;padding:5px 12px 5px 10px;border-radius:14px;background:var(--surface);background:color-mix(in srgb,var(--c) 13%,var(--surface));box-shadow:inset 0 0 0 2px var(--c)}
-.hd-me>i{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--c)}
-.hd-me>i svg{width:70%;height:70%}
-.hd-me>span{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}
-.hd-me b{font-size:15.5px;font-weight:800}
-.hd-me small{font-size:12px;color:var(--mut);font-weight:700}
-.hd-me small.hot{color:var(--hot);font-weight:800}
-.hd-me em,.hd-sr em{font-style:normal;font-weight:900;font-size:17px;direction:ltr}
-.hd em.up{color:var(--ok)}.hd em.dn{color:var(--bad)}
-
-/* actions */
-.hd .big{margin:8px 0 0;padding-top:13px;padding-bottom:13px}
-.hd-go{background:var(--me,var(--navy))}
-.hd.is-sk .hd-go{background:#2D4763}
-.hd.is-sk .hd-go.guard{background:#B2453C}
-.hd .hd-go.ear{background:#6A4FA0}
-@media (prefers-color-scheme:dark){.hd.is-sk .hd-go{background:#3B5D82}}
-.hd-acts{display:flex;align-items:stretch;gap:8px}
-.hd-acts .big{flex:1;min-width:0;font-size:19px;padding:12px}
-.hd-acts .sm{margin-top:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;padding:6px 12px;border-radius:16px}
-.hd-acts .sm small{font-size:10.5px;color:var(--mut);font-weight:700}
-.hd-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.hd-two .big{font-size:18px;padding:10px 8px;line-height:1.25}
-.hd-two .big small{font-size:12px;margin-top:2px}
-.hd-stay{background:#4B6584}
-.hd-run{background:#E07B24}
-.hd-wait{margin:12px 0 2px;text-align:center;color:var(--mut);font-weight:700;font-size:15px}
-.hd-tip{margin:6px 0 0;text-align:center;color:var(--mut);font-size:12.5px;font-weight:600}
-
-/* the seeker counts while the others hide */
-.hd-blind{margin-top:10px;padding:18px 16px 16px;border-radius:22px;background:linear-gradient(180deg,#2B2350,#4B3A7A 70%,#7A4A7A);color:#fff;text-align:center;box-shadow:var(--e2)}
-.hd-blind b{display:block;font-size:22px;font-weight:900}
-.hd-blind p{margin:4px 0 0;font-size:14px;opacity:.88}
-.hd-eyes{font-size:56px;line-height:1.1;animation:hdpeek .42s ease-in-out 4 alternate both}
-@keyframes hdpeek{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
-.hd-blind-map{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:min(100%,250px);margin:14px auto 0;opacity:.28}
-.hd-blind-map i{display:block;aspect-ratio:1;padding:16%;border-radius:10px;background:rgba(255,255,255,.18)}
-.hd-blind-map svg{width:100%;height:100%}
-
-/* the round's end: everyone's place and points */
-.hd-sum{display:flex;flex-direction:column;gap:6px;margin-top:10px}
-.hd-sr{display:grid;grid-template-columns:32px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:9px;align-items:center;padding:6px 12px 6px 10px;border-radius:14px;background:var(--surface);box-shadow:var(--e1),inset 4px 0 0 var(--c)}
-.hd-sr>i{grid-row:1/3;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--c)}
-.hd-sr>i svg{width:70%;height:70%}
-.hd-sr>b{font-size:15px;font-weight:800;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hd-sr>span{grid-column:2;font-size:12.5px;color:var(--mut);font-weight:700;line-height:1.25}
-.hd-sr>em{grid-row:1/3;grid-column:3}
-.hd-sr.c,.hd-sr.g{opacity:.85}
+/* «غميضة الحارة» (hide): the night map of the حارة. Uses css/kit-hara.css. Transform/opacity animations only, finite. */
+.hd{position:relative;width:calc(100% + 8px);margin:0 -4px;color:#F4F6FA;font-weight:700}
+/* HUD: the 3 minutes, the searches left, the powers, the step's seconds */
+.hd-hud{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:16px 16px 0 0;background:#16223A;box-shadow:inset 0 -1px 0 rgba(255,255,255,.08)}
+.hd-clk{display:flex;align-items:center;gap:4px;padding:2px 10px 2px 4px;border-radius:14px;background:#0E1626;direction:ltr}
+.hd-clk svg{width:28px;height:28px}
+.hd-clk .tr{fill:none;stroke:rgba(255,255,255,.16);stroke-width:4}
+.hd-clk .fg{fill:none;stroke:#F0B429;stroke-width:4;stroke-linecap:round}
+.hd-clk b{font-size:19px;line-height:1;font-weight:800;min-width:42px}
+.hd-clk.low b{color:#FF8A80}.hd-clk.low .fg{stroke:#EC6158}
+.hd-left{position:relative;display:flex;align-items:baseline;gap:3px;padding:2px 8px 7px;border-radius:12px;background:#0E1626}
+.hd-left b{font-size:18px;line-height:1.1;font-weight:800}
+.hd-left small{font-size:11.5px;color:#A9BBD3;font-weight:600}
+.hd-pips{position:absolute;left:6px;right:6px;bottom:3px;display:flex;gap:1.5px;direction:ltr}
+.hd-pips u{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.18);text-decoration:none}
+.hd-pips u.on{background:#F0B429}
+.hd-pw{font-size:16px;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#2D4763;box-shadow:inset 0 0 0 2px #F0B429}
+.hd-pw.used{opacity:.4;box-shadow:none;filter:grayscale(1)}
+.hd-role{flex:none;text-align:center;font-size:13px;font-weight:800;padding:4px 6px;border-radius:12px;background:rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-role.sk{background:#EC6158}.hd-role.ok{background:#3FAE5C}.hd-role.out{background:#5F7590}
+.hd-hud>.hd-pw+.hd-pw+.hd-sec{margin-inline-start:auto}
+.hd-sec{width:34px;height:30px;display:grid;place-items:center;border-radius:11px;background:#0E1626;font-size:16px;font-weight:800;margin-inline-start:auto}
+.hd-sec.off{opacity:.45}
+.hd-bar{height:4px;background:#0E1626;overflow:hidden}
+.hd-bar i{display:block;height:100%;background:#F0B429;transform-origin:right;transition:transform .5s linear}
+.hd-bar.low i{background:#EC6158}.hd-bar.idle i{opacity:.35}
+html.lite .hd-bar i{transition:none}
+/* the stage: the map, the event card on top of it, the heartbeat under it */
+.hd-stage{position:relative;background:#2B3852;border-radius:0 0 16px 16px;overflow:hidden}
+.hd-stage>.kh-banner,.hd-stage>.kh-card{position:absolute;z-index:2;top:8px;left:8px;right:8px;justify-content:flex-start}
+.hd-stage>.kh-card.got{background:#FFE1DE}.hd-stage>.kh-card.got>i{background:#EC6158}
+.hd-stage>.kh-card.h1>i{background:#E5484D}.hd-stage>.kh-card.h2>i{background:#F28C38}.hd-stage>.kh-card.h3>i{background:#3D8FD1}
+.hd-stage>.kh-card.ls.yes>i{background:#3FAE5C}.hd-stage>.kh-card.ls.no>i{background:#9FB3C8}
+.hd-stage>.kh-card.bark{background:#FFE9C7}
+.hd-stage>.kh-banner.mom{background:#B23A3A}.hd-stage>.kh-banner.count{background:#2D4763}.hd-stage>.kh-banner.go{background:#3FAE5C}
+.hd-map{position:relative;width:100%;aspect-ratio:360/500;background-size:100% 100%;background-color:#2B3852}
+.hd-map>svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.hd-map text{font-family:inherit;font-weight:800;text-anchor:middle}
+/* names on solid pills */
+.hd-pl rect{fill:rgba(12,19,33,.9);stroke:rgba(255,255,255,.14);stroke-width:1}
+.hd-pl text{fill:#fff}
+.hd-pl.can rect{stroke:#F0B429;stroke-width:1.6}
+.hd-pl.sn rect{fill:#2F6FA8;stroke:#7FD3FF}
+.hd-pl.sel rect{fill:#F0B429;stroke:#fff;stroke-width:2}.hd-pl.sel text{fill:#17233A}
+.hd-pl.home rect{fill:#3FAE5C;stroke:#fff;stroke-width:1.6}
+.hd-ring{fill:#FFD84D;fill-opacity:.16;stroke:#FFD84D;stroke-width:3;stroke-dasharray:7 5}
+.hd-tap{cursor:pointer}.hd-tap rect{fill:transparent}
+.hd-hb text{fill:#fff}
+.hd-dust path{fill:#C9B48E;opacity:.55}
+.hd-tag{font-size:12px;fill:#7BEA9C}
+.hd-me-tag rect{fill:#fff;stroke:#17233A;stroke-width:1.4}.hd-me-tag text{fill:#17233A;font-size:11.5px}
+.hd-sil text{fill:#FFE38A;font-size:14px}
+/* zones: «اسمع» and «الكشاف» pick one; the answer stays drawn for a step */
+.hd-zn{fill:#4AB1E8;fill-opacity:.08;stroke:#7FD3FF;stroke-width:2.4;stroke-dasharray:8 6;stroke-linejoin:round;cursor:pointer}
+.hd-zn.torch{fill:#FFE38A;stroke:#FFE38A}
+.hd-zn.on{fill-opacity:.24;stroke-width:3.4;stroke-dasharray:none}
+.hd-zn.res{cursor:default;fill-opacity:.12}.hd-zn.res.yes{fill:#3FAE5C;stroke:#7BEA9C}.hd-zn.res.no{fill:#9FB3C8;stroke:#C8D6E5}
+.hd-zn.heard{cursor:default;fill:#F28C38;fill-opacity:.12;stroke:#FFB37A}
+/* bright footpaths */
+.hd-path{fill:none;stroke-width:3.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 7}
+.hd-path.sneak{stroke:#7FD3FF}.hd-path.sneak.on{stroke:#fff;stroke-width:4.6}
+.hd-path.run{stroke:#EC6158}
+.hd-path.seek{stroke:#FFE38A;opacity:.75}
+.hd-path.trail{stroke:var(--c);stroke-width:4;opacity:.95}
+/* characters */
+.kh-ch.got{opacity:.92}
+.hd-fx{animation:hd-pop .4s cubic-bezier(.34,1.56,.64,1) both;transform-box:fill-box;transform-origin:center}
+@keyframes hd-pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+.hd-cnt{animation:hd-pop .3s both;transform-box:fill-box;transform-origin:bottom}
+.hd-beat{position:absolute;z-index:2;bottom:8px;right:8px;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:14px;background:#EC6158;font-size:14px;font-weight:800;box-shadow:0 3px 0 rgba(0,0,0,.3);animation:hd-beat 1s 5}
+.hd-beat i{font-style:normal}
+@keyframes hd-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.07)}30%{transform:scale(1)}45%{transform:scale(1.04)}}
+html.lite .hd-fx,html.lite .hd-beat,html.lite .hd-cnt{animation:none}
+@media (prefers-reduced-motion:reduce){.hd-fx,.hd-beat,.hd-cnt{animation:none}}
+/* the action dock stays reachable on short phones */
+.hd-dock{position:fixed;z-index:5;left:50%;bottom:0;transform:translateX(-50%);width:min(540px,100%);padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 8px)}
+.hd{padding-bottom:6px}
+.hd-dock .big{margin:0}
+.hd-acts{display:flex;gap:8px}
+.hd-acts .big{flex:1;min-height:56px;font-size:18px;padding:10px 8px}
+.hd-go{background:#EC6158}
+.hd-go.hide{background:#3FAE5C}.hd-go.lsn{background:#2D4763;box-shadow:var(--lip),inset 0 0 0 3px #F0B429}.hd-go.torch{background:#C98F1A}.hd-go.sneak{background:#4AB1E8}
+.hd-guard{flex:.75!important;background:#4AB1E8;white-space:nowrap}
+.hd-guard.on{box-shadow:var(--lip),0 0 0 3px #FFD84D}
+.hd-pows{display:flex;gap:8px;margin-top:8px}
+.hd-acts.sk .big{min-height:60px;padding:6px 4px;line-height:1.15;font-size:18px}
+.hd-acts.sk .hd-go{flex:1.5}
+.hd-acts .big small{display:block;font-size:12.5px;font-weight:700;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-acts.sk .hd-pw2{flex:none;width:58px;font-size:20px;background:#2D4763;box-shadow:var(--lip),inset 0 0 0 2.5px #F0B429}
+.hd-pw2 small{color:#F0B429}
+.hd-pw2:disabled{opacity:.45}
+.hd-back{min-height:58px;min-width:72px}
+.hd-three{display:flex;gap:6px}
+.hd-three .big{flex:1;padding:8px 4px;font-size:18px;min-height:60px;line-height:1.15}
+.hd-three .big small{font-size:11.5px}
+.hd-stay{background:#2D4763}.hd-sneak{background:#4AB1E8}.hd-run{background:#EC6158}
+.hd-wait,.hd-tip{text-align:center;color:var(--mut);font-size:15px;margin:6px 0}
+.hd-tip{font-size:13px;margin:6px 0 0}
+.hd-wait b{color:var(--ink)}
+.hd-cv b{color:#FFE38A}
+/* the round's end */
+.hd-sum{display:grid;gap:6px;margin-top:10px}
+.hd-sr{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:14px;background:var(--surface);color:var(--ink);box-shadow:var(--e1);border-inline-start:5px solid var(--c)}
+.hd-sr i{width:30px;height:30px;flex:none;display:grid;place-items:center}
+.hd-sr b{font-size:15px;flex:none}
+.hd-sr span{flex:1;min-width:0;font-size:12.5px;color:var(--mut);font-weight:600}
+.hd-sr em{font-style:normal;font-weight:800;padding:2px 8px;border-radius:9px;background:var(--surface-2);direction:ltr}
+.hd-sr em.up{background:#3FAE5C;color:#fff}.hd-sr em.dn{background:#EC6158;color:#fff}
+/* the status card (engine status box): what just happened, then what to do now */
+.st-main .hd-st{display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.15;text-align:start;max-width:100%}
+.hd-st>i{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;font-style:normal;font-size:16px;background:var(--surface-2)}
+.hd-st span{min-width:0}
+.hd-st b{display:block;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-st small{display:block;font-size:12px;font-weight:600;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-st.got>i{background:#EC6158}.hd-st.h1>i{background:#E5484D}.hd-st.h2>i{background:#F28C38}.hd-st.h3>i{background:#3D8FD1}
+.hd-st.mom>i{background:#B23A3A}.hd-st.bark>i,.hd-st.gr>i{background:#F0B429}.hd-st.ls.yes>i,.hd-st.go>i{background:#3FAE5C}.hd-st.tz>i{background:#FFE38A}
+.hd-todo{margin:3px 0 0;font-size:14.5px;font-weight:800;line-height:1.2;color:var(--mut)}
+.hd-todo.yt{font-size:15px;color:var(--ink)}
+.hd-role.beat{background:#EC6158;animation:hd-beat 1s 5}
+html.lite .hd-role.beat{animation:none}
+.cover .msg .hd-cv{font-size:17px}.cover .msg .hd-cv b{font-size:22px}
+/* «اسمع» / «الكشاف»: only the zones answer taps */
+.hd-map.m-lsn svg>:not(.hd-zn):not(.hd-zl),.hd-map.m-torch svg>:not(.hd-zn):not(.hd-zl){pointer-events:none}
+.hd-map.m-lsn .hd-pl:not(.zone),.hd-map.m-torch .hd-pl:not(.zone){opacity:.55}
+.hd-zl{cursor:pointer}.hd-pl.zone rect{fill:#2D4763;stroke:#7FD3FF;stroke-width:2}.hd-map.m-torch .hd-pl.zone rect{stroke:#FFE38A}
+.hd-pl.zone.sel rect{fill:#F0B429;stroke:#fff}
+/* the flickering street lamp: one glow, once per reveal */
+.hd-flick{opacity:0;pointer-events:none;animation:hd-flick 1.6s linear 1}
+@keyframes hd-flick{0%{opacity:.9}12%{opacity:.15}22%{opacity:.85}34%{opacity:.05}46%{opacity:.8}70%{opacity:.5}100%{opacity:0}}
+html.lite .hd-flick{animation:none}
+@media (prefers-reduced-motion:reduce){.hd-flick{animation:none}}
