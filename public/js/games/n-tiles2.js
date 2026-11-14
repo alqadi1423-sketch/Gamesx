@@ -186,8 +186,9 @@ const k2dH=(t,w,col)=>`<svg class="dsv" viewBox="0 0 40 20" width="${w||48}" ari
 const k2dV=(t,h,col)=>`<svg class="dsv" viewBox="0 0 20 40" height="${h||76}" aria-hidden="true"><path class="dl" d="M2.6 20H17.4"/><circle class="dp" cx="10" cy="20" r="1.15"/><g class="dpp">${k2Half(k2dn(t[0]),0,0,col)}${k2Half(k2dn(t[1]),0,20,col)}</g></svg>`;
 // a tile on the table: doubles stand across the line
 const k2dOn=(t,cls,col,k)=>`<span class="dom ${k2dDbl(t)?'dbl':''} ${cls||''}"${k?` data-k="${k}"`:''}>${k2dDbl(t)?k2dV(t,44,col):k2dH(t,44,col)}</span>`;
-function k2dHand(d,v,legal,my,sel,col,ga){const hs=cardsOf(d.hands[v]||'');const ids=handIds(hs,'kd'+v+'-');
-  return `<div class="hand dhand k2dh">${hs.map((t,i)=>t==='??'?`<span class="dom k2dbk" id="${ids[i]}"></span>`:my&&legal.includes(i)?`<button class="dom pick ${sel===i?'sel':''}" id="${ids[i]}" data-ga="${ga||'tile'}" data-i="${i}">${k2dV(t,70,col)}</button>`:`<button class="dom ${my?'dim':''}" id="${ids[i]}" disabled>${k2dV(t,70,col)}</button>`).join('')}</div>`;}
+// the hand: standing tiles, or (many tiles) lying tiles in rows
+function k2dHand(d,v,legal,my,sel,col,ga){const hs=cardsOf(d.hands[v]||'');const ids=handIds(hs,'kd'+v+'-'),flat=hs.length>9,f=t=>flat?k2dH(t,54,col):k2dV(t,70,col);
+  return `<div class="${flat?'k2dgrid':'hand dhand'} k2dh">${hs.map((t,i)=>t==='??'?`<span class="dom k2dbk" id="${ids[i]}"></span>`:my&&legal.includes(i)?`<button class="dom pick ${sel===i?'sel':''}" id="${ids[i]}" data-ga="${ga||'tile'}" data-i="${i}">${f(t)}</button>`:`<button class="dom ${my?'dim':''}" id="${ids[i]}" disabled>${f(t)}</button>`).join('')}</div>`;}
 const k2dDeal=(d,m,k)=>{const n=d.pl.length,all=shuffle(k2dSet(m)),hands=Array(n).fill('');for(let s=0;s<n;s++)if(d.out[s]!=='1')hands[s]=all.splice(0,k).join('');return {hands,bone:all.join('')};};
 const k2dDraw=(d,s)=>{const j=rnd(d.bone.length/2)*2,t=d.bone.slice(j,j+2),hands=[...d.hands];hands[s]+=t;return {...d,hands,bone:d.bone.slice(0,j)+d.bone.slice(j+2),dt:t};};
 
@@ -225,7 +226,7 @@ const k2fRound=x=>Math.round(x/5)*5;
 function k2fPlay(d,i,end){const s=d.turn,hs=cardsOf(d.hands[s]),t=hs[i];if(!t||!k2fFits(d,t).includes(end))return d;
   const hands=[...d.hands];hs.splice(i,1);hands[s]=hs.join('');let nd={...k2fPlace(d,t,end),hands,ps:0,lp:{s,t,end},dt:''};
   const sum=k2fSum(nd),got=sum>0&&sum%5===0?sum:0;const sc=[...d.sc];if(got)sc[k2fSi(d,s)]+=got;
-  nd={...nd,sc,last:`${nameTag(d,s)} نزّل ${k2dn(t[0])}|${k2dn(t[1])}${got?` وسجّل ${got} 🎯`:''}`};
+  nd={...nd,sc,last:`${nameTag(d,s)} نزّل <bdi dir="ltr">${k2dn(t[0])}|${k2dn(t[1])}</bdi>${got?` وسجّل ${got} 🎯`:''}`};
   if(got&&sc[k2fSi(d,s)]>=K2FV)return k2fEndGame({...nd,ph:'sum',sum:{w:s,add:k2fSides(d).map((_,j)=>j===k2fSi(d,s)?got:0),pips:d.pl.map((_,q)=>k2fPips(nd,q))}},k2fSide(d,s));
   if(!hs.length)return k2fHandEnd(nd,s);
   return {...nd,turn:nextSeat(nd,s)};}
@@ -315,7 +316,7 @@ function k2tPlay(d,i,k){const s=d.turn,hs=cardsOf(d.hands[s]),t=hs[i];if(!t||!k2
   const e=k2tEndV(d,k),o=k2dn(t[0])===e?t:t[1]+t[0];hs.splice(i,1);const hands=[...d.hands];hands[s]=hs.join('');
   let nd={...d,hands,ps:0,dt:'',drew:0,lp:k};
   if(k==='m')nd.mx=d.mx+o;else{nd.tr=d.tr.map((x,j)=>j===k?x+o:x);if(k===s)nd.mk=setAt(d.mk,s,'0');}
-  const where=k==='m'?'القطار العام':k===s?'قطاره':`قطار ${nm(d,k)}`;nd.last=`${nameTag(d,s)} نزّل ${k2dn(t[0])}|${k2dn(t[1])} على ${where}`;
+  const where=k==='m'?'القطار العام':k===s?'قطاره':`قطار ${nm(d,k)}`;nd.last=`${nameTag(d,s)} نزّل <bdi dir="ltr">${k2dn(t[0])}|${k2dn(t[1])}</bdi> على ${where}`;
   if(!hs.length)return k2tRoundEnd(nd,s);
   if(k2dDbl(t)&&!k2tAllDown(nd,k2dn(t[0]))){nd.dbl={k,v:k2dn(t[0])};nd.last+='، ولازم يتغطى الدبل';return nd;}
   nd.dbl=null;return {...nd,turn:nextSeat(nd,s)};}
@@ -383,3 +384,294 @@ GAMES.k_train.bot=(d,s,lv)=>{if(d.ph==='opt')return k2tDeal({...d,nr:4,dl:d.turn
     opts.push({i,k,v:v+Math.random()*(lv===1?6:.3)});}
   const m=lvRand(lv)?pickR(opts):opts.sort((a,b)=>b.v-a.v)[0];return k2tPlay(d,m.i,m.k);};
 GAMES.k_train.botDelay=(d,s,lv)=>d.ph==='sum'?6000:d.ph==='opt'?900:800+rnd(600);
+
+/* ---------- cards on a felt: the hand as buttons ---------- */
+function k2Hand(d,v,legal,my,sel,ga,pre){const hc=cardsOf(d.hands[v]||'');const ids=handIds(hc,(pre||'kh')+v+'-');
+  return `<div class="bhand k2hand ${hc.length>12?'big':''}">${hc.map((c,i)=>my&&legal.includes(i)?`<button class="bcard ${sel&&sel.includes(i)?'sel':''}" id="${ids[i]}" data-ga="${ga||'card'}" data-i="${i}">${cardHTML(c)}</button>`:`<button class="bcard ${my?'dim':''}" id="${ids[i]}" disabled>${cardHTML(c)}</button>`).join('')}</div>`;}
+const k2Stock=(n,can,ga,extra)=>`<${can?`button data-ga="${ga}"`:'div'} class="k2stock ${can?'can':''}">${cardHTML('??',true)}<small>${n}</small>${extra||''}</${can?'button':'div'}>`;
+
+/* =================================================================
+   الأحمق (Durak, podkidnoy, the Russian game; pagat.com). 36 cards (6 to ace) for 2-6 players, 52 for 7-8. Six cards each, the
+   bottom card of the stock shows the trump. The holder of the lowest trump attacks first. The attacker leads a card, the
+   defender beats it with a higher card of its suit or any trump (a trump only with a higher trump) or takes everything.
+   After each beat the attacker, then the others in turn (not the defender), may throw in more cards of ranks already on the
+   table: at most 6 a bout and never more than the defender held. All beaten: the cards are out and the defender attacks next;
+   taken: the others may still throw in, he picks it all up and loses his turn to attack. Hands are refilled to six from the
+   stock, attacker first, defender last. With the stock gone, players who run out are safe; the last one holding cards is the
+   fool (الأحمق) and loses.
+   ================================================================= */
+const k2duV=c=>'23456789TJQKA'.indexOf(c[0]);
+const k2duBeats=(tr,a,b)=>b[1]===a[1]?k2duV(b)>k2duV(a):b[1]===tr;
+const k2duSortH=(h,tr)=>cardsOf(h).sort((a,b)=>(a[1]===tr)-(b[1]===tr)||'shdc'.indexOf(a[1])-'shdc'.indexOf(b[1])||k2duV(a)-k2duV(b)).join('');
+const k2duHas=(d,s)=>!!d.hands[s]&&d.out[s]!=='1';
+// the throwers of this bout in order: the attacker, then round the table after the defender
+function k2duThr(d){const n=d.pl.length,o=[d.att];for(let k=1;k<n;k++){const s=(d.def+k)%n;if(s!==d.att&&s!==d.def&&o.indexOf(s)<0)o.push(s);}return o.filter(s=>k2duHas(d,s));}
+const k2duRanks=d=>new Set(d.tb.flatMap(p=>[p[0][0],p[1]?p[1][0]:null]).filter(Boolean));
+const k2duUnb=d=>d.tb.filter(p=>!p[1]).length;
+function k2duCanAdd(d,s,c){if(!d.tb.length)return s===d.att;if(d.tb.length>=d.lim)return false;
+  if(d.ph==='att'&&k2duUnb(d)>=cardsOf(d.hands[d.def]).length)return false;return k2duRanks(d).has(c[0]);}
+const k2duAdds=(d,s)=>cardsOf(d.hands[s]).map((c,i)=>k2duCanAdd(d,s,c)?i:-1).filter(i=>i>=0);
+const k2duDefs=d=>{const u=d.tb.find(p=>!p[1]);return u?cardsOf(d.hands[d.def]).map((c,i)=>k2duBeats(d.tr,u[0],c)?i:-1).filter(i=>i>=0):[];};
+function k2duDeal(d){const n=d.pl.length,R=n>6?'23456789TJQKA':'6789TJQKA',all=[];for(const s of 'shdc')for(const r of R)all.push(r+s);
+  const dk=shuffle(all),hands=Array(n).fill('');for(let k=0;k<6;k++)for(let s=0;s<n;s++)if(d.out[s]!=='1')hands[s]+=dk.shift();
+  const tc=dk[dk.length-1],tr=tc[1];let att=-1,lo=99;hands.forEach((h,s)=>cardsOf(h).forEach(c=>{if(c[1]===tr&&k2duV(c)<lo){lo=k2duV(c);att=s;}}));
+  if(att<0)att=aliveSeats(d)[rnd(aliveSeats(d).length)];const nd={...d,hands:hands.map(h=>k2duSortH(h,tr)),dk:dk.join(''),tc,tr,tb:[],att,def:nextSeat(d,att),ph:'att',turn:att,ti:0,np:0,fo:[],last:''};
+  return {...nd,lim:Math.min(6,cardsOf(nd.hands[nd.def]).length),last:lo<99?`${nameTag(d,att)} عنده أصغر حكم ويبدأ الهجوم`:''};}
+// the next thrower who can still add a card (the others pass by themselves); none left ends the bout
+function k2duAsk(d,from,np){const T=k2duThr(d);for(let k=0;k<T.length&&np<T.length;k++){const j=(from+k)%T.length,s=T[j];if(k2duAdds(d,s).length)return {...d,turn:s,ti:j,np};np++;}
+  return k2duBoutEnd(d);}
+function k2duRefill(d,ord){let dk=d.dk;const hands=[...d.hands];for(const s of ord){while(cardsOf(hands[s]).length<6&&dk){hands[s]+=dk.slice(0,2);dk=dk.slice(2);}hands[s]=k2duSortH(hands[s],d.tr);}return {...d,hands,dk};}
+function k2duBoutEnd(d){const took=d.ph==='take';let nd={...d};const all=d.tb.flatMap(p=>[p[0],p[1]].filter(Boolean));
+  if(took){const hands=[...d.hands];hands[d.def]+=all.join('');nd.hands=hands;nd.last=`${nameTag(d,d.def)} أخذ ${all.length} ورقة`;}
+  else nd.last=`${nameTag(d,d.def)} صدّ الهجوم كله`;
+  nd.dc=(d.dc||0)+(took?0:all.length);nd.lt=d.tb;nd.tb=[];
+  nd=k2duRefill(nd,[...k2duThr(d),d.def]);
+  // out of the game: no cards and no stock
+  let out=nd.out,fo=[...(d.fo||[])];if(!nd.dk)nd.pl.forEach((_,s)=>{if(out[s]!=='1'&&!nd.hands[s]){out=setAt(out,s,'1');fo.push(s);}});nd={...nd,out,fo};
+  const al=aliveSeats(nd);if(al.length<=1){const fool=al.length?al[0]:-1;const ws=nd.pl.map((_,s)=>s).filter(s=>s!==fool);
+    if(fool<0)return {...nd,win:'d',ph:'end',last:'خلصوا كلهم مع بعض، ما فيه أحمق'};return {...nd,ph:'end',fool,win:fo[0]??ws[0],wins:ws,last:`${nameTag(nd,fool)} هو الأحمق 🃏`};}
+  let att=took?nextSeat(nd,d.def):d.def;if(nd.out[att]==='1')att=nextSeat(nd,att);const def=nextSeat(nd,att);
+  return {...nd,att,def,ph:'att',turn:att,ti:0,np:0,lim:Math.min(6,cardsOf(nd.hands[def]).length)};}
+function k2duAdd(d,s,i){const c=cardsOf(d.hands[s])[i];if(!c||!k2duCanAdd(d,s,c))return d;const hands=[...d.hands];hands[s]=k2Rm(hands[s],c);
+  let nd={...d,hands,tb:[...d.tb,[c,'']],last:`${nameTag(d,s)} ${d.tb.length?'رمى':'هجم بـ'} ${k2Lab(c)}`};
+  if(d.ph==='take')return k2duAsk(nd,d.ti,0);return {...nd,ph:'def',turn:d.def};}
+function k2duBeat(d,i){const c=cardsOf(d.hands[d.def])[i],j=d.tb.findIndex(p=>!p[1]);if(!c||j<0||!k2duBeats(d.tr,d.tb[j][0],c))return d;
+  const hands=[...d.hands];hands[d.def]=k2Rm(hands[d.def],c);const tb=d.tb.map((p,k)=>k===j?[p[0],c]:p);
+  const nd={...d,hands,tb,ph:'att',last:`${nameTag(d,d.def)} صدّ بـ ${k2Lab(c)}`};
+  if(!hands[d.def]||tb.length>=d.lim)return k2duBoutEnd(nd);return k2duAsk(nd,0,0);}
+const k2duTake=d=>k2duAsk({...d,ph:'take',last:`${nameTag(d,d.def)} بياخذ الورق`},0,0);
+const k2duPass=d=>k2duAsk({...d,last:`${nameTag(d,d.turn)} خلاص`},d.ti+1,d.np+1);
+GAMES.k_durak={name:'الأحمق',cat:'cards',lbc:'#4E5D2A',teams:'none',outDone:true,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#5C6E33"/><circle cx="50" cy="50" r="40" fill="#6F8540"/><g transform="rotate(-16 40 52)"><rect x="22" y="26" width="32" height="46" rx="5" fill="#fff"/><text x="38" y="58" font-size="22" font-weight="900" text-anchor="middle" fill="#2D4763">6</text></g><g transform="rotate(14 62 50)"><rect x="46" y="22" width="32" height="46" rx="5" fill="#fff" stroke="#F0B429" stroke-width="2.5"/><path d="M62 33c-6 7-9 10-9 14a4.5 4.5 0 0 0 7.5 3.4L59 57h6l-1.5-6.6A4.5 4.5 0 0 0 71 47c0-4-3-7-9-14z" fill="#2D4763"/></g><path d="M22 84q9-8 18 0 9-8 18 0" stroke="#F0B429" stroke-width="3" fill="none"/></svg>`,
+  init:n=>({hands:Array(n).fill(''),dk:'',tc:'6s',tr:'s',tb:[],att:0,def:1,ph:'att',ti:0,np:0,lim:6,dc:0,fo:[],lt:null,last:''}),
+  start:d=>k2duDeal(d),
+  mask:(d,v)=>d.win!=null?d:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),dk:k2Hide(d.dk)},
+  redeal:d=>d.win!=null?d:{...k2duDeal({...d,out:d.out}),last:'انعادت الجولة من جديد'},
+  viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.hands.map((h,s)=>d.out[s]==='1'?'✓':cardsOf(h).length+' ورق'),
+  winText:d=>d.fool>=0&&d.win!=='d'?`${nm(d,d.fool)} هو الأحمق! 🃏`:null,
+  onSkip(nd,d){if(nd.win!=null)return nd;const al=aliveSeats(nd);if(al.length<2)return nd;// a player who left: start a fresh bout without him
+    let att=nd.out[d.att]==='1'?nextSeat(nd,d.att):d.att;const def=nextSeat(nd,att);return {...nd,tb:[],att,def,ph:'att',turn:att,ti:0,np:0,lim:Math.min(6,cardsOf(nd.hands[def]).length)};},
+  onTimeout(d){if(d.ph==='def')return k2duTake(d);if(!d.tb.length)return k2duAdd(d,d.turn,0);return k2duPass(d);},
+  status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;
+    if(d.ph==='def')return s+(me?'<b class="yt">صدّ أو خذ الورق</b>':`${nameTag(d,d.def)} يصدّ`);
+    if(d.ph==='take')return s+(me?'<b class="yt">تبي ترمي له زيادة؟</b>':`${nameTag(d,d.turn)} يرمي على ${nameTag(d,d.def)}`);
+    return s+(me?`<b class="yt">${d.tb.length?'ترمي ورقة؟':'هاجم'}</b>`:`${nameTag(d,d.turn)} ${d.tb.length?'يرمي':'يهاجم'} ${nameTag(d,d.def)}`);},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.win==null;
+    let h=`<div class="k2 k2du">${k2Seats(d,s=>`<i>${d.out[s]==='1'?'✓':cardsOf(d.hands[s]).length}</i>${s===d.att&&d.win==null?'<u>⚔️</u>':s===d.def&&d.win==null?'<u>🛡️</u>':''}${d.fool===s?'<u>🃏</u>':''}`)}`;
+    h+=`<div class="k2felt k2dut"><div class="k2dutop"><div class="k2trump">${d.dk?`<span class="k2tc">${cardHTML(d.tc)}</span>`:''}${k2Stock(d.dk.length/2,false)}<em>الحكم <b class="${'hd'.includes(d.tr)?'rs':''}">${K2SN[d.tr]}</b></em></div>
+      <span class="k2dc">مرمي ${d.dc||0}</span></div><div class="k2tbl">${d.tb.length?d.tb.map((p,k)=>`<span class="k2pair" data-k="p${k}${p[0]}">${cardHTML(p[0])}${p[1]?`<span class="k2over">${cardHTML(p[1])}</span>`:''}</span>`).join(''):`<p class="note">${d.win!=null?'':'الطاولة فاضية'}</p>`}</div>
+      ${d.ph==='take'?`<p class="k2tk">${nm(d,d.def)} بياخذ الورق</p>`:''}</div>`;
+    if(v<0||d.out[v]==='1'&&d.win==null)return h+(v>=0?'<p class="note">خلّصت ورقك، أنت بأمان ✓</p>':'')+'</div>';
+    let L=[];if(my)L=d.ph==='def'?k2duDefs(d):k2duAdds(d,v);
+    if(my){const xs=[];if(d.ph==='def')xs.push([0,'آخذ الورق','red']);else if(d.tb.length)xs.push([1,d.ph==='take'?'خلاص، خلّه ياخذ':'بيتا (خلاص)','navy']);if(xs.length)h+=k2Btns(xs,'do');}
+    h+=k2Hand(d,v,L,my);return h+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const s=d.turn;
+    if(a==='do'){if(i===0&&d.ph==='def')act(k2duTake(d));else if(i===1&&d.ph!=='def'&&d.tb.length)act(k2duPass(d));return;}
+    if(a==='card'){if(d.ph==='def'){if(s===d.def)act(k2duBeat(d,i));return;}act(k2duAdd(d,s,i));}}};
+HELP.k_durak='الأحمق (دوراك) لعبة روسية مشهورة. لين 6 لاعبين نلعب بـ36 ورقة (من 6 لين الإكة)، و7 و8 بالكوتشينة كاملة. كل واحد ياخذ 6 أوراق، وآخر ورقة في الكومة مكشوفة ونوعها هو الحكم. اللي عنده أصغر حكم يبدأ يهاجم اللي بعده: ينزّل ورقة، والمدافع لازم يصدّها بورقة أعلى من نفس النوع أو بأي حكم (والحكم ما يصدّه إلا حكم أعلى)، أو ياخذ الورق كله. بعد كل صدّة يقدر المهاجم وبعده الباقين (غير المدافع) يرمون ورق بنفس أرقام اللي على الطاولة، لين 6 أوراق بالهجمة وبدون ما يزيدون على ورق المدافع. لو صدّ كل شي ينرمى الورق ويصير هو المهاجم الجاي، ولو أخذ الورق يقدرون يرمون له زيادة، وياخذه كله ويروح الهجوم للي بعده. بعد كل هجمة كل واحد يكمّل لين 6 من الكومة: المهاجم أول والمدافع آخر واحد. لما تخلص الكومة اللي يخلّص ورقه ينجى، وآخر واحد يبقى معه ورق هو «الأحمق» ويخسر، والباقين كلهم فايزين.';
+// the bot: counts the cards gone and the cards it saw taken; attacks with its lowest non-trumps (pairs first), throws in cheap
+// cards (anything it can spare when the defender is taking), beats with the cheapest card that does it and keeps its trumps,
+// and takes low attacks rather than spend a high trump while the stock is still big
+const k2duCost=(c,tr)=>k2duV(c)+(c[1]===tr?13:0);
+GAMES.k_durak.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]),tr=d.tr;
+  if(d.ph==='def'){const D=k2duDefs(d);if(!D.length)return k2duTake(d);if(lv===1&&Math.random()<.3)return k2duBeat(d,pickR(D));
+    const best=D.slice().sort((a,b)=>k2duCost(H[a],tr)-k2duCost(H[b],tr))[0],c=H[best],stock=d.dk.length/2;
+    if(lv>1&&c[1]===tr&&k2duV(c)>=9&&stock>8&&d.tb.length<=1&&k2duCost(d.tb.find(p=>!p[1])[0],tr)<6)return k2duTake(d);
+    return k2duBeat(d,best);}
+  const A=k2duAdds(d,s);if(!A.length)return d.tb.length?k2duPass(d):k2duAdd(d,s,0);
+  if(lv===1&&Math.random()<.35)return d.tb.length&&Math.random()<.5?k2duPass(d):k2duAdd(d,s,pickR(A));
+  const cnt=r=>H.filter(c=>c[0]===r).length,stock=d.dk.length/2;
+  if(!d.tb.length){const i=A.slice().sort((a,b)=>k2duCost(H[a],tr)-cnt(H[a][0])*(lv===3?2:1)-(k2duCost(H[b],tr)-cnt(H[b][0])*(lv===3?2:1)))[0];return k2duAdd(d,s,i);}
+  const i=A.slice().sort((a,b)=>k2duCost(H[a],tr)-k2duCost(H[b],tr))[0],c=H[i];
+  const cap=d.ph==='take'?(stock>4?10:14):(stock>4?8:12);if(k2duCost(c,tr)<=cap||(!stock&&lv===3))return k2duAdd(d,s,i);return k2duPass(d);};
+GAMES.k_durak.botDelay=(d,s,lv)=>700+rnd(600);
+
+/* =================================================================
+   جن رمي (Gin Rummy, pagat.com). Two play a hand; with more players the winner of each hand stays and the loser goes to the
+   back of the line (the others watch). 10 cards each, one turned up. The non-dealer may take that upcard or pass, then the
+   dealer; if both pass the non-dealer draws from the stock. A turn: draw the stock or the top discard, then discard (not the
+   card just taken from the discards). Melds: 3-4 of a rank, or 3+ in a suit in order (ace low only). Deadwood: ace 1,
+   pictures 10, others their number. Knock with 10 or less deadwood after your discard: the other lays off what he can on
+   your melds (not after gin); lower deadwood wins the difference; a tie or lower for the defender is an undercut (+25 to him).
+   Gin (no deadwood) scores 25 + the other's deadwood. Two cards left in the stock: the hand is void. 100 wins (shown with
+   the 100 game bonus and 25 per hand won).
+   ================================================================= */
+const k2gV=c=>Math.min(10,k2rv(c));
+// every meld a set of cards can form: sets (each 3 of 4, and all 4) and runs (each stretch of 3+)
+function k2gCands(cs){const out=[],byR={},byS={};cs.forEach((c,i)=>{(byR[c[0]]=byR[c[0]]||[]).push(i);(byS[c[1]]=byS[c[1]]||[]).push(i);});
+  for(const r in byR){const a=byR[r];if(a.length>=3){if(a.length===4){out.push(a.slice());for(let k=0;k<4;k++)out.push(a.filter((_,j)=>j!==k));}else out.push(a.slice(0,3));}}
+  for(const s in byS){const a=byS[s].slice().sort((x,y)=>k2rv(cs[x])-k2rv(cs[y]));for(let i=0;i<a.length;i++){const run=[a[i]];for(let j=i+1;j<a.length;j++){if(k2rv(cs[a[j]])!==k2rv(cs[run[run.length-1]])+1)break;run.push(a[j]);if(run.length>=3)out.push(run.slice());}}}
+  return out.map(m=>({m,mask:m.reduce((x,i)=>x|(1<<i),0),v:m.reduce((x,i)=>x+k2gV(cs[i]),0)}));}
+// the melds that leave the least deadwood
+function k2gBest(cs){const C=k2gCands(cs),tot=cs.reduce((x,c)=>x+k2gV(c),0);let best={dw:tot,ms:[]};
+  const go=(i,used,ms,got)=>{if(tot-got<best.dw)best={dw:tot-got,ms:ms.slice()};for(let j=i;j<C.length;j++){if(C[j].mask&used)continue;ms.push(C[j]);go(j+1,used|C[j].mask,ms,got+C[j].v);ms.pop();}};
+  go(0,0,[],0);const inM=best.ms.reduce((x,m)=>x|m.mask,0);
+  return {dw:best.dw,melds:best.ms.map(m=>m.m.map(i=>cs[i]).sort((a,b)=>k2rv(a)-k2rv(b))),dead:cs.filter((_,i)=>!(inM&(1<<i)))};}
+const k2gDW=cs=>k2gBest(cs).dw;
+// the defender's cards laid off on the knocker's melds (runs grow at both ends, sets to four)
+function k2gLayoff(melds,dead){melds=melds.map(m=>m.slice());let left=dead.slice(),off=[],moved=true;
+  while(moved){moved=false;for(const c of left.slice()){for(const m of melds){const set=m.every(x=>x[0]===m[0][0]);
+    const ok=set?m.length<4&&c[0]===m[0][0]:c[1]===m[0][1]&&(k2rv(c)===k2rv(m[0])-1||k2rv(c)===k2rv(m[m.length-1])+1);
+    if(ok){m.push(c);m.sort((a,b)=>k2rv(a)-k2rv(b));left.splice(left.indexOf(c),1);off.push(c);moved=true;break;}}}}
+  return {melds,left,off};}
+const k2gOther=(d,s)=>d.pr[0]===s?d.pr[1]:d.pr[0];
+function k2gDeal(d){const n=d.pl.length,dk=shuffle(deck52()),hands=Array(n).fill('');const nd=k2gOther(d,d.dl);
+  for(let k=0;k<10;k++)for(const s of [nd,d.dl])hands[s]+=dk.shift();const up=dk.shift();
+  return {...d,hands:hands.map(h=>h?k2Sort(h):''),dk:dk.join(''),disc:up,ph:'up1',turn:nd,tk:'',dn:'',fs:0,lk:null,last:''};}
+function k2gDraw(d,from){const s=d.turn,hands=[...d.hands];let c;
+  if(from==='disc'){c=d.disc.slice(-2);hands[s]=k2Sort(hands[s]+c);return {...d,hands,disc:d.disc.slice(0,-2),ph:'disc',tk:c,last:`${nameTag(d,s)} أخذ ${k2Lab(c)}`};}
+  c=d.dk.slice(0,2);hands[s]=k2Sort(hands[s]+c);return {...d,hands,dk:d.dk.slice(2),ph:'disc',tk:'',dn:c,last:`${nameTag(d,s)} سحب من الكومة`};}
+function k2gDisc(d,c){const s=d.turn,hands=[...d.hands];hands[s]=k2Rm(hands[s],c);const nd={...d,hands,disc:d.disc+c,tk:'',dn:'',ph:'draw',turn:k2gOther(d,s),last:`${nameTag(d,s)} رمى ${k2Lab(c)}`};
+  if(nd.dk.length/2<=2)return {...nd,ph:'sum',lk:{void:1},last:'ما بقى بالكومة إلا ورقتين: الجولة ملغاة'};return nd;}
+function k2gKnock(d,c){const s=d.turn,o=k2gOther(d,s),hands=[...d.hands];hands[s]=k2Rm(hands[s],c);const K=k2gBest(cardsOf(hands[s]));if(K.dw>10)return d;
+  const D=k2gBest(cardsOf(hands[o])),gin=K.dw===0,L=gin?{melds:K.melds,left:D.dead,off:[]}:k2gLayoff(K.melds,D.dead);const odw=L.left.reduce((x,c)=>x+k2gV(c),0);
+  let w,pts,kind;if(gin){w=s;pts=25+odw;kind='gin';}else if(K.dw<odw){w=s;pts=odw-K.dw;kind='knock';}else{w=o;pts=K.dw-odw+25;kind='under';}
+  const sc=[...d.sc],box=[...d.box];sc[w]+=pts;box[w]++;
+  const nd={...d,hands,disc:d.disc+c,sc,box,ph:'sum',lk:{s,o,w,pts,kind,km:L.melds,kd:K.dead,om:D.melds,od:L.left,off:L.off,kdw:K.dw,odw},tk:'',dn:'',
+    last:kind==='gin'?`${nameTag(d,s)} جين! +${pts}`:kind==='knock'?`${nameTag(d,s)} طرق وكسب ${pts}`:`${nameTag(d,o)} قصّ على ${nameTag(d,s)} (+${pts})`};
+  if(sc[w]>=100)return {...nd,win:w,wins:[w]};return nd;}
+// next hand: winner stays (and deals), the loser goes to the back of the line; a void hand is dealt again by the same dealer
+function k2gNext(d){let pr=d.pr,q=d.q,dl=d.dl;const L=d.lk;
+  if(L&&!L.void){const lo=L.w===L.s?L.o:L.s;if(q.length){pr=[L.w,q[0]];q=[...q.slice(1),lo];}dl=L.w;}
+  const hands=d.hands.map(()=>'');return k2gDeal({...d,pr,q,dl,hands});}
+const k2gTop=d=>d.disc.slice(-2);
+GAMES.k_gin={name:'جن رمي',cat:'cards',lbc:'#2B5E8C',teams:'none',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2F6CA3"/><circle cx="50" cy="50" r="40" fill="#3A80BE"/>${[0,1,2].map(k=>`<g transform="translate(${18+k*13} ${24+k*3}) rotate(${-10+k*10})"><rect width="28" height="40" rx="4" fill="#fff" stroke="#DCE3EC"/><text x="8" y="16" font-size="13" font-weight="900" fill="#D43C33">${7+k}</text><path d="M14 22c-3 3.5-5 5-5 7.2a2.6 2.6 0 0 0 5 .8 2.6 2.6 0 0 0 5-.8c0-2.2-2-3.7-5-7.2z" fill="#D43C33"/></g>`).join('')}<rect x="20" y="72" width="60" height="14" rx="7" fill="#F0B429"/><text x="50" y="83" font-size="11" font-weight="900" text-anchor="middle" fill="#2D4763">GIN</text></svg>`,
+  init:n=>({pr:[0,1],q:[...Array(n).keys()].slice(2),dl:0,hands:Array(n).fill(''),dk:'',disc:'',ph:'up1',sc:Array(n).fill(0),box:Array(n).fill(0),tk:'',dn:'',lk:null,last:''}),
+  start:d=>{const al=aliveSeats(d);return k2gDeal({...d,pr:[al[0],al[1]],q:al.slice(2),dl:al[1]});},
+  mask:(d,v)=>d.win!=null||d.ph==='sum'?d:{...d,hands:d.hands.map((h,s)=>s===v?h:k2Hide(h)),dk:k2Hide(d.dk),dn:d.turn===v?d.dn:''},
+  redeal:d=>d.win!=null?d:{...k2gDeal(d),last:'انعادت الجولة من جديد'},
+  net:{local:['card']},
+  viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.sc.slice(),
+  onSkip(nd,d){if(nd.win!=null)return nd;// a player of the hand left: the other wins it and the line moves on
+    if(!d.pr.some(s=>nd.out[s]==='1'))return {...nd,q:d.q.filter(s=>nd.out[s]!=='1')};const al=aliveSeats(nd);if(al.length<2)return nd;
+    const w=d.pr.find(s=>nd.out[s]!=='1')??al[0],q=d.q.filter(s=>nd.out[s]!=='1'&&s!==w);const c=q.length?q[0]:al.find(s=>s!==w);
+    return k2gDeal({...nd,pr:[w,c],q:q.filter(s=>s!==c),dl:w,hands:nd.hands.map(()=>'')});},
+  winText:d=>`فاز ${nm(d,d.win)} بـ${d.sc[d.win]} نقطة (مع المكافآت ${d.sc[d.win]+100+25*d.box[d.win]})`,
+  onTimeout(d){if(d.ph==='sum')return k2gNext(d);if(d.ph==='up1')return {...d,ph:'up2',turn:d.dl};if(d.ph==='up2')return {...d,ph:'draw',fs:1,turn:k2gOther(d,d.dl)};
+    if(d.ph==='draw')return k2gDraw({...d,fs:0},'stock');const c=cardsOf(d.hands[d.turn]).filter(x=>x!==d.tk).sort((a,b)=>k2gV(b)-k2gV(a))[0];return k2gDisc(d,c);},
+  status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';const me=!ctx.local&&d.turn===ctx.v;
+    const what=d.ph==='up1'||d.ph==='up2'?'تاخذ الورقة المكشوفة؟':d.ph==='draw'?'اسحب':'ارمِ ورقة أو اطرق';return s+(me?`<b class="yt">${what}</b>`:`دور ${nameTag(d,d.turn)}: ${what}`);},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph!=='sum';
+    let h=`<div class="k2 k2gin">${k2Seats(d,s=>`<em>${d.sc[s]}</em>${d.pr.includes(s)?'<u>🃏</u>':`<u>⏳${d.q.indexOf(s)+1}</u>`}`,s=>d.turn===s&&d.ph!=='sum'&&d.win==null)}`;
+    const o=v>=0&&d.pr.includes(v)?k2gOther(d,v):d.pr[1],top=k2gTop(d),up=d.ph==='up1'||d.ph==='up2',canD=my&&!d.fs&&(d.ph==='draw'||up)&&top;
+    h+=`<div class="k2felt k2gt"><div class="k2opp">${nameTag(d,o)} <span class="k2backs">${'<i></i>'.repeat(Math.min(11,cardsOf(d.hands[o]).length))}</span></div>
+      <div class="k2mid">${k2Stock(d.dk.length/2,my&&d.ph==='draw','stock')}<div class="k2disc">${top?`<${canD?'button data-ga="take"':'div'} class="k2top ${canD?'can':''}" data-k="g${d.disc.length}">${cardHTML(top,true)}</${canD?'button':'div'}>`:'<i class="k2emp"></i>'}<small>المرمي</small></div></div></div>`;
+    if(d.ph==='sum'){const L=d.lk;h+='<div class="panel k2sum">';
+      if(L.void)h+='<h3>الجولة ملغاة</h3><p>خلصت الكومة بدون طرق</p>';
+      else{const sh=(t,ms,dd)=>`<div class="k2gr"><b>${t}</b><div class="k2gm">${ms.map(m=>`<span class="k2gml">${m.map(miniCard).join('')}</span>`).join('')}${dd.length?`<span class="k2gml dead">${dd.map(miniCard).join('')}</span>`:''}</div></div>`;
+        h+=`<h3>${L.kind==='gin'?'جين! 🎉':L.kind==='knock'?'طرق':'قصّ! ✂️'} ${nameTag(d,L.w)} +${L.pts}</h3>${sh(`${nm(d,L.s)} (باقي ${L.kdw})`,L.km,L.kd)}${sh(`${nm(d,L.o)} (باقي ${L.odw})`,L.om,L.od)}${L.off.length?`<p>نزّل على ملفاته: ${L.off.map(miniCard).join('')}</p>`:''}`;}
+      h+=`<div class="k2tot">${d.pl.map((_,s)=>`<span style="--c:${col(d,s)}">${nm(d,s)} <b>${d.sc[s]}</b></span>`).join('')}</div>${ctx.my||(d.win==null&&ctx.local)?k2Next(d):''}</div>`;return h+'</div>';}
+    if(v<0||!d.pr.includes(v))return h+`<p class="note">تتفرج: يلعب ${nm(d,d.pr[0])} و${nm(d,d.pr[1])}، والفايز يكمل مع اللي بعده</p></div>`;
+    const cs=cardsOf(d.hands[v]),B=cs.length?k2gBest(cs):{dw:0,melds:[],dead:[]},sel=my&&d.ph==='disc'?k2Sel(d,'gn',d.hands[v]):[],si=sel.length?sel[0]:-1;
+    if(my&&up)h+=k2Btns([[0,'خذ المكشوفة','blue'],[1,'لا، مرّر','navy']],'up');
+    if(my&&d.ph==='disc'){const c=si>=0?cs[si]:null,dw=c?k2gDW(cs.filter((_,i)=>i!==si)):99;h+=k2Btns([[0,c?'ارمِ الورقة':'اختر ورقة ترميها','navy',!c],...(c&&dw<=10?[[1,dw?`اطرق (باقي ${dw})`:'جين! 🎉','green']]:[])],'dsc');}
+    // the hand laid out as its best melds, then the deadwood
+    const ord=[...B.melds.flat(),...B.dead.sort((a,b)=>k2rv(a)-k2rv(b))];const ids=handIds(cs,'kg'+v+'-'),inM=new Set(B.melds.flat());
+    h+=`<p class="lbl hlbl">الباقي بدون ملفات: <b>${B.dw}</b></p><div class="bhand k2hand">${ord.map(c=>{const i=cs.indexOf(c);const can=my&&d.ph==='disc'&&c!==d.tk;
+      return `<button class="bcard ${i===si?'sel':''} ${inM.has(c)?'k2inm':''} ${c===d.dn||c===d.tk?'k2new':''}" id="${ids[i]}" ${can?`data-ga="card" data-i="${i}"`:'disabled'}>${cardHTML(c)}</button>`;}).join('')}</div>`;
+    return h+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my)return;const s=d.turn;if(a==='next'){if(d.ph==='sum')act(k2gNext(d));return;}if(d.ph==='sum')return;
+    if(a==='up'){if(d.ph!=='up1'&&d.ph!=='up2')return;if(i===0){act(k2gDraw(d,'disc'));return;}act(d.ph==='up1'?{...d,ph:'up2',turn:d.dl,last:`${nameTag(d,s)} ما أخذها`}:{...d,ph:'draw',fs:1,turn:k2gOther(d,d.dl),last:`${nameTag(d,s)} ما أخذها`});return;}
+    if(a==='stock'){if(d.ph!=='draw')return;act(k2gDraw({...d,fs:0},'stock'));return;}
+    if(a==='take'){if(d.fs||!(d.ph==='draw'||d.ph==='up1'||d.ph==='up2')||!d.disc)return;act(k2gDraw(d,'disc'));return;}
+    if(d.ph!=='disc')return;const hs=d.hands[s];
+    if(a==='card'){const c=cardsOf(hs)[i];if(!c||c===d.tk)return;const sel=k2Sel(d,'gn',hs);S.sel=sel[0]===i?[]:[k2Key(d,'gn',hs),i];render();return;}
+    if(a==='dsc'){const sel=k2Sel(d,'gn',hs),c=sel.length?cardsOf(hs)[sel[0]]:null;if(!c||c===d.tk)return;S.sel=[];act(i===1?k2gKnock(d,c):k2gDisc(d,c));}}};
+HELP.k_gin='جن رمي لاعبين اثنين ضد بعض، ولو كنتوا أكثر: الفايز بكل جولة يكمّل، والخسران يروح آخر الطابور ويدخل اللي بعده (والباقين يتفرجون). كل واحد ياخذ 10 أوراق وتنكشف ورقة. أول شي اللي مو موزّع يقدر ياخذ المكشوفة أو يمرّر، وبعده الموزّع، ولو الاثنين مرّروا يسحب اللي مو موزّع من الكومة. في دورك اسحب من الكومة أو خذ آخر ورقة مرمية، وبعدها ارمِ ورقة (ما ترمي نفس الورقة اللي أخذتها من المرمي). الملفات: 3 أو 4 من نفس الرقم، أو 3 وفوق من نفس النوع بالتسلسل (الإكة بس تحت: إكة 2 3). الورق اللي برّا الملفات ينحسب: الإكة 1، الصور 10، والباقي برقمه. لو صار الباقي عندك 10 أو أقل بعد ما ترمي تقدر «تطرق»: الثاني ينزّل اللي يقدر على ملفاتك، ولو باقيك أقل منه تاخذ الفرق، ولو باقيه أقل أو يساويك «يقصّ» عليك وياخذ الفرق و25. لو صار باقيك صفر هذي «جين»: 25 وباقي خصمك، وما يقدر ينزّل على ملفاتك. لو ما بقى بالكومة إلا ورقتين الجولة تنلغي. أول من يوصل 100 يفوز (ونعرض له مكافأة 100 للعبة و25 لكل جولة كسبها).';
+// the bot: takes a discard only when it cuts its deadwood (a meld), throws the card that leaves the least deadwood (keeping
+// pairs and near-runs, and on hard never feeding what the foe picked up), knocks at once on easy/medium, waits for a low
+// count or gin on hard while the stock is long
+function k2gPot(cs){let p=0;for(let i=0;i<cs.length;i++)for(let j=i+1;j<cs.length;j++){const a=cs[i],b=cs[j];if(a[0]===b[0])p+=1;else if(a[1]===b[1]&&Math.abs(k2rv(a)-k2rv(b))<=2)p+=Math.abs(k2rv(a)-k2rv(b))===1?1:.6;}return p;}
+function k2gChoose(d,s,lv,cs){const o=k2gOther(d,s),seen=d.seen&&d.seen[o]||'';const opts=cs.filter(c=>c!==d.tk).map(c=>{const rest=cs.filter(x=>x!==c),B=k2gBest(rest);
+  let v=B.dw-k2gPot(B.dead)*(lv>1?1.5:.5);if(lv===3)for(const x of cardsOf(seen))if(x[0]===c[0]||(x[1]===c[1]&&Math.abs(k2rv(x)-k2rv(c))===1))v+=1.5;return {c,dw:B.dw,v:v+(lv===1?Math.random()*6:0)};});
+  return opts.sort((a,b)=>a.v-b.v)[0];}
+GAMES.k_gin.botSee=nd=>{const d=S.st.d;if(!d||!nd||d.gid!==nd.gid||nd.ph!=='disc'||!nd.tk||d.ph==='disc')return;const s=d.turn;nd.seen=nd.seen||{};nd.seen[s]=(nd.seen[s]||'')+nd.tk;};
+GAMES.k_gin.bot=(d,s,lv)=>{if(d.ph==='sum')return k2gNext(d);const cs=cardsOf(d.hands[s]),top=k2gTop(d);
+  if(d.ph==='up1'||d.ph==='up2'||d.ph==='draw'){if(!d.fs&&top){const now=k2gDW(cs),w=k2gChoose({...d,tk:top},s,lv,[...cs,top]);if(w.dw<now-(lv===1?0:2))return k2gDraw(d,'disc');}
+    if(d.ph==='up1')return {...d,ph:'up2',turn:d.dl,last:`${nameTag(d,s)} ما أخذها`};if(d.ph==='up2')return {...d,ph:'draw',fs:1,turn:k2gOther(d,d.dl),last:`${nameTag(d,s)} ما أخذها`};
+    return k2gDraw({...d,fs:0},'stock');}
+  const w=k2gChoose(d,s,lv,cs),stock=d.dk.length/2;
+  if(w.dw===0||(w.dw<=10&&(lv<3||w.dw<=(stock>8?10:7))))return k2gKnock(d,w.c);return k2gDisc(d,w.c);};
+GAMES.k_gin.botDelay=(d,s,lv)=>d.ph==='sum'?7000:800+rnd(600);
+
+/* =================================================================
+   غولف الورق (six-card Golf, pagat.com). Six cards face down in two rows of three; everyone turns two up. A turn: draw the
+   stock or the top discard and put it in place of any of your six (the old card goes face up on the discards; a face-down
+   card is not looked at first), or throw a stock card away. The hand ends as soon as someone's six are all face up.
+   Ace 1, two −2, 3-10 their number, jack and queen 10, king 0, two equal cards in a column 0. 9 holes (or 4), lowest wins.
+   ================================================================= */
+const k2gfV=c=>c[0]==='K'?0:c[0]==='2'?-2:Math.min(10,k2rv(c));
+function k2gfScore(cs){let t=0;for(let k=0;k<3;k++){const a=cs[k],b=cs[k+3];if(a==='??'||b==='??')continue;t+=a[0]===b[0]?0:k2gfV(a)+k2gfV(b);}return t;}
+const k2gfShown=(d,s)=>{const cs=cardsOf(d.hands[s]);let t=0;for(let k=0;k<3;k++){const a=d.up[s][k]==='1'?cs[k]:null,b=d.up[s][k+3]==='1'?cs[k+3]:null;if(a&&b)t+=a[0]===b[0]?0:k2gfV(a)+k2gfV(b);else if(a)t+=k2gfV(a);else if(b)t+=k2gfV(b);}return t;};
+function k2gfDeal(d){const n=d.pl.length,dk=shuffle(deck52(n>4?2:1)),hands=Array(n).fill('');for(let s=0;s<n;s++)if(d.out[s]!=='1')hands[s]=dk.splice(0,6).join('');
+  const disc=dk.shift(),s0=nextSeat(d,(d.dl+d.ho)%n),st=d.out[s0]==='1'?nextSeat(d,s0):s0;return {...d,hands,up:Array(n).fill('000000'),dk:dk.join(''),disc,dc:'',fd:0,ph:'flip',turn:st,st0:st,lm:null,sum:null};}
+function k2gfAfter(d,s){if(d.up[s]==='111111'){const rs=d.pl.map((_,k)=>d.out[k]==='1'?0:k2gfScore(cardsOf(d.hands[k])));const sc=d.sc.map((x,k)=>x+rs[k]);
+    const nd={...d,sc,rs,ph:'sum',sum:{s},up:d.up.map(()=>'111111'),last:`${nameTag(d,s)} كشف كل أوراقه`};if(d.ho+1>=d.nh)return k2Win(nd,k2Best(nd,sc,false));return nd;}
+  return {...d,turn:nextSeat(d,s),dc:'',fd:0};}
+function k2gfPut(d,p){const s=d.turn,cs=cardsOf(d.hands[s]),old=cs[p];cs[p]=d.dc;const hands=[...d.hands];hands[s]=cs.join('');
+  const nd={...d,hands,up:d.up.map((u,k)=>k===s?setAt(u,p,'1'):u),disc:d.disc+old,lm:{s,p},last:`${nameTag(d,s)} حط ${k2Lab(d.dc)} ورمى ${k2Lab(old)}`};return k2gfAfter(nd,s);}
+const k2gfThrow=d=>k2gfAfter({...d,disc:d.disc+d.dc,lm:null,last:`${nameTag(d,d.turn)} رمى ${k2Lab(d.dc)}`},d.turn);
+function k2gfDraw(d,from){if(from==='disc'){const c=d.disc.slice(-2);return {...d,disc:d.disc.slice(0,-2),dc:c,fd:1,last:`${nameTag(d,d.turn)} أخذ ${k2Lab(c)}`};}
+  let dk=d.dk,disc=d.disc;if(!dk){const top=disc.slice(-2);dk=shuffle(cardsOf(disc.slice(0,-2))).join('');disc=top;}
+  return {...d,dk:dk.slice(2),disc,dc:dk.slice(0,2),fd:0,last:`${nameTag(d,d.turn)} سحب من الكومة`};}
+function k2gfFlip(d,p){const s=d.turn;if(d.up[s][p]!=='0')return d;const up=d.up.map((u,k)=>k===s?setAt(u,p,'1'):u);const nd={...d,up};
+  if(up[s].split('').filter(x=>x==='1').length<2)return nd;const nx=nextSeat(d,s);return nx===d.st0?{...nd,ph:'play',turn:d.st0,last:'كل واحد كشف ورقتين، يلا نلعب'}:{...nd,turn:nx};}
+function k2gfGrid(d,s,can,mini){const cs=cardsOf(d.hands[s]),u=d.up[s],lm=d.lm&&d.lm.s===s?d.lm.p:-1;
+  return `<div class="k2gf ${mini?'mini':''}">${cs.map((c,p)=>{const show=u[p]==='1'&&c!=='??';const k=`g${s}-${p}-${show?c:'b'}`;
+    return can&&can.includes(p)?`<button class="k2gc can" data-ga="pos" data-i="${p}" data-k="${k}">${cardHTML(show?c:'??',!mini)}</button>`:`<span class="k2gc ${p===lm?'lp':''}" data-k="${k}">${cardHTML(show?c:'??',!mini)}</span>`;}).join('')}</div>`;}
+GAMES.k_golf={name:'غولف الورق',cat:'cards',lbc:'#2E7D4F',teams:'none',
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3C9A5F"/><path d="M0 74q50-20 100 0v26H0z" fill="#2E7D4F"/><ellipse cx="66" cy="78" rx="10" ry="3.5" fill="#1C4D31"/><path d="M66 78V30" stroke="#fff" stroke-width="2.5"/><path d="M66 30l18 7-18 7z" fill="#EC6158"/>${[0,1,2].map(k=>`<rect x="${10+k*14}" y="${30+(k%2)*4}" width="12" height="17" rx="2" fill="#fff" stroke="#DCE3EC"/><rect x="${10+k*14}" y="${50+(k%2)*4}" width="12" height="17" rx="2" fill="#2D4763" stroke="#fff" stroke-width="1"/>`).join('')}<circle cx="44" cy="80" r="4" fill="#fff"/></svg>`,
+  init:n=>({dl:0,ho:0,nh:9,hands:Array(n).fill(''),up:Array(n).fill('000000'),dk:'',disc:'',dc:'',fd:0,sc:Array(n).fill(0),rs:null,ph:'opt',st0:0,lm:null,sum:null,last:''}),
+  mask:(d,v)=>d.win!=null||d.ph==='sum'?d:{...d,hands:d.hands.map((h,s)=>cardsOf(h).map((c,p)=>d.up[s][p]==='1'?c:'??').join('')),dk:k2Hide(d.dk),dc:d.turn===v||d.fd?d.dc:k2Hide(d.dc)},
+  redeal:d=>d.win!=null||d.ph==='opt'?d:{...k2gfDeal(d),last:'انعادت الجولة من جديد'},
+  viewer:d=>d.win!=null||d.ph==='opt'?null:d.turn,coverMsg:d=>d.last||'',
+  points:d=>d.sc.slice(),
+  winText:d=>`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بأقل مجموع (${d.sc[d.win]})`,
+  onTimeout(d){if(d.ph==='opt')return k2gfDeal({...d,nh:4});if(d.ph==='sum')return k2gfDeal({...d,ho:d.ho+1,last:''});const s=d.turn;
+    if(d.ph==='flip')return k2gfFlip(d,d.up[s].indexOf('0'));if(!d.dc)return k2gfDraw(d,'stock');if(d.fd)return k2gfPut(d,d.up[s].indexOf('0')>=0?d.up[s].indexOf('0'):0);return k2gfThrow(d);},
+  status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='opt')return 'كم حفرة نلعب؟';if(d.ph==='sum')return s+'انتهت الحفرة';const me=!ctx.local&&d.turn===ctx.v;
+    const what=d.ph==='flip'?'اكشف ورقتين من ورقك':!d.dc?'اسحب من الكومة أو خذ المرمي':d.fd?'حطها مكان ورقة من ورقك':'حطها مكان ورقة أو ارمها';
+    return s+(me?`<b class="yt">${what}</b>`:`دور ${nameTag(d,d.turn)}`)+` • الحفرة ${d.ho+1} من ${d.nh}`;},
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="k2 k2golf">`;
+    if(d.ph==='opt')return h+`${k2Seats(d,()=>'')}<div class="panel k2opt"><h3>غولف الورق</h3><p>كل جولة «حفرة»، والأقل نقاط يفوز</p>${ctx.my?k2Btns([[4,'قصيرة: 4 حفر','navy'],[9,'كاملة: 9 حفر','blue']],'nh'):'<p class="note">ننتظر الاختيار</p>'}</div></div>`;
+    const my=ctx.my&&d.turn===v&&(d.ph==='play'||d.ph==='flip');
+    h+=k2Seats(d,s=>`<em>${d.sc[s]}</em>${d.ph!=='sum'?`<u>👁 ${k2gfShown(d,s)}</u>`:''}`,s=>d.turn===s&&d.ph!=='sum'&&d.win==null);
+    const top=d.disc.slice(-2),canTop=my&&d.ph==='play'&&!d.dc&&top;
+    h+=`<div class="k2felt k2gft"><div class="k2mid">${k2Stock(d.dk.length/2,my&&d.ph==='play'&&!d.dc,'stock')}<div class="k2disc">${top?`<${canTop?'button data-ga="take"':'div'} class="k2top ${canTop?'can':''}" data-k="f${d.disc.length}">${cardHTML(top,true)}</${canTop?'button':'div'}>`:'<i class="k2emp"></i>'}<small>المرمي</small></div>
+      ${d.dc?`<div class="k2held"><span data-k="h${d.dc}">${cardHTML(d.dc,true)}</span><small>بيد ${nm(d,d.turn)}</small></div>`:''}</div>
+      <div class="k2gfo">${d.pl.map((_,s)=>s===v||d.out[s]==='1'?'':`<div class="k2gfp ${d.turn===s?'on':''}" style="--c:${col(d,s)}"><small>${nm(d,s)}</small>${k2gfGrid(d,s,null,true)}</div>`).join('')}</div></div>`;
+    if(d.ph==='sum'){h+=`<div class="panel k2sum"><h3>نتيجة الحفرة ${d.ho+1}</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${d.rs[s]>=0?'+':''}${d.rs[s]}</em><b>${d.sc[s]}</b></div>`).join('')}${ctx.my?k2Next(d,'الحفرة الجاية'):''}</div>`;return h+'</div>';}
+    if(v<0)return h+'</div>';let can=null;
+    if(my&&d.ph==='flip')can=[0,1,2,3,4,5].filter(p=>d.up[v][p]==='0');else if(my&&d.dc)can=[0,1,2,3,4,5];
+    h+=`<p class="lbl hlbl">ورقك ${d.ph==='play'?`(المكشوف ${k2gfShown(d,v)})`:''}</p>${k2gfGrid(d,v,can,false)}`;
+    if(my&&d.dc&&!d.fd)h+=k2Btns([[0,'ارمِ الورقة','navy']],'throw');
+    return h+'</div>';},
+  click(a,i,d,ctx){if(!ctx.my)return;const s=d.turn;
+    if(a==='nh'){if(d.ph!=='opt'||![4,9].includes(i))return;act(k2gfDeal({...d,nh:i,dl:d.turn}));return;}
+    if(a==='next'){if(d.ph==='sum')act(k2gfDeal({...d,ho:d.ho+1,last:''}));return;}
+    if(a==='pos'){if(i<0||i>5)return;if(d.ph==='flip'){act(k2gfFlip(d,i));return;}if(d.ph==='play'&&d.dc)act(k2gfPut(d,i));return;}
+    if(d.ph!=='play')return;
+    if(a==='stock'&&!d.dc){act(k2gfDraw(d,'stock'));return;}
+    if(a==='take'&&!d.dc&&d.disc){act(k2gfDraw(d,'disc'));return;}
+    if(a==='throw'&&d.dc&&!d.fd)act(k2gfThrow(d));}};
+HELP.k_golf='غولف الورق بست أوراق. كل لاعب قدامه 6 أوراق مقلوبة بصفين (3 فوق و3 تحت)، وبالبداية كل واحد يكشف ورقتين يختارهم. في دورك: اسحب من الكومة أو خذ آخر ورقة مرمية، وحطها مكان أي ورقة من الست (المقلوبة ما تشوفها قبل)، والورقة اللي شلتها تنرمي مكشوفة. ولو سحبت من الكومة تقدر بدال كذا ترمي الورقة على طول. أول ما أحد تنكشف أوراقه الست كلها تخلص الحفرة على طول. النقاط: الإكة 1، الاثنين −2 (ناقص اثنين)، من 3 لين 10 برقمها، الولد والبنت 10، الشايب صفر، وأي ورقتين نفس الرقم فوق بعض بنفس العمود عمودهم صفر. تلعبون 9 حفر (أو 4)، وصاحب أقل مجموع يفوز. لو كنتوا أكثر من 4 نلعب بكوتشينتين.';
+// the bot: knows only the cards up (its own and everyone's) and the discards; a hidden card is worth the mean of the cards it
+// has not seen. It takes the discard when it improves a column (a pair, a low card), keeps pairs, throws high stock cards,
+// and (hard) does not turn its last card when that would end the hole with it behind
+function k2gfMean(d,s){const seen=[];d.pl.forEach((_,k)=>cardsOf(d.hands[k]).forEach((c,p)=>{if(d.up[k][p]==='1')seen.push(c);}));cardsOf(d.disc).forEach(c=>seen.push(c));
+  const all=deck52(d.pl.length>4?2:1);for(const c of seen){const j=all.indexOf(c);if(j>=0)all.splice(j,1);}return all.reduce((x,c)=>x+k2gfV(c),0)/Math.max(1,all.length);}
+function k2gfGain(d,s,c,E){const cs=cardsOf(d.hands[s]),u=d.up[s];let best={p:-1,g:-99};
+  for(let p=0;p<6;p++){const q=(p+3)%6,known=u[p]==='1',cur=known?k2gfV(cs[p]):E,mate=u[q]==='1'?cs[q]:null;
+    const colNow=mate?(known&&cs[p][0]===mate[0]?0:cur+k2gfV(mate)):cur+E,colNew=mate?(c[0]===mate[0]?0:k2gfV(c)+k2gfV(mate)):k2gfV(c)+E;let g=colNow-colNew;
+    if(!known)g+=.5;if(g>best.g)best={p,g};}return best;}
+GAMES.k_golf.bot=(d,s,lv)=>{if(d.ph==='opt')return k2gfDeal({...d,nh:4,dl:d.turn});if(d.ph==='sum')return k2gfDeal({...d,ho:d.ho+1,last:''});
+  if(d.ph==='flip'){const f=[0,1,2,3,4,5].filter(p=>d.up[s][p]==='0');return k2gfFlip(d,lv>1&&f.includes(0)&&d.up[s][3]==='0'?(d.up[s][0]==='1'?3:0):pickR(f));}
+  const E=k2gfMean(d,s),last=d.up[s].split('').filter(x=>x==='0').length===1;
+  const ends=(p)=>last&&d.up[s][p]==='0';const behind=()=>{const me=k2gfShown(d,s)+E*0;return d.pl.some((_,k)=>k!==s&&d.out[k]!=='1'&&k2gfShown(d,k)+d.up[k].split('').filter(x=>x==='0').length*E*.6<me);};
+  if(!d.dc){const top=d.disc.slice(-2);if(top){const g=k2gfGain(d,s,top,E);if(g.g>=(lv===1?0:1.5)&&!(lv===3&&ends(g.p)&&behind()))return k2gfDraw(d,'disc');}return k2gfDraw(d,'stock');}
+  const g=k2gfGain(d,s,d.dc,E);if(lv===1&&Math.random()<.3)return d.fd?k2gfPut(d,rnd(6)):Math.random()<.5?k2gfThrow(d):k2gfPut(d,rnd(6));
+  if(d.fd)return k2gfPut(d,g.p);if(g.g>0&&!(lv===3&&ends(g.p)&&behind()))return k2gfPut(d,g.p);return k2gfThrow(d);};
+GAMES.k_golf.botDelay=(d,s,lv)=>d.ph==='sum'?6000:800+rnd(600);

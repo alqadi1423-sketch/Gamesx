@@ -95,3 +95,65 @@ button.k2pile .k2t{box-shadow:0 0 0 3px var(--sel);border-radius:6px}
 .k2tend{min-width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#F7F1E3;color:#2D4763;font-weight:900;font-size:13px;margin-left:2px}
 .btn.k2here{min-height:34px;padding:0 12px;font-size:14px;background:#F0B429;color:#4A3000;box-shadow:0 3px 0 #B07E10}
 .k2opt{text-align:center}
+
+.k2dgrid{display:flex;flex-wrap:wrap;gap:8px 6px;justify-content:center;direction:ltr;padding:10px 0 4px}
+.k2dgrid .dom{flex:none;position:relative}
+.k2dgrid .dom.pick{cursor:pointer;transform:translateY(-4px);box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #D8CBAE,0 0 0 2.5px var(--sel),0 6px 10px rgba(0,0,0,.22)}
+.k2dgrid .dom.dim::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(18,30,48,.22)}
+.k2dgrid>.dom[id]{animation:k2in var(--t3) var(--ease) backwards}
+
+/* ---------- cards on the felt: stock, discard, held card, hand ---------- */
+.k2stock{position:relative;background:none;padding:0;display:inline-block;--cwb:56px}
+.k2stock small{position:absolute;left:0;right:0;bottom:-18px;text-align:center;font-weight:800;font-size:12px;color:#fff}
+.k2stock.can .card{box-shadow:0 0 0 3px var(--sel),0 4px 10px rgba(0,0,0,.3)}
+.k2stock:not(.can) .card{box-shadow:2px 2px 0 #DCE3EC,3px 3px 0 rgba(0,0,0,.25)}
+.k2mid{display:flex;align-items:flex-start;justify-content:center;gap:22px;padding:6px 0 18px;--cwb:56px}
+.k2disc,.k2held{display:flex;flex-direction:column;align-items:center;gap:3px}
+.k2disc small,.k2held small{font-size:12px;font-weight:700;opacity:.9}
+.k2top{background:none;padding:0;animation:k2in var(--t3) var(--ease)}
+.k2top.can .card{box-shadow:0 0 0 3px var(--sel),0 4px 10px rgba(0,0,0,.3)}
+.k2held>span{display:block;animation:k2in var(--t3) var(--ease)}
+.k2held .card{box-shadow:0 0 0 3px #F0B429,0 6px 12px rgba(0,0,0,.3)}
+.k2hand{--cw:min(50px,calc((100vw - 40px)/8))}
+.k2hand.big{--cw:44px}
+.k2hand .bcard.k2new .card{outline:2px solid #F0B429;outline-offset:1px}
+.k2hand .bcard.k2inm .card::before{content:'';position:absolute;left:4px;right:4px;bottom:-5px;height:3px;border-radius:2px;background:var(--ok)}
+.k2opp{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;margin-bottom:6px}
+.k2backs{display:inline-flex}
+.k2backs i{width:14px;height:20px;border-radius:3px;margin-left:-6px;background:#fff;box-shadow:inset 0 0 0 2px #2D4763,inset 0 0 0 4px #fff,inset 0 0 0 20px #4AB1E8,1px 1px 0 rgba(0,0,0,.25)}
+
+/* ---------- الأحمق ---------- */
+.k2dutop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.k2trump{position:relative;display:flex;align-items:center;gap:8px;--cw:44px;--cwb:48px;padding-bottom:18px}
+.k2tc{display:block;transform:rotate(90deg) translate(6px,-14px);margin:0 -12px 0 6px}
+.k2trump em{font-style:normal;font-size:13px;font-weight:700}
+.k2trump em b{font-size:20px;color:#fff}.k2trump em b.rs{color:#FFB3AD}
+.k2dc{font-size:12px;font-weight:700;background:rgba(0,0,0,.25);border-radius:99px;padding:1px 10px}
+.k2tbl{display:flex;flex-wrap:wrap;gap:14px 10px;justify-content:center;min-height:96px;align-items:center;--cw:46px;padding:4px 0 8px}
+.k2pair{position:relative;display:inline-block;animation:k2in var(--t3) var(--ease)}
+.k2over{position:absolute;left:14px;top:18px;animation:k2in var(--t3) var(--ease)}
+.k2tbl .k2pair:has(.k2over){margin-right:14px;margin-bottom:18px}
+.k2tk{text-align:center;font-weight:800;color:#FFD84D;margin:2px 0 0}
+
+/* ---------- جن رمي ---------- */
+.k2gr{margin:8px 0}
+.k2gr b{display:block;font-size:14px;margin-bottom:4px}
+.k2gm{display:flex;flex-wrap:wrap;gap:6px;direction:ltr}
+.k2gml{display:inline-flex;padding:3px 6px 3px 10px;border-radius:8px;background:var(--surface-2);box-shadow:inset 0 0 0 1.5px var(--ok)}
+.k2gml.dead{box-shadow:inset 0 0 0 1.5px var(--bad)}
+.k2sum p .card.mini{vertical-align:middle}
+
+/* ---------- غولف الورق ---------- */
+.k2gf{display:grid;grid-template-columns:repeat(3,auto);gap:8px;justify-content:center;direction:ltr;--cwb:min(70px,22vw)}
+.k2gf.mini{gap:2px;--cw:22px}
+.k2gf.mini .card.card.card{width:22px;height:31px;border-radius:3px}
+.k2gc{display:block;background:none;padding:0;transition:transform var(--t2) var(--ease)}
+.k2gc .card{animation:k2in var(--t3) var(--ease)}
+.k2gc.can .card{box-shadow:0 0 0 3px var(--sel),0 4px 10px rgba(0,0,0,.25);cursor:pointer}
+.k2gc.can:active{transform:scale(.95)}
+.k2gc.lp .card{box-shadow:0 0 0 3px #F0B429}
+.k2gfo{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px}
+.k2gfp{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;border-radius:10px;background:rgba(0,0,0,.18)}
+.k2gfp.on{box-shadow:0 0 0 2px var(--c)}
+.k2gfp small{font-size:11px;font-weight:800;max-width:80px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.k2golf .k2gf:not(.mini){margin:6px 0 4px}
