@@ -46,7 +46,8 @@ try{localStorage.removeItem('alaabna.v3');}catch(e){}
 /* a game has d.pl = list of roles (colours) taking part; seat i plays role d.pl[i] */
 // bots get a person's name in local mode (سالم، نوف…) unless the player typed one
 const BOTN=['سالم','نوف','مشعل','غلا','بندر','جود','زياد','لين'];
-function pnameText(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return String(n).trim().slice(0,14)||(S.mode==='local'&&S.bots[r]?'🤖 '+BOTN[r]:NAMES[r]);}
+// (direction overrides and isolates are dropped: a name with one would turn the rest of the sentence around it)
+function pnameText(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return String(n).replace(/[\u202A-\u202E\u2066-\u2069]/g,'').trim().slice(0,14)||(S.mode==='local'&&S.bots[r]?'🤖 '+BOTN[r]:NAMES[r]);}
 // the same name, escaped for HTML (pnameText is for textContent, such as toasts)
 function pname(r){return escH(pnameText(r));}
 /* ================= bots: only on one phone (local mode) ================= */
@@ -865,7 +866,7 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
     case 'resume':{const sv=loadSaved();if(sv)enterRoom(sv.code,false,sv);break;}
     case 'leave':leaveRoom();break;
     case 'grid':if(S.mode==='local'&&S.st.d&&S.st.d.win==null&&!S.browse){S.browse=true;S.showResult=false;render();break;}setGame(null);break;
-    case 'lresume':localResume();break;
+    case 'lresume':localResume();if(!(S.mode==='local'&&S.st.d)){toast('اللعبة ما عادت محفوظة');render();}break;
     case 'browse':S.browse=true;S.showResult=false;render();break;
     case 'resumegame':S.browse=false;render();break;
     case 'gcat':S.gcat=t.dataset.v||'';if(S.draft.q)S.draft.q='';render();{const m=app.querySelector('.gsent');if(m&&scrollY>m.offsetTop)window.scrollTo(0,m.offsetTop);}break;
