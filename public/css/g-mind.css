@@ -1,1 +1,338 @@
 /* mind games: look and motion (loaded after style.css; uses the tokens at the top of style.css) */
+/* every game of the group renders inside .gm.gm-<id>, so nothing here reaches other games */
+.gm{width:100%;display:flex;flex-direction:column;align-items:center;min-width:0}
+.gm>*{max-width:100%}
+@keyframes mi-pop{0%{transform:scale(.4);opacity:0}100%{transform:none;opacity:1}}
+@keyframes mi-rise{0%{transform:translateY(10px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes mi-flip{0%{transform:perspective(300px) rotateX(-90deg)}60%{transform:perspective(300px) rotateX(12deg)}100%{transform:none}}
+@keyframes mi-glow{0%,100%{box-shadow:0 0 0 2px var(--gold),0 0 0 0 rgba(240,180,41,.55)}50%{box-shadow:0 0 0 2px var(--gold),0 0 0 8px rgba(240,180,41,0)}}
+
+/* ================= code breaker ================= */
+.gm-mm{gap:10px}
+.gm-mm .mmb{width:100%;max-width:400px;padding:10px 10px 12px;border-radius:var(--r-xl);
+ background:linear-gradient(180deg,#3B5A7E,#2A4260 60%,#233954);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -4px 0 rgba(0,0,0,.25),var(--e2)}
+.gm-mm .mmh{max-height:min(262px,32vh);overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding:6px 0 0;position:relative;scrollbar-width:none}
+.gm-mm .mmh::-webkit-scrollbar{display:none}
+.gm-mm .mmr{display:grid;grid-template-columns:22px 14px 1fr 30px;align-items:center;gap:8px;min-height:46px;padding:5px 10px;border-radius:var(--r-m);
+ background:rgba(9,20,34,.28);box-shadow:inset 0 1px 2px rgba(0,0,0,.25),0 1px 0 rgba(255,255,255,.06);justify-content:stretch}
+.gm-mm .mmr[data-k^=h]{animation:mi-rise var(--t3) var(--ease)}
+.gm-mm .mmr .n{font-size:13px;font-weight:800;color:#8FA6C0;text-align:center}
+.gm-mm .mmr .who{width:12px;height:12px;border-radius:50%;background:var(--c,transparent);box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+.gm-mm .mmr.ghost .who{box-shadow:0 0 0 2px rgba(255,255,255,.12)}
+.gm-mm .pegs{display:flex;justify-content:center;gap:10px;direction:ltr}
+/* a hole in the board and a glossy peg sitting in it */
+.gm-mm .hole{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font-style:normal;
+ background:radial-gradient(circle at 50% 60%,#132235 0 34%,#1B2E45 36% 100%);box-shadow:inset 0 3px 4px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.1)}
+.gm-mm .peg{width:30px;height:30px;border:0;border-radius:50%;flex:none;display:block;
+ background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.95) 0 9%,rgba(255,255,255,.35) 18%,transparent 42%),radial-gradient(circle at 50% 120%,rgba(0,0,0,.35),transparent 60%),var(--pc,#888);
+ box-shadow:0 2px 0 rgba(0,0,0,.35),0 3px 6px rgba(0,0,0,.3),inset 0 -2px 0 rgba(0,0,0,.18)}
+.gm-mm .pegs .peg{animation:mi-pop var(--t2) var(--spring)}
+/* the feedback pins: 2 x 2 small holes, black = right place, white = right colour */
+.gm-mm .fb{display:grid;grid-template-columns:repeat(2,11px);gap:4px;margin:0;justify-self:end}
+.gm-mm .fb i{width:11px;height:11px;border-radius:50%;display:block;background:#15253A;box-shadow:inset 0 1.5px 2px rgba(0,0,0,.6)}
+.gm-mm .fb i.b,.gm-mm .mmleg i.b{background:radial-gradient(circle at 35% 30%,#6B7B8F,#0D141D 70%);box-shadow:0 0 0 1.5px rgba(255,255,255,.55),0 1px 2px rgba(0,0,0,.5)}
+.gm-mm .fb i.w,.gm-mm .mmleg i.w{background:radial-gradient(circle at 35% 30%,#fff,#D9E2EC 70%);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.gm-mm .mmr:not(.ghost):not(.cur) .fb i.b,.gm-mm .mmr:not(.ghost):not(.cur) .fb i.w{animation:mi-pop var(--t2) var(--spring) both}
+.gm-mm .mmr:not(.ghost):not(.cur) .fb i:nth-child(2){animation-delay:.06s}.gm-mm .mmr:not(.ghost):not(.cur) .fb i:nth-child(3){animation-delay:.12s}.gm-mm .mmr:not(.ghost):not(.cur) .fb i:nth-child(4){animation-delay:.18s}
+/* the secret code, behind a shield until the end */
+.gm-mm .mmr.code{grid-template-columns:50px 1fr 30px;background:linear-gradient(180deg,#1A2B40,#14233A);box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.08)}
+.gm-mm .mmr.code .fbl{color:#9FB3C8;font-size:12px;font-weight:800;min-width:0;text-align:center}
+.gm-mm .mmr.code .lock{font-size:16px;text-align:center;opacity:.8}
+.gm-mm .hole.q{color:#6F86A2;font-weight:800;font-size:15px;line-height:1}
+.gm-mm .mmr.code.open{background:linear-gradient(180deg,#3A3214,#2A2410);box-shadow:inset 0 0 0 2px var(--gold),inset 0 2px 6px rgba(0,0,0,.4)}
+/* the row being filled: the player's colour and a gold frame */
+.gm-mm .mmr.cur{background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 2px var(--sel),0 4px 12px rgba(0,0,0,.25)}
+.gm-mm .mmr.cur .n{color:var(--sel)}
+.gm-mm .mmr.cur .hole{box-shadow:inset 0 3px 4px rgba(0,0,0,.55),0 0 0 2px rgba(255,216,77,.35)}
+.gm-mm .mmr.ghost{opacity:.5;box-shadow:none;background:rgba(9,20,34,.16)}
+.gm-mm .mmr.win{background:rgba(240,180,41,.2);box-shadow:inset 0 0 0 2px var(--gold);animation:mi-glow 1.2s ease-in-out 2}
+.gm-mm .mmr.win .n{color:var(--gold)}
+.gm-mm .mmleg{display:flex;gap:14px;justify-content:center;font-size:13px;font-weight:700;color:var(--mut);margin-top:-2px}
+.gm-mm .mmleg span{display:flex;align-items:center;gap:5px}
+.gm-mm .mmleg i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.gm-mm .mmleg i.b{box-shadow:0 0 0 1.5px var(--line)}
+/* palette: six big glossy pegs in a tray */
+.gm-mm .mmpal{display:flex;gap:8px;justify-content:center;flex-wrap:nowrap;margin:0;padding:8px 10px;border-radius:99px;background:var(--surface);box-shadow:var(--e1)}
+.gm-mm .peg.pbig{width:44px;height:44px;border:0;transition:transform var(--t1) var(--ease),opacity var(--t2)}
+.gm-mm .peg.pbig:active:not(:disabled){transform:scale(.88)}
+.gm-mm .peg.pbig:disabled{opacity:.35}
+.gm-mm .acts{margin:0}
+.gm-mm .acts .btn{min-height:48px}
+
+/* ================= guess the word ================= */
+.gm-word{gap:12px}
+.gm-word .wcat{display:flex;align-items:center;gap:8px;margin:2px 0 0;font-weight:800}
+.gm-word .wcat span{font-size:13px;color:var(--mut)}
+.gm-word .wcat b{background:#3E7C59;color:#fff;border-radius:99px;padding:2px 14px;font-size:16px;box-shadow:0 3px 0 rgba(0,0,0,.15)}
+.gm-word .wordbox{display:flex;flex-wrap:nowrap;gap:5px;justify-content:center;margin:0;width:100%;direction:rtl}
+.gm-word .wordbox .wl{width:min(46px,calc((100% - (var(--n) - 1) * 5px) / var(--n)));height:auto;aspect-ratio:46/56;min-width:0;border-radius:var(--r-s);
+ display:grid;place-items:center;font-size:clamp(18px,7vw,28px);font-weight:800;color:#2D4763;
+ background:var(--surface);border:0;box-shadow:inset 0 0 0 2px var(--line),0 3px 0 var(--line)}
+.gm-word .wordbox .wl.on{background:linear-gradient(#5BB57F,#3E9A63);color:#fff;box-shadow:0 3px 0 #2C7149,inset 0 1px 0 rgba(255,255,255,.3);animation:mi-flip var(--t3) var(--ease)}
+.gm-word .wordbox .wl.miss{background:#C8D3DF;color:#5F7590;box-shadow:0 3px 0 #A9B7C6;animation:mi-flip var(--t3) var(--ease)}
+.gm-word .kb{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;width:100%;max-width:400px;margin:0;direction:rtl}
+.gm-word .kb .key{width:auto;height:46px;min-width:0;border-radius:var(--r-s);font-size:21px;font-weight:800;background:var(--surface);color:var(--ink);box-shadow:0 3px 0 var(--line),inset 0 0 0 1px var(--line);transition:transform var(--t1),box-shadow var(--t1)}
+.gm-word .kb .key:active:not(:disabled){transform:translateY(3px);box-shadow:0 0 0 var(--line),inset 0 0 0 1px var(--line)}
+.gm-word .kb .key:disabled{opacity:.55}
+.gm-word .kb .key.hit{background:#3FAE5C;color:#fff;opacity:1;box-shadow:0 3px 0 #2C7149}
+.gm-word .kb .key.miss{background:#8E9BAA;color:#E9EEF3;opacity:.7;box-shadow:none;text-decoration:line-through;text-decoration-thickness:2px}
+
+/* ================= guess the number ================= */
+.gm-num{gap:10px}
+.gm-num .nrng{display:flex;align-items:center;gap:10px;width:100%;max-width:420px;background:var(--surface);border-radius:var(--r-l);padding:8px 12px;box-shadow:var(--e1)}
+.gm-num .nrng b{min-width:40px;text-align:center;font-size:22px;font-weight:800;color:#6B4FA0;background:#EFE9FA;border-radius:var(--r-s);padding:0 6px}
+.gm-num .nbar{flex:1;height:12px;border-radius:9px;background:var(--surface-2);position:relative;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
+.gm-num .nbar i{position:absolute;top:0;bottom:0;border-radius:9px;background:linear-gradient(90deg,#8C6CC4,#6B4FA0);transition:inset-inline-start var(--t3) var(--ease),width var(--t3) var(--ease)}
+.gm-num .ngrid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px;width:min(100%,420px);padding:6px;border-radius:var(--r-l);background:linear-gradient(#7A5CB3,#5E4392);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),var(--e1)}
+.gm-num .ngrid>*{min-width:0}
+.gm-num .nc{aspect-ratio:1;border-radius:7px;display:grid;place-items:center;padding:0;font-weight:800;font-size:13px;color:#3B2A63;background:#fff;box-shadow:0 2px 0 #C7B8E6;transition:transform var(--t1)}
+.gm-num .nc:disabled{opacity:1}
+.gm-num .nc:active:not(:disabled){transform:scale(.88)}
+.gm-num .nc.out{background:rgba(255,255,255,.12);color:rgba(255,255,255,.35);box-shadow:none}
+.gm-num .nc.gs{background:rgba(255,255,255,.22);color:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.65);position:relative}
+.gm-num .nc.gs::after{position:absolute;top:-1px;inset-inline-end:1px;font-size:8px;line-height:1;color:var(--sel)}
+.gm-num .nc.up::after{content:'▲'}.gm-num .nc.dn::after{content:'▼'}
+.gm-num .nc.sec{background:var(--gold);color:#3B2A63;box-shadow:0 0 0 3px #fff,0 0 14px 4px rgba(240,180,41,.75);animation:mi-pop var(--t3) var(--spring);position:relative;z-index:1}
+@media (prefers-color-scheme:dark){
+ .gm-num .nrng b{background:#2E2546;color:#C9B5F0}
+ .gm-num .ngrid{background:linear-gradient(#4E3A7A,#3B2B5E)}
+ .gm-num .nc{background:#EDE6FA;box-shadow:0 2px 0 #8C77B8}
+}
+
+/* ================= matchsticks ================= */
+.gm-nim .piles{gap:6px;max-width:440px}
+.gm-nim .pilecard{gap:10px;padding:4px 10px;border-radius:var(--r-l);box-shadow:var(--e1);transition:box-shadow var(--t2),opacity var(--t2)}
+.gm-nim .pilecard.lm{box-shadow:0 0 0 2px rgba(240,180,41,.7),var(--e1)}
+.gm-nim .pilecard.empty{opacity:.7}
+.gm-nim .pn{width:26px;height:26px;font-size:14px}
+.gm-nim .pc2{min-width:30px;font-size:22px;font-weight:800;color:var(--ink)}
+.gm-nim .pilecard.empty .pc2{color:var(--mut)}
+/* green felt tray the sticks lie on */
+.gm-nim .sticks{flex:1;min-width:0;display:flex;align-items:flex-end;justify-content:flex-start;gap:0;direction:ltr;min-height:56px;margin:0;padding:3px 6px;border-radius:var(--r-m);
+ background:radial-gradient(ellipse at 50% 30%,var(--felt-1),var(--felt-2));box-shadow:inset 0 2px 6px rgba(0,0,0,.35)}
+.gm-nim .sticks .note{color:#D8F0E1;margin:auto;font-size:14px}
+.gm-nim .match,.gm-nim .mg{position:relative;flex:0 1 34px;min-width:22px;height:50px;padding:0;background:none;display:block;transition:transform var(--t1) var(--ease)}
+.gm-nim .match:disabled{opacity:1}
+/* a pine stick with a rounded red head */
+.gm-nim .match::before,.gm-nim .mg::before{content:'';position:absolute;left:50%;top:9px;bottom:1px;width:9px;margin-left:-4.5px;border-radius:2px 2px 3px 3px;
+ background:linear-gradient(90deg,#B98448,#F3D9A8 38%,#E9C48A 62%,#A97339);box-shadow:0 2px 2px rgba(0,0,0,.3)}
+.gm-nim .match::after,.gm-nim .mg::after{content:'';position:absolute;left:50%;top:0;width:13px;height:16px;margin-left:-6.5px;border-radius:50% 50% 45% 45%;
+ background:radial-gradient(circle at 35% 30%,#FF8A7A,#D9372B 55%,#8E1F17);box-shadow:0 1px 2px rgba(0,0,0,.35)}
+/* pressing a stick lifts it and every stick after it: that is what you take */
+.gm-nim .match:not(:disabled):hover,.gm-nim .match:not(:disabled):hover~.match,.gm-nim .match:not(:disabled):active,.gm-nim .match:not(:disabled):active~.match{transform:translateY(-7px) rotate(-4deg)}
+.gm-nim .match:not(:disabled):active::after,.gm-nim .match:not(:disabled):active~.match::after{box-shadow:0 0 0 3px rgba(255,216,77,.7)}
+/* sticks taken earlier: faint outlines; sticks taken by the last move: burnt, they drop away */
+.gm-nim .mg{pointer-events:none;opacity:.22}
+.gm-nim .mg::before{background:rgba(255,255,255,.6);box-shadow:none}
+.gm-nim .mg::after{background:rgba(255,255,255,.6);box-shadow:none}
+.gm-nim .mg.tk{opacity:.55;animation:mi-take var(--t3) var(--ease)}
+.gm-nim .mg.tk::before{background:linear-gradient(90deg,#3A2A1C,#6A4E33 50%,#3A2A1C)}
+.gm-nim .mg.tk::after{background:radial-gradient(circle at 40% 35%,#555,#1C1C1C);width:10px;height:12px;margin-left:-5px;top:3px}
+@keyframes mi-take{0%{transform:translateY(-10px) rotate(-8deg);opacity:1}100%{transform:none;opacity:.55}}
+@media (prefers-color-scheme:dark){.gm-nim .pn{background:#26323f}}
+
+/* ================= do not say 31 ================= */
+.gm-c31{gap:16px;padding-top:4px}
+.gm-c31 .cdial{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 18px 10px;border-radius:var(--r-xl);
+ background:var(--surface);box-shadow:inset 0 0 0 3px var(--c),var(--e2);transition:box-shadow var(--t2)}
+.gm-c31 .cnum{font-size:88px;line-height:1;font-weight:800;color:var(--ct,var(--c));font-variant-numeric:tabular-nums;animation:mi-pop var(--t2) var(--spring);text-shadow:0 4px 0 rgba(0,0,0,.08)}
+.gm-c31 .ctrack{position:relative;width:100%;height:12px;border-radius:9px;background:var(--surface-2);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
+.gm-c31 .ctrack i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:9px;background:var(--c);transition:width var(--t3) var(--ease)}
+.gm-c31 .ctrack u{position:absolute;inset-block:0;inset-inline-end:0;background:repeating-linear-gradient(-45deg,rgba(229,83,75,.55) 0 4px,rgba(229,83,75,.25) 4px 8px)}
+.gm-c31 .lbl{margin:0;font-size:15px;text-align:center}
+.gm-c31 .csteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:340px}
+.gm-c31 .cstep{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;aspect-ratio:1/1;max-height:104px;border-radius:var(--r-xl);
+ background:var(--c);color:#fff;box-shadow:inset 0 2px 0 rgba(255,255,255,.25),0 5px 0 rgba(0,0,0,.2);transition:transform var(--t1),box-shadow var(--t1),opacity var(--t2)}
+.gm-c31 .cstep b{font-size:34px;line-height:1.1}
+.gm-c31 .cstep small{font-size:14px;font-weight:800;background:rgba(0,0,0,.18);border-radius:99px;padding:0 10px;margin-top:2px}
+.gm-c31 .cstep:active:not(:disabled){transform:translateY(4px);box-shadow:inset 0 2px 0 rgba(255,255,255,.25),0 1px 0 rgba(0,0,0,.2)}
+.gm-c31 .cstep:disabled{opacity:.4;box-shadow:none}
+.gm-c31 .cstep.lose small{background:#fff;color:var(--bad)}
+.gm-c31 .cstep.lose small::before{content:'💀 '}
+
+/* ================= shared bits for the games in more.js ================= */
+.gm .lbl{margin:2px 0;text-align:center}
+@keyframes mi-deal{0%{transform:translateY(-24px) rotate(-8deg) scale(.8);opacity:0}100%{transform:none;opacity:1}}
+/* a felt card table; the cards on it belong to the cards component */
+.gm .mtab{position:relative;width:100%;max-width:440px;border-radius:var(--r-xl);padding:12px;color:#fff;
+ background:radial-gradient(ellipse at 50% 30%,var(--felt-1),var(--felt-2) 75%);box-shadow:inset 0 0 0 4px rgba(0,0,0,.14),inset 0 3px 14px rgba(0,0,0,.3),var(--e1)}
+.gm-war .wrd,.gm-lowu .lrds{display:flex;gap:5px;justify-content:center}
+.gm-war .wrd i,.gm-lowu .lrds i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25);transition:background var(--t2),transform var(--t2)}
+.gm-war .wrd i.done{background:rgba(255,255,255,.75)}
+.gm-war .wrd i.on,.gm-lowu .lrds i.on{background:var(--gold);transform:scale(1.3)}
+
+/* ================= card war ================= */
+.gm-war{gap:12px}
+.gm-war .wtab{display:flex;align-items:center;justify-content:center;gap:18px;padding:14px 12px}
+.gm-war .wprize{width:92px;height:128px;flex:none;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;color:#5A3B00;
+ background:linear-gradient(150deg,#FFE9A3,#F0B429 55%,#C98A10);box-shadow:inset 0 0 0 3px rgba(255,255,255,.55),inset 0 0 0 6px rgba(160,105,0,.35),0 6px 14px rgba(0,0,0,.35);animation:mi-deal var(--t3) var(--spring)}
+.gm-war .wprize small{font-size:13px;font-weight:800;opacity:.8}
+.gm-war .wprize b{font-size:58px;line-height:1;font-weight:800;text-shadow:0 2px 0 rgba(255,255,255,.5)}
+.gm-war .wrds{display:flex;flex-direction:column;align-items:center;gap:8px}
+.gm-war .wrds small{font-size:14px;font-weight:800;color:#E3F5E9}
+.gm-war .whand{flex-wrap:nowrap;gap:5px;width:100%;max-width:440px;margin:0}
+.gm-war .whand .card.wc{width:min(54px,calc((100% - 30px) / 7));height:auto;aspect-ratio:5/7;font-size:clamp(20px,6.5vw,28px);font-weight:800;display:grid;place-items:center;padding:0;flex:none;transition:transform var(--t1) var(--ease)}
+.gm-war .whand button.card.wc:active:not(:disabled){transform:translateY(-6px) scale(.96)}
+.gm-war .whand .card.wc.dim{opacity:.35;filter:grayscale(1)}
+
+/* ================= lowest unique number ================= */
+.gm-lowu{gap:12px}
+.gm-lowu .lrds i{background:var(--line)}
+.gm-lowu .lrds i.done{background:#3E9298}
+.gm-lowu .lgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;width:min(100%,380px);padding:12px;border-radius:var(--r-xl);
+ background:linear-gradient(#3E9298,#2E6F73);box-shadow:inset 0 2px 0 rgba(255,255,255,.18),inset 0 -5px 0 rgba(0,0,0,.18),var(--e1)}
+.gm-lowu .lgrid>*{min-width:0}
+.gm-lowu .lnum{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;padding:0;font-size:24px;font-weight:800;color:#1F5458;
+ background:radial-gradient(circle at 35% 28%,#fff 0 30%,#E4F2F2 70%,#C9E3E3);box-shadow:0 4px 0 #1D5357,inset 0 -2px 0 rgba(0,0,0,.08);transition:transform var(--t1),box-shadow var(--t1)}
+.gm-lowu .lnum:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #1D5357}
+.gm-lowu .lnum:disabled{opacity:.55}
+
+/* ================= two thirds of the average ================= */
+.gm-two3{gap:14px}
+.gm-two3 .t3card{width:100%;max-width:420px;display:grid;place-items:center;padding:10px;border-radius:var(--r-xl);background:var(--surface);box-shadow:inset 0 0 0 3px #7A69C4,var(--e2)}
+.gm-two3 .big-num{font-size:76px;line-height:1.1;color:#5D4E9E;font-variant-numeric:tabular-nums}
+.gm-two3 .t3rng{width:100%;max-width:420px;padding:0 4px}
+.gm-two3 .t3r{-webkit-appearance:none;appearance:none;display:block;width:100%;height:16px;margin:12px 0 6px;border-radius:99px;outline:none;cursor:pointer;
+ background:linear-gradient(to left,#7A69C4 0 calc(var(--v,50) * 1%),var(--surface-2) calc(var(--v,50) * 1%));box-shadow:inset 0 1px 3px rgba(0,0,0,.2)}
+.gm-two3 .t3r::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#E6E1F7);box-shadow:0 0 0 4px #7A69C4,0 4px 8px rgba(0,0,0,.3)}
+.gm-two3 .t3r::-moz-range-thumb{width:34px;height:34px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 0 4px #7A69C4,0 4px 8px rgba(0,0,0,.3)}
+.gm-two3 .t3r:active::-webkit-slider-thumb{transform:scale(1.1)}
+.gm-two3 .t3tk{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--mut);padding:0 6px}
+.gm-two3 .btn.wide{margin:0}
+@media (prefers-color-scheme:dark){.gm-two3 .big-num{color:#C9BEF5}.gm-two3 .t3r{background:linear-gradient(to left,#8C7BDA 0 calc(var(--v,50) * 1%),#2C3A4A calc(var(--v,50) * 1%))}}
+
+/* ================= ultimate X-O ================= */
+.gm-uxo .uxo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;width:min(100%,420px);padding:7px;border-radius:var(--r-l);
+ background:linear-gradient(#34506F,#24394F);box-shadow:inset 0 -4px 0 rgba(0,0,0,.25),var(--e2)}
+.gm-uxo .ub{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:4px;border-radius:12px;opacity:1;
+ background:#C9D5E2;box-shadow:inset 0 -2px 0 rgba(0,0,0,.08);transition:background var(--t2),box-shadow var(--t2)}
+.gm-uxo .ub>*{min-width:0}
+.gm-uxo .uc{aspect-ratio:1;padding:12%;border-radius:6px;background:#DDE5EE;display:grid;place-items:center;position:relative;transition:transform var(--t1)}
+.gm-uxo .uc:disabled{opacity:1}
+.gm-uxo .uc svg{width:100%;height:100%;animation:mi-pop var(--t2) var(--spring)}
+.gm-uxo .ub:not(.act):not(.won) .uc svg{opacity:.75}
+/* where you may play: lit, white, gold frame, a soft dot in every free cell */
+.gm-uxo .ub.act{background:#fff;box-shadow:0 0 0 3px var(--sel),0 0 16px 2px rgba(255,216,77,.45);z-index:1}
+.gm-uxo .ub.act .uc{background:#EEF3F8}
+.gm-uxo .uc.can::after{content:'';width:22%;height:22%;border-radius:50%;background:rgba(45,71,99,.18)}
+.gm-uxo .uc.can:active{transform:scale(.88)}
+.gm-uxo .uc.lm{background:rgba(240,180,41,.4)!important;box-shadow:inset 0 0 0 2px rgba(240,180,41,.9)}
+/* a small board won: the winner's tint and one big mark */
+.gm-uxo .ub.won{background:var(--l)}
+.gm-uxo .ub.won .uc{background:rgba(255,255,255,.35)}
+.gm-uxo .ub.won .uc svg{opacity:.25}
+.gm-uxo .ubw{position:absolute;inset:8%;opacity:1;pointer-events:none;filter:drop-shadow(0 3px 0 rgba(0,0,0,.15));animation:mi-pop var(--t3) var(--spring)}
+.gm-uxo .ubw svg{width:100%;height:100%}
+.gm-uxo .ub.dr{background:repeating-linear-gradient(45deg,#B9C5D3 0 6px,#C9D5E2 6px 12px)}
+.gm-uxo .ub.dr .uc{background:rgba(255,255,255,.35)}
+.gm-uxo .ub.uwin{box-shadow:0 0 0 3px var(--gold);animation:mi-glow 1.1s ease-in-out 3}
+@media (prefers-color-scheme:dark){.gm-uxo .ub{background:#7F91A6}.gm-uxo .uc{background:#A9B8C9}.gm-uxo .ub.dr{background:repeating-linear-gradient(45deg,#6E8096 0 6px,#7F91A6 6px 12px)}}
+
+/* ================= bomb wires ================= */
+@keyframes mi-shake{0%,100%{transform:none}15%{transform:translateX(-8px) rotate(-1.5deg)}35%{transform:translateX(7px) rotate(1.2deg)}55%{transform:translateX(-5px)}75%{transform:translateX(3px)}}
+@keyframes mi-blink{0%,49%{opacity:1}50%,100%{opacity:.25}}
+@keyframes mi-cutl{0%{transform:none}100%{transform:rotate(7deg)}}
+@keyframes mi-cutr{0%{transform:none}100%{transform:rotate(-7deg)}}
+@keyframes mi-spark{0%{transform:scale(.8)}100%{transform:scale(1.15)}}
+.gm-wires .bombx{position:relative;width:100%;max-width:420px;padding:12px;border-radius:var(--r-xl);color:#fff;
+ background:radial-gradient(circle at 12px 12px,#8C96A2 0 3px,#4A535E 3.5px 5px,transparent 5.5px),radial-gradient(circle at calc(100% - 12px) 12px,#8C96A2 0 3px,#4A535E 3.5px 5px,transparent 5.5px),
+  radial-gradient(circle at 12px calc(100% - 12px),#8C96A2 0 3px,#4A535E 3.5px 5px,transparent 5.5px),radial-gradient(circle at calc(100% - 12px) calc(100% - 12px),#8C96A2 0 3px,#4A535E 3.5px 5px,transparent 5.5px),
+  linear-gradient(160deg,#4A535E,#2B3138 60%,#22272D);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -4px 0 rgba(0,0,0,.35),var(--e2)}
+/* a new bomb after an explosion: the case shakes once under a red flash that fades */
+.gm-wires .bombx.boom{animation:mi-shake .4s var(--ease)}
+.gm-wires .bombx.boom::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(255,90,60,.5);pointer-events:none;opacity:0;animation:mi-fade .6s ease-out}
+@keyframes mi-fade{0%{opacity:1}100%{opacity:0}}
+.gm-wires .bhd{display:flex;align-items:center;gap:12px;padding:0 10px 10px}
+.gm-wires .bsvg{width:58px;height:58px;flex:none;filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
+.gm-wires .bspark{transform-origin:57px 7px;animation:mi-spark .5s ease-in-out infinite alternate}
+.gm-wires .blcd{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 12px;border-radius:var(--r-s);background:#0E1A12;box-shadow:inset 0 2px 6px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.12)}
+.gm-wires .blcd b{font-size:38px;line-height:1;font-weight:800;color:#FF5A4E;font-variant-numeric:tabular-nums;letter-spacing:2px;text-shadow:0 0 8px rgba(255,90,78,.7)}
+.gm-wires .blcd small{font-size:13px;font-weight:700;color:#8FA59A}
+.gm-wires .bled{width:14px;height:14px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,#FFB3AB,#E5342A 60%);box-shadow:0 0 8px 2px rgba(229,52,42,.7);animation:mi-blink 1s steps(1) infinite}
+/* the circuit board the wires run across, with a terminal strip on each side */
+.gm-wires .wset{position:relative;display:flex;flex-direction:column;gap:2px;padding:8px 0;border-radius:var(--r-m);
+ background:linear-gradient(90deg,#A7AFB8 0 10px,transparent 10px calc(100% - 10px),#A7AFB8 calc(100% - 10px)),repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 14px),repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 14px),#1D4A37;
+ box-shadow:inset 0 2px 8px rgba(0,0,0,.55)}
+.gm-wires .wire{position:relative;display:block;width:100%;height:36px;margin:0;padding:0;border-radius:0;background:none;box-shadow:none;opacity:1}
+/* screw terminals at both ends */
+.gm-wires .wire::before,.gm-wires .wire::after{content:'';position:absolute;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;
+ background:radial-gradient(circle at 35% 30%,#F4F6F8,#9AA3AD 60%,#6B747E);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.gm-wires .wire::before{left:-2px}.gm-wires .wire::after{right:-2px}
+.gm-wires .wh{position:absolute;top:50%;height:12px;margin-top:-6px;left:10px;right:10px;border-radius:6px;display:block;
+ background:linear-gradient(180deg,rgba(255,255,255,.55) 0 2px,rgba(255,255,255,.12) 3px 45%,rgba(0,0,0,.28)),var(--c);
+ box-shadow:0 3px 3px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.25);transition:transform var(--t1) var(--ease)}
+.gm-wires button.wire:not(:disabled):hover .wh{transform:scaleY(1.2)}
+.gm-wires button.wire:not(:disabled):active .wh{transform:scaleY(1.35);box-shadow:0 0 0 3px rgba(255,216,77,.75),0 3px 3px rgba(0,0,0,.45)}
+.gm-wires button.wire:disabled{cursor:default}
+/* a cut wire: two halves with bare copper ends, sagging apart */
+.gm-wires .wire.cut .wh{opacity:.7}
+.gm-wires .wire.cut .wh.a{right:calc(50% + 12px);transform-origin:left center;transform:rotate(7deg);animation:mi-cutl var(--t3) var(--spring)}
+.gm-wires .wire.cut .wh.b{left:calc(50% + 12px);transform-origin:right center;transform:rotate(-7deg);animation:mi-cutr var(--t3) var(--spring)}
+.gm-wires .wire.cut .wh::after{content:'';position:absolute;top:2px;bottom:2px;width:7px;border-radius:2px;background:linear-gradient(#F6C27A,#C7782B)}
+.gm-wires .wire.cut .wh.a::after{right:-5px}.gm-wires .wire.cut .wh.b::after{left:-5px}
+
+/* ================= quiz cards: proverbs, sequences, colour words ================= */
+.gm-prov .pvq{display:inline}
+.gm-prov .pvb{display:inline-block;min-width:68px;margin-inline-start:6px;border-bottom:3px dashed var(--gold);color:transparent;line-height:1.1;vertical-align:baseline}
+.gm-prov .qbox{position:relative;overflow:hidden}
+.gm-prov .qbox::before{content:'❝';position:absolute;top:-6px;inset-inline-start:10px;font-size:54px;line-height:1;color:var(--gold);opacity:.35;pointer-events:none}
+.gm-seq .sqs{display:flex;gap:6px;justify-content:center;width:100%}
+.gm-seq .sqs b{flex:1 1 0;min-width:0;padding:8px 0;border-radius:var(--r-s);background:var(--surface-2);box-shadow:inset 0 -3px 0 var(--line);font-size:clamp(16px,5.4vw,24px);font-variant-numeric:tabular-nums;animation:mi-rise var(--t3) var(--ease) both}
+.gm-seq .sqs b:nth-child(2){animation-delay:.04s}.gm-seq .sqs b:nth-child(3){animation-delay:.08s}.gm-seq .sqs b:nth-child(4){animation-delay:.12s}.gm-seq .sqs b:nth-child(5){animation-delay:.16s}.gm-seq .sqs b:nth-child(6){animation-delay:.2s}
+.gm-seq .sqs .sqq{background:#FFF3C4;color:#9A6B00;box-shadow:inset 0 0 0 2px var(--gold),inset 0 -3px 0 rgba(240,180,41,.6)}
+@media (prefers-color-scheme:dark){.gm-seq .sqs .sqq{background:#3A3218;color:var(--sel)}}
+/* the word sits on a paper card in both themes, so its ink colour reads true */
+.gm-stroop .stw{display:block;width:fit-content;min-width:60%;margin:0 auto 10px;padding:4px 22px 10px;border-radius:var(--r-l);font-size:54px;line-height:1.3;
+ background:#FBF8F1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),0 4px 0 rgba(0,0,0,.08);animation:mi-pop var(--t3) var(--spring)}
+.gm-stroop .sth{display:block;font-size:15px;color:var(--mut)}
+
+/* ================= go fish ================= */
+.gm-fish{gap:10px}
+.gm-fish .ftab{display:flex;flex-direction:column;align-items:center;gap:10px}
+.gm-fish .fseats{display:grid;grid-template-columns:repeat(auto-fit,minmax(66px,1fr));gap:6px;width:100%}
+.gm-fish .fseats>*{min-width:0}
+.gm-fish .fseat{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:var(--r-m);color:#fff;
+ background:rgba(0,0,0,.22);box-shadow:inset 0 3px 0 var(--c);transition:transform var(--t2) var(--ease),box-shadow var(--t2)}
+.gm-fish .fseat b{max-width:100%;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.gm-fish .fseat small{font-size:12px;font-weight:700;opacity:.9}
+.gm-fish .fseat.out{opacity:.4}
+.gm-fish .fbk{display:flex;align-items:center;direction:ltr;height:18px}
+.gm-fish .fbk i{width:12px;height:17px;border-radius:3px;margin-left:-8px;transform-origin:50% 120%;background:repeating-linear-gradient(45deg,#4AB1E8 0 2px,#3A9AD0 2px 4px);box-shadow:0 0 0 1.5px #fff,1px 1px 2px rgba(0,0,0,.3)}
+.gm-fish .fbk i:first-child{margin-left:0;transform:rotate(-16deg)}.gm-fish .fbk i:nth-child(2){transform:rotate(-8deg)}.gm-fish .fbk i:nth-child(4){transform:rotate(8deg)}.gm-fish .fbk i:nth-child(5){transform:rotate(16deg)}
+.gm-fish .fbk em{font-style:normal;font-weight:800;font-size:14px;margin-left:10px}
+.gm-fish .fseat.can{box-shadow:inset 0 3px 0 var(--c),0 0 0 2px rgba(255,216,77,.45)}
+.gm-fish .fseat.can:active{transform:scale(.94)}
+.gm-fish .fseat.sel{background:rgba(255,255,255,.2);box-shadow:inset 0 3px 0 var(--c),var(--ring);transform:translateY(-3px)}
+.gm-fish .fpond{display:flex;align-items:center;gap:14px}
+.gm-fish .fpond small{font-size:13px;font-weight:700;color:#E3F5E9}
+.gm .fstk{position:relative;isolation:isolate;display:inline-flex}
+.gm .fstk::before,.gm .fstk::after{content:'';position:absolute;inset:0;border-radius:8px;background:#E9EEF4;box-shadow:0 1px 2px rgba(0,0,0,.3);z-index:-1}
+.gm .fstk::before{transform:translate(3px,3px)}.gm .fstk::after{transform:translate(6px,6px)}
+.gm .fstk.none::before,.gm .fstk.none::after{display:none}
+.gm .fstk.none{width:40px;height:58px;border-radius:8px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.gm-fish .fhand{margin:4px 0 0}
+.gm-fish .fbooks{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;align-items:center}
+.gm-fish .fbooks b{min-width:28px;padding:1px 8px;border-radius:99px;background:var(--gold);color:#5A3B00;font-size:14px;text-align:center;box-shadow:0 2px 0 rgba(0,0,0,.15);animation:mi-pop var(--t3) var(--spring)}
+
+/* ================= 99 ================= */
+.gm-n99{gap:8px}
+.gm-n99 .n9tab{display:flex;align-items:center;justify-content:center;gap:26px;padding:14px}
+.gm-n99 .n9m{position:relative;width:148px;height:148px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gm-n99 .n9m svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.gm-n99 .n9m circle{fill:none;stroke-width:9}
+.gm-n99 .n9m .tr{stroke:rgba(0,0,0,.25);fill:rgba(0,0,0,.12)}
+.gm-n99 .n9m .fl{stroke:#6FE0A0;stroke-linecap:round;transition:stroke-dasharray var(--t3) var(--ease),stroke var(--t3)}
+.gm-n99 .n9m.warm .fl{stroke:#FFB547}.gm-n99 .n9m.hot .fl{stroke:#FF5A4E}
+.gm-n99 .n9m b{position:relative;font-size:50px;line-height:1;font-weight:800;font-variant-numeric:tabular-nums;animation:mi-pop var(--t2) var(--spring)}
+.gm-n99 .n9m.hot b{color:#FFD2CE}
+.gm-n99 .n9m small{position:relative;font-size:12px;font-weight:700;color:#E3F5E9}
+.gm-n99 .n9side{display:flex;flex-direction:column;align-items:center;gap:12px}
+.gm-n99 .n9dir{display:flex;flex-direction:column;align-items:center;line-height:1}
+.gm-n99 .n9dir span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:800;background:rgba(0,0,0,.22)}
+.gm-n99 .n9dir small{font-size:12px;font-weight:700;margin-top:3px;color:#E3F5E9}
+.gm-n99 .n9hand{gap:10px;margin:0}
+.gm-n99 .n9c{display:flex;flex-direction:column;align-items:center;gap:4px}
+.gm-n99 .n9c small{font-size:12px;font-weight:800;padding:0 8px;border-radius:99px;background:var(--surface);color:var(--mut);box-shadow:var(--e1);white-space:nowrap}
+.gm-n99 .n9c.no small{opacity:.5}
+.gm-n99 .legend{margin:2px 0 0}
