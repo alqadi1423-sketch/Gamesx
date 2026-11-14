@@ -181,6 +181,7 @@ const TVR=(()=>{const r=[];for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)r.push(a===
 function tvPips(t,s){let p=t.bar[s]*25;for(let i=0;i<24;i++)if(tvOwn(t.pts[i],s))p+=tvCnt(t.pts[i])*(s?24-i:i+1);return p;}
 // side s still has to pass the other side's checkers
 function tvContact(t){if(t.bar[0]||t.bar[1])return true;let lo1=99,hi0=-1;for(let i=0;i<24;i++){if(t.pts[i]>0)hi0=Math.max(hi0,i);if(t.pts[i]<0)lo1=Math.min(lo1,i);}return lo1<hi0;}
+const TVBW=[0,.45,.45,.5];// how much a blot worries each level
 function tvJudge(t,s,lv){const o=1-s,me=tvPips(t,s),op=tvPips(t,o);let v=op-me+t.off[s]*2-t.off[o]*2;
   if(!tvContact(t))return v;
   const home=(x,i)=>x?i>=18:i<=5,made=x=>{let n=0;for(let i=0;i<24;i++)if(home(x,i)&&tvOwn(t.pts[i],x)&&tvCnt(t.pts[i])>=2)n++;return n;};
@@ -194,7 +195,7 @@ function tvJudge(t,s,lv){const o=1-s,me=tvPips(t,s),op=tvPips(t,o);let v=op-me+t
   // the other side on the bar against a strong home board
   v+=t.bar[o]*(4+myHome*3)-t.bar[s]*(2+opHome*3);
   // blots: the share of the 36 rolls that hit them, times what they would lose
-  const wt=lv===3?1:.45;const src=[];for(let i=0;i<24;i++)if(tvOwn(t.pts[i],o))src.push(i+1);
+  const wt=TVBW[lv]||.45;const src=[];for(let i=0;i<24;i++)if(tvOwn(t.pts[i],o))src.push(i+1);
   for(let i=0;i<24;i++){if(!(tvOwn(t.pts[i],s)&&tvCnt(t.pts[i])===1))continue;const p=i+1;
     const ds=src.map(q=>s?p-q:q-p).filter(x=>x>0&&x<=24);if(t.bar[o])ds.push(s?p:25-p);if(!ds.length)continue;
     let hits=0;for(const r of TVR)if(r.some(x=>ds.includes(x)))hits++;
@@ -207,6 +208,10 @@ function tvPlans(d,s){const out=new Map();
     const seen=new Set();for(const m of al){const sk=m.from+':'+m.die;if(seen.has(sk))continue;seen.add(sk);
       const nt=tvMove(t,s,m.from,m.to),rest=[...dice];rest.splice(rest.indexOf(m.die),1);rec(nt,rest,first||m,dep+1);}};
   rec({pts:d.pts,bar:d.bar,off:d.off},d.mv,null,0);return [...out.values()].filter(x=>x.first);}
+// what the board is worth for the side that just moved, averaged over the 21 rolls of side o and o's best plan for each
+function tvReply(t,o,lv){let tot=0,w=0;for(let a=1;a<=6;a++)for(let b=a;b<=6;b++){const k=a===b?1:2,mv=a===b?[a,a,a,a]:[a,b];
+    let bo=-1e9;for(const x of tvPlans({pts:t.pts,bar:t.bar,off:t.off,mv},o)){const v=x.t.off[o]===15?1e5:tvJudge(x.t,o,lv);if(v>bo)bo=v;}
+    if(bo===-1e9)bo=tvJudge(t,o,lv);tot-=bo*k;w+=k;}return tot/w;}
 // how likely side s wins from here, roughly (a lead of about a tenth of the race is a good double)
 const tvWinP=(t,s,lv)=>{const sc=8+(tvPips(t,0)+tvPips(t,1))/14;return 1/(1+Math.exp(-tvJudge(t,s,lv)/sc));};
 GAMES.tavla.bot=(d,s,lv)=>{const side=d.sd;
@@ -221,7 +226,10 @@ GAMES.tavla.bot=(d,s,lv)=>{const side=d.sd;
     // the plan made for this roll stays while the board is the one it expected
     const k=d.gid+':'+d.pts.join(',')+'|'+d.bar+'|'+d.mv.join('');const P=S.tvPlan;
     if(P&&P.k===k){const m=al.find(x=>x.from===P.m.from&&x.to===P.m.to&&x.die===P.m.die);if(m)return tvPlay(d,m);}
-    const ns=lv===3?.5:4;let best=null,bv=-1e9;for(const x of tvPlans(d,side)){const v=tvJudge(x.t,side,lv)+Math.random()*ns;if(v>bv){bv=v;best=x;}}
+    const ns=lv===3?.5:4;let best=null,bv=-1e9;const all=tvPlans(d,side);for(const x of all){x.v=tvJudge(x.t,side,lv)+Math.random()*ns;if(x.v>bv){bv=x.v;best=x;}}
+    // hard also looks at every roll the other side may throw next and its best answer to each (the best few plans only, for a short time)
+    if(lv===3&&all.length>1){const t0=performance.now();all.sort((a,b)=>b.v-a.v);bv=-1e9;
+      for(const x of all.slice(0,6)){if(performance.now()-t0>260&&best)break;const v=x.t.off[side]===15?1e6:tvReply(x.t,1-side,lv);if(v>bv){bv=v;best=x;}}}
     if(!best)return tvPlay(d,al[0]);const m=best.first;const nd=tvPlay(d,m);
     // the rest of the plan: replayed from the board after this move
     S.tvPlan=null;if(nd.ph==='move'&&nd.sd===side){const rest=tvPlans(nd,side).find(x=>x.t.pts.join(',')===best.t.pts.join(',')&&x.t.bar+''===best.t.bar+''&&x.t.off+''===best.t.off+'');
