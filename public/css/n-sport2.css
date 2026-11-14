@@ -163,7 +163,7 @@
 .fs-info{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13px;font-weight:700;color:var(--mut);padding:0 4px}
 
 /* ---------- dhow race ---------- */
-.r2 .dh-svg{width:min(100%,250px);margin:0 auto}
+.r2 .dh-svg{width:min(100%,210px);margin:0 auto}
 .dh-wt{font-size:3.4px;font-weight:800;fill:#1B4F72}
 .dh-b.me>g>path:first-child{stroke:#FFD84D;stroke-width:.8}
 .dh-rose{position:relative;width:216px;height:216px;margin:0 auto;border-radius:50%;background:radial-gradient(circle,var(--surface) 0 38%,var(--surface-2) 39% 100%);box-shadow:var(--e1)}
