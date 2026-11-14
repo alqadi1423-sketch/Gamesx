@@ -86,9 +86,9 @@ GAMES.d_ship={name:'السفينة والقبطان',cat:'dice',lbc:'#1E5F8C',ne
     let s=rgHead(d,SCC_R,`<span>الرمية <b>${d.rl}</b> من 3</span>`);
     s+=`<div class="d2-scc">${slot(0,'السفينة ⛵',6)}${slot(1,'القبطان 🧭',5)}${slot(2,'البحارة 👥',4)}</div>`;
     const cargo=d.hv===3;
-    s+=`<div class="ytray d2-tray ${cargo?'cargo':''}">${d.rl?d.dv.map(x=>dieH(x,{roll:fr,cls:cargo?'cg':''})).join(''):[0,0,0,0,0].slice(d.hv).map(()=>dieH(0)).join('')}${cargo?`<b class="d2-sum">📦 ${dsum(d.dv)}</b>`:''}</div>`;
+    s+=`<div class="ytray d2-tray ${cargo?'cargo':''}">${d.rl?d.dv.map(x=>dieH(x,{roll:fr,cls:cargo?'d2cg':''})).join(''):[0,0,0,0,0].slice(d.hv).map(()=>dieH(0)).join('')}${cargo?`<b class="d2-sum">📦 ${dsum(d.dv)}</b>`:''}</div>`;
     s+=`<div class="acts">${rollBtn(d,my&&d.rl<3,d.hv===3?'ارمِ الحمولة':'ارمِ')}${cargo?`<button class="btn navy" data-ga="stop" ${my&&d.rl<3?'':'disabled'}>⚓ أثبّت ${dsum(d.dv)}</button>`:''}</div>`;
-    const T=rgTarget(d,t);if(T!=null&&d.win==null)s+=`<p class="note">أعلى حمولة بالجولة: <b>${T}</b></p>`;
+    const T=rgTarget(d,t);if(T&&d.win==null)s+=`<p class="note">أعلى حمولة بالجولة: <b>${T}</b></p>`;
     s+=rgRow(d,v=>v?'📦 '+v:'🌊 0');
     if(d.lt&&d.lt.s!==t)s+=ltBox(d,`${miniD([6,5,4].slice(0,d.lt.hv))}${d.lt.hv===3?miniD(d.lt.dv):''}<b>${d.lt.v}</b>`);
     return s;},
@@ -121,7 +121,7 @@ const MXL=3;
 function mxLose(d,s,k,msg,rv){const lv=[...d.lv];lv[s]=Math.max(0,lv[s]-k);let out=d.out;if(lv[s]<=0)out=setAt(out,s,'1');const al=aliveSeats(d,out);
   return {...d,lv,out,cup:d.cup.map(()=>''),cl:null,ph:'roll',rv,rd:d.rd+1,turn:out[s]==='1'?nextSeat(d,s,out):s,win:al.length===1?al[0]:null,last:msg};}
 const mxRoll=d=>{const a=R6(),b=R6();return {...d,cup:d.cup.map((c,s)=>s===d.turn?''+Math.max(a,b)+Math.min(a,b):''),ph:'claim',rc:d.rc+1,last:`${nm(d,d.turn)} رمى تحت الكاسة 🤫`};};
-const mxClaim=(d,v)=>({...d,cl:{v,s:d.turn},ph:'roll',rv:null,turn:nextSeat(d,d.turn),last:`${nm(d,d.turn)} يقول: ${mxName(v)}`});
+const mxClaim=(d,v)=>({...d,cl:{v,s:d.turn,p:d.cl?d.cl.v:-1},ph:'roll',rv:null,turn:nextSeat(d,d.turn),last:`${nm(d,d.turn)} يقول: ${mxName(v)}`});
 function mxDoubt(d){const t=d.turn,c=d.cl,real=mxRank(d.cup[c.s]),ok=real>=c.v;const loser=ok?t:c.s,k=ok&&c.v===20?2:1;
   const rv={s:c.s,dv:d.cup[c.s],v:c.v,by:t,ok,ls:loser,k};
   return mxLose(d,loser,k,`${nm(d,t)} كشف الكاسة: ${nm(d,c.s)} قال ${mxName(c.v)} وطلع ${mxName(real)}، ${ok?'صادق':'كذاب'}! ${nm(d,loser)} خسر ${k===2?'حياتين':'حياة'}`,rv);}
@@ -175,14 +175,18 @@ GAMES.d_mex.bot=(d,s,lv)=>{
     return botDo(d,s,'claim',v);}
   if(!d.cl)return botDo(d,s,'roll',0);const c=d.cl.v;
   if(lv===1){if(c===20)return botDo(d,s,Math.random()<.5?'give':'doubt',0);return botDo(d,s,Math.random()<.25||MXGE[c]<.2?'doubt':'roll',0);}
-  // the chance the claim is true: a player who threw high enough says what he has, one who threw lower has to lie,
-  // and a lie lands mostly right above the claim before it
-  const pTrue=MXP[c]/(MXP[c]+(1-MXGE[c])*.6+.0001);
+  /* the chance the claim is true, from the claim before it (lo is the least that could be said): a player who threw at least lo
+     mostly says what he has (now and then more), one who threw less has to lie, and a lie lands mostly right above lo */
+  const lo=(d.cl.p==null?-1:d.cl.p)+1,lt=k=>MXP.slice(0,Math.max(0,k)).reduce((a,b)=>a+b,0);
+  const q=k=>k===0?.65:k===1?.22:.13/Math.max(1,19-lo);
+  const truth=(c>=lo?MXP[c]:0)+MXGT[c]*.1,lie=lt(lo)*q(c-lo)+Math.max(0,lt(c)-lt(lo))*.15;
+  const pTrue=truth/(truth+lie+1e-9);
   // a claimed مكسيكو is true about one time in eleven: lifting costs 2 lives that rarely, giving up costs 1 for sure
-  if(c===20)return botDo(d,s,'doubt',0);
-  // believing means throwing to beat it: honest when the throw is higher, otherwise a lie that may be lifted
-  const loseBelieve=(1-MXGT[c])*.55;
-  if(lv===2)return botDo(d,s,pTrue<loseBelieve*1.1||MXGE[c]<.12?'doubt':'roll',0);
+  if(c===20)return botDo(d,s,2*pTrue<1?'doubt':'give',0);
+  // believing means throwing to beat it: honest when the throw is higher, otherwise a lie that may well be lifted
+  const loseBelieve=(1-MXGT[c])*.42;
+  // medium only asks how likely any throw is to reach the claim
+  if(lv===2)return botDo(d,s,MXGE[c]<.3?'doubt':'roll',0);
   return botDo(d,s,pTrue<loseBelieve?'doubt':'roll',0);};
 HELP.d_mex='لعبة مكسيكو (Mäxchen): زهرتين تحت كاسة. الرقم يُقرأ الكبير أول: 5 و3 = 53. الترتيب من الأقل: 31، 32، 41… إلى 65، بعدها الدبلات من دبل 1 إلى دبل 6، وأعلى شي 21 «مكسيكو». بدورك ترمي تحت الكاسة وتشوف لحالك، وبعدين تقول رقم لازم يكون أعلى من اللي قبلك، صادق أو كذاب. اللي بعدك يا يصدّقك ويرمي هو (ولازم يقول أعلى منك)، يا يكشف الكاسة: إذا الزهر نفس اللي قلت أو أعلى يخسر هو حياة، وإذا كذبت تخسر أنت. لو أحد قال مكسيكو ما ينغلب: يا تسلّم وتخسر حياة، يا تكشف وإذا كانت صدق تخسر حياتين. اللي خسر يبدأ الجولة الجاية. لكل واحد 3 أرواح، وآخر واحد يبقى يفوز.';
 
@@ -197,25 +201,26 @@ GAMES.d_chi={name:'شيكاغو',cat:'dice',lbc:'#3B4C8C',net:{host:['roll']},re
   points:d=>d.tot,status:lastSt,
   winExtra:d=>'المجموع: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.tot[s]}`).join('، '),
   onTimeout:d=>GAMES.d_chi.go(d),onSkip:(nd,d)=>rgSkip(nd,d,CHI),
-  go(d){const t=d.turn,dv=rollN(2),v=dsum(dv),tg=Math.min(d.rn,CHI_R)+1,ok=v===tg;
+  go(d){const t=d.turn,dv=rollN(2),v=dsum(dv),tg=Math.min(d.rn,CHI_R)+1,ok=d.rn<=CHI_R&&v===tg;
     const hs=d.rn<=CHI_R?d.hs.map((h,s)=>s===t?setAt(h,d.rn-1,ok?'1':'0'):h):d.hs;
     return rgNext({...d,dv,hs,rc:d.rc+1,res:d.res.map((r,s)=>s===t?v:r),lt:{s:t,dv,v,ok},last:ok?`${nm(d,t)} جاب ${tg}! +${tg} 🎯`:`${nm(d,t)} طلع ${v}`},t,CHI);},
   render(d,ctx){const my=ctx.my&&d.win==null,tg=Math.min(d.rn,CHI_R)+1;
     let s=`<div class="d2-chi">${[...Array(CHI_R)].map((_,k)=>`<span class="${k+1===d.rn?'on':k+1<d.rn?'past':''}">${k+2}</span>`).join('')}</div>`;
-    s+=`<div class="d2-hd"><span>${d.rn>CHI_R?'<b>جولة فاصلة</b> على 12':`الهدف <b class="d2-big">${tg}</b>`}</span><span>الجولة ${Math.min(d.rn,CHI_R)} من ${CHI_R}</span></div>`;
+    s+=`<div class="d2-hd"><span>${d.rn>CHI_R?'<b>جولة فاصلة</b>: أعلى رمية':`الهدف <b class="d2-big">${tg}</b>`}</span><span>الجولة ${Math.min(d.rn,CHI_R)} من ${CHI_R}</span></div>`;
     const L=d.lt;const fr=L&&once(`chi${d.gid}_${d.rc}`);
     s+=`<div class="ytray d2-tray">${L?L.dv.map(x=>dieH(x,{roll:fr})).join('')+`<b class="d2-sum ${L.ok?'hit':''}">${L.v}${L.ok?' 🎯':''}</b>`:dieH(0)+dieH(0)}</div>`;
     if(L)s+=`<p class="note" style="--c:${col(d,L.s)}">رمية ${nm(d,L.s)}</p>`;
-    s+=`<div class="acts">${rollBtn(d,my,`ارمِ على ${d.rn>CHI_R?12:tg}`)}</div>`;
-    s+=rgRow(d,v=>`${v}${v===(d.rn>CHI_R?12:d.rn+1)?' 🎯':''}`);
+    s+=`<div class="acts">${rollBtn(d,my,d.rn>CHI_R?'ارمِ':`ارمِ على ${tg}`)}</div>`;
+    s+=rgRow(d,v=>`${v}${d.rn<=CHI_R&&v===d.rn+1?' 🎯':''}`);
     s+=`<div class="d2-chit">${d.pl.map((r,p)=>alive(d,p)?`<div style="--c:${col(d,p)}"><i>${nm(d,p)}</i><span>${[...d.hs[p]].map((h,k)=>`<u class="${h==='1'?'y':h==='0'?'n':''}">${h==='1'?k+2:''}</u>`).join('')}</span><b>${d.tot[p]}</b></div>`:'').join('')}</div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null||a!=='roll')return;act(GAMES.d_chi.go(d));}
 };
 // a tie-break round aims at 12 again
-CHI.rate=(f=>x=>x.rn>CHI_R?{gain:x.res.map(v=>v===12?12:0),msg:'الجولة الفاصلة على 12'}:f(x))(CHI.rate);
+// a tie-break round: the highest throw gets a point
+CHI.rate=(f=>x=>{if(x.rn<=CHI_R)return f(x);const {gain,w}=topGain(x,v=>v);return {gain,msg:winMsg(x,w,'بأعلى رمية')};})(CHI.rate);
 GAMES.d_chi.bot=(d,s)=>botDo(d,s,'roll',0);
-HELP.d_chi='شيكاغو: 11 جولة، وكل جولة لها رقم هدف بالترتيب من 2 إلى 12. بدورك ترمي زهرتين مرة وحدة، وإذا مجموعهم نفس هدف الجولة تاخذ نقاط بقدره (مثلاً بجولة الـ8 تاخذ 8). بعد الـ11 جولة يفوز صاحب أعلى مجموع، ولو تعادلوا فيه جولة فاصلة على 12. مع الفرق ينجمع مجموع الفريق.';
+HELP.d_chi='شيكاغو: 11 جولة، وكل جولة لها رقم هدف بالترتيب من 2 إلى 12. بدورك ترمي زهرتين مرة وحدة، وإذا مجموعهم نفس هدف الجولة تاخذ نقاط بقدره (مثلاً بجولة الـ8 تاخذ 8). بعد الـ11 جولة يفوز صاحب أعلى مجموع، ولو تعادلوا فيه جولة فاصلة: أعلى رمية تاخذ نقطة. مع الفرق ينجمع مجموع الفريق.';
 
 /* five-dice odds for the bots: the 252 sets of five dice and what every keep can turn into (yatzy's table, YB in dice.js).
    dpV(key,left,v0) is the value of each set with `left` throws to come when v0 values a set scored now */
@@ -276,8 +281,8 @@ GAMES.d_balut={name:'بالوت النرد',cat:'dice',lbc:'#6E2C6B',net:{host:[
       if(k===6)return pp.P[6]?`<em class="ok">+${pp.P[6]}</em>`:'<em>+2 لكل</em>';
       const z=b.some(v=>v===0);return pp.P[k]?`<em class="ok">+${pp.P[k]}</em>`:z?'<em class="no">✗</em>':`<em>+${k===3?4:3}</em>`;};
     s+=`<div class="d2-bl" style="--c:${col(d,t)}"><div class="d2-blh"><span>${nm(d,t)} • الدور ${Math.min(28,filled+1)} من 28</span></div>${[0,1,2,3,4,5,6].map(k=>{const b=blBox(card,k),op=opts[k];const can=my&&d.rl&&op!=null;
-      return `<button class="d2-blr ${op!=null&&d.rl?(op?(op===best?'pv top':'pv'):'zero'):''}" data-ga="sc" data-i="${k}" ${can?'':'disabled'}><span class="d2-bln"><i>${BLI[k]}</i>${BLC[k]}</span><span class="d2-blb">${b.map(v=>`<u class="${v>=0?'f':''} ${v===0?'z':''}">${v>=0?v:''}</u>`).join('')}</span><b class="d2-blp">${op!=null&&d.rl?op:''}</b>${bon(k)}</button>`;}).join('')}
-      <div class="d2-blt"><span>المجموع <b>${pp.score}</b></span><span>نقاط المجموع <b>${pp.sp>0?'+':''}${pp.sp}</b></span><span>النقاط <b class="d2-big">${pp.pts}</b></span></div></div>`;
+      return `<button class="d2-blr ${op!=null&&d.rl?(op?(op===best?'d2pv top':'d2pv'):'zero'):''}" data-ga="sc" data-i="${k}" ${can?'':'disabled'}><span class="d2-bln"><i>${BLI[k]}</i>${BLC[k]}</span><span class="d2-blb">${b.map(v=>`<u class="${v>=0?'f':''} ${v===0?'z':''}">${v>=0?v:''}</u>`).join('')}</span><b class="d2-blp">${op!=null&&d.rl?op:''}</b>${bon(k)}</button>`;}).join('')}
+      <div class="d2-blt"><span>المجموع <b>${pp.score}</b></span><span>نقاط المجموع <b dir="ltr">${pp.sp>0?'+':''}${pp.sp}</b></span><span>النقاط <b class="d2-big" dir="ltr">${pp.pts}</b></span></div></div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
     if(a==='hold'){if(d.rl>=3)return;const x=hold(d,i);if(x)act(x);return;}
@@ -357,7 +362,7 @@ GAMES.d_knuck={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,na
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#6B533A"/><rect x="14" y="10" width="72" height="36" rx="6" fill="#3E2E1F"/><rect x="14" y="54" width="72" height="36" rx="6" fill="#3E2E1F"/>${[0,1,2].map(c=>`<rect x="${19+c*23}" y="15" width="18" height="26" rx="3" fill="#8C6B47"/><rect x="${19+c*23}" y="59" width="18" height="26" rx="3" fill="#8C6B47"/>`).join('')}<rect x="21" y="62" width="14" height="14" rx="3" fill="#fff"/><circle cx="28" cy="69" r="2.4" fill="#2D4763"/><rect x="44" y="62" width="14" height="14" rx="3" fill="#F2C14E"/><circle cx="48" cy="66" r="2" fill="#2D4763"/><circle cx="54" cy="72" r="2" fill="#2D4763"/><path d="M44 20l16 16M60 20L44 36" stroke="#E5483F" stroke-width="5" stroke-linecap="round"/></svg>`,
   init:()=>({g:['000000000','000000000'],dv:0,sd:0,tr:[0,0],rc:0,lm:null,last:''}),
   start:d=>({...d,sd:d.turn%2,turn:tmNow({...d,sd:d.turn%2},d.turn%2)}),
-  points:d=>d.pl.map((r,s)=>kbSc(d.g[s%2])),status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+(d.pl.length>2?`دور ${tmName(d,d.sd)}`:turnTxt(d,ctx)),
+  points:d=>d.pl.map((r,s)=>kbSc(d.g[s%2])),status:lastSt,
   winExtra:d=>`${tmName(d,0)} ${kbSc(d.g[0])} • ${tmName(d,1)} ${kbSc(d.g[1])}`,
   onTimeout(d){let x=d;if(!x.dv)x={...x,dv:R6(),rc:x.rc+1};const c=[0,1,2].find(c=>kbCol(x.g[x.sd],c).length<3);return GAMES.d_knuck.put(x,c);},
   onSkip:(nd,d)=>tmSkip(nd,d),
@@ -368,10 +373,10 @@ GAMES.d_knuck={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,na
   render(d,ctx){const my=ctx.my&&d.win==null,meS=ctx.local||ctx.v<0?d.sd:kbSide(d,ctx.v),opS=1-meS;
     const fr=d.dv&&once(`kb${d.gid}_${d.rc}`),lm=d.lm,lmNew=lm&&once(`kbl${d.gid}_${lm.rc}`);
     const board=(sd,flip)=>{const g=d.g[sd],cs=[0,1,2].map(c=>kbCol(g,c));const can=my&&sd===d.sd&&d.dv;
-      return `<div class="d2-kb ${flip?'top':''} ${sd===d.sd&&d.win==null?'on':''}" style="--c:${col(d,tmSeats(d,sd)[0]??sd)}"><div class="d2-kbn">${tmName(d,sd)} <b>${kbSc(g)}</b></div><div class="d2-kbg">${[0,1,2].map(c=>{const a=cs[c],cc=cnt6(a);
+      return `<div class="d2-kb ${flip?'d2-up':''} ${sd===d.sd&&d.win==null?'on':''}" style="--c:${col(d,tmSeats(d,sd)[0]??sd)}"><div class="d2-kbn"><span>${tmSeats(d,sd).map(x=>nm(d,x)).join(' و')||'—'}</span><b>${kbSc(g)}</b></div><div class="d2-kbg">${[0,1,2].map(c=>{const a=cs[c],cc=cnt6(a);
         const cells=[0,1,2].map(r=>{const v=a[r]||0;const isNew=lmNew&&lm.sd===sd&&lm.c===c&&r===a.length-1;return `<div class="d2-kc">${v?dieH(v,{roll:isNew,cls:cc[v]>1?'m'+cc[v]:''}):''}</div>`;});
         const hit=lm&&lm.sd!==sd&&lm.c===c&&lm.k&&lmNew;
-        return `<${can&&a.length<3?'button':'div'} class="d2-kcol ${hit?'hit':''} ${can&&a.length<3?'can':''}" ${can&&a.length<3?`data-ga="put" data-i="${c}"`:''}>${(flip?cells.reverse():cells).join('')}<em>${kbColSc(a)}</em></${can&&a.length<3?'button':'div'}>`;}).join('')}</div></div>`;};
+        return `<${can&&a.length<3?'button':'div'} class="d2-kcol ${hit?'hit':''} ${can&&a.length<3?'can':''}" ${can&&a.length<3?`data-ga="put" data-i="${c}"`:''}>${cells.join('')}<em>${kbColSc(a)}</em></${can&&a.length<3?'button':'div'}>`;}).join('')}</div></div>`;};
     let s=board(opS,true);
     s+=`<div class="d2-kbm">${d.dv?dieH(d.dv,{roll:fr,cls:'d2-kbd'}):my?`<button class="btn d2-roll" style="background:${col(d,d.turn)}" data-ga="roll">🎲 ارمِ</button>`:dieH(0,{cls:'d2-kbd'})}${d.dv&&my?'<small>اختر عمود</small>':''}</div>`;
     s+=board(meS,false);
@@ -637,15 +642,15 @@ GAMES.d_foot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,nam
   init:()=>({z:4,sd:0,k0:0,sc:[0,0],tk:0,tr:[0,0],ph:'play',pk:['',''],lr:null,gl:null,rc:0,last:''}),
   start:d=>{const sd=d.turn%2;return {...d,sd,k0:sd,turn:tmNow({...d,sd},sd)};},
   points:d=>d.pl.map((r,s)=>d.sc[s%2]),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+(d.pl.length>2?`الكورة مع ${tmName(d,d.sd)} • يلعب ${nameTag(d,d.turn)}`:turnTxt(d,ctx)),
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.pl.length>2&&d.ph==='play'?` <small>(فريق ${nm(d,d.sd)})</small>`:''),
   winExtra:d=>`${tmName(d,0)} ${d.sc[0]} - ${d.sc[1]} ${tmName(d,1)}`+(d.pk[0]||d.pk[1]?` • الترجيح ${[...d.pk[0]].filter(c=>c==='o').length}-${[...d.pk[1]].filter(c=>c==='o').length}`:''),
   onTimeout:d=>d.ph==='pen'?fbKick(d):fbAct(d,'short'),onSkip:(nd,d)=>tmSkip(nd,d),
   render(d,ctx){const my=ctx.my&&d.win==null,sd=d.sd,c0=col(d,0),c1=col(d,1),dist=fbDist(sd,d.z),fr=d.lr&&once(`fb${d.gid}_${d.rc}`);
     const gn=d.gl&&once(`fbg${d.gid}_${d.gl.rc}`);
     let s=`<div class="d2-fbs"><span style="--c:${c0}"><i>${tmName(d,0)}</i></span><b class="${gn?'gl':''}">${d.sc[0]} - ${d.sc[1]}</b><span style="--c:${c1}"><i>${tmName(d,1)}</i></span><em>${d.ph==='pen'?'ترجيح':d.tk>=FB_T?'90\'':fbMin(d.tk)+'\''}${d.ph==='play'?` • ${d.tk<FB_H?'الشوط الأول':'الشوط الثاني'}`:''}</em></div>`;
-    s+=`<div class="d2-pitch" dir="ltr" style="--c0:${c0};--c1:${c1}"><i class="gl0"></i>${[...Array(9)].map((_,k)=>`<div class="d2-z ${k===d.z?'ball':''} ${d.ph==='play'&&fbDist(sd,k)<=3?'box'+sd:''}">${k===d.z&&d.ph==='play'?`<span class="d2-ball" style="--c:${sd?c1:c0}">⚽</span>`:''}</div>`).join('')}<i class="gl1"></i></div>`;
+    s+=`<div class="d2-pitch" dir="ltr" style="--c0:${c0};--c1:${c1}"><i class="gl0"></i>${[...Array(9)].map((_,k)=>`<div class="d2-z ${k===4?'mid':''} ${k===d.z?'ball':''} ${d.ph==='play'&&fbDist(sd,k)<=3?'box'+sd:''}">${k===d.z&&d.ph==='play'?`<span class="d2-ball" style="--c:${sd?c1:c0}">⚽</span>`:''}</div>`).join('')}<i class="gl1"></i></div>`;
     if(d.lr){const L=d.lr;s+=`<div class="d2-fbl ${L.ok?'ok':'no'}" style="--c:${col(d,L.sd)}">${miniD(L.dv)}<span>${{short:'تمريرة قصيرة',long:'كورة طويلة',shot:'تسديدة',kick:'ركلة ترجيح'}[L.a]} ${L.ok?'✓':'✗'}</span></div>`.replace('class="d2-md"',`class="d2-md ${fr?'roll':''}"`);}
-    if(d.ph==='pen'){s+=`<div class="d2-pens">${[0,1].map(q=>`<div style="--c:${q?c1:c0}"><i>${tmName(d,q)}</i><span>${[...d.pk[q]].map(c=>`<u class="${c}">${c==='o'?'⚽':'✗'}</u>`).join('')}${'<u></u>'.repeat(Math.max(0,5-d.pk[q].length))}</span></div>`).join('')}</div>`;
+    if(d.ph==='pen'){s+=`<div class="d2-pens">${[0,1].map(q=>`<div style="--c:${q?c1:c0}"><i>${tmName(d,q)}</i><span>${[...d.pk[q]].map(c=>`<u class="${c==='o'?'d2o':'d2x'}">${c==='o'?'⚽':'✗'}</u>`).join('')}${'<u></u>'.repeat(Math.max(0,5-d.pk[q].length))}</span></div>`).join('')}</div>`;
       if(my)s+=`<div class="acts"><button class="btn d2-roll" style="background:${col(d,d.turn)}" data-ga="kick">🥅 سدّد الركلة <small>(6+ على زهرتين)</small></button></div>`;return s;}
     if(my){const pct=p=>Math.round(p*100)+'%';
       s+=`<div class="d2-fba"><button class="btn" data-ga="short" style="background:#3F8EDB">قصيرة <small>+1 • ${pct(5/6)}</small></button><button class="btn" data-ga="long" style="background:#8A5BD1">طويلة <small>+2/+3 • ${pct(4/6)}</small></button><button class="btn red" data-ga="shot" ${dist<=3?'':'disabled'}>سدّد ⚽ <small>${dist<=3?`${FB_NEED[dist]}+ • ${pct(fbPG(dist))}`:'بعيد'}</small></button></div>`;}
@@ -677,13 +682,13 @@ HELP.d_foot='كورة بالنرد (لعبة من تصميمنا): فريقين 
 /* ======================= 13. draw the beetle ======================= */
 /* one throw a turn: 6 the body, 5 the head, 4 a wing (two), 3 a leg (six), 2 an antenna (two), 1 an eye (two).
    The body comes first, the head before the antennae and the eyes. The first full beetle wins */
-const BT=[{f:6,m:1,n:'الجسم'},{f:5,m:1,n:'الراس'},{f:4,m:2,n:'جناح'},{f:3,m:6,n:'رجل'},{f:2,m:2,n:'قرن استشعار'},{f:1,m:2,n:'عين'}];
+const BT=[{f:6,m:1,n:'الجسم'},{f:5,m:1,n:'الراس'},{f:4,m:2,n:'جناح'},{f:3,m:6,n:'رجل'},{f:2,m:2,n:'قرن'},{f:1,m:2,n:'عين'}];
 const BTFULL='112622';
 const btCan=(b,k)=>+b[k]<BT[k].m&&(k===0||b[0]==='1')&&(k<4||b[1]==='1');
 const btParts=b=>[...b].reduce((a,c)=>a+ +c,0);
 // the beetle in SVG: drawn parts in the player's colour, missing ones as a faint outline; the newest part pops in
 function btSVG(b,c,nw,big){const on=k=>+b[k],P=(k,j,svg)=>`<g class="${j<on(k)?'on':'off'} ${nw&&nw[0]===k&&nw[1]===j?'nw':''}">${svg}</g>`;
-  let s=`<svg viewBox="0 0 100 124" class="d2-bt ${big?'big':''}" style="--c:${c}">`;
+  let s=`<svg viewBox="0 0 100 124" class="d2-bt ${big?'lg':''}" style="--c:${c}">`;
   // legs: three on each side
   const L=[[34,58,14,50],[32,74,12,78],[36,90,18,106],[66,58,86,50],[68,74,88,78],[64,90,82,106]];
   const legOrder=[0,3,1,4,2,5];
