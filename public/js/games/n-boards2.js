@@ -102,7 +102,7 @@ GAMES.b_mancala={...B2TEAM,name:'المنقلة',cat:'board',lbc:'#8A5A2B',
   render(d,ctx){const flip=b2Flip(d,ctx),my=ctx.my,lg=my?new Set(b2owLegal(d.p,d.sd)):new Set();
     const got=new Map((d.got||[]).map((j,k)=>[j,k]));const cp=new Set(d.cp||[]);
     const pit=i=>{const n=d.p[i],can=lg.has(i),k=got.get(i);let seeds='';for(let j=0;j<Math.min(n,14);j++){const [x,y]=B2SEED[j];seeds+=`<i class="sd c${(i*7+j)%4}" style="left:${x}%;top:${y}%"></i>`;}
-      return `<${can?'button':'div'} class="owp ${can?'can':''} ${d.lm&&d.lm[0]===i?'lmf':''} ${cp.has(i)?'cpt':''}" ${can?`data-ga="pit" data-i="${i}"`:''}>${seeds}<b class="${k!=null?'got':''}"${k!=null?` data-k="c${d.mvn}" style="--dl:${Math.min(k*25,250)}ms"`:''}>${n}</b></${can?'button':'div'}>`;};
+      return `<${can?'button':'div'} class="owp ${can?'can':''} ${d.lm&&d.lm[0]===i?'lmf':''} ${cp.has(i)?'cpt':''}" ${can?`data-ga="pit" data-i="${i}"`:''}>${seeds}<b class="${k!=null?'got':''}"${k!=null?` data-k="c${d.mvn}" style="--dl:${Math.min(k*20,200)}ms"`:''}>${n}</b></${can?'button':'div'}>`;};
     const top=flip?[0,1,2,3,4,5].reverse():[6,7,8,9,10,11].reverse(),bot=flip?[6,7,8,9,10,11]:[0,1,2,3,4,5];
     const tray=s=>`<div class="owt ${s?'t1':'t0'}"><b>${d.kp[s]}</b><small>${s?'فوق':'تحت'}</small></div>`;
     return `<div class="b2ow bd-b2"><div class="owbd">${tray(flip?0:1)}<div class="owrw">${top.map(pit).join('')}${bot.map(pit).join('')}</div>${tray(flip?1:0)}</div></div>`;},
