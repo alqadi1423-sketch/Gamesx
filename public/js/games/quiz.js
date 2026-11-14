@@ -4,23 +4,52 @@
 const simulViewer=d=>{if(d.win!=null)return null;for(let s=0;s<d.pl.length;s++)if(d.out[s]!=='1'&&!hasPicked(d,s))return s;return null;};
 const srng=(d,k)=>mulberry(seedOf(d.gid+'#'+k));
 const pickedChips=()=>'';
-function simulStatus(d,ctx,extra){
+// noRes: the board already shows the last round, so the status does not repeat it
+function simulStatus(d,ctx,extra,noRes){
   if(d.win!=null)return '';
-  const me=ctx.local?ctx.v:ctx.v;let s=(d.res?`<small>${d.res}</small><br>`:'')+(extra||'');
+  const me=ctx.local?ctx.v:ctx.v;let s=(d.res&&!noRes?`<small>${d.res}</small><br>`:'')+(extra||'');
   if(!ctx.local&&me>=0)s+=hasPicked(d,me)?'<b>اخترت، ننتظر الباقين</b>':'<b>اختر جوابك</b>';
   else if(ctx.local&&me!=null)s+=`دور ${nameTag(d,me)} يختار`;
   return s;
 }
+/* ---------- shared look of the answer games (view only: everything is read from d, the private picks and d.res) ---------- */
+const QL=['أ','ب','ج','د','هـ','و','ز','ح'];
+const stripT=t=>String(t).replace(/<[^>]+>/g,'');
+const chipT=t=>escH(stripT(t).replace(/\s*[✓✗]$/,''));
+const seatsOf=d=>d.pl.map((r,s)=>s);
+// the answer seat s gave in round rd, when this phone may see it (its own; every seat on one phone or after the end)
+function seatPick(d,ctx,s,rd){const pv=(ctx&&ctx.priv)||S.priv;const p=pv&&pv[d.pl[s]];
+  if(!p||p.gid!==d.gid||p.rd!==rd||p.pick==null||p.pick===NOPICK)return null;
+  return S.mode==='local'||(ctx&&s===ctx.v)||d.win!=null?p.pick:null;}
+// a player marker in the player's colour
+const pDot=(d,s,cls)=>`<i class="pdot ${cls||''}" style="--c:${col(d,s)}" title="${escH(nm(d,s))}"></i>`;
+// who has handed in an answer this round (filled) and who we still wait for (hollow)
+function qzWho(d,ctx){if(d.win!=null)return '';const al=seatsOf(d).filter(s=>d.out[s]!=='1');if(al.length<2)return '';
+  return `<div class="qz-who">${al.map(s=>pDot(d,s,hasPicked(d,s)?'on':'')).join('')}</div>`;}
+// the seats that got last round right, read back from d.res ("… • ✓ name، name")
+function resOk(d){const m=/• ✓ (.*)$/.exec(d.res||'');if(!m)return [];const ns=m[1].split('، ');return seatsOf(d).filter(s=>ns.includes(nm(d,s)));}
+const qzOpt=(t,k,cls,dis,extra)=>`<button class="opt ${cls||''}" data-ga="m" data-i="${k}" ${dis?'disabled':''} style="--i:${k}"><i class="ol">${QL[k]||k+1}</i><span class="ot">${t}</span>${extra||''}</button>`;
 
 /* ---------- rock paper scissors ---------- */
 const RPS=['✊','✋','✌️'],RPSN=['حجرة','ورقة','مقص'];
+// last round read back from d.res ("name ✊ +1، name ✌️"): the hand and the points of each seat
+function rpsLast(d){if(!d.res)return null;const es=d.res.split('، ');const out=[];
+  for(const s of seatsOf(d)){const n=nm(d,s)+' ';const e=es.find(x=>x.startsWith(n));if(!e)continue;const r=e.slice(n.length);const k=RPS.findIndex(h=>r.startsWith(h));if(k<0)continue;
+    out.push({s,k,got:+((/\+(\d+)/.exec(r)||[0,0])[1])});}
+  return out.length?out:null;}
+function rpsDuel(d){const L=rpsLast(d);if(!L)return '';const mx=Math.max(...L.map(x=>x.got));const two=L.length===2;
+  const hand=(x,j)=>`<div class="rps-p ${mx>0?(x.got===mx?'w':'l'):'t'}" style="--c:${col(d,x.s)};--j:${j}"><span class="rps-h k${x.k} ${two&&j===1?'mir':''}">${RPS[x.k]}</span><b>${escH(nm(d,x.s))}</b>${x.got?`<em>+${x.got}</em>`:''}</div>`;
+  return `<div class="rps-duel ${two?'two':''}" id="rpd${d.rd}"><div class="rps-hd">${d.win!=null?'الجولة الأخيرة':`الجولة ${d.rd}`}${mx>0?'':'<span>تعادل</span>'}</div>
+    <div class="rps-row">${two?hand(L[0],0)+'<i class="rps-vs">VS</i>'+hand(L[1],1):L.map(hand).join('')}</div></div>`;}
 GAMES.rps={name:'حجرة ورقة مقص',cat:'quiz',lbc:'#C76A2A',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#EE8A3C"/><text x="28" y="48" font-size="30" text-anchor="middle">✊</text><text x="72" y="48" font-size="30" text-anchor="middle">✋</text><text x="50" y="84" font-size="30" text-anchor="middle">✌️</text></svg>`,
   init:n=>({rd:0,pts:Array(n).fill(0),res:'',goal:5}),
   viewer:simulViewer,coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)),
+  status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts),true),
   winExtra:d=>d.res,
-  render(d,ctx){return pickedChips(d)+`<div class="row">${RPS.map((e,k)=>`<button class="rpsb" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${e}<small>${RPSN[k]}</small></button>`).join('')}</div>`;},
+  render(d,ctx){const duel=rpsDuel(d);if(d.win!=null)return `<div class="rps">${duel}</div>`;
+    const v=ctx.v,mp=v!=null&&v>=0?seatPick(d,ctx,v,d.rd):null;
+    return pickedChips(d)+`<div class="rps ${mp!=null?'picked':''}">${duel}<p class="rps-goal">أول واحد يوصل ${d.goal} نقاط يفوز</p><div class="row rps-pick">${RPS.map((e,k)=>`<button class="rpsb k${k} ${mp===k?'sel':''}" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}><span class="rps-h">${e}</span><small>${RPSN[k]}</small></button>`).join('')}</div>${qzWho(d,ctx)}</div>`;},
   click(a,k,d,ctx){if(!ctx.my)return;simulPick(d,ctx.v,k);},
   resolve(d,picks){const pts=[...d.pts];const got=Array(d.pl.length).fill(0);
     for(let a=0;a<picks.length;a++)for(let b=0;b<picks.length;b++){if(picks[a]==null||picks[b]==null)continue;if((picks[a]+2)%3===picks[b])got[a]++;}
@@ -32,15 +61,32 @@ GAMES.rps={name:'حجرة ورقة مقص',cat:'quiz',lbc:'#C76A2A',
 
 /* ---------- quiz factory ---------- */
 const ROUNDS=10;
+// the question card: game chip, "question n of 10" with a progress strip, the question, and who has answered
+function qzCard(d,ctx,Q,rd,last){const G=GAMES[S.st.g]||{};
+  return `<div class="qz-card" id="qzc${rd}${last?'f':''}"><div class="qz-hd"><span class="qz-cat"><i class="qz-ic">${G.icon||''}</i><span>${G.name||''}</span></span><span class="qz-n">${last?'السؤال الأخير':`سؤال <b>${rd+1}</b> من ${ROUNDS}`}</span></div>
+    <div class="qz-prog">${Array.from({length:ROUNDS},(_,k)=>`<i class="${k<rd||last?'done':k===rd?'cur':''}"></i>`).join('')}</div>
+    <div class="qbox qz-q">${Q.q}</div>${last?'':qzWho(d,ctx)}</div>`;}
+// the answer of the round before: the right option, this player's own wrong one, and who got it
+function qzRev(d,ctx,gen){const rd=d.rd-1;if(rd<0)return '';const P=gen(d,rd);const ok=resOk(d);const v=ctx.v;
+  const mp=v!=null&&v>=0?seatPick(d,ctx,v,rd):null;const me=mp==null?'':mp===P.a?'ok':'no';
+  return `<div class="qz-rev ${me}" id="qzr${d.rd}"><span class="qz-rl">${me==='ok'?'صح! ':me==='no'?'للأسف، ':''}جواب السؤال ${rd+1}</span>
+    <span class="qz-chip ok"><i class="ol">${QL[P.a]}</i><span>${chipT(P.o[P.a])}</span><b>✓</b></span>${me==='no'?`<span class="qz-chip no"><i class="ol">${QL[mp]||''}</i><span>${chipT(P.o[mp])}</span><b>✗</b></span>`:''}
+    <span class="qz-okp">${ok.length?ok.map(s=>pDot(d,s,'on')).join(''):'<small>محد جابها</small>'}</span></div>`;}
 function makeQuiz(o){return {name:o.name,cat:'quiz',lbc:o.lbc,icon:o.icon,
   gen:o.gen,botPick(d,s,lv){const Q=o.gen(d,d.rd);return Math.random()<[0,.45,.72,.93][lv]?Q.a:rnd(Q.o.length);},
   init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
   viewer:simulViewer,coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,`<small>سؤال ${Math.min(d.rd+1,ROUNDS)} من ${ROUNDS}</small><br>`),
+  status:(d,ctx)=>simulStatus(d,ctx,'',true),
   winExtra:d=>d.res+'<br>النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
-  render(d,ctx){if(d.win!=null)return '';const Q=o.gen(d,d.rd);
-    const g2=Q.big||Q.o.every(t=>String(t).replace(/<[^>]+>/g,'').length<=7);
-    return `<div class="qbox">${Q.q}</div><div class="opts ${g2?'g2':''} ${Q.big?'emo':''}">${Q.o.map((t,k)=>`<button class="opt" data-ga="m" data-i="${k}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`;},
+  render(d,ctx){const G=GAMES[S.st.g]||{};const sty=`style="--qc:${G.lbc||'#2E7D9A'}"`;
+    const fin=d.win!=null,rd=fin?d.rd-1:d.rd;if(rd<0)return '';const Q=o.gen(d,rd);
+    const g2=Q.big||Q.o.every(t=>stripT(t).length<=7);const cls=`opts qz-opts ${g2?'g2':''} ${Q.big?'emo':''}`;
+    if(fin){// the last question with its answer on the buttons and every player's marker on what they chose
+      const okS=resOk(d);const mk=k=>{const ss=seatsOf(d).filter(s=>{const p=seatPick(d,ctx,s,rd);return p===k||(p==null&&k===Q.a&&okS.includes(s));});return ss.length?`<span class="qz-mk">${ss.map(s=>pDot(d,s,'on')).join('')}</span>`:'';};
+      const mp=ctx.v!=null&&ctx.v>=0?seatPick(d,ctx,ctx.v,rd):null;
+      return `<div class="qz fin" ${sty}>${qzCard(d,ctx,Q,rd,true)}<div class="${cls}" id="qzo${rd}f">${Q.o.map((t,k)=>qzOpt(t,k,k===Q.a?'ok':k===mp?'no':'dim',true,mk(k))).join('')}</div></div>`;}
+    const v=ctx.v,mp=v!=null&&v>=0?seatPick(d,ctx,v,rd):null;
+    return `<div class="qz ${mp!=null?'picked':''}" ${sty}>${qzRev(d,ctx,o.gen)}${qzCard(d,ctx,Q,rd)}<div class="${cls}" id="qzo${rd}">${Q.o.map((t,k)=>qzOpt(t,k,mp===k?'sel':'',!ctx.my)).join('')}</div></div>`;},
   click(a,k,d,ctx){if(!ctx.my)return;simulPick(d,ctx.v,k);},
   resolve(d,picks){const Q=o.gen(d,d.rd);const pts=[...d.pts];const ok=[];
     picks.forEach((p,s)=>{if(p===Q.a){pts[s]++;ok.push(nm(d,s));}});

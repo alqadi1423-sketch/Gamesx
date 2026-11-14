@@ -124,11 +124,7 @@ function majLast(d){if(!(d.rd>0)||!d.res)return '';const Q=GAMES.major.q(d,d.rd-
   if(!d.res.startsWith(a))return '';const j=d.res.indexOf(m,a.length);if(j<0)return '';const c0=parseInt(d.res.slice(a.length,j)),c1=parseInt(d.res.slice(j+m.length));
   if(!isFinite(c0)||!isFinite(c1))return '';const t=Math.max(1,c0+c1),p0=Math.round(c0/t*100);
   return `<div class="pql maj"><small>اللي فات</small><div class="pqlab"><span class="a ${c0>c1?'win':''}"><b>${Q[0]}</b><em>${c0}</em></span><span class="b ${c1>c0?'win':''}"><em>${c1}</em><b>${Q[1]}</b></span></div><div class="pqbar"><i class="a" style="width:${c0+c1?p0:50}%"></i><i class="b"></i></div><small>${c0===c1?'تعادل، محد أخذ نقطة':`الأغلبية أخذت نقطة (${c0>c1?p0:100-p0}%)`}</small></div>`;}
-// the question packs (صح أو خطأ، رتّب الحروف، مين المختلف): the right answer and who got it
-function quizLast(G,d){if(!(d.rd>0)||!d.res)return '';const Q=G.gen(d,d.rd-1);const ans=String(Q.o[Q.a]).replace(/<[^>]+>/g,'');const head=`الجواب: ${ans} • `;
-  if(!d.res.startsWith(head))return '';const tail=d.res.slice(head.length);const who=tail.startsWith('✓ ')?tail.slice(2).split('، ').map(x=>pqSeat(d,x)).filter(s=>s>=0):[];
-  return `<div class="pql quiz"><span class="pqok">✓</span><div class="pqlt"><small>جواب السؤال اللي فات</small><b>${esc(ans)}</b></div><div class="pqwho">${who.length?who.map(s=>pqAv(d,s)).join(''):'<small>محد جابها</small>'}</div></div>`;}
-function pqWrap(id){const G=GAMES[id],r0=G.render,s0=G.status;
-  G.render=function(d,ctx){return `<div class="pq pq-${id}">${quizLast(G,d)}${r0.call(this,d,ctx)}</div>`;};
-  G.status=(d,ctx)=>s0(quizLast(G,d)?{...d,res:''}:d,ctx);}
+// the shared quiz board (quiz.js makeQuiz) already shows the last answer and who got it; this only adds the scope class
+function pqWrap(id){const G=GAMES[id],r0=G.render;
+  G.render=function(d,ctx){return `<div class="pq pq-${id}">${r0.call(this,d,ctx)}</div>`;};}
 ['tf','scr','odd'].forEach(pqWrap);
