@@ -39,14 +39,16 @@ const s2Board=(o,d)=>(o.board?o.board(d):o.score?s2ScBoard(d,o.unit):spdBoard(d)
 function s2Wait(o,d,ctx){if(!o.score)return waitCard(d,ctx);const p=ctx.v>=0?seatPick(d,ctx,ctx.v,d.rd):null;
   return `<div class="spd spd-sent"><div class="spd-ck">✓</div><div class="spdt">أرسلت</div>${p&&Number.isFinite(p.sc)?`<div class="spd-me">نتيجتك <b>${p.sc}</b> ${o.unit}</div>`:''}<p class="note">ننتظر الباقين</p>${qzWho(d,ctx)}</div>`;}
 const s2Ready=(o,d,RN)=>`<div class="spd spd-ready"><div class="spd-card"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div>${o.tip?`<p class="s2tip">${o.tip(d)}</p>`:''}<span class="spd-rd">جولة ${Math.min(d.rd+1,RN)} من ${RN}</span><button class="btn red wide spd-go" data-ga="start">جاهز، ابدأ</button></div>${s2Board(o,d)}</div>`;
+// the round's line; games scored by accuracy name their best player «the most exact» rather than «the fastest»
+const s2Res=(o,d)=>{const r=d.res||'';return o.best?r.replace('. الأسرع: ',`. ${o.best}: `):r;};
 // a speed game: o.view / o.start / o.click play one round on this phone; o.bot gives a bot's result for the same round
 function s2Base(o){const RN=o.rounds||5,box=h=>`<div class="s2 ${o.cls}">${h}</div>`;
   return {name:o.name,cat:'speed',lbc:o.lbc,icon:o.icon,
     botPick:(d,s,lv)=>o.bot(d,s,lv),
     init:n=>({rd:0,pts:Array(n).fill(0),res:''}),
-    viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
+    viewer:d=>simulViewer(d),coverMsg:d=>s2Res(o,d),
     status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,RN)} من ${RN}</small><br>`,true),
-    winExtra:d=>d.res,noTimer:false,
+    winExtra:d=>s2Res(o,d),noTimer:false,
     resolve(d,p){if(o.score)return s2ScRes(d,p,RN);const x=spdResolve(d,p,o.rank!==false);return {...x,win:x.rd>=RN?mostPts(x.pts):null};},
     render(d,ctx){if(d.win!=null)return box(`<div class="spd">${s2Board(o,d)}</div>`);
       if(!ctx.my)return ctx.v>=0&&hasPicked(d,ctx.v)?box(s2Wait(o,d,ctx)):'';
@@ -89,7 +91,7 @@ HELP.s_cword='تطلع كلمات ألوان وحدة ورا الثانية، و
 /* ---------- 2. balloon pop: balloons rise, pop only the ones in your own colour ---------- */
 const S2PH=360;
 // the round's balloons: lane, colour slot (0 = yours, 1..3 = others), when it leaves the ground and its sway
-const s2poQ=s2Memo(d=>{const R=srng(d,'po'+d.rd),rd=d.rd,n=16+rd*2,U=3500-rd*280,gap=640-rd*45,a=[];let ln=-1;
+const s2poQ=s2Memo(d=>{const R=srng(d,'po'+d.rd),rd=d.rd,n=18+rd*2,U=3500-rd*280,gap=560-rd*40,a=[];let ln=-1;
   for(let i=0;i<n;i++){let l;do l=s2I(R,5);while(l===ln);ln=l;a.push({l,k:R()<.42?0:1+s2I(R,3),t:600+i*gap+s2I(R,180),w:s2I(R,628)/100});}
   let tg=a.filter(b=>!b.k).length;for(let g=0;tg<6&&g<60;g++){const b=a[s2I(R,n)];if(b.k){b.k=0;tg++;}}
   return {a,U,end:a[n-1].t+U+120};});
@@ -129,7 +131,7 @@ const s2btI=d=>{const R=srng(d,'bt'+d.rd);return 60000/([84,96,108,120,132][Math
 const s2btLit=(rd,j)=>j<4||rd<2||(rd<4&&j<8);
 const s2btCl=e=>e==null?'':e<60?'g':e<130?'y':'r';
 function s2btFin(st){const I=st.I,h=st.err.filter(x=>x!=null).length,m=st.err.reduce((a,x)=>a+(x==null?I/2:x),0)/8;s2Send(st,{ok:h>=5,ms:Math.round(m+40*st.ex)});}
-GAMES.s_beat=s2Base({name:'نقرة الإيقاع',cls:'s2bt',lbc:'#D35400',rank:true,
+GAMES.s_beat=s2Base({name:'نقرة الإيقاع',cls:'s2bt',lbc:'#D35400',rank:true,best:'الأدق',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#E8762C"/><circle cx="50" cy="46" r="30" fill="#FFD9A8" opacity=".35"/><circle cx="50" cy="46" r="20" fill="#fff"/><circle cx="50" cy="46" r="9" fill="#E8762C"/>${[0,1,2,3,4,5,6,7].map(k=>`<circle cx="${22+k*8}" cy="86" r="3" fill="${k<5?'#fff':'#FFD9A8'}" opacity="${k<5?1:.6}"/>`).join('')}</svg>`,
   title:'الدائرة تنبض: عدّ معها أربع نبضات، وبعدها اضغط مع كل نبضة ثمان مرات',
   tip:d=>d.rd<2?'النبض يبان طول الجولة':d.rd<4?'النبض يختفي في نص الضغطات: كمّل على نفس الإيقاع':'بعد الأربع الأولى النبض يختفي كله: الإيقاع في راسك',

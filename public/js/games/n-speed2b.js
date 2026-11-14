@@ -45,7 +45,7 @@ HELP.s_flash='تطلع لوحة مربعات، وبعدها كم مربع ينو
 /* ---------- 10. stop the clock: a timer starts, then hides; stop it as close to 10.00 seconds as you can ---------- */
 const s2spV=d=>[5000,3000,2000,1000,0][Math.min(d.rd,4)],S2SPL=800;
 const s2spF=ms=>(Math.max(0,ms)/1000).toFixed(2);
-GAMES.s_stop=s2Base({name:'أوقف الساعة',cls:'s2sp',lbc:'#34495E',rank:true,
+GAMES.s_stop=s2Base({name:'أوقف الساعة',cls:'s2sp',lbc:'#34495E',rank:true,best:'الأقرب',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F5A73"/><rect x="44" y="10" width="12" height="8" rx="2" fill="#F0B429"/><circle cx="50" cy="56" r="32" fill="#fff"/><circle cx="50" cy="56" r="26" fill="#EAF0F6"/><path d="M50 56V36" stroke="#EC6158" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="56" r="4" fill="#2D4763"/><text x="50" y="78" font-size="10" font-weight="900" fill="#2D4763" text-anchor="middle" direction="ltr">10.00</text></svg>`,
   title:'تبدأ ساعة تعد وبعدها تختفي: وقّفها على 10.00 ثانية بالضبط قد ما تقدر',
   tip:d=>s2spV(d)?`الساعة تبان أول ${s2spV(d)/1000} ثواني وبعدها تختفي`:'هالجولة الساعة مخفية من البداية!',
@@ -147,7 +147,7 @@ GAMES.s_chain={...s2Base({name:'ردة الفعل الجماعية',cls:'s2ch',l
     s2T(st,1000,next);},
   view(d,ctx,st){const Q=s2chQ(d),N=Q.nodes.length,on=st.k>=0?Q.a[st.k]:null;
     const node=(x,j)=>{const an=-Math.PI/2+j*2*Math.PI/N,l=(50+38*Math.cos(an)).toFixed(1),t=(50+38*Math.sin(an)).toFixed(1),me=x===ctx.v,trap=x>=100;
-      return `<i class="s2ch-n ${trap?'trap':''} ${me?'me':''} ${on===x?'on':''}" style="left:${l}%;top:${t}%;--c:${trap?'#5D6D7E':col(d,x)}"><u></u>${trap?'💣':me?'أنت':escH(nm(d,x)).slice(0,6)}</i>`;};
+      return `<i class="s2ch-n ${trap?'trap':''} ${me?'me':''} ${on===x?'on':''}" style="left:${l}%;top:${t}%;--c:${trap?'#5D6D7E':col(d,x)}"><u></u>${trap?'💣':me?'أنت':escH([...String(nm(d,x)).replace(/^\S*🤖\S*\s*/u,'')].slice(0,5).join(''))}</i>`;};
     return `<div class="s2ch-top"><span>${st.k<0?'استعد…':on===ctx.v?'عندك! التقطها ⚡':on>=100?'قنبلة! لا تضغط':'انتظر دورك'}</span><span>${'❤️'.repeat(Math.max(0,d.hp[ctx.v]))}</span></div>
       <div class="s2ch-ring ${st.fx}">${Q.nodes.map(node).join('')}<b class="s2ch-c">${Math.max(0,st.k+1)}/${Q.a.length}</b></div>
       <button class="s2ch-go ${on===ctx.v&&!st.got?'hot':''}" data-ga="tap">التقط ⚡</button>`;},
