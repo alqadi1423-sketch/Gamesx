@@ -4,10 +4,11 @@
    publishes its name, chat, and a queue q of moves sealed to the host; the host plays them in order and acks each sender.
    Seats belong to device keys (ids[role] = fp), so a seat, its score and a kick follow the person, not the colour. */
 // 2: teams, and the rebuilt draw and guess, categories, sea battle, bomb, lucky boxes, camel race and higher or lower
-const NETV=3,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=6000,PUB_MS=40,QMAX=6;
+// 4: acks name each move turned down and why (x: [[n, code]]), the host says which seats a bot plays (ab), forfeit ('out')
+const NETV=4,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=6000,PUB_MS=40,QMAX=6;
 // every phone publishes at least every HB_MS (hb = its clock); a peer whose presence has not changed for HB_DEAD is taken as asleep
 const HB_MS=4000,HB_DEAD=12000,TAKE_NEXT=6000;
-const HOSTK=['h','g','s','d','sc','cfg','ids','pp','vw','bk','ack'];
+const HOSTK=['h','g','s','d','sc','cfg','ids','pp','vw','bk','ack','ab'];
 const FPRE=/^[\w-]{12}$/;
 const isFp=x=>typeof x==='string'&&FPRE.test(x);
 function validIds(a){if(!Array.isArray(a)||a.length!==MAXP||!a.every(x=>x===null||isFp(x)))return null;const f=a.filter(Boolean);return new Set(f).size===f.length?a.slice():null;}
@@ -15,7 +16,8 @@ function netReset(){S.seenHost=false;clearTimeout(S.takeT);clearTimeout(S.pubT);
   Object.assign(S,{ids:Array(MAXP).fill(null),epoch:0,hostFp:null,hostK:null,hst:null,pp:{},outQ:[],pend:false,lastN:{},rejN:{},ack:{},lastAck:{},bk:null,bkC:null,
     needUpd:false,hostGoneAt:null,vgen:0,peersByFp:{},qByFp:{},lostAt:Date.now(),hostSince:0,badC:new Set(),oldSeen:false,ackN:0,sentN:0,hostKeyC:null,vwC:{},bkCache:null,seatGone:{},
     restore:null,takeT:null,pubT:null,pubBusy:false,pubAgain:false,pubRx:null,procBusy:false,procAgain:false,sendTimes:[],bigWarn:false,
-    hbSeen:{},vh:{},vtry:{},fpPeer:{},vwSig:null,lastPubAt:0,tickAt:Date.now(),rxAt:Date.now(),myPv:null,resend:null,selfPubLast:undefined,dRef:null,dS:0});}
+    hbSeen:{},vh:{},vtry:{},fpPeer:{},vwSig:null,lastPubAt:0,tickAt:Date.now(),rxAt:Date.now(),myPv:null,resend:null,selfPubLast:undefined,dRef:null,dS:0,
+    hist:[],ab:{},abR:[],abQ:{},synced:false,clickSnap:null});}
 netReset();
 const amHost=()=>S.mode==='online'&&!!S.hostFp&&S.hostFp===SEAL.fp;
 const roleOfFp=fp=>fp?S.ids.indexOf(fp):-1;
@@ -33,7 +35,7 @@ const hostLive=()=>!!S.hostFp&&vhLive(S.hostFp);
    the AES-GCM additional data of each view. A copied key cannot publish other host fields: no view would open with them */
 function canon(v){if(v===null||v===undefined)return 'null';if(Array.isArray(v))return '['+v.map(canon).join(',')+']';
   if(typeof v==='object')return '{'+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+':'+canon(v[k])).join(',')+'}';return JSON.stringify(v);}
-function hostAad(pr){let a;try{a=JSON.parse(JSON.stringify([pr.h,pr.g,pr.s,pr.d,pr.sc,pr.cfg,pr.ids,pr.pp,pr.ack,pr.hb]));}catch(e){return null;}return 'v'+S.code+canon(a);}
+function hostAad(pr){let a;try{a=JSON.parse(JSON.stringify([pr.h,pr.g,pr.s,pr.d,pr.sc,pr.cfg,pr.ids,pr.pp,pr.ack,pr.hb,pr.ab]));}catch(e){return null;}return 'v'+S.code+canon(a);}
 // the state this phone shows: the host shows its own seat's view of the whole state, the others already hold only theirs
 function dView(){const d=S.st.d;if(!amHost()||!d)return d;const G=GAMES[S.st.g],seat=mySeat(d);
   const c=S.dvC;if(c&&c.d===d&&c.seat===seat&&c.g===S.st.g)return c.v;let v=d;try{v=viewOf(G,d,seat);}catch(e){console.error(e);}S.dvC={d,seat,g:S.st.g,v};return v;}
@@ -50,11 +52,21 @@ function propose(nd){
   S.st={...S.st,s:S.st.s+1,d:nd};S.wild=null;S.dside=null;sfx('tap');render();}
 function queueIntent(m){
   if(S.mode!=='online')return false;
-  // a private part is sent whole every time: a newer one replaces one still waiting (typing, drawing)
-  if(m.t==='pv')S.outQ=S.outQ.filter(x=>x.m.t!=='pv');
+  // a private part is sent whole every time: a newer one replaces those still waiting at the end of the queue (typing, drawing).
+  // One with a tap or a move after it stays, so the host reads them in the order they were made
+  let snap=S.clickSnap||null;
+  if(m.t==='pv'){let k=S.outQ.length;while(k>0&&S.outQ[k-1].m.t==='pv')k--;const gone=S.outQ.slice(k);S.outQ=S.outQ.slice(0,k);
+    if(!snap){const g=gone.find(x=>x.snap);if(g)snap=g.snap;}}
   if(S.outQ.length>=QMAX){toast('استنى شوي، حركاتك ما وصلت للحين');return false;}
-  m.n=nextN();S.outQ.push({m,c:null,k:null,at:Date.now()});if(m.t==='ck')S.pend=true;if(m.t==='pv')S.myPv=m.p;
+  // what was typed when the move was made: put back if the host turns the move down (unsent words are never lost)
+  m.n=nextN();S.outQ.push({m,c:null,k:null,at:Date.now(),snap});if(m.t==='ck')S.pend=true;if(m.t==='pv')S.myPv=m.p;
   reseal();return true;}
+// this phone's typing (not the chat, search or names) when a tap is made
+function draftSnap(){const o={};for(const k of Object.keys(S.draft||{}))if(!DRAFT_OWN.test(k)&&typeof S.draft[k]==='string'&&S.draft[k].trim())o[k]=S.draft[k];return Object.keys(o).length?o:null;}
+// a move that did not count: what was typed for it comes back in its box (unless something new was typed there since)
+function putBack(items){let any=false;for(const it of items){const sn=it.snap;if(!sn)continue;
+    for(const k in sn)if(!(S.draft[k]||'').trim()){S.draft[k]=sn[k];any=true;const el=app.querySelector(`[data-draft="${CSS.escape(k)}"]`);if(el&&!el.value)el.value=sn[k];}}
+  return any;}
 // every waiting move sealed to the current host (again after a host change)
 async function reseal(){const k=S.hostK;
   if(k&&!amHost())for(const it of S.outQ.slice()){if(it.k===k&&it.c)continue;let c=null;try{c=await SEAL.seal(k,it.m,'q'+S.code);}catch(e){}if(S.hostK!==k)return;if(c){it.c=c;it.k=k;}}
@@ -74,7 +86,12 @@ function netClick(G,a,i){
 // waiting moves the host never took: dropped after PEND_MS
 function expireIntents(){if(S.mode!=='online'||amHost()||!S.outQ.length)return;const now=Date.now(),old=S.outQ.filter(x=>now-x.at>PEND_MS);if(!old.length)return;
   S.outQ=S.outQ.filter(x=>now-x.at<=PEND_MS);if(old.some(x=>x.m.t==='nd')){S.outQ=S.outQ.filter(x=>x.m.t!=='nd');if(S.hst)S.st={...S.hst};}
-  S.pend=S.outQ.some(x=>x.m.t==='ck');toast('ما وصلت حركتك، جرّب مرة ثانية');publish();render();}
+  S.pend=S.outQ.some(x=>x.m.t==='ck');toast(putBack(old)?'ما وصلت حركتك، كتابتك باقية جرّب مرة ثانية':'ما وصلت حركتك، جرّب مرة ثانية');publish();render();}
+
+// why a move did not count, as the player reads it ('' = say nothing: the round it was for is over and the screen shows it)
+const REJ_MSG={stale:'اللعبة تغيّرت قبل ما توصل حركتك، جرّبها مرة ثانية',turn:'راح الدور قبل ما توصل حركتك',over:'',dep:'',
+  pick:'اختيارك انحسب من قبل، ما يتغيّر',seat:'تتفرج الحين، تلعب معهم الجولة الجاية',bad:'هالحركة ما تنفع الحين',pv:'ما قدرنا نحسبها، جرّب مرة ثانية',
+  busy:'الجولة ما خلصت للحين',host:'صاحب الغرفة 👑 هو اللي يبدأ المباراة الجديدة',game:'صاحب الغرفة 👑 هو اللي يختار اللعبة',err:'صار خطأ، جرّب مرة ثانية'};
 
 /* ---------- reading the room ---------- */
 function onPeers(ch){
@@ -149,7 +166,7 @@ function verifyHost(peer,fp,pr){const v=pr.vw&&typeof pr.vw==='object'?pr.vw[SEA
 // this page did not run for a while (frozen in the background, phone asleep): what it saw of the others is old, and if it was
 // the host, someone may have taken over meanwhile, so it may step down
 function tickGap(){const now=Date.now();if(now-(S.tickAt||now)>HB_DEAD){S.lostAt=now;for(const k in S.hbSeen)S.hbSeen[k].at=now;for(const k in S.vh)S.vh[k].at=now;S.tickAt=now;tabTick();}S.tickAt=now;}
-function demote(){S.hostFp=null;S.hostK=null;S.hostKeyC=null;S.vwC={};S.bkCache=null;S.outQ=[];S.pend=false;publish();}
+function demote(){S.hostFp=null;S.hostK=null;S.hostKeyC=null;S.vwC={};S.bkCache=null;S.outQ=[];S.pend=false;S.ab={};S.abQ={};S.hist=[];publish();}
 // the newest verified message of the host: what it says, and the view sealed to this phone in it
 function followHost(fp){
   const V=S.vh[fp],pr=V.pr,ids=validIds(pr.ids),v=V.v;if(!ids)return;
@@ -180,9 +197,18 @@ function applyHost(pr,cf,view,P){
   // the host's answer to this phone's waiting moves
   const a=pr.ack&&typeof pr.ack==='object'?pr.ack[SEAL.fp]:null;let rej=false;
   if(a&&typeof a==='object'&&Number.isInteger(a.n)&&a.n>S.ackN){S.ackN=a.n;const done=S.outQ.filter(x=>x.m.n<=a.n);S.outQ=S.outQ.filter(x=>x.m.n>a.n);
-    if(a.x&&done.length){if(done.some(x=>x.m.t==='nd')||S.outQ.some(x=>x.m.t==='nd')){S.outQ=S.outQ.filter(x=>x.m.t!=='nd');rej=true;}toast('ما انحسبت حركتك');}
-    if(done.some(x=>x.m.t==='ck')){if(Array.isArray(a.t))a.t.slice(0,3).forEach(t=>{if(typeof t==='string')toast(t.slice(0,120));});if(a.u)uiApply(GAMES[c.g],a.u);}
+    // the moves the host turned down, each with why (a.x = [[n, code]]); the rest of them counted
+    const xs=new Map((Array.isArray(a.x)?a.x:[]).filter(e=>Array.isArray(e)&&Number.isInteger(e[0])&&typeof e[1]==='string').map(e=>[e[0],e[1].slice(0,8)]));
+    const bad=done.filter(x=>xs.has(x.m.n));
+    if(bad.length){let back=bad;
+      // a public move turned down: the ones made on top of it go too (the host turns them down as well), the board is the host's again
+      if(bad.some(x=>x.m.t==='nd')){back=[...bad,...S.outQ.filter(x=>x.m.t==='nd')];S.outQ=S.outQ.filter(x=>x.m.t!=='nd');rej=true;}
+      const why=bad.map(x=>xs.get(x.m.n)).find(w=>REJ_MSG[w]!=='');const kept=putBack(back);
+      if(why!=null)toast((REJ_MSG[why]||'ما انحسبت حركتك، جرّب مرة ثانية')+(kept?' (كتابتك باقية)':''));}
+    if(done.some(x=>x.m.t==='ck'&&!xs.has(x.m.n))){if(Array.isArray(a.t))a.t.slice(0,3).forEach(t=>{if(typeof t==='string')toast(t.slice(0,120));});if(a.u)uiApply(GAMES[c.g],a.u);}
     S.pend=S.outQ.some(x=>x.m.t==='ck');publish();}
+  // the seats a bot plays for now (their players are away)
+  S.abR=Array.isArray(pr.ab)?[...new Set(pr.ab.filter(isRole))]:[];
   // this phone's own public move stays on screen until the host has played it (or played something else first)
   const pend=S.outQ.filter(x=>x.m.t==='nd');
   // (also while the host's board is still the one the move was made on: a settings change moves s, not the board)
@@ -198,7 +224,10 @@ function applyHost(pr,cf,view,P){
   // after a host change: this phone's own pick or entry, if the new host does not have it for this round
   const rs=S.resend;S.resend=null;
   if(rs&&S.me!=null&&d&&rs.gid===d.gid&&!jsEq(S.priv[S.me],rs)&&!S.outQ.some(x=>x.m.t==='pv')){S.priv[S.me]=rs;queueIntent({t:'pv',p:rs});}
-  if(S.st.g!==oldG){resetUI();S.browse=false;S.showResult=false;}else if((S.st.d&&S.st.d.gid)!==oldGid){resetUI();S.showResult=false;}
+  // the host started another game: everyone goes to it. Not on the first message after coming in: a player who came back to the
+  // room's list (reload, «ارجع لغرفتك») stays there, even when the game he had saved is not the one on now
+  if(S.st.g!==oldG){resetUI();if(S.synced)S.browse=false;S.showResult=false;}else if((S.st.d&&S.st.d.gid)!==oldGid){resetUI();S.showResult=false;}
+  S.synced=true;
   // a game whose players show their own part (selfPub): a new round changes what this phone shows of it
   const G=GAMES[S.st.g];if(G&&G.selfPub&&S.me!=null&&S.st.d){let x=null;try{x=S.priv[S.me]?privFor(G,S.st.d,-1,S.me,S.priv[S.me]):null;}catch(e){}if(!jsEq(x,S.selfPubLast))publish();}
   save();render();}
@@ -230,6 +259,8 @@ function takeOver(mode){
     if(mode==='bk'){const b=S.bk;S.st={...S.st,g:b.g,s:b.s,d:b.d||S.st.d};S.priv=Array(MAXP).fill(null).map((x,r)=>(Array.isArray(b.priv)?b.priv[r]:null)??null);if(b.lastN&&typeof b.lastN==='object')S.lastN={...S.lastN,...b.lastN};}
     else{const mine=S.me!=null?S.priv[S.me]:null;S.priv=Array(MAXP).fill(null);if(mode==='public'&&S.me!=null)S.priv[S.me]=mine;}}
   S.hostFp=SEAL.fp;S.hostK=SEAL.k;S.hostSince=Date.now();S.hostGoneAt=null;S.hostKeyC=null;S.outQ=[];S.pend=false;S.bk=null;S.bkC=null;S.ack={};S.vwC={};S.bkCache=null;S.rejN={};
+  // the seats the last host's bot played go on with this one's
+  S.hist=[];S.abQ={};S.ab={};for(const r of S.abR||[])if(r!==S.me)S.ab[r]={at:Date.now(),gid:S.st.d&&S.st.d.gid,fail:0};
   if(S.ids.indexOf(SEAL.fp)<0){const r=[1,2,3,4,5,6,7,0].find(r=>!S.ids[r]||!present(S.ids[r]));if(r!=null){S.ids[r]=SEAL.fp;S.st.sc=[...S.st.sc];S.st.sc[r]=0;}}
   S.me=roleOfFp(SEAL.fp);if(S.me<0)S.me=null;S.pending=false;recomputeRoles();
   if(mode==='redeal'){const G=GAMES[S.st.g],d=S.st.d;let nd=null;
@@ -261,45 +292,144 @@ async function processIntents(){
       for(const it of items){const m=await SEAL.open(pr.k,it.c,'q'+S.code);if(!amHost()||S.nr!==nr)return;if(it.n<=(S.lastN[fp]||0))continue;
         // what does not open with this key was not sealed by its device (or to another host): no ack, it does not move lastN
         if(!m||typeof m!=='object'||m.n!==it.n){S.badC.add(it.c);if(S.badC.size>200)S.badC.delete(S.badC.values().next().value);continue;}
-        S.lastN[fp]=it.n;let res;
-        {S.inIntent=true;try{res=handleIntent(fp,roleOfFp(fp),m)||{};}catch(e){console.error('intent',e);res={x:'err'};}finally{S.inIntent=false;}}
-        const b=batch[fp]||(batch[fp]={t:[],u:{}});if(res.x)b.x=res.x;if(res.t)b.t.push(...res.t);if(res.u)Object.assign(b.u,res.u);
-        S.ack[fp]={n:it.n,...(b.x?{x:b.x}:{}),...(b.t.length?{t:b.t.slice(0,3)}:{}),...(Object.keys(b.u).length?{u:b.u}:{})};any=true;}}
+        S.lastN[fp]=it.n;let res;const r=roleOfFp(fp);
+        {S.inIntent=true;try{res=handleIntent(fp,r,m)||{};}catch(e){console.error('intent',e);res={x:'err'};}finally{S.inIntent=false;}}
+        // every move turned down is named in the ack with why (the last few, so one answer is never lost to the next)
+        if(res.x){const l=S.rejN[fp]||(S.rejN[fp]=[]);l.push([it.n,String(res.x)]);if(l.length>QMAX+2)l.shift();}
+        // a player who plays again takes his seat back from the bot
+        else if(S.ab[r]&&['nd','ck','pv','me'].includes(m.t)){delete S.ab[r];any=true;}
+        const b=batch[fp]||(batch[fp]={t:[],u:{}});if(res.t)b.t.push(...res.t);if(res.u)Object.assign(b.u,res.u);
+        const xs=(S.rejN[fp]||[]).filter(e=>e[0]<=it.n);
+        S.ack[fp]={n:it.n,...(xs.length?{x:xs}:{}),...(b.t.length?{t:b.t.slice(0,3)}:{}),...(Object.keys(b.u).length?{u:b.u}:{})};any=true;}}
     if(any)afterChange();
   }while(S.procAgain&&amHost());}finally{S.procBusy=false;}}
 const jsonLen=v=>{try{return JSON.stringify(v).length;}catch(e){return 1e9;}};
-function rejectNd(fp,n,x){const a=S.rejN[fp]||(S.rejN[fp]=[]);a.push(n);if(a.length>8)a.shift();return {x};}
+/* a public move made on an older board (base): the host's changes since then and the move's own changes must not touch the same
+   thing (the same key, or the same places of a list). Then it means the same on the board now and is played there, checked like
+   any other move. A clock, a hint or another player's answer elsewhere on the board no longer turns a move down */
+function ndClash(old,cur,dp){const H=dPatch(old,cur),hk=new Map();for(const k of Object.keys(H))hk.set(k.replace(/^[@!]/,''),k[0]==='@'?new Set(Object.keys(H[k])):null);
+  for(const k of Object.keys(dp)){const n=k.replace(/^[@!]/,'');if(!hk.has(n))continue;const hs=hk.get(n);
+    if(k[0]!=='@'||!hs||!dp[k]||typeof dp[k]!=='object')return true;for(const i of Object.keys(dp[k]))if(hs.has(i))return true;}
+  return false;}
+// the board the host had at s (only the last ones are kept)
+function histAt(s){if(!Number.isInteger(s)||s>S.st.s)return null;const H=S.hist;for(let k=H.length-1;k>=0;k--)if(H[k].s<=s)return H[k].d;return null;}
+const HIST_N=40;
 function handleIntent(fp,r,m){
   if(!isRole(r))return {x:'seat'};
   const G=GAMES[S.st.g],d=S.st.d;
   switch(m.t){
-    case 'nd':{if(!G||!d)return rejectNd(fp,m.n,'stale');if((m.dep&&(S.rejN[fp]||[]).includes(m.dep))||!baseOk(m.base))return rejectNd(fp,m.n,'stale');
-      if(isSecretG(G))return rejectNd(fp,m.n,'secret');if(!m.dp||typeof m.dp!=='object'||jsonLen(m.dp)>40000)return rejectNd(fp,m.n,'bad');
-      const c=cleanSt({g:S.st.g,d:applyPatch(d,m.dp)});if(!c||!c.d||!validateProposal(d,c.d,r))return rejectNd(fp,m.n,'bad');
+    case 'nd':{if(!G||!d)return {x:'over'};if(m.dep&&(S.rejN[fp]||[]).some(e=>e[0]===m.dep))return {x:'dep'};
+      if(isSecretG(G))return {x:'over'};if(!m.dp||typeof m.dp!=='object'||jsonLen(m.dp)>40000)return {x:'bad'};
+      const seat=d.pl.indexOf(r);if(seat<0)return {x:'seat'};
+      if(!baseOk(m.base)){const old=histAt(m.base);if(!old)return {x:'stale'};if(old.gid!==d.gid)return {x:'over'};
+        if(ndClash(old,d,m.dp))return {x:canPropose(d,d,seat)?'stale':'turn'};}
+      const c=cleanSt({g:S.st.g,d:applyPatch(d,m.dp)});if(!c||!c.d)return {x:'bad'};if(c.d.gid!==d.gid)return {x:'over'};
+      if(!validateProposal(d,c.d,r))return {x:canPropose(d,c.d,seat)?'bad':'turn'};
+      // a turn handed to a seat that left meanwhile is not a move the player made
+      let nt=G.noTurn;try{if(typeof nt==='function')nt=nt(c.d);}catch(e){nt=false;}
+      if(c.d.win==null&&!nt&&c.d.turn!==d.turn&&c.d.out[c.d.turn]==='1')return {x:'stale'};
       act(c.d);return {};}
-    case 'pv':{if(!d||!d.pl.includes(r)||!m.p||typeof m.p!=='object'||jsonLen(m.p)>16384)return {x:'pv'};let p;try{p=cleanVal(m.p,0);}catch(e){return {x:'pv'};}
-      if(p.gid!==d.gid)return {x:'pv'};const o=S.priv[r];if(o&&jsEq(o,p))return {};
+    // a private part (an answer, a pick, typing, a drawing). One for a round that is over is let go quietly
+    case 'pv':{if(!d||!m.p||typeof m.p!=='object'||jsonLen(m.p)>16384)return {x:'pv'};if(!d.pl.includes(r))return {x:'seat'};let p;try{p=cleanVal(m.p,0);}catch(e){return {x:'pv'};}
+      if(p.gid!==d.gid)return {x:'over'};const o=S.priv[r];if(o&&jsEq(o,p))return {};
       if(o&&o.gid===d.gid&&o.rd===d.rd&&o.pick!=null&&p.rd===d.rd&&!jsEq(o.pick,p.pick))return {x:'pick'};
       if(G&&G.privOk&&!G.privOk(d,r,o,p))return {x:'pv'};
       setPriv(r,p);return {};}
-    case 'ck':{if(!G||!isSecretG(G))return {x:'pub'};if(!d||!baseOk(m.base)||m.gid!==d.gid)return {x:'stale'};const seat=d.pl.indexOf(r);if(seat<0)return {x:'seat'};
+    case 'ck':{if(!G||!d||m.gid!==d.gid)return {x:'over'};if(!isSecretG(G))return {x:'over'};const seat=d.pl.indexOf(r);if(seat<0)return {x:'seat'};
       let ui={};if(m.ui&&typeof m.ui==='object'&&jsonLen(m.ui)<=2048)try{ui=cleanVal(m.ui,0);}catch(e){ui={};}
-      const R=sandboxClick(G,d,seat,String(m.a).slice(0,20),Number.isFinite(m.i)?m.i:null,ui);
+      const a=String(m.a).slice(0,20),i=Number.isFinite(m.i)?m.i:null;
+      // a tap made on an older board (a clock, a hint, someone's guess came in meanwhile) counts when the button the player
+      // tapped is still there for him, the same: it is played on the board now, by the game's own rules like any tap
+      if(!baseOk(m.base)){const old=histAt(m.base);if(!old)return {x:'stale'};if(old.gid!==d.gid)return {x:'over'};
+        const was=seatBtn(G,old,seat,a,i,ui);if(was==null||was!==seatBtn(G,d,seat,a,i,ui)){let my=false;try{my=ctxFor(viewOf(G,d,seat),seat,seatPriv(G,d,seat)).my;}catch(e){}return {x:my?'stale':'turn'};}}
+      const R=sandboxClick(G,d,seat,a,i,ui);
       if(R.err)console.warn('sandbox click',R.err);
       if(R.pv&&R.pv.role===r)setPriv(r,R.pv.p);
       if(R.v!==undefined&&R.v&&R.v!==d){try{cleanD(R.v);act(R.v);}catch(e){return {x:'bad',t:R.toasts};}}
       return {t:R.toasts,u:R.u};}
     case 'skip':skipAbsent(6000);return {};
-    case 'new':{if(!S.st.g)return {x:'new'};if(d&&d.win==null)return {x:'busy'};if(matchOver())return {x:'host'};newRound();return {};}
-    case 'game':{const g=m.g;if(cfg().pick!=='all'||typeof g!=='string'||!Object.prototype.hasOwnProperty.call(GAMES,g))return {x:'pick'};
+    // forfeit: the seat leaves this round, the others play on
+    case 'out':{if(!d||m.gid!==d.gid||d.win!=null)return {x:'over'};const s=d.pl.indexOf(r);if(s<0)return {x:'seat'};if(d.out[s]!=='1')forfeit(s);return {};}
+    // back from being away: the bot stops playing this seat (processIntents)
+    case 'me':return {};
+    case 'new':{if(!S.st.g)return {x:'over'};if(d&&d.win==null)return {x:'busy'};if(matchOver())return {x:'host'};newRound();return {};}
+    case 'game':{const g=m.g;if(cfg().pick!=='all'||typeof g!=='string'||!Object.prototype.hasOwnProperty.call(GAMES,g))return {x:'game'};
       if(S.st.g===g&&d&&d.win==null)return {};setGame(g);return {};}
   }
-  return {x:'?'};}
+  return {x:'err'};}
+
+/* ---------- a bot for a player who is away ----------
+   On the host only. A seat whose phone has been out of the room for GRACE (asleep, app closed, no signal) is played by a medium
+   bot, and every phone marks it «🤖». It stops when its player is back and taps «رجعت» or makes a move himself. The bot sees
+   only what that seat sees (its view of the state and of the private parts); in a game with secrets its move is a tap that the
+   host plays for the seat by the game's own rules, as it plays the player's own taps */
+const AB_LV=2,AB_FAIL=3;
+// the seats a bot plays now, as the host publishes them (ab)
+function abList(){const d=S.st.d;if(!d||!amHost())return [];
+  return Object.keys(S.ab).map(Number).filter(r=>isRole(r)&&(S.ab[r].fail||0)<AB_FAIL&&d.pl.includes(r)&&d.out[d.pl.indexOf(r)]!=='1').sort((a,b)=>a-b);}
+const abRoles=()=>S.mode!=='online'?[]:amHost()?abList():(S.abR||[]);
+const abOn=r=>abRoles().includes(r);
+// runs fn as seat s on what that seat sees (v, pv): the whole state and the other parts are out of its reach meanwhile
+function abSee(G,v,s,pv,ui,fn){const st=S.st,pr=S.priv;
+  return asSeat(G,v,s,ui,()=>{S.st={...st,d:v};S.priv=pv;try{return fn();}finally{S.st=st;S.priv=pr;}});}
+function abTick(){if(!amHost()||S.offline)return;const d=S.st.d,G=GAMES[S.st.g];let ch=false;
+  if(!d||!G){if(Object.keys(S.ab).length){S.ab={};publish();render();}return;}
+  for(const k of Object.keys(S.ab)){const r=+k,x=S.ab[k];
+    // not in this game any more, or back for a new round
+    if(!d.pl.includes(r)||!S.ids[r]||S.roles.has(r)&&x.gid!==d.gid){delete S.ab[k];ch=true;continue;}
+    if(x.gid!==d.gid){x.gid=d.gid;x.fail=0;}}
+  if(d.win==null)d.pl.forEach((r,s)=>{if(r===S.me||S.ab[r]||d.out[s]==='1'||!S.ids[r]||!goneLong(r))return;S.ab[r]={at:Date.now(),gid:d.gid,fail:0};ch=true;});
+  if(ch){publish();render();}
+  if(d.win!=null||!abList().length)return;
+  const sim=isSimul(G,d),now=Date.now(),live=new Set(),on=s=>abList().includes(d.pl[s]);
+  const who=sim?aliveSeats(d).filter(s=>on(s)&&!hasPicked(d,s)):(on(d.turn)&&d.out[d.turn]!=='1'?[d.turn]:[]);
+  for(const s of who){const k=S.st.g+d.gid+':'+S.st.s+':'+s;live.add(k);
+    if(!(k in S.abQ)){let w=BOTMS[AB_LV]+rnd(sim?2500:700);try{if(G.botDelay)w=Math.min(8000,G.botDelay(d,s,AB_LV));}catch(e){}S.abQ[k]=now+w;continue;}
+    if(now>=S.abQ[k]){delete S.abQ[k];abMove(G,d,s);return;}}
+  for(const k in S.abQ)if(!live.has(k))delete S.abQ[k];
+  // what a game needs from every seat whatever the turn (sea battle: «جاهز» once the ships are placed): G.abOff names those taps
+  if(G.abOff&&!sim)for(const s of aliveSeats(d)){const r=d.pl[s];if(!on(s)||now-(S.ab[r].off||0)<2500)continue;S.ab[r].off=now;
+    S.inIntent=true;try{const v=isSecretG(G)?viewOf(G,d,s):d;if(abTap(G,d,s,v,seatPriv(G,d,s),undefined,G.abOff))return;}catch(e){console.error('autobot',e);}finally{S.inIntent=false;}}}
+function abMove(G,d,s){const r=d.pl[s],sec=isSecretG(G),sim=isSimul(G,d);let did=false;
+  S.inIntent=true;
+  try{const v=sec?viewOf(G,d,s):d,pv=seatPriv(G,d,s);
+    if(sim&&G.botPick){const p=abSee(G,v,s,pv,{},()=>G.botPick(v,s,AB_LV));simulPick(d,s,p==null?NOPICK:p);did=true;}
+    else{const want=sim?undefined:abSee(G,v,s,pv,{},()=>G.bot?G.bot(v,s,AB_LV):undefined);
+      // the game's own bot waits here (this game moves on by itself, on the host)
+      if(want===v)did=true;
+      else{if(want&&!sec){try{cleanD(want);if(want.gid===d.gid&&validateProposal(d,want,r)){act(want);did=true;}}catch(e){}}
+        if(!did)did=abTap(G,d,s,v,pv,want);}}}
+  catch(e){console.error('autobot',e);}finally{S.inIntent=false;}
+  const x=S.ab[r];if(x){x.fail=did?0:(x.fail||0)+1;if(x.fail>=AB_FAIL){publish();render();}}}
+// the tap the bot makes: of the buttons this seat has, the one that makes the bot's move (or the nearest to it), else any that
+// moves the game; a tap that only selects (a card, a target) is followed by the next one. The host then plays it on the real state
+function abTap(G,d,s,v,pv,want,only){let ui={};const r=d.pl[s];
+  for(let step=0;step<6;step++){
+    const best=abSee(G,v,s,pv,ui,()=>{const c=ctxFor(v,s,pv);let h='';try{h=G.render(v,c);}catch(e){return null;}
+      TPL.innerHTML=h;const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disabled')&&(!only||only.includes(e.dataset.ga)));TPL.innerHTML='';
+      const ui0=uiSnap(G),seen=new Set(),opts=[];
+      for(const e of els){const a=e.dataset.ga,i=e.dataset.i!=null?+e.dataset.i:null,k=a+':'+i;if(seen.has(k)||seen.size>=30)continue;seen.add(k);
+        uiLoad(G,ui0);NET_CAP={v:undefined,pv:null};ACT_CAP={v:null};try{G.click(a,i,v,c);}catch(x){}
+        const nv=ACT_CAP.v||NET_CAP.v,np=NET_CAP.pv;ACT_CAP=null;const u=uiSnap(G);
+        const moved=!!(nv&&nv!==v)||!!(np&&np.role===r);let sc=moved?1:jsEq(u,ui0)?-1:0;
+        if(moved&&want&&nv){if(jsEq(nv,want))sc=1e6;else sc+=Object.keys(want).filter(q=>jsEq(nv[q],want[q])).length;}
+        opts.push({a,i,u,ui0,sc:sc+Math.random()*.5});}
+      uiLoad(G,ui0);opts.sort((x,y)=>y.sc-x.sc);return opts[0]&&opts[0].sc>-1?opts[0]:null;});
+    if(!best)return false;
+    if(best.sc<1){ui=best.u;continue;}
+    const R=sandboxClick(G,d,s,best.a,best.i,best.ui0);
+    if(R.pv&&R.pv.role===r)setPriv(r,R.pv.p);
+    if(R.v!==undefined&&R.v&&R.v!==d){try{cleanD(R.v);act(R.v);}catch(e){return false;}return true;}
+    return !!(R.pv&&R.pv.role===r);}
+  return false;}
+setInterval(()=>{if(S.mode==='online')abTick();},300);
 
 /* ---------- publishing ---------- */
 /* the s at which the board (d) last changed: a move made on that board still counts after a settings change or a score
    reset, which move s but not the board */
-function dSeq(){if(S.st.d!==S.dRef){S.dRef=S.st.d;S.dS=S.st.s;}return S.dS;}
+function dSeq(){if(S.st.d!==S.dRef){S.dRef=S.st.d;S.dS=S.st.s;
+    // the boards the host had lately, so a move made on one of them can still be read (histAt)
+    if(amHost()&&S.st.d){S.hist.push({s:S.st.s,d:S.st.d});if(S.hist.length>HIST_N)S.hist.shift();}}return S.dS;}
 const baseOk=b=>Number.isInteger(b)&&b>=dSeq()&&b<=S.st.s;
 // after a quiet moment (a move) it goes out at once; during a burst (drawing, typing, a busy room) it waits PUB_MS so the burst
 // goes out as fewer messages: sending each change at once there let the players' phones fall behind the host
@@ -322,7 +452,7 @@ async function doPublish(){
       const own=G&&G.selfPub&&S.peersByFp[S.ids[r]];pp[r]=own&&(small||jsEq(own.pr.pp,x))?'@':x;}
     // an answer stays until its sender's queue no longer holds what it answers (the sender has seen it)
     const ack={};for(const fp in S.ack){if(!S.peersByFp[fp])continue;const n=S.ack[fp].n;if((S.qByFp[fp]||[]).some(pr=>Array.isArray(pr.q)&&pr.q.some(x=>x&&x.n<=n)))ack[fp]=S.ack[fp];}S.ack=ack;
-    const pub={h:S.epoch,g:S.st.g,s:S.st.s,d:pubD,sc:S.st.sc,cfg:S.st.cfg,ids:S.ids.slice(),pp,ack,hb};
+    const pub={h:S.epoch,g:S.st.g,s:S.st.s,d:pubD,sc:S.st.sc,cfg:S.st.cfg,ids:S.ids.slice(),pp,ack,hb,ab:abList()};
     const aad=hostAad(pub);if(!aad)return;
     // every phone here gets a view sealed to it, bound to all the public fields above (even when it holds nothing more than them)
     const vw={},sig=Object.keys(S.peersByFp).map(fp=>fp+':'+S.peersByFp[fp].pr.k).sort().join();const jobs=[];

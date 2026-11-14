@@ -1208,3 +1208,11 @@ html.lite .floatrx{will-change:auto}
 .status .sm{min-height:40px}
 /* a phone on its side: sheets (the result above all) scroll inside instead of hiding their buttons below the edge */
 @media (max-height:500px){.sheet{max-height:94vh;max-height:94dvh;overflow-y:auto}}
+/* a seat the host's bot plays while its player is away, and the line that gives it back */
+.pt .pk.ab{left:auto;right:5px;background:#E3EEFB;font-size:10px}
+.players.four .pt .pk.ab,.players.many .pt .pk.ab{left:auto;right:4px}
+.abme{display:block;font-size:14px;font-weight:800;color:var(--navy);margin-top:2px}.abme .sm{margin-inline-start:6px}
+.status:has(.abme){height:auto;min-height:68px}.st-main:has(.abme){display:block}
+/* «انسحاب»: a quiet link under the board, and a sheet that asks first */
+.ffw{text-align:center;margin:14px 0 76px}.ffw .link{font-size:15px;color:var(--mut);display:inline-block}
+.sheet.ff p{margin:4px 0 0;font-size:16px;line-height:1.6;text-align:center}.sheet.ff .acts .btn{flex:1;min-width:130px}

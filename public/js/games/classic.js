@@ -297,6 +297,8 @@ GAMES.sea={name:'معركة السفن',cat:'board',lbc:'#245F8C',
   privOk:(d,r,o,p)=>typeof p.f==='string'&&/^[.a-e]{64}$/.test(p.f)&&SHIPS.every((L,k)=>p.f.split(SL[k]).length-1===L)&&!(o&&o.gid===d.gid&&o.ready&&(!p.ready||o.f!==p.f))&&
     (p.pick==null||p.pick==='~'||Array.isArray(p.pick)&&p.pick.length<=SHIPS.length&&p.pick.every(x=>Array.isArray(x)&&x.length===2&&x.every(Number.isInteger))),
   net:{host:['fire','gone'],local:['tgt','aim','salvo','ed','rot','shuffle','ready']},
+  // a player who is away: the host's bot says «جاهز» with the fleet he has (net.js abTick)
+  abOff:['ready'],
   // online, time ran out while placing ships: fleets laid out so far are locked in, and a seat with no fleet at all (its player never came) is out.
   // On one phone everybody is here, so nobody is pushed: the turn just moves on (a bot's turn passes to the people, see 'ready')
   onTimeout(d){const pr=S.priv;if(S.mode!=='online'||allReady(d,pr))return {...d,turn:nextSeat(d,d.turn)};let out=d.out;
