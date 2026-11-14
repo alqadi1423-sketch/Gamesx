@@ -68,7 +68,13 @@ const S={draft:{},sel:[],mode:null,localN:2,localNames:[],myName:lsGet(LSK.name)
   chat:{},myChat:[],chatSeen:Date.now(),chatSkip:new Set(),chatIn:{},avs:{},seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false,browse:false,modal:null,showResult:false,winKey:null,wasMy:false,rxSeen:{}};
 // while a game animates the screen by hand (holdRender), the next real render repaints it in full even if its HTML is unchanged
 {let hr=!!S.holdRender;Object.defineProperty(S,'holdRender',{get:()=>hr,set:v=>{hr=v;S.lastHtml=null;},enumerable:true,configurable:true});}
-try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){S.localN=l.n||2;S.localNames=l.names||[];S.bots=l.bots||{};}}catch(e){}
+// the table kept on this phone, checked: a damaged or hand-edited copy gives 2..8 players, names as text and bots of level 1..3,
+// with one person at least
+function cleanTable(l){const n=Math.round(+(l&&l.n)),o={n:n>=2&&n<=MAXP?n:2,names:[],bots:{}};if(!l||typeof l!=='object')return o;
+  if(Array.isArray(l.names))o.names=l.names.slice(0,MAXP).map(x=>typeof x==='string'?x.slice(0,14):'');
+  if(l.bots&&typeof l.bots==='object')for(let r=0;r<MAXP;r++)if([1,2,3].includes(l.bots[r]))o.bots[r]=l.bots[r];
+  if([...Array(o.n).keys()].every(r=>o.bots[r]))delete o.bots[0];return o;}
+try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){const t=cleanTable(l);S.localN=t.n;S.localNames=t.names;S.bots=t.bots;}}catch(e){}
 // the teams last chosen on this phone (local play keeps them between games)
 function localTeams(){try{const l=JSON.parse(lsGet(LSK.local)||'null');const o={};if(l&&CFGOK.teams(l.teams))o.teams=l.teams;if(l&&tmOk(l.tm))o.tm={...l.tm};return o;}catch(e){return {};}}
 S.bots=S.bots||{};
@@ -169,11 +175,14 @@ function save(){
   if(S.mode==='local'){lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames,bots:S.bots,teams:cfg().teams||0,tm:cfg().tm||{}}));if(S.st.g&&S.st.d)lsSet(LSK.lgame,JSON.stringify({st:S.st,priv:S.priv,n:S.localN,names:S.localNames,bots:S.bots}));}
   if(S.mode!=='online'||!S.code)return;const h=amHost();
   lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',ep:S.epoch,host:h,me:S.me,st:h?S.st:(S.hst||S.st),priv:h?S.priv:(S.me!=null?{[S.me]:S.priv[S.me]}:{}),ids:S.ids,lastN:h?S.lastN:{},n:S.sentN}));}
-function loadSaved(){try{return JSON.parse(lsGet(LSK.room)||'null');}catch(e){return null;}}
+// (only a room this app could have saved: an object with a room code of letters and digits)
+function loadSaved(){try{const v=JSON.parse(lsGet(LSK.room)||'null');return v&&typeof v==='object'&&!Array.isArray(v)&&typeof v.code==='string'&&/^[A-Za-z0-9]{1,12}$/.test(v.code)?v:null;}catch(e){return null;}}
 // a local game that was not finished when the app closed or went home
-function loadLocal(){try{const l=JSON.parse(lsGet(LSK.lgame)||'null');const d=l&&l.st&&l.st.d;return d&&d.win==null&&Array.isArray(d.pl)&&hasG(l.st.g)?l:null;}catch(e){return null;}}
-function localResume(){const l=loadLocal();if(!l)return;S.mode='local';S.me=null;S.localN=Math.max(2,Math.min(MAXP,l.n||l.st.d.pl.length));S.localNames=l.names||[];S.bots=l.bots||{};
-  S.st={...l.st,cfg:{...CFG0,...(l.st.cfg||{})},sc:Array.isArray(l.st.sc)&&l.st.sc.length>=MAXP?l.st.sc:Array(MAXP).fill(0)};S.priv=Array(MAXP).fill(null).map((x,r)=>(l.priv||[])[r]??null);
+// (a damaged copy, one that is not a state this app could have made, is not offered)
+// (ended=true: also a game that has ended, for a reload that comes back to its result)
+function loadLocal(ended){try{const l=JSON.parse(lsGet(LSK.lgame)||'null');const d=l&&l.st&&l.st.d;return d&&(ended||d.win==null)&&Array.isArray(d.pl)&&hasG(l.st.g)&&cleanD(d)?l:null;}catch(e){return null;}}
+function localResume(l){l=l||loadLocal();if(!l)return;S.mode='local';S.me=null;const t=cleanTable({...l,n:Number.isInteger(l.n)&&l.n>=2&&l.n<=MAXP?l.n:l.st.d.pl.length});S.localN=t.n;S.localNames=t.names;S.bots=t.bots;
+  S.st={...l.st,s:Number.isInteger(l.st.s)?l.st.s:0,cfg:cleanCfg(l.st.cfg),sc:cleanSc(l.st.sc)||Array(MAXP).fill(0)};S.priv=Array(MAXP).fill(null).map((x,r)=>{const p=Array.isArray(l.priv)?l.priv[r]:null;return p&&typeof p==='object'?p:null;});
   S.seen=null;S.browse=false;S.showResult=false;resetUI();afterChange();}
 
 /* ================= turn timer ================= */
@@ -787,11 +796,14 @@ function floatRx(r,i){if(!emoOk(i))return;const now=Date.now();S.rxLast=S.rxLast
   document.body.appendChild(el);sfx('pop');setTimeout(()=>el.remove(),1900);}
 function rxRateOk(){const now=Date.now();S.rxT=(S.rxT||[]).filter(t=>now-t<10000);if(S.rxT.length>=8||now-(S.rxT[S.rxT.length-1]||0)<600)return false;S.rxT.push(now);return true;}
 /* ================= this phone's stats ================= */
-function statsGet(){try{const o=JSON.parse(lsGet(LSK.stats)||'null');if(o&&typeof o==='object'&&o.g&&typeof o.g==='object')return {g:o.g,ids:Array.isArray(o.ids)?o.ids:[]};}catch(e){}return {g:{},ids:[]};}
+// (each game is [played, won], whole numbers with won ≤ played: a damaged copy keeps only what reads as such)
+function statsGet(){try{const o=JSON.parse(lsGet(LSK.stats)||'null');if(o&&typeof o==='object'&&o.g&&typeof o.g==='object'){const g={};
+  for(const k of Object.keys(o.g)){const e=o.g[k];if(k==='__proto__'||!Array.isArray(e))continue;const p=Math.min(1e6,Math.max(0,Math.floor(+e[0]||0)));if(p)g[k]=[p,Math.min(p,Math.max(0,Math.floor(+e[1]||0)))];}
+  return {g,ids:Array.isArray(o.ids)?o.ids.filter(x=>typeof x==='string'):[]};}}catch(e){}return {g:{},ids:[]};}
 function noteStats(g,d,won){const o=statsGet();if(!d||o.ids.includes(d.gid))return;o.ids=[...o.ids,d.gid].slice(-30);const e=Array.isArray(o.g[g])?o.g[g]:[0,0];e[0]=(+e[0]||0)+1;if(won)e[1]=(+e[1]||0)+1;o.g[g]=e;lsSet(LSK.stats,JSON.stringify(o));}
 function statsAll(){const o=statsGet();let n=0,w=0,k=0;for(const g in o.g){const e=o.g[g];if(!Array.isArray(e))continue;n+=+e[0]||0;w+=+e[1]||0;k++;}return {n,w,k};}
 function renderStats(){const o=statsGet(),fav=new Set(favGames()),t=statsAll();
-  const ks=Object.keys(o.g).filter(g=>GAMES[g]&&Array.isArray(o.g[g])).sort((a,b)=>o.g[b][0]-o.g[a][0]);
+  const ks=Object.keys(o.g).filter(g=>Object.prototype.hasOwnProperty.call(GAMES,g)&&Array.isArray(o.g[g])).sort((a,b)=>o.g[b][0]-o.g[a][0]);
   OUT=`${topBar('إحصائياتي','home')}<div class="stt"><span><b>${t.n}</b><small>لعبة خلصت</small></span><span><b>${t.w}</b><small>فوز</small></span><span><b>${t.n?Math.round(t.w/t.n*100):0}٪</b><small>نسبة الفوز</small></span></div>
 
   ${ks.length?`<div class="stl">${ks.map(g=>{const p=+o.g[g][0]||0,w=+o.g[g][1]||0;return `<button class="str" data-a="quick" data-v="${g}"><span class="gi">${GAMES[g].icon}</span><span class="lv-tx"><b>${fav.has(g)?'⭐ ':''}${GAMES[g].name}</b><small>${p} مرة • ${w} فوز</small></span><i class="stb" aria-hidden="true"><i style="width:${p?Math.round(w/p*100):0}%"></i></i></button>`;}).join('')}</div><button class="link" data-a="statsreset">تصفير الإحصائيات</button>`:'<p class="gempty">ما خلصت ولا لعبة للحين</p>'}`;}
@@ -985,7 +997,8 @@ function saveMeta(){try{const ids=[...recentGames(),...favGames(),...NEWG];const
 const HEREK='alaabna.here';
 function noteHere(){if(S.hereWait)return;try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);}}catch(e){}}
 function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)||'null');}catch(e){}if(!h||typeof h!=='object')return false;
-  if(h.m==='local'){const l=h.g&&loadLocal();if(l){localResume();if(h.b){S.browse=true;render();}return true;}if(h.g)return false;
+  if(h.m==='local'){const l=h.g&&loadLocal(true);if(l){localResume(l);if(h.b){S.browse=true;render();}return true;}
+    // a game that had ended (or is no longer kept): this phone's game list, with its players as they were
     S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0,...localTeams()}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();return true;}
   if(h.m==='online'){const sv=loadSaved();if(sv&&sv.code&&sv.code===h.c&&sv.via!=='near'){S.mode='lobby';render();enterRoom(sv.code,false,sv);return true;}S.mode='lobby';render();getRoom();return true;}
   if(h.m==='lobby'){S.mode='lobby';render();getRoom();return true;}
