@@ -145,7 +145,7 @@ GAMES.p_story={name:'قصة متسلسلة',cat:'party',lbc:'#6E2C00',teams:'non
     h+=`<div class="p2-paper"><p class="op">${P2STOP[d.op]}</p>${d.ln.map(([s,t,tw,b],k)=>t?`<p data-k="sl${k}" class="${k>=d.rs&&cur?'new':''} ${d.ph==='show'&&k>=d.rs&&cnt[k]===mx&&mx>0?'best':''}" style="--c:${col(d,s)}">${escH(t)} <small>— ${nm(d,s)}${k>=d.rs?` • 🔑 ${P2STW[tw]||''}${b?' ✓':''}`:''}${cnt[k]?` • ${cnt[k]} 👍`:''}</small></p>`:'').join('')}${d.ph==='write'?'<p class="dots">…</p>':''}</div>`;
     if(d.ph==='write'){const me=(ctx.local||v===d.turn)&&!isBot(d,d.turn);
       if(me&&d.tw>=0)h+=`<div class="p2-twist">🔑 كلمتك السرية: <b>${P2STW[d.tw]}</b><small>دخّلها بجملتك وتاخذ نقطة</small></div><div class="p2-guess col"><input class="field" data-draft="p2sl${d.turn}" data-enter="sl" maxlength="70" value="${escH(S.draft['p2sl'+d.turn]||'')}" placeholder="كمّل القصة بجملة وحدة…" autocomplete="off"><button class="btn red" data-ga="sl">أضف ✍️</button></div>`;
-      else h+=`<p class="note">${isBot(d,d.turn)?'🤖 ':''}${nm(d,d.turn)} يكتب…</p>`;}
+      else h+=`<p class="note">${nm(d,d.turn)} يكتب…</p>`;}
     if(d.ph==='vote'){if(!ctx.my||v==null||v<0)return h+'<p class="note">ننتظر الأصوات…</p>'+p2Wait(d)+'</div>';
       h+=`<p class="p2-lead small">${nm(d,v)}، أي جملة أحلى؟</p><div class="p2-stm">${p2StRound(d).filter(([l])=>l[1]&&l[0]!==v).map(([l,k])=>`<button class="p2-st" data-ga="v" data-i="${k}" style="--c:${col(d,l[0])}"><small class="nm">${nm(d,l[0])}</small><span>${escH(l[1])}</span></button>`).join('')}</div>`;}
     if(d.ph==='show')h+=p2Next(d,ctx,d.r+1>=d.R,'الجولة الجاية ←');
@@ -223,7 +223,7 @@ GAMES.p_fake={name:'الرسام المزيف',cat:'party',lbc:'#5B2C6F',teams:'
     h+=`<div class="p2-easel ${drawMe?'live':''}"><svg viewBox="0 0 63 63" class="p2-drw ${drawMe?'pad':''}" ${drawMe?'id="p2pad"':''}>${p2FkSvg(d,d.sk)}${p2FkSvg(d,cur)}</svg>${d.ph==='draw'?`<small class="p2-kind">${kind?'النوع: '+kind:''}</small>`:''}</div>`;
     h+=`<div class="p2-legend">${d.pl.map((r,s)=>`<span class="${d.ph==='draw'&&s===d.turn?'on':''}" style="--c:${COLS[r]}">${nm(d,s)} <b>${d.sk.filter(x=>x[0]===s).length}</b></span>`).join('')}</div>`;
     if(d.ph==='draw'){if(drawMe)h+=cur.length?`<div class="p2-row"><button class="btn red" data-ga="fok">✓ اعتمد الخط</button><button class="btn soft" data-ga="fclr">↶ أعد</button></div>`:'<p class="note">ارسم خط واحد بإصبعك (بدون ما ترفعه)</p><button class="sm p2-fskip" data-ga="fskip">ما عندي فكرة، عدّني ⏭</button>';
-      else h+=`<p class="note">${isBot(d,d.turn)?'🤖 ':''}${nm(d,d.turn)} يرسم…</p>`;}
+      else h+=`<p class="note">${nm(d,d.turn)} يرسم…</p>`;}
     if(d.ph==='vote'){if(!ctx.my||v==null||v<0)h+='<p class="note">ننتظر الأصوات…</p>'+p2Wait(d);
       else h+=`<p class="p2-lead small">${nm(d,v)}، مين المزيف؟</p>`+p2Tiles(d,{v,ga:'v',can:s=>s!==v&&d.out[s]!=='1'});}
     if(d.ph==='guess'){h+=`<p class="p2-lead">🎭 ${nm(d,d.fk)} هو المزيف! لو عرف الكلمة يفوز</p>`;
@@ -353,7 +353,7 @@ GAMES.p_qa={name:'سؤال وجواب',cat:'party',lbc:'#117864',teams:'none',mi
       return h+`<p class="p2-lead small">${nm(d,v)}، جوابك (محد بيعرف إنه لك):</p><div class="p2-guess"><input class="field" data-draft="p2qa${v}" data-enter="qa" maxlength="30" value="${escH(S.draft['p2qa'+v]||'')}" placeholder="جوابك…" autocomplete="off"><button class="btn red" data-ga="qa">أرسل</button></div></div>`;}
     const ws=p2QaWriters(d);const sel=S.p2qs!=null&&S.p2qs<d.an.length?S.p2qs:-1;const shown=d.ph==='show'||d.win!=null;
     h+=`<div class="p2-ansl">${d.an.map((t,k)=>{const m=d.mt[k],o=d.ow[k];const ok=shown&&m===o;
-      return `<div class="p2-an ${sel===k&&iA&&!shown?'sel':''} ${shown?(ok?'ok':'no'):''}" data-k="an${d.k}_${k}"><${iA&&!shown?'button':'span'} class="p2-ant" ${iA&&!shown?`data-ga="qsel" data-i="${k}"`:''}>«${escH(t)}»</${iA&&!shown?'button':'span'}>
+      return `<div class="p2-an ${sel===k&&iA&&!shown?'sel':''} ${shown?(ok?'ok':'no'):''}" data-k="an${d.k}_${k}"><${iA&&!shown?'button':'span'} class="p2-ant" ${iA&&!shown?`data-ga="qsel" data-i="${k}"`:''}>${escH(t)}</${iA&&!shown?'button':'span'}>
         <div class="p2-anw">${shown?`<i style="--c:${col(d,o)}">✍️ ${nm(d,o)}</i>${m>=0&&m!==o?`<i class="x" style="--c:${col(d,m)}">قال ${nm(d,m)}</i>`:''}`:m>=0?`<i style="--c:${col(d,m)}">${nm(d,m)}</i>`:'<i class="q">؟</i>'}</div></div>`;}).join('')}</div>`;
     if(d.ph==='match'){if(iA){h+=sel>=0?`<p class="p2-lead small">مين كتب «${escH(d.an[sel])}»؟</p><div class="p2-row">${ws.map(s=>`<button class="p2-gsr" style="--c:${col(d,s)}" data-ga="mt" data-i="${sel*8+s}">${nm(d,s)}</button>`).join('')}</div>`:'<p class="note">اضغط على جواب وبعدها على اللي تتوقعه كتبه</p>';
         h+=`<button class="big red" data-ga="done" ${d.mt.every(x=>x>=0)?'':'disabled'}>اكشف ✓</button>`;}
