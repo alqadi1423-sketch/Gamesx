@@ -107,12 +107,11 @@ function u2Game(o){
       if(a==='start'){if(st.ph!=='ready')return;st.ph='go';st.t0=Date.now();st.cap=u2Cap(o,d);st.w=o.init(d.pz);st.h=[];u2Save();render();return;}
       if(st.ph!=='go')return;
       if(a==='quit'){if(!st.q){st.q=1;render();setTimeout(()=>{if(S.u2===st&&st.q){st.q=0;render();}},3000);return;}u2Send(d,ctx.v,{s:'',ms:Date.now()-st.t0});render();return;}
-      st.q=0;
       if(a==='undo'){if(st.h&&st.h.length){st.w=st.h.pop();u2Save();render();}return;}
       if(a==='clr'){u2Push(st);st.w=o.init(d.pz);u2Save();render();return;}
       const r=o.tap(a,i,d.pz,st);if(r===true)u2Done(o,d,ctx,st);else{u2Save();render();}},
     // a drag on the board (data-ud): o.drag gets 'down' | 'move' | 'up' with the cell under the finger
-    u2ptr(kind,c,d,ctx,tag){if(d.win!=null||d.ph!=='go'||!d.pz)return;const st=u2St(d,ctx.v);if(st.ph!=='go'||!o.drag)return;st.q=0;const r=o.drag(kind,c,d.pz,st,tag);if(r===true)u2Done(o,d,ctx,st);else if(r)render();}};
+    u2ptr(kind,c,d,ctx,tag){if(d.win!=null||d.ph!=='go'||!d.pz)return;const st=u2St(d,ctx.v);if(st.ph!=='go'||!o.drag)return;const r=o.drag(kind,c,d.pz,st,tag);if(r===true)u2Done(o,d,ctx,st);else if(r)render();}};
   U2[o.cls]=o;return G;}
 // keep the board before a change, for «تراجع»
 function u2Push(st){st.h=st.h||[];st.h.push(JSON.parse(JSON.stringify(st.w)));if(st.h.length>40)st.h.shift();}
