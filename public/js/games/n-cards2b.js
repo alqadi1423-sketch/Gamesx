@@ -7,7 +7,7 @@
 const c2fsSide=(d,s)=>d.tm?d.tm[s]:d.pairs?s%2:s;
 const c2fsSides=d=>[...new Set(d.pl.map((_,s)=>c2fsSide(d,s)))];
 const c2fsSideName=(d,t)=>d.pl.map((_,s)=>s).filter(s=>c2fsSide(d,s)===t).map(s=>nameTag(d,s)).join(' و');
-function c2fsWinSide(d,t){const ws=d.pl.map((_,s)=>s).filter(s=>c2fsSide(d,s)===t&&d.out[s]!=='1');const all=ws.length?ws:d.pl.map((_,s)=>s).filter(s=>c2fsSide(d,s)===t);return {...d,win:all[0],wins:all,...(d.tm?{}:{})};}
+function c2fsWinSide(d,t){const ws=d.pl.map((_,s)=>s).filter(s=>c2fsSide(d,s)===t&&d.out[s]!=='1');const all=ws.length?ws:d.pl.map((_,s)=>s).filter(s=>c2fsSide(d,s)===t);return {...d,win:all[0],wins:all};}
 // hands are hidden from other seats online, the stock from everybody
 function c2shMask(d,v){if(!d||d.win!=null||!Array.isArray(d.hands))return d;const o={...d,hands:d.hands.map((x,s)=>s===v?x:c2Hide(x))};
   if(typeof d.dk==='string')o.dk=c2Hide(d.dk);if(typeof d.pile==='string')o.pile=c2Hide(d.pile);return o;}
@@ -170,7 +170,7 @@ GAMES.c_shakba={name:'شكبة',cat:'cards',lbc:'#A0522D',
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(c2skNext(d));return;}if(d.ph!=='play')return;
     if(a==='card'){const c=cardsOf(d.hands[d.turn])[i];if(!c)return;const o=c2skOpts(cardsOf(d.fl),c);if(o.length>1){S.sel=[c2skSelKey(d),c];render();return;}S.sel=[];act(c2skPlay(d,c,o[0]||null));return;}
     if(a==='take'){const c=Array.isArray(S.sel)&&S.sel[0]===c2skSelKey(d)?S.sel[1]:null;S.sel=[];if(!c||i<0||!cardsOf(d.hands[d.turn]).includes(c)){render();return;}const o=c2skOpts(cardsOf(d.fl),c)[i];if(!o){render();return;}act(c2skPlay(d,c,o));}}};
-HELP.c_shakba='الشكبة لعبة صيد مثل السكوبا، بـ40 ورقة (بدون 8 و9 و10): الشايب بـ10، الولد بـ9، البنت بـ8، والإكة بواحد. كل لاعب ياخذ 3 أوراق وتنحط 4 مكشوفة في الأرض، ولما تخلص يتوزع 3 ثانية لين تخلص الكوتشينة. في دورك تنزل ورقة: إذا في الأرض ورقة بنفس قيمتها لازم تاكلها (وتختار أي وحدة لو فيه أكثر)، وإذا ما فيه وفيه مجموعة مجموعها نفس قيمتها لازم تاكلها (وتختار المجموعة)، وإذا لا تبقى ورقتك في الأرض. إذا كنست الأرض كلها تصير «شكبة» ونقطة، إلا بآخر ورقة في الجولة. اللي يبقى في الأرض بالآخر ياخذه آخر واحد أكل. النقاط بآخر كل جولة: الكارطة (أكثر ورق) نقطة، الديناري (أكثر ديناري) نقطة، البرميلة (أكثر سبعات، ولو تعادلتوا أكثر ستات) نقطة، السبعة الحية (7 الديناري) نقطة، وكل شكبة نقطة. أول من يوصل 21 يفوز. مع 4 لاعبين: كل اثنين متقابلين فريق.';
+HELP.c_shakba='الشكبة لعبة صيد مثل السكوبا، بـ40 ورقة (بدون 8 و9 و10): الشايب بـ10، الولد بـ9، البنت بـ8، والإكة بواحد. كل لاعب ياخذ 3 أوراق وتنحط 4 مكشوفة في الأرض، ولما تخلص يتوزع 3 ثانية لين تخلص الكوتشينة. في دورك تنزل ورقة: إذا في الأرض ورقة بنفس قيمتها لازم تاكلها (وتختار أي وحدة لو فيه أكثر)، وإذا ما فيه وفيه مجموعة مجموعها نفس قيمتها لازم تاكلها (وتختار المجموعة)، وإذا لا تبقى ورقتك في الأرض. إذا كنست الأرض كلها تصير «شكبة» ونقطة، إلا بآخر ورقة في الجولة. اللي يبقى في الأرض بالآخر ياخذه آخر واحد أكل. النقاط بآخر كل جولة: الكارطة (أكثر ورق) نقطة، الديناري (أكثر ديناري) نقطة، البرميلة (أكثر سبعات، ولو تعادلتوا أكثر ستات) نقطة، السبعة الحية (7 الديناري) نقطة، وكل شكبة نقطة. أول من يوصل 21 يفوز. مع 4 لاعبين: كل اثنين متقابلين فريق. ومع 5 لاعبين وأكثر: آخر توزيعة تنقسم واحدة واحدة لين تخلص.';
 GAMES.c_shakba.bot=(d,s,lv)=>{if(d.ph==='sum')return c2skNext(d);const H=cardsOf(d.hands[s]),fl=cardsOf(d.fl);
   const val=c=>1+(c[1]==='d'?1.2:0)+(c[0]==='7'?2:c[0]==='6'?1:0)+(c==='7d'?5:0);
   let best=null,bv=-1e9;const last=!d.dk.length&&d.hands.every((h,k)=>k===s||!h.length)&&H.length===1;
@@ -524,7 +524,7 @@ const c2kkKey=d=>d.gid+':'+d.r+':'+d.turn+':'+d.hands[d.turn]+d.melds.length;
 GAMES.c_konkan={name:'كونكان',cat:'cards',lbc:'#7B2D4F',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#7B2D4F"/><circle cx="50" cy="50" r="40" fill="#8E3A5E"/>${[0,1,2,3].map(k=>`<rect x="${14+k*18}" y="${30+k*3}" width="22" height="32" rx="3" fill="#fff" stroke="#5A1F39" stroke-width="1.2"/><text x="${25+k*18}" y="${51+k*3}" font-size="13" font-weight="800" text-anchor="middle" fill="${k%2?'#D43C33':'#2D4763'}">${['9','10','J','Q'][k]}</text>`).join('')}<rect x="28" y="74" width="44" height="14" rx="7" fill="#F0B429"/><text x="50" y="85" font-size="11" font-weight="900" text-anchor="middle" fill="#5A1F39">51</text></svg>`,
   init:n=>({dl:n-1,...c2kkDealCore(n),tot:Array(n).fill(0),r:1,last:'الجولة 1 من 5'}),
-  start:(d,base)=>c2kkRound({...d,dl:(base.turn+d.pl.length-1)%d.pl.length}),
+  start:d=>c2kkRound({...d,dl:((d.turn||0)+d.pl.length-1)%d.pl.length}),
   hide:{seat:['hands'],all:['dk']},net:{ui:['kk']},
   redeal:d=>d.win!=null||d.ph==='sum'?d:{...c2kkRound(d),last:`انعادت الجولة ${d.r} من جديد`},
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
