@@ -68,7 +68,7 @@ function c2Trick(d,me){const H=d.H,tk=cardsOf(d.tk);const show=tk.length?tk.map(
   return s;}
 function c2Table(d,me,o){const H=d.H;let h=`<div class="c2felt ${H>4?'many':''} ${o.cls||''}">`;
   for(let k=0;k<H;k++){const r=(k-me+H)%H,[x,y]=c2Pos(H,r),cnt=cardsOf(d.hands[k]).length;
-    h+=`<div class="c2seat ${r===0?'me':''} ${o.on===k?'on':''} ${o.mark&&o.mark(k)?'mk':''}" style="left:${(50+41*x).toFixed(1)}%;top:${(50+(r===0?43:39)*y).toFixed(1)}%;--c:${col(d,d.ctl[k])}"><span class="c2nm">${c2Name(d,k)}</span>${o.info?`<span class="c2inf">${o.info(k)}</span>`:''}${r&&cnt?`<i class="c2bk">${cnt}</i>`:''}</div>`;}
+    h+=`<div class="c2seat ${r===0?'me':''} ${o.on===k?'on':''} ${o.mark&&o.mark(k)?'mk':''}" style="left:${(50+41*x).toFixed(1)}%;top:${(50+(r===0?43:39)*y).toFixed(1)}%;--c:${col(d,d.ctl[k])}"><span class="c2nm">${c2Name(d,k)}</span><span class="c2inf">${o.info?o.info(k):''}${r&&cnt?`<i class="c2bk">${cnt}</i>`:''}</span></div>`;}
   return h+`<div class="c2mid">${o.center!=null?o.center:c2Trick(d,me)}</div></div>`;}
 // the last trick stays readable while the next one is played
 function c2Last(d,extra){if(!d.lt||!d.tk)return '';return `<div class="blast"><small>آخر لمّة</small><span class="lc">${d.lt.c.map((c,i)=>`<span class="${(d.lt.f+i)%d.H===d.lt.w?'w':''}">${c2Mini(c)}</span>`).join('')}</span><b>${c2Name(d,d.lt.w)}</b>${extra||''}</div>`;}
