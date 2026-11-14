@@ -20,7 +20,7 @@ html.lite{--e1:0 1px 0 var(--line);--e2:0 2px 0 var(--line);--e3:0 6px 0 rgba(15
 html.lite *,html.lite *::before,html.lite *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
 /* what carries a message still shows for its time, by fading only */
 html.lite .floatrx,html.lite .ytb,html.lite .dmg,html.lite .toast{animation-name:rmfade!important;animation-timing-function:linear!important}
-html.lite .floatrx{animation-duration:2.2s!important}html.lite .ytb{animation-duration:1.7s!important}html.lite .toast{animation-duration:2s!important}html.lite .dmg{animation-duration:1.3s!important;transform:translate(-50%,-20px)}
+html.lite .floatrx{animation-duration:1.8s!important}html.lite .ytb{animation-duration:1.7s!important}html.lite .toast{animation-duration:2s!important}html.lite .dmg{animation-duration:1.3s!important;transform:translate(-50%,-20px)}
 /* waiting spinners keep turning (a plain rotation of a small element) */
 html.lite .status.pend::after,html.lite .scan i{animation-duration:.9s!important;animation-iteration-count:infinite!important}
 /* the turn timer and progress bars keep sliding smoothly */
@@ -33,3 +33,5 @@ html.lite .camelp,html.lite .tank.on,html.lite .trophy svg,html.lite .gm-uxo .ub
 html.lite .mboard .mc .hs,html.lite .mboard .mc.msk .ic,html.lite .bd-sea .sc .fire,html.lite .bd-ch .chp,html.lite .chpro button .chp,html.lite .bd-ch .dmp .crw{filter:none!important}
 html.lite body::before{display:none}
 html.lite .confetti{display:none}
+/* a new screen comes in quickly (taps feel answered at once) */
+#app.scr-in>:not(.sheet-bg):not(.board):not(.rx){animation-duration:.18s}

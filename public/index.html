@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#E9F1FA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111923" media="(prefers-color-scheme: dark)">
@@ -13,6 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="css/style.css?v=1794660516">
+<!-- the games' styles and scripts load right after the first screen (core.js loadGames), in this order. A new game adds its lines inside these templates -->
+<template id="later-css">
 <link rel="stylesheet" href="css/g-boards.css?v=1794660516">
 <link rel="stylesheet" href="css/g-cards.css?v=1794660516">
 <link rel="stylesheet" href="css/g-dice.css?v=1794660516">
@@ -21,7 +23,11 @@
 <link rel="stylesheet" href="css/g-party.css?v=1794660516">
 <link rel="stylesheet" href="css/n-words2.css?v=1">
 <link rel="stylesheet" href="css/n-cards2.css?v=1">
+<link rel="stylesheet" href="css/n-boards2.css?v=1">
+<link rel="stylesheet" href="css/n-party2.css?v=1">
+<link rel="stylesheet" href="css/n-dice2.css?v=1">
 <link rel="stylesheet" href="css/n-speed2.css?v=1">
+</template>
 <link rel="stylesheet" href="css/perf.css?v=1794660516">
 </head>
 <body>
@@ -30,14 +36,16 @@
 </defs></svg>
 <div id="app"></div>
 <script src="js/capacitor.js?v=1794660516"></script>
+<script src="js/emoji.js?v=1794660516"></script>
 <script src="js/core.js?v=1794660516"></script>
 <script src="js/seal.js?v=1794660516"></script>
 <script src="js/views.js?v=1794660516"></script>
 <script src="js/net.js?v=1794660516"></script>
-<script src="js/dict.js?v=1794660516"></script>
 <script src="js/help.js?v=1794660516"></script>
 <script src="js/transport-ws.js?v=1794660516"></script>
 <script src="js/transport-near.js?v=1794660516"></script>
+<template id="later-js">
+<script src="js/dict.js?v=1794660516"></script>
 <script src="js/games/classic.js?v=1794660516"></script>
 <script src="js/games/boards.js?v=1794660516"></script>
 <script src="js/games/cards.js?v=1794660516"></script>
@@ -61,9 +69,15 @@
 <script src="js/games/n-words2b.js?v=1"></script>
 <script src="js/games/n-cards2.js?v=1"></script>
 <script src="js/games/n-cards2b.js?v=1"></script>
+<script src="js/games/n-boards2.js?v=1"></script>
+<script src="js/games/n-boards2b.js?v=1"></script>
+<script src="js/games/n-party2.js?v=1"></script>
+<script src="js/games/n-party2b.js?v=1"></script>
+<script src="js/games/n-dice2.js?v=1"></script>
 <script src="js/games/n-speed2.js?v=1"></script>
 <script src="js/games/n-speed2b.js?v=1"></script>
 <script src="js/bots.js?v=1794660516"></script>
+</template>
 <script src="js/boot.js?v=1794660516"></script>
 </body>
 </html>
