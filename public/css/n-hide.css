@@ -80,7 +80,8 @@
 
 /* «اسمع»: the 2×2 square, its result, and the 9 points to choose from */
 .hd-sq{position:absolute;width:calc(50% - 3px);height:calc(50% - 3px);display:grid;place-items:center;pointer-events:none;z-index:3;border-radius:16px}
-.hd-sq.ls{border:3px dashed rgba(255,255,255,.95)}
+.hd-sq.ls{border:3px dashed rgba(255,255,255,.95);place-items:end center}
+.hd-sq.ls>span{transform:translateY(55%)}
 .hd-sq.ls.yes{border-color:var(--hot);background:rgba(229,72,63,.10)}
 .hd-sq.ls.no{border-color:var(--cold);background:rgba(61,143,214,.08)}
 .hd-sq>span{padding:1px 9px;border-radius:99px;background:#45357A;color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap;box-shadow:0 0 0 2px #fff}
@@ -115,6 +116,7 @@
 .hd-me>span{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}
 .hd-me b{font-size:15.5px;font-weight:800}
 .hd-me small{font-size:12px;color:var(--mut);font-weight:700}
+.hd-me small.hot{color:var(--hot);font-weight:800}
 .hd-me em,.hd-sr em{font-style:normal;font-weight:900;font-size:17px;direction:ltr}
 .hd em.up{color:var(--ok)}.hd em.dn{color:var(--bad)}
 
@@ -143,7 +145,7 @@
 .hd-blind p{margin:4px 0 0;font-size:14px;opacity:.88}
 .hd-eyes{font-size:56px;line-height:1.1;animation:hdpeek .42s ease-in-out 4 alternate both}
 @keyframes hdpeek{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
-.hd-blind-map{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px;opacity:.28}
+.hd-blind-map{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:min(100%,250px);margin:14px auto 0;opacity:.28}
 .hd-blind-map i{display:block;aspect-ratio:1;padding:16%;border-radius:10px;background:rgba(255,255,255,.18)}
 .hd-blind-map svg{width:100%;height:100%}
 
