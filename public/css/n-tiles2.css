@@ -208,3 +208,61 @@ button.k2pile .k2t{box-shadow:0 0 0 3px var(--sel);border-radius:6px}
 .k2sphc .bcard.dim .card::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(18,30,48,.24)}
 .k2spto{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:6px}
 .k2spto .btn{min-height:40px;font-size:15px;padding:0 14px}
+
+/* ---------- سوليتير السباق ---------- */
+.k2klt{padding:8px 6px 10px;--cw:min(48px,calc((100vw - 64px)/7))}
+.k2kltop{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;direction:ltr;justify-items:center;margin-bottom:10px}
+.k2kls,.k2klw,.k2klf{position:relative;background:none;padding:0;display:block}
+.k2kls small{position:absolute;left:0;right:0;bottom:-15px;text-align:center;font-size:11px;font-weight:800;color:#fff}
+.k2kslot{display:grid;place-items:center;width:var(--cw);height:calc(var(--cw)*1.4);border-radius:6px;border:2px dashed rgba(255,255,255,.4);color:rgba(255,255,255,.7);font-style:normal;font-weight:800;font-size:16px;background:none;padding:0}
+.k2kslot.tgt{border-color:var(--sel);background:rgba(255,216,77,.18)}
+.k2kre{display:grid;place-items:center;width:var(--cw);height:calc(var(--cw)*1.4);border-radius:6px;border:2px solid rgba(255,255,255,.5);font-style:normal;font-size:22px;color:#fff}
+.k2klf.tgt .card,.k2klf.tgt .k2kslot{box-shadow:0 0 0 3px var(--sel)}
+.k2klf.sel .card,.k2klw .k2kc.sel .card{box-shadow:var(--ring)}
+.k2klb{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;direction:ltr}
+.k2klc{position:relative;display:flex;justify-content:center}
+.k2klc .k2kc{position:absolute;left:50%;margin-left:calc(var(--cw)/-2);background:none;padding:0;display:block}
+.k2klw .k2kc{position:static;margin:0}
+.k2kc.sel .card{box-shadow:var(--ring),0 4px 8px rgba(0,0,0,.25)}
+.k2kc.tgt .card{box-shadow:0 0 0 3px var(--sel)}
+.k2kc .card{animation:k2in var(--t2) var(--ease)}
+
+/* ---------- بشتي ---------- */
+.k2pipot{position:relative;display:flex;align-items:center;justify-content:center;min-width:120px;min-height:100px;padding-bottom:16px}
+.k2pic{display:block;margin:0 -18px;transform:rotate(calc(var(--j)*8deg));animation:k2flipin var(--t3) var(--ease)}
+.k2pipot small{position:absolute;bottom:-2px;left:0;right:0;text-align:center;font-size:12px;font-weight:700}
+.k2piw{text-align:center;margin:-4px 0 6px;animation:k2pop var(--t3) var(--spring)}
+.k2piw b{display:inline-block;background:#F0B429;color:#4A3000;border-radius:99px;padding:2px 16px;font-size:18px;box-shadow:0 3px 0 #B07E10}
+@keyframes k2pop{from{opacity:0;transform:scale(.6)}}
+.k2pit .k2tot span{background:rgba(0,0,0,.25);color:#fff}
+
+/* ---------- الأزواج الصاعدة ---------- */
+.k2rmtop{display:flex;align-items:flex-start;gap:12px;--cwb:52px}
+.k2rmd{flex:1;display:flex;flex-wrap:wrap;gap:4px 0;direction:ltr;align-items:flex-start;padding-left:8px;min-height:44px}
+.k2rmd small{opacity:.8}
+.k2rmdc{background:none;padding:0;display:block;margin-left:-8px}
+button.k2rmdc .card{box-shadow:0 0 0 2px var(--sel)}
+button.k2rmdc:active{transform:translateY(-3px)}
+.k2rmm{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px;direction:ltr}
+.k2rmml{display:inline-flex;padding:4px 6px 4px 12px;border-radius:9px;background:rgba(255,255,255,.14);box-shadow:inset 0 -3px 0 var(--c)}
+.k2rmml.lp{box-shadow:inset 0 -3px 0 var(--c),0 0 0 2px var(--sel)}
+.card.mini.k2rmj i{display:block;font-style:normal;font-size:10px;font-weight:800;color:#7A3E9D}
+.k2rm .k2acts .btn{font-size:14px}
+
+/* ---------- ورق الحظ ---------- */
+.k2pob{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px dashed rgba(255,255,255,.3)}
+.k2pon{font-size:12px;font-weight:800;padding:1px 9px;border-radius:99px;background:var(--c);color:#fff}
+.k2pop{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+.k2pos{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 6px;border-radius:10px;background:rgba(0,0,0,.16)}
+.k2pos.on{box-shadow:0 0 0 2px var(--c)}
+.k2poh{display:flex;flex-direction:column;align-items:center;gap:2px}
+.k2poh small{font-size:11px;font-weight:700;opacity:.95}
+.k2poc{display:flex;direction:ltr;--cw:34px}
+.k2poc>span{display:block;margin-left:-12px;animation:k2flipin var(--t3) var(--ease)}
+.k2poc>span:first-child{margin-left:0}
+.k2poh.bust{opacity:.5}
+.k2poh.pon small,.k2poh.five small{color:#FFE07A}
+.k2pomine{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.k2pomine .k2poc{--cw:56px}.k2pomine .k2poc>span{margin-left:-18px}
+.k2pomine .k2poh small{font-size:14px;color:var(--ink)}
+.k2pomine .k2poh.on .k2poc{outline:3px solid var(--sel);outline-offset:4px;border-radius:6px}
