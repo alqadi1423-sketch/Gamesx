@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Nearby rooms: Capacitor finds the plugin, its methods and its permission callback by reflection.
+# Release builds are not shrunk today (minifyEnabled false); these keep the plugin whole if that is ever turned on.
+-keep class com.alaabna.games.NearbyPlugin { *; }
+-keep class com.alaabna.games.MainActivity { *; }
+-keepattributes *Annotation*,InnerClasses,EnclosingMethod,Signature

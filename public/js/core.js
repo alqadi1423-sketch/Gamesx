@@ -499,22 +499,22 @@ function renderNear(){
   <button class="big red mkroom" data-a="ncreate" ${S.joining?'disabled':''}>أنشئ غرفة</button>
   <div class="panel">${pTitle('near','green','الغرف القريبة')}${L.length?`<div class="nlist">${L.map((f,i)=>`<button class="nroom" data-a="njoin" data-i="${i}" ${S.joining?'disabled':''}><b>${escH(f.host)||'غرفة'}</b><i>ادخل</i></button>`).join('')}</div>`:S.nearScan?`<p class="scan"><i></i>ندوّر على غرف قريبة…</p>`:''}</div>
   ${S.joining?'<p class="note">جاري الاتصال…</p>':''}${S.roomErr?`<p class="err">${S.roomErr}</p>`:''}
-  ${S.nearLog?`${D.length?`<pre class="nlog">${escH(D.map(x=>x.raw||x.t).join('\n'))}</pre>`:''}${NEARROOM.log.length?`<pre class="nlog">${escH(NEARROOM.log.join('\n'))}</pre>`:''}`:''}`;
+  ${NEARROOM.debug&&NEARROOM.log.length?`<details class="nlog"><summary>تفاصيل الاتصال</summary><pre>${escH(NEARROOM.log.join('\n'))}</pre></details>`:''}`;
 }
-// turns a native error into a short Arabic hint, with the raw code kept for us
-function nearErr(m){m=String(m||'');const raw=S.nearLog&&m&&m!=='perm'&&m!=='timeout'?`<small class="ltr nraw">${escH(m.slice(0,90))}</small>`:'';
+// turns a native error into a short Arabic hint (the raw code stays in NEARROOM.log, never on screen)
+function nearErr(m){m=String(m||'');
   let t='ما قدرت أشغّل الغرف القريبة.';
   if(m==='perm'||/PERMISSION/i.test(m))t='الجوال ما أعطى التطبيق صلاحية الأجهزة القريبة أو الموقع.';
   else if(m==='timeout')t='ما رد صاحب الغرفة. قرّبوا من بعض وجرّب مرة ثانية.';
   else if(/LOCATION/i.test(m))t='شغّل الموقع في الجوال.';
   else if(/BLUETOOTH|RADIO/i.test(m))t='شغّل البلوتوث وجرّب مرة ثانية.';
   else if(/API_UNAVAILABLE|SERVICE_MISSING|not implemented/i.test(m))t='هذا الجوال ما فيه خدمات Google اللي يحتاجها اللعب القريب.';
-  return t+raw;}
+  return t;}
 async function nearCheck(){
   const st=await NEARROOM.status(),D=[];
   if(st.fail)D.push({t:nearErr(st.fail)});
   else{
-    if(st.gmsOk===false)D.push({t:'هذا الجوال ما فيه خدمات Google أو تحتاج تحديث، واللعب القريب يحتاجها.'});
+    if(st.gmsOk===false)D.push({t:'هذا الجوال ما فيه خدمات Google أو تحتاج تحديث، واللعب القريب يحتاجها.',...(st.gmsFix?{a:'gms',b:'حدّث خدمات Google'}:{})});
     if(st.hasBt===false)D.push({t:'هذا الجوال ما فيه بلوتوث.'});
     else if(st.bt===false)D.push({t:'البلوتوث مقفل.',a:'bt',b:'افتح البلوتوث'});
     if(st.locNeeded&&st.loc===false)D.push({t:'الموقع مقفل، والجوال يحتاجه عشان يلقى الأجهزة القريبة.',a:'loc',b:'افتح الموقع'});
@@ -529,7 +529,7 @@ async function startNear(){
   if(S.mode!=='near')return;
   if(!r.ok){
     if(r.why==='perm')D.push({t:'وافق على صلاحية الأجهزة القريبة والموقع عشان تشوف الغرف.',a:'app',b:'افتح صلاحيات التطبيق'});
-    else{const m=r.msg||'';D.push({t:nearErr(m),...(/PERMISSION/i.test(m)?{a:'app',b:'افتح صلاحيات التطبيق'}:/LOCATION/i.test(m)?{a:'loc',b:'افتح الموقع'}:/BLUETOOTH/i.test(m)?{a:'bt',b:'افتح البلوتوث'}:{})});}
+    else{const m=r.msg||'';D.push({t:nearErr(m),...(/PERMISSION/i.test(m)?{a:'app',b:'افتح صلاحيات التطبيق'}:/LOCATION/i.test(m)?{a:'loc',b:'افتح الموقع'}:/BLUETOOTH|RADIO/i.test(m)?{a:'bt',b:'افتح البلوتوث'}:{})});}
   }
   S.nearScan=r.ok;S.nearDiag=D;render();}
 function renderLobby(){
@@ -907,7 +907,7 @@ app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.draf
   else{const G=S.st.g&&GAMES[S.st.g];if(G&&G.onDraft)G.onDraft(k,e.target.value);}});
 app.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.send'))e.preventDefault();});
 // support only: a long press on the nearby screen's title shows the connection details
-app.addEventListener('pointerdown',e=>{if(S.mode!=='near'||!e.target.closest||!e.target.closest('.top h1'))return;clearTimeout(S.lpT);S.lpT=setTimeout(()=>{S.nearLog=!S.nearLog;render();},1200);});
+app.addEventListener('pointerdown',e=>{if(S.mode!=='near'||!e.target.closest||!e.target.closest('.top h1'))return;clearTimeout(S.lpT);S.lpT=setTimeout(()=>{S.nearLog=!S.nearLog;try{NEARROOM.debug=S.nearLog;}catch(x){}render();},1200);});
 ['pointerup','pointercancel','pointerleave'].forEach(k=>app.addEventListener(k,()=>clearTimeout(S.lpT)));
 app.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code'){const b=app.querySelector('[data-a="join"]');if(b)b.click();}else if(e.target.dataset&&e.target.dataset.draft==='chat'){e.preventDefault();shellAct({dataset:{a:'send'}});}
   else if(e.target.dataset&&e.target.dataset.draft==='q'){e.preventDefault();e.target.blur();}
