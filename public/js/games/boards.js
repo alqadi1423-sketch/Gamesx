@@ -114,7 +114,9 @@ GAMES.treasure={name:'الكنز المدفون',cat:'mind',lbc:'#B07B2A',
       if(v==='.')return `<button class="cg sand ${sc}" data-ga="${rm?'r':'m'}" data-i="${i}" ${ctx.my?'':'disabled'}></button>`;
       if(v==='*')return `<div class="cg gold"><span>💰</span></div>`;
       const k=v.charCodeAt(0)-97;return `<div class="cg dug ${i===lm?'lm':''}" style="--h:${heat(k)};--c:${col(d,+d.by[i])}"><b>${k}</b><i></i></div>`;}).join('')}</div>`;
-    if(ctx.my&&d.win==null&&(d.rdr||'')[t]==='1')h+=`<div class="row mnbar"><button class="btn ${rm?'red':'navy'}" data-ga="rad">${rm?'📡 اختر وسط المربع':'📡 الرادار (مرة وحدة)'}</button><small>يقول لك هل الكنز في مربع 3×3، وبعدها تحفر</small></div>`;
+    // the radar bar keeps its place once it is used up, so the board never jumps between turns
+    const ron=ctx.my&&d.win==null&&(d.rdr||'')[t]==='1';
+    h+=`<div class="row mnbar" ${ron?'':'style="visibility:hidden" aria-hidden="true"'}><button class="btn ${rm?'red':'navy'}" ${ron?'data-ga="rad"':'disabled'}>${rm?'📡 اختر وسط المربع':'📡 الرادار (مرة وحدة)'}</button><small>يقول لك هل الكنز في مربع 3×3، وبعدها تحفر</small></div>`;
     return h;},
   click(a,i,d,ctx){
     if(a==='rad'){if(!ctx.my||(d.rdr||'')[d.turn]!=='1')return;const k=d.gid+d.o+d.turn;S.trR=S.trR===k?null:k;render();return;}

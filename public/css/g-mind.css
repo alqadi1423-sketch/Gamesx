@@ -410,7 +410,7 @@
 .gm-n99 .n9lv span.on{transform:translateY(-2px);box-shadow:inset 3px 0 0 var(--c),0 0 0 2px var(--c),var(--e1)}
 .gm-n99 .n9lv span.out{opacity:.4}
 .gm-n99 .n9lv b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
-.gm-n99 .n9lv em{font-style:normal;color:#E5483F;letter-spacing:1px}
+.gm-n99 .n9lv em{font-style:normal;color:#E5483F}
 .gm-n99 .n9lv em u{text-decoration:none;opacity:.25}
 .gm-n99 .n9two{display:flex;gap:3px}
 .gm-n99 .n9two button{border:0;font:inherit;font-size:12px;font-weight:800;padding:2px 8px;border-radius:99px;background:#7D3C98;color:#fff;box-shadow:0 2px 0 #5B2C6F;cursor:pointer}
@@ -463,3 +463,5 @@
 .gm-wires .wsafe.wbad{background:#C0392B}
 .gm-wires .wsec.wscan{background:#FFF4CC;color:#5B4A00;animation:mi-pop var(--t3) var(--spring)}
 @media (prefers-color-scheme:dark){.gm-wires .wsec.wscan{background:#4A3F12;color:#FFE9A6}}
+/* nine wires or more: two columns, so the board and its buttons fit a phone */
+.gm-wires .wset.two{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}

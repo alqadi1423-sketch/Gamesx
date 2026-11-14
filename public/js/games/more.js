@@ -58,7 +58,7 @@ GAMES.lowu={name:'أصغر رقم فريد',cat:'quiz',lbc:'#2E6F73',
   init:n=>({rd:0,max:n>4?15:10,pts:Array(n).fill(0),res:'',rounds:8,used:Array(n).fill(0).map(()=>[]),prize:LUP[rnd(LUP.length)],pot:0}),
   privOk:(d,r,o,p)=>p.pick==null||p.pick===NOPICK||Number.isInteger(p.pick)&&luFree(d,d.pl.indexOf(r)).includes(p.pick),
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
-  status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,d.rounds)} من ${d.rounds}. أصغر رقم ما اختاره غيرك ياخذ الجائزة، وكل رقم مرة وحدة باللعبة</small><br>`),
+  status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,d.rounds)} من ${d.rounds}</small><br>`),
   winExtra:d=>d.res,
   // the prize (with what a round without a winner left on it), the rounds, last round's numbers with the winner in gold,
   // and the numbers: the ones this player has used are spent
@@ -360,7 +360,7 @@ GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
     const kb=v>=0&&Array.isArray(d.kn[v])?d.kn[v].filter(i=>i<-0.5).map(i=>-i-1):[];const scan=my&&d.ps[d.turn]!=='1'&&S.wscan===d.gid+':'+d.nb+':'+d.turn;
     const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const boom=!d.cut.length&&/^💥/.test(d.last||'');
     let s=`<div class="gm gm-wires"><div class="bombx ${boom?'boom':''}" data-k="b${d.nb}"><div class="bhd">${BOMB}<div class="blcd"><b class="ltr">${String(left.length).padStart(2,'0')}</b><small>أسلاك باقية</small></div><i class="bled"></i></div>
-    <div class="wset">${[...Array(d.k).keys()].map(i=>{const c=WCOL[i][0];if(d.cut.includes(i))return `<div class="wire cut ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}"><i class="wh a"></i><i class="wh b"></i></div>`;
+    <div class="wset ${d.k>8?'two':''}">${[...Array(d.k).keys()].map(i=>{const c=WCOL[i][0];if(d.cut.includes(i))return `<div class="wire cut ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}"><i class="wh a"></i><i class="wh b"></i></div>`;
       const known=kn.includes(i),bad=kb.includes(i),tag=my?'button':'div';
       return `<${tag} class="wire ${known?'known':''} ${bad?'bad':''} ${d.win!=null&&i===d.bomb?'deadly':''} ${scan?'wscn':''}" style="--c:${c}" ${my?`data-ga="${scan?'scan':'cut'}" data-i="${i}" aria-label="${scan?'افحص':'قص'} السلك ${WCOL[i][1]}"`:''}><i class="wh"></i>${known?'<s class="wsafe">سليم ✓</s>':bad?'<s class="wsafe wbad">💣 هذا هو!</s>':''}</${tag}>`;}).join('')}</div></div>`;
     if(v>=0&&d.out[v]!=='1'&&d.win==null){const k2=kn.filter(i=>!d.cut.includes(i)),b2=kb.filter(i=>!d.cut.includes(i));

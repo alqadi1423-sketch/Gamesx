@@ -282,6 +282,8 @@ button.opt:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 va
 .qz-g .pdot{width:12px;height:12px;border-width:2px}
 .qz-me{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:-4px;font-size:14px;font-weight:700;color:var(--mut)}
 .qz-me b{min-width:2ch;font-size:22px;font-weight:900;color:var(--ink);direction:ltr;font-variant-numeric:tabular-nums}
+.qz-rev .qz-me{margin:0 auto 0 0;gap:6px;font-size:13px}.qz-rev .qz-me b{font-size:19px}
+.qz-cat{padding:3px}
 .qz-cap{color:var(--qc,#7A3E9D)}
 .qz-eq{direction:ltr;unicode-bidi:isolate;display:inline-block}
 .qz-eq b{color:var(--qc,#3B6E2F)}

@@ -307,11 +307,12 @@ button.pv.can:active{transform:scale(.94)}
 /* tools: colours, brush sizes, undo / clear / skip */
 .pdraw .ptools{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;margin:0}
 .pdraw .pcols{width:auto;max-width:100%;padding:5px 8px;border-radius:99px;background:var(--surface);box-shadow:var(--e1)}
-.pdraw .tcol{width:28px;height:28px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22);transition:transform var(--t2) var(--spring),box-shadow var(--t2)}
+.pdraw .tcol{width:32px;height:32px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22);transition:transform var(--t2) var(--spring),box-shadow var(--t2)}
 .pdraw .tcol.on{transform:translateY(-2px) scale(1.12);box-shadow:inset 0 -3px 0 rgba(0,0,0,.22),0 0 0 3px var(--surface),0 0 0 5.5px var(--sel)}
 .pdraw .tcol:active{transform:scale(.9)}
 .pdraw .tcol[style*="#FFFFFF"]{box-shadow:inset 0 0 0 1.5px var(--edge),inset 0 -3px 0 rgba(0,0,0,.12)}
 .pdraw .tcol.er{display:grid;place-items:center;background:var(--surface-2);font-size:15px}
+.pdraw .sm[data-ga]{min-height:36px}.pdraw .ppeek{min-height:36px}
 .pdraw .psz{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--surface);box-shadow:0 2px 0 var(--edge);transition:transform var(--t1) var(--ease)}
 .pdraw .psz i{display:block;border-radius:50%;background:var(--ink)}
 .pdraw .psz.on{box-shadow:var(--ring)}

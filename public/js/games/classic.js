@@ -184,7 +184,7 @@ GAMES.cw={name:'حرب الألوان',cat:'board',lbc:'#4B3A62',
   // vr 1 (chain reaction): one dot at a time on an empty cell or your own, and a cell bursts when its dots reach its neighbours
   // (two in a corner, three on an edge, four inside), so corners are quick and the middle is slow
   init:n=>{const Z=CWS[n]||8;return {Z,o:'.'.repeat(Z*Z),n:'0'.repeat(Z*Z),mv:Array(n).fill(0),vr:CWV};},
-  status(d,ctx){return turnTxt(d,ctx)+(d.vr&&d.win==null?'<br><small>نقطة وحدة بكل دور، والخانة تنفجر لما تساوي نقاطها عدد جيرانها</small>':'');},
+  status(d,ctx){return turnTxt(d,ctx)+(d.vr&&d.win==null?'<br><small>نقطة بكل دور • الخانة تنفجر لما تمتلي</small>':'');},
   render(d,ctx){
     const t=String(d.turn),first=d.mv[d.turn]===0,Z=d.Z,ex=new Set(d.ex||[]),fresh=!ctx.bot&&d.mv.every(m=>!m)&&d.win==null;
     // the dots a cell sends to its neighbours when it bursts (the first few bursts only, so a long chain stays light)

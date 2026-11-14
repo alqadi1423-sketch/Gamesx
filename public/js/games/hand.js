@@ -109,8 +109,8 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
     return {...nd,hands,disc,ph:'draw',took:null,tc:0,lo:false,op0:null,last:`${nm(d,t)} طلع`};},
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
     if(d.ph==='sum')return s+`انتهت الجولة ${d.r}`;
-    s+=`${who}: ${d.ph==='draw'?'اسحب من الكومة أو خذ ورقة الأرض':d.took?'نزّل ورقة الأرض بمجموعة، وبعدها ارمِ ورقة':'نزّل أو أضف، وبعدها ارمِ ورقة'}`;
-    s+=`<br><small>${String(d.last||'').startsWith(`الجولة ${d.r} `)?'':`الجولة ${d.r} من 5 • `}أول نزول لازم ${d.req} أو أكثر</small>`;return s;},
+    s+=`${who}: ${d.ph==='draw'?'اسحب أو خذ ورقة الأرض':d.took?'نزّل ورقة الأرض بمجموعة ثم ارمِ':'نزّل أو أضف، ثم ارمِ ورقة'}`;
+    s+=`<br><small>${String(d.last||'').startsWith(`الجولة ${d.r} `)?'':`الجولة ${d.r} من 5`}${(d.op||'')[d.turn]==='1'?'':` • أول نزول ${d.req}+`}</small>`;return s;},
   render(d,ctx){
     const v=ctx.local?d.turn:ctx.v,my=ctx.my;const k=d.gid+':'+d.r+':'+d.turn+':'+d.hands[d.turn]+d.melds.length;
     if(!S.hd||S.hd.k!==k)S.hd={k,sel:[],pend:[]};const U=S.hd;
@@ -139,7 +139,7 @@ GAMES.hand={name:'هند',cat:'cards',lbc:'#5A2D82',
     const act2=my&&show===d.turn&&d.ph==='play';
     // each card keeps its node (id, the second copy of a card gets 2), so only a card just drawn or taken flies in
     const ids=handIds(all,'hc'+show+'-');
-    h+=`<p class="lbl" style="text-align:center">ورقك ${d.op[show]==='1'?'<small>(نزّلت)</small>':''}</p><div class="hand hhand">${idx.map(i=>`<button class="hc ${U.sel.includes(i)?'sel':''} ${d.took&&all[i]===d.took&&show===d.turn?'took':''}" id="${ids[i]}" ${act2?`data-ga="sel" data-i="${i}"`:'disabled'}>${hCard(all[i])}</button>`).join('')}</div>`;
+    h+=`<p class="lbl" style="text-align:center">ورقك ${d.op[show]==='1'?'<small>(نزّلت)</small>':''}</p><div class="hand hhand ${idx.length>9?'r2':''}" ${idx.length>9?`style="--cols:${Math.ceil(idx.length/2)};--cw:${Math.min(50,Math.floor(336/Math.ceil(idx.length/2))-3)}px"`:''}>${idx.map(i=>`<button class="hc ${U.sel.includes(i)?'sel':''} ${d.took&&all[i]===d.took&&show===d.turn?'took':''}" id="${ids[i]}" ${act2?`data-ga="sel" data-i="${i}"`:'disabled'}>${hCard(all[i])}</button>`).join('')}</div>`;
     if(act2){const sel=U.sel.map(i=>all[i]);const m=sel.length>=3?hMeld(sel):null;
       h+=`<div class="row hact"><button class="btn green" data-ga="meld" ${m?'':'disabled'}>نزّل${m?` (${hValue(m)})`:''}</button><button class="btn red" data-ga="disc" ${sel.length===1&&!U.pend.length?'':'disabled'}>ارمِ</button>${d.took&&d.tc===0&&!U.pend.length?'<button class="btn" data-ga="back">رجّع ورقة الأرض</button>':''}</div>`;}
     return h;},

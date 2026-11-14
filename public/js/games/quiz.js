@@ -42,7 +42,7 @@ function rpsLast(d){if(!d.res)return null;const es=d.res.split('، ');const out=
 function rpsDuel(d){const L=rpsLast(d);if(!L)return '';const mx=Math.max(...L.map(x=>x.got));const two=L.length===2;const pg=d.pg;
   const hand=(x,j)=>`<div class="rps-p ${mx>0?(x.got===mx?'w':'l'):'t'}" style="--c:${col(d,x.s)};--j:${j}"><span class="rps-h k${x.k} ${two&&j===1?'mir':''} ${x.k===pg?'gold':''}">${RPS[x.k]}</span><b>${escH(nm(d,x.s))}</b>${x.got?`<em>+${x.got}</em>`:''}</div>`;
   return `<div class="rps-duel ${two?'two':''}" id="rpd${d.rd}"><div class="rps-hd">${d.win!=null?'الجولة الأخيرة':`الجولة ${d.rd}`}${mx>0?'':'<span>تعادل</span>'}</div>
-    <div class="rps-row">${two?hand(L[0],0)+'<i class="rps-vs">VS</i>'+hand(L[1],1):L.map(hand).join('')}</div></div>`;}
+    <div class="rps-row">${two?hand(L[0],0)+'<i class="rps-vs">ضد</i>'+hand(L[1],1):L.map(hand).join('')}</div></div>`;}
 // the last hands of every other player, newest first, so a player can read their habits
 function rpsHist(d,v){const hs=d.hs||[];const rows=seatsOf(d).filter(s=>s!==v&&d.out[s]!=='1'&&(hs[s]||'').replace(/-/g,'').length);if(!rows.length)return '';
   return `<div class="rps-hist">${rows.map(s=>`<span class="rps-hr" style="--c:${col(d,s)}">${pDot(d,s,'on')}${[...hs[s].slice(-5)].reverse().map((c,j)=>`<i class="${j?'':'nw'}">${c==='-'?'·':RPS[+c]}</i>`).join('')}</span>`).join('')}</div>`;}
@@ -91,17 +91,17 @@ const QTN=['','سهل','متوسط','صعب'],QTP=['','نقطة','نقطتين',
 const pA=p=>Number.isInteger(p)&&p>=0?p%10:null,pX=p=>Number.isInteger(p)&&p>=10;
 // the question card: game chip, "question n of 10" with a progress strip, the question, and who has answered
 function qzCard(d,ctx,Q,rd,last,deep){const G=GAMES[S.st.g]||{};const t=deep?Q.t||qTier(rd):0;
-  return `<div class="qz-card ${t?'t'+t:''}" id="qzc${rd}${last?'f':''}"><div class="qz-hd"><span class="qz-cat"><i class="qz-ic">${G.icon||''}</i><span>${G.name||''}</span></span>${t?`<span class="qz-lv l${t}">${QTN[t]} • ${QTP[t]}</span>`:''}<span class="qz-n">${last?'السؤال الأخير':`سؤال <b>${rd+1}</b> من ${ROUNDS}`}</span></div>
+  return `<div class="qz-card ${t?'t'+t:''}" id="qzc${rd}${last?'f':''}"><div class="qz-hd"><span class="qz-cat"><i class="qz-ic">${G.icon||''}</i></span>${t?`<span class="qz-lv l${t}">${QTN[t]} • ${QTP[t]}</span>`:''}<span class="qz-n">${last?'السؤال الأخير':`سؤال <b>${rd+1}</b> من ${ROUNDS}`}</span></div>
     <div class="qz-prog">${Array.from({length:ROUNDS},(_,k)=>`<i class="${k<rd||last?'done':k===rd?'cur':''} ${deep?'l'+qTier(k):''}"></i>`).join('')}</div>
     <div class="qbox qz-q">${Q.q}</div>${last?'':qzWho(d,ctx)}</div>`;}
 const qzSgn=g=>g>0?'+'+g:g<0?'−'+(-g):'0';
 // the answer of the round before: the right option, this player's own wrong one, and who got it (with the deeper quiz: what each one earned)
-function qzRev(d,ctx,gen,deep){const rd=d.rd-1;if(rd<0)return '';const P=gen(d,rd);const ok=deep&&d.gain?seatsOf(d).filter(s=>d.gain[s]>0):resOk(d);const v=ctx.v;
+function qzRev(d,ctx,gen,deep,tail){const rd=d.rd-1;if(rd<0)return '';const P=gen(d,rd);const ok=deep&&d.gain?seatsOf(d).filter(s=>d.gain[s]>0):resOk(d);const v=ctx.v;
   const mp=pA(v!=null&&v>=0?seatPick(d,ctx,v,rd):null);const me=mp==null?'':mp===P.a?'ok':'no';
   const gn=deep&&d.gain?seatsOf(d).filter(s=>d.gain[s]).sort((a,b)=>d.gain[b]-d.gain[a]).map(s=>`<span class="qz-g ${d.gain[s]>0?'up':'dn'}" style="--c:${col(d,s)}">${pDot(d,s,'on')}<b dir="ltr">${qzSgn(d.gain[s])}</b>${d.dx&&d.dx[s]==='1'?'<i>×2</i>':''}</span>`).join(''):'';
   return `<div class="qz-rev ${me}" id="qzr${d.rd}"><span class="qz-rl">${me==='ok'?'صح! ':me==='no'?'للأسف، ':''}جواب السؤال ${rd+1}</span>
     <span class="qz-chip ok"><i class="ol">${QL[P.a]}</i><span>${chipT(P.o[P.a])}</span><b>✓</b></span>${me==='no'?`<span class="qz-chip no"><i class="ol">${QL[mp]||''}</i><span>${chipT(P.o[mp])}</span><b>✗</b></span>`:''}
-    ${deep?`<span class="qz-gns">${gn||'<small>محد جابها</small>'}</span>`:`<span class="qz-okp">${ok.length?ok.map(s=>pDot(d,s,'on')).join(''):'<small>محد جابها</small>'}</span>`}</div>`;}
+    ${deep?`<span class="qz-gns">${gn||'<small>محد جابها</small>'}</span>`:`<span class="qz-okp">${ok.length?ok.map(s=>pDot(d,s,'on')).join(''):'<small>محد جابها</small>'}</span>`}${tail||''}</div>`;}
 // the moment the answer lands: a big ✓ or ✗ with what this player earned. It shows for 1.4 s (a redraw then takes it away,
 // so it also shows in light motion), with a sound when one player holds the phone
 function qzFx(d,ctx,rd,P,keep){const v=ctx.v;if(v==null||v<0)return '';const mp=pA(seatPick(d,ctx,v,rd));if(mp==null)return '';const ok=mp===P.a;
@@ -145,7 +145,7 @@ function makeQuiz(o){const deep=!!o.deep;return {name:o.name,cat:'quiz',lbc:o.lb
       if(fire||xb)bar=`<div class="qz-bar">${fire}${xb}</div>`;}
     if(me&&rd>0)setTimeout(qzCount,0);
     const tot=deep&&me&&rd>0?`<div class="qz-me"><span>نقاطك</span><b class="qz-tot" id="qzt${d.gid}${rd}" data-from="${d.pts[v]-(d.gain?d.gain[v]:0)}" data-to="${d.pts[v]}">${d.pts[v]}</b></div>`:'';
-    return `<div class="qz ${mp!=null?'picked':''}" ${sty}>${rd>0?qzFx(d,ctx,rd-1,o.gen(d,rd-1)):''}${qzRev(d,ctx,o.gen,deep)}${tot}${qzCard(d,ctx,Q,rd,false,deep)}${bar}<div class="${cls}" id="qzo${rd}">${Q.o.map((t,k)=>qzOpt(t,k,mp===k?'sel':'',!ctx.my,mp===k&&pX(raw)?'<em class="qz-xm">×2</em>':'')).join('')}</div></div>`;},
+    return `<div class="qz ${mp!=null?'picked':''}" ${sty}>${rd>0?qzFx(d,ctx,rd-1,o.gen(d,rd-1)):''}${qzRev(d,ctx,o.gen,deep,tot)}${qzCard(d,ctx,Q,rd,false,deep)}${bar}<div class="${cls}" id="qzo${rd}">${Q.o.map((t,k)=>qzOpt(t,k,mp===k?'sel':'',!ctx.my,mp===k&&pX(raw)?'<em class="qz-xm">×2</em>':'')).join('')}</div></div>`;},
   click(a,k,d,ctx){if(!ctx.my)return;
     if(a==='x2'){if(!deep||!d.x2||!(d.x2[ctx.v]>0))return;const key=d.gid+':'+d.rd+':'+ctx.v;S.qx=S.qx===key?null:key;render();return;}
     if(a!=='m'||!Number.isInteger(k))return;const dbl=deep&&S.qx===d.gid+':'+d.rd+':'+ctx.v&&d.x2&&d.x2[ctx.v]>0;S.qx=null;simulPick(d,ctx.v,k+(dbl?10:0));},

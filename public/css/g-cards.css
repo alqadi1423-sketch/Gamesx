@@ -225,6 +225,9 @@ button.ustack:active{transform:translate(2px,2px)}
 .hhand .hc.took .card.card.card{box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),0 0 0 2.5px var(--gold),0 3px 8px rgba(14,28,46,.2)}
 .hhand .hc.took.sel .card.card.card{box-shadow:var(--ring),0 8px 14px rgba(14,28,46,.24)}
 .hhand button.hc:active .card.card.card{transform:translateY(-4px) scale(.96)}
+/* a long hand (10+ cards) lies in two rows of whole cards, so every card is a full-size target */
+.hhand.hhand.r2{display:grid;grid-template-columns:repeat(var(--cols),var(--cw));justify-content:center;gap:12px 3px;padding-top:16px}
+.hhand.hhand.r2>.hc+.hc{margin-left:0}
 .hact{margin-top:6px}
 
 /* =====================================================================
@@ -258,7 +261,7 @@ button.ustack:active{transform:translate(2px,2px)}
 .bjchip{width:74px;height:74px;margin:6px auto 4px;border-radius:50%;display:grid;place-items:center;animation:cd-pop var(--t2) var(--spring);
   background:repeating-conic-gradient(#fff 0 15deg,#EC6158 15deg 45deg) ;box-shadow:0 3px 0 #a83a33,0 5px 0 #fff,0 7px 0 #a83a33,0 10px 10px rgba(0,0,0,.35)}
 .bjchip span{width:52px;height:52px;border-radius:50%;background:#EC6158;color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85),inset 0 0 0 4px #EC6158,inset 0 0 0 5px rgba(255,255,255,.5)}
-.bjbet .mbid .sm{background:rgba(255,255,255,.92);color:var(--navy);box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.bjbet .mbid .sm{min-height:40px;min-width:54px;background:rgba(255,255,255,.92);color:var(--navy);box-shadow:0 3px 0 rgba(0,0,0,.25)}
 .bjbet .mbid .sm:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
 .bjbet .mbid b{display:none}
 .bjbet .mbid{gap:8px}
