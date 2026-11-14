@@ -395,7 +395,8 @@ function statusBox(html){
 /* the match ends on the round that leaves one player alone at the top with the target or more (a tie at the top plays on).
    The winner is kept in that round's state (d.mw), so every device shows it on that result only, and the next round starts a new match */
 // with teams the players of the winning team share the lead, so a lead held only by them ends the match too
-function matchEnd(nd,sc){const t=cfg().target;if(!t)return nd;const mx=Math.max(...sc),top=sc.map((x,r)=>x===mx?r:-1).filter(r=>r>=0);
+// a game that moves session points itself (d.dsc, tens of points a round) is not ended by a target counted in wins
+function matchEnd(nd,sc){const t=cfg().target;if(!t||Array.isArray(nd.dsc))return nd;const mx=Math.max(...sc),top=sc.map((x,r)=>x===mx?r:-1).filter(r=>r>=0);
   const team=!!nd.tm&&Array.isArray(nd.wins)&&top.every(r=>nd.wins.includes(nd.pl.indexOf(r)));return mx>=t&&(top.length===1||team)?{...nd,mw:top[0]}:nd;}
 const matchOver=()=>{const d=S.st.d;return !!(d&&d.win!=null&&d.mw!=null);};
 const matchSc=()=>S.st.d&&S.st.d.mw!=null?Array(MAXP).fill(0):S.st.sc;
