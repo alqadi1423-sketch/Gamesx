@@ -6,7 +6,11 @@
 const w2RKey=(d,v)=>d.gid+':'+d.rd+':'+v;
 function w2RSt(d,v){const k=w2RKey(d,v);if(!S.w2r||S.w2r.key!==k)S.w2r={key:k,ph:'ready'};return S.w2r;}
 // hand in this phone's result once (the clock, «خلصت» or a solved puzzle)
-function w2RSend(d,v,pick){const st=w2RSt(d,v);if(st.ph==='sent')return;clearTimeout(st.tm);st.ph='sent';const cur=S.st.d;if(!cur||cur.gid!==d.gid||cur.rd!==d.rd)return;simulPick(cur,v,pick);}
+function w2RSend(d,v,pick){const st=w2RSt(d,v);if(st.ph==='sent')return;clearTimeout(st.tm);st.ph='sent';st.pick=pick;const cur=S.st.d;if(!cur||cur.gid!==d.gid||cur.rd!==d.rd)return;simulPick(cur,v,pick);}
+// a result handed in that never reached the round (the screen still waits for it) is handed in again
+function w2RAgain(d,ctx,st){if(st.ph==='sent'&&ctx.my&&!hasPicked(d,ctx.v)&&st.pick!==undefined)setTimeout(()=>{const cur=S.st.d;if(S.w2r===st&&cur&&cur.gid===d.gid&&cur.rd===d.rd&&!hasPicked(cur,ctx.v))simulPick(cur,ctx.v,st.pick);},0);}
+// the race's taps all stay on the phone (online too); the phone's race state travels with the tap tests' snapshots
+const W2RNET={local:['start','quit','t','clr','ok','kk','kdel','mix','pos','undo','c','cl','hint','bk','keep','go'],ui:['w2r']};
 function w2Race(o){const R=o.rounds;
   const G={name:o.name,cat:'words',lbc:o.lbc,icon:o.icon,
     init:n=>({rd:0,pts:Array(n).fill(0),res:'',...(o.init?o.init(n):{})}),
@@ -19,7 +23,7 @@ function w2Race(o){const R=o.rounds;
       if(!ctx.my)return `<div class="w2 w2race">${ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="w2sent"><b>✓</b>أرسلت، ننتظر الباقين</div>':''}${qzWho(d,ctx)}${last}</div>`;
       const st=w2RSt(d,ctx.v);
       if(st.ph==='ready')return `<div class="w2 w2race"><div class="w2ready"><div class="w2ri">${o.icon}</div><b>${o.title}</b><span class="w2rd">جولة ${d.rd+1} من ${R} • ${Math.round(o.T(d)/1000)} ثانية</span><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>${last}</div>`;
-      if(st.ph==='go'&&Date.now()>st.t0+o.T(d)+300){setTimeout(()=>{if(S.w2r===st&&st.ph==='go')w2RSend(d,ctx.v,o.timeUp(d,st));},0);}
+      w2RAgain(d,ctx,st);if(st.ph==='go'&&Date.now()>st.t0+o.T(d)+300){setTimeout(()=>{if(S.w2r===st&&st.ph==='go')w2RSend(d,ctx.v,o.timeUp(d,st));},0);}
       return `<div class="w2 w2race">${w2Clock(st.t0+o.T(d),o.T(d),'var(--ok)')}${o.view(d,ctx,st)}</div>`;},
     click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const st=w2RSt(d,ctx.v);
       if(a==='start'){if(st.ph!=='ready')return;st.ph='go';st.t0=Date.now();o.begin(d,st);const v=ctx.v;st.tm=setTimeout(()=>{if(S.w2r===st&&st.ph==='go'){w2RSend(d,v,o.timeUp(d,st));render();}},o.T(d)+50);render();return;}
@@ -27,7 +31,7 @@ function w2Race(o){const R=o.rounds;
       if(a==='quit'){w2RSend(d,ctx.v,o.timeUp(d,st));render();return;}
       o.click(a,i,d,ctx,st);},
     resolve(d,picks){const nd=o.resolve(d,picks);const rd=d.rd+1;return {...nd,rd,win:rd>=R?mostPts(nd.pts):null};},
-    botPick:o.botPick,net:o.net};
+    botPick:o.botPick,net:W2RNET,redeal:d=>d};
   return G;}
 // what every seat earned this round, one row each, best first
 function w2RaceRows(d,rows){return `<div class="w2rows">${rows.sort((a,b)=>b.g-a.g).map(r=>`<div class="w2row" style="--c:${col(d,r.s)}"><i></i><b>${escH(nm(d,r.s))}</b><span>${r.t}</span><em>${r.g>0?'+'+r.g:'0'}</em></div>`).join('')}</div>`;}
@@ -63,7 +67,7 @@ GAMES.w_grid=w2Race({name:'شبكة الحروف',lbc:'#B8742A',rounds:3,T:()=>9
     const nb=last==null?null:new Set(w2Nb(last,W2GZ));
     return `<div class="w2gw">${w2TypedBox(w,'المس الحروف بالترتيب')}</div><div class="w2grid" style="--z:${W2GZ}">${G.g.map((c,i)=>{const k=p.indexOf(i);return `<button class="w2gt ${k>=0?'on':''} ${i===last?'last':''} ${nb&&nb.has(i)&&k<0?'nb':''}" data-ga="t" data-i="${i}">${c}${k>=0?`<small>${k+1}</small>`:''}</button>`;}).join('')}</div>
       <div class="w2acts"><button class="btn soft" data-ga="clr" ${p.length?'':'disabled'}>مسح</button><button class="btn" data-ga="ok" ${p.length>=3?'':'disabled'}>أرسل الكلمة</button></div>
-      <div class="w2found"><b>${st.found.length}</b> ${st.found.length>10||!st.found.length?'كلمة':'كلمات'}${st.found.map(x=>`<span>${escH(x)}</span>`).join('')}</div><button class="btn soft w2quit" data-ga="quit">خلصت</button>`;},
+      <div class="w2found"><b>${st.found.length}</b> ${st.found.length>10||!st.found.length?'كلمة':'كلمات'}${st.found.map(x=>`<span>${escH(w2LDisp(x))}</span>`).join('')}</div><button class="btn soft w2quit" data-ga="quit">خلصت</button>`;},
   click(a,i,d,ctx,st){const G=w2Grid(d,d.rd);const p=st.path;
     if(a==='clr'){st.path=[];render();return;}
     if(a==='t'){if(!(i>=0&&i<G.g.length))return;const k=p.indexOf(i);
@@ -78,8 +82,8 @@ GAMES.w_grid=w2Race({name:'شبكة الحروف',lbc:'#B8742A',rounds:3,T:()=>9
     const miss=G.ws.filter(w=>!cnt[w]).slice(0,6).join(' ');
     return {...d,pts,lw,miss,res:d.pl.map((r,s)=>`${nm(d,s)} +${lw[s]?lw[s].split(' ').reduce((a,x)=>a+(+x.split(':')[1]||0),0):0}`).join('، ')};},
   summary(d){const lw=d.lw||[];const rows=d.pl.map((r,s)=>{const l=(lw[s]||'').split(' ').filter(Boolean).map(x=>x.split(':'));const g=l.reduce((a,x)=>a+(+x[1]||0),0);
-      return {s,g,t:l.length?l.slice(0,8).map(([w,x])=>`<i class="${+x===1&&w2WPts(w)>1?'sh':''}">${escH(w)}</i>`).join('')+(l.length>8?`<i>+${l.length-8}</i>`:''):'<i>—</i>'};});
-    return `<div class="w2sum"><div class="w2sh">الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${w2RaceRows(d,rows)}${d.miss?`<p class="w2miss">كلمات فاتتكم: ${d.miss.split(' ').map(w=>`<b>${escH(w)}</b>`).join(' ')}</p>`:''}</div>`;},
+      return {s,g,t:l.length?l.slice(0,8).map(([w,x])=>`<i class="${+x===1&&w2WPts(w)>1?'sh':''}">${escH(w2LDisp(w))}</i>`).join('')+(l.length>8?`<i>+${l.length-8}</i>`:''):'<i>—</i>'};});
+    return `<div class="w2sum"><div class="w2sh">الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${w2RaceRows(d,rows)}${d.miss?`<p class="w2miss">كلمات فاتتكم: ${d.miss.split(' ').map(w=>`<b>${escH(w2LDisp(w))}</b>`).join(' ')}</p>`:''}</div>`;},
   // a bot finds a share of the grid's words: easy mostly short ones
   botPick(d,s,lv){const ws=w2Grid(d,d.rd).ws;const frac=[0,.18,.35,.6][lv]+Math.random()*.12,cap=[0,9,16,28][lv];const pool=lv===1?ws.filter(w=>w.length<=4):ws;
     return {w:w2Shuf(pool).slice(0,Math.max(1,Math.min(cap,Math.round(pool.length*frac))))};}
@@ -106,7 +110,7 @@ GAMES.w_hive=w2Race({name:'خلية الحروف',lbc:'#C9921B',rounds:2,T:()=>1
     const score=st.found.reduce((a,w)=>a+w2HvPts(w,H),0);
     return `${w2TypedBox(st.cur||'',`كل كلمة فيها «${H.c}»`)}<div class="w2kb w2hive" data-ok="ok">${cell(H.c,0,0,1)}${ord.map((c,k)=>cell(c,pos[k][0],pos[k][1])).join('')}</div>
       <div class="w2acts"><button class="btn soft" data-ga="kdel" aria-label="امسح">⌫</button><button class="btn soft" data-ga="mix" aria-label="لخبط">🔀</button><button class="btn" data-ga="ok" ${w2Len(st.cur||'')>=3?'':'disabled'}>أرسل</button></div>
-      <div class="w2found"><b>${score}</b> نقطة • ${st.found.length} من ${H.ws.length}${st.found.map(x=>`<span>${escH(x)}</span>`).join('')}</div><button class="btn soft w2quit" data-ga="quit">خلصت</button>`;},
+      <div class="w2found"><b>${score}</b> نقطة • ${st.found.length} من ${H.ws.length}${st.found.map(x=>`<span>${escH(w2LDisp(x))}</span>`).join('')}</div><button class="btn soft w2quit" data-ga="quit">خلصت</button>`;},
   click(a,i,d,ctx,st){const H=w2Hive(d,d.rd);const all=[H.c,...H.ls];
     if(a==='kk'){const c=W2KA[i];if(!c||!all.includes(c==='ى'?'ي':c))return;if(w2Len(st.cur)<12)st.cur+=c;render();return;}
     if(a==='kdel'){st.cur=[...st.cur].slice(0,-1).join('');render();return;}
@@ -124,8 +128,8 @@ GAMES.w_hive=w2Race({name:'خلية الحروف',lbc:'#C9921B',rounds:2,T:()=>1
     return {w:w2Shuf(pool).slice(0,Math.max(1,Math.min(cap,Math.round(pool.length*frac))))};}
 });
 const w2GridSum=d=>{const lw=d.lw||[];const rows=d.pl.map((r,s)=>{const l=(lw[s]||'').split(' ').filter(Boolean).map(x=>x.split(':'));const g=l.reduce((a,x)=>a+(+x[1]||0),0);
-    return {s,g,t:l.length?l.slice(0,8).map(([w,x])=>`<i>${escH(w)}</i>`).join('')+(l.length>8?`<i>+${l.length-8}</i>`:''):'<i>—</i>'};});
-  return `<div class="w2sum"><div class="w2sh">الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${w2RaceRows(d,rows)}${d.miss?`<p class="w2miss">كلمات فاتتكم: ${d.miss.split(' ').map(w=>`<b>${escH(w)}</b>`).join(' ')}</p>`:''}</div>`;};
+    return {s,g,t:l.length?l.slice(0,8).map(([w,x])=>`<i>${escH(w2LDisp(w))}</i>`).join('')+(l.length>8?`<i>+${l.length-8}</i>`:''):'<i>—</i>'};});
+  return `<div class="w2sum"><div class="w2sh">الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${w2RaceRows(d,rows)}${d.miss?`<p class="w2miss">كلمات فاتتكم: ${d.miss.split(' ').map(w=>`<b>${escH(w2LDisp(w))}</b>`).join(' ')}</p>`:''}</div>`;};
 HELP.w_hive='سبعة حروف، واحد منها بالنص. اضغط «ابدأ» وعندك دقيقتين تكوّن فيها أكبر عدد من الكلمات (3 حروف أو أكثر) من هالحروف بس، وتقدر تكرر الحرف، بس كل كلمة لازم فيها حرف النص. الكلمة من 3 حروف بنقطة، 4 بنقطتين، 5 بثلاث، والأطول بعدد حروفها، واللي تجمع الحروف السبعة كلها لها 5 زيادة. الكلمة اللي لقاها غيرك بعد تنحسب بنقطة وحدة. جولتين والأكثر نقاط يفوز.';
 
 /* ---------- سلّم الكلمات: from one three-letter word to another, one letter at a time ---------- */
@@ -453,7 +457,7 @@ GAMES.w_cross=w2Race({name:'كلمات متقاطعة',lbc:'#2D5B8C',rounds:2,T:
     const grid=`<div class="w2xg" style="--w:${X.W};--h:${X.H}">${X.g.map((c,i)=>{if(!c)return '<i class="w2xb"></i>';const n=X.starts.indexOf(i)+1;const f=st.f[i];
       return `<button class="w2xc ${i===st.sel?'sel':''} ${on.has(i)?'on':''} ${f&&f===c&&st.chk?'ok':''}" data-ga="c" data-i="${i}">${n&&X.words.some(w=>w.cs[0]===i)?`<small>${n}</small>`:''}${f?escH(f):''}</button>`;}).join('')}</div>`;
     const list=dn=>X.words.filter(w=>w.dn===dn).map(w=>`<button class="w2xl ${cw===w?'on':''} ${w.cs.every(i=>st.f[i]===X.g[i])?'done':''}" data-ga="cl" data-i="${X.words.indexOf(w)}"><b>${w.n}</b>${escH(w.clue)}<small>(${w.cs.length})</small></button>`).join('');
-    return `<div class="w2xclue">${cw?`<b>${cw.n} ${cw.dn?'عمودي':'أفقي'}</b> ${escH(cw.clue)}`:''}</div>${grid}${w2Kb({ga:'kk',ok:'hint',okTxt:'اكشف حرف',noEnter:true,dis:c=>'ءئؤى'.includes(c)})}
+    return `<div class="w2xclue">${cw?`<b>${cw.n} ${cw.dn?'عمودي':'أفقي'}</b> ${escH(cw.clue)}`:''}</div>${grid}${w2Kb({ga:'kk',ok:'hint',okTxt:'اكشف حرف (+10 ث)',okCls:'soft',noEnter:true,dis:c=>'ءئؤى'.includes(c)})}
       <div class="w2xls"><div><h4>أفقي</h4>${list(0)}</div><div><h4>عمودي</h4>${list(1)}</div></div><p class="note">كشف الحرف يزيد وقتك 10 ثواني${st.pen?` (كشفت ${st.pen})`:''}</p><button class="btn soft w2quit" data-ga="quit">استسلم</button>`;},
   click(a,i,d,ctx,st){const X=w2Xw(w2XId(d,d.rd));
     const step=k=>{const w=w2XWord(X,st.sel,st.dn);if(!w)return;const j=w.cs.indexOf(st.sel)+k;if(j>=0&&j<w.cs.length)st.sel=w.cs[j];};
@@ -669,8 +673,10 @@ GAMES.w_poem={name:'المساجلة',cat:'words',lbc:'#6B4226',
   bot(d,s,lv){const V=w2Pv();const h=d.h[s];const ok=h.map((id,i)=>[id,i]).filter(([id])=>w2PoOk(d,id));
     if(!ok.length)return botDo(d,s,!d.drew&&d.dk.length?'dr':'ps',0);
     if(lvRand(lv)||lv===1&&Math.random()<.5)return w2PoPlay(d,s,pickR(ok)[1]);
-    const seen=new Set([...h,...d.tb]);const left=c=>V.filter((x,id)=>!seen.has(id)&&x.s===c).length;
-    const sc=ok.map(([id,i])=>{const c=w2PoNeed(id);const mine=h.filter(x=>x!==id&&V[x].s===c).length;return [i,(c?left(c):30)-mine*(lv===3?2:0)+Math.random()*(lv===3?.5:3)];});
+    // a free turn dumps the verse that is hardest to place later (few verses end on its first letter); any turn leaves the next
+    // player a letter that few unseen verses start with, so they draw and the turn comes back open
+    const seen=new Set([...h,...d.tb]);const left=c=>V.filter((x,id)=>!seen.has(id)&&x.s===c).length;const demand=c=>V.filter((x,id)=>w2PoNeed(id)===c).length;
+    const sc=ok.map(([id,i])=>{const c=w2PoNeed(id);const trap=c?left(c):30;return [i,(d.need?0:demand(V[id].s)*(lv===3?3:1))+trap+Math.random()*(lv===3?.5:4)];});
     sc.sort((a,b)=>a[1]-b[1]);return w2PoPlay(d,s,sc[0][0]);}
 };
 HELP.w_poem='كل لاعب ينعطى أبيات شعر حقيقية (فصيح ونبطي) مكتوب عليها قايلها. اللي يبدأ يقول أي بيت، وبعده كل واحد لازم يقول بيت يبدأ بالحرف اللي انتهى فيه البيت اللي قبله (الرويّ، يعني الحرف اللي تنبني عليه القافية، والهمزة تنحسب ألف). إذا ما عندك بيت مناسب اسحب بيت من الكومة: إذا ناسبك قوله، وإذا ما ناسبك يروح الدور واللي بعدك يقول أي بيت يبيه. أول واحد يخلّص أبياته يفوز. ومع الفرق يفوز الفريق كله مع اللي فاز.';
@@ -696,7 +702,7 @@ GAMES.w_long={name:'أطول كلمة',cat:'words',lbc:'#A23B5A',
   start:d=>({...d,ts:Date.now()}),
   simulNow:d=>d.ph==='play',viewer:d=>d.win==null&&d.ph==='play'?simulViewer(d):null,coverMsg:()=>'',
   // the letters are drawn on the host: a tap on a letter kind goes there; building the word stays on the phone
-  net:{local:['t','bk','clr','start','keep','go']},
+  net:{host:['v','c'],local:['t','bk','clr','start','keep','go'],ui:['w2r']},redeal:d=>d,
   points:d=>d.pts,
   status(d,ctx){if(d.ph==='play')return simulStatus(d,ctx,`<small>الجولة ${d.r+1} من ${d.R}</small><br>`,true);
     return `<small>الجولة ${d.r+1} من ${d.R}</small><br>${!ctx.local&&ctx.v===d.turn?'<b class="yt">اختر الحروف</b>':`${nameTag(d,d.turn)} يختار الحروف`}`;},
@@ -710,7 +716,7 @@ GAMES.w_long={name:'أطول كلمة',cat:'words',lbc:'#A23B5A',
     if(!ctx.my)return `<div class="w2 w2lg">${slots}${ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="w2sent"><b>✓</b>أرسلت، ننتظر الباقين</div>':''}${qzWho(d,ctx)}</div>`;
     const st=w2RSt(d,ctx.v);
     if(st.ph==='ready')return `<div class="w2 w2lg">${slots}<div class="w2ready"><b>كوّن أطول كلمة من هالحروف (كل حرف مرة)</b><span class="w2rd">${W2LGT/1000} ثانية</span><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div></div>`;
-    if(st.ph==='go'&&Date.now()>st.t0+W2LGT+300)setTimeout(()=>{if(S.w2r===st&&st.ph==='go')w2RSend(d,ctx.v,st.keep||'');},0);
+    w2RAgain(d,ctx,st);if(st.ph==='go'&&Date.now()>st.t0+W2LGT+300)setTimeout(()=>{if(S.w2r===st&&st.ph==='go')w2RSend(d,ctx.v,st.keep||'');},0);
     const w=(st.sel||[]).map(i=>d.L[i]).join('');
     return `<div class="w2 w2lg">${w2Clock(st.t0+W2LGT,W2LGT,'var(--ok)')}${w2TypedBox(w,'المس الحروف')}<div class="w2ltiles">${[...d.L].map((c,i)=>`<button class="w2lt ${st.sel.includes(i)?'used':''} ${'اوي'.includes(c)?'vw':''}" data-ga="t" data-i="${i}" ${st.sel.includes(i)?'disabled':''}>${c}</button>`).join('')}</div>
       <div class="w2acts"><button class="btn soft" data-ga="bk" aria-label="امسح">⌫</button><button class="btn soft" data-ga="clr">مسح</button><button class="btn" data-ga="keep" ${w.length>=3?'':'disabled'}>ثبّت الكلمة</button></div>

@@ -55,8 +55,11 @@ function w2Lex(){if(W2L)return W2L;const keys=new Set(),words=new Map();
       if(m[1]==='a')add(w+'ة');
       if(m[1]==='o'){add(w+'ة');add(w+'ون');add(w+'ين');add(w+'ات');}
       if(m[1]==='v'){for(const p of 'يتنأ')add(p+w);for(const x of ['ت','وا','نا'])add(w+x);}}}
-  try{for(const k in WORDS)for(const w of WORDS[k])add(w);}catch(e){}
-  try{for(const w of WASLA)if(!/^ال/.test(w))add(w);}catch(e){}
+  // countries, cities and months are names, not words: the letter games leave them out
+  const place=new Set();try{for(const k of ['دولة','مدينة'])for(const w of WORDS[k])place.add(w2K(w).replace(/^ال/,''));}catch(e){}
+  for(const w of 'جازان نجران بريدة عنيزة سكاكا الجوف بيروت بغداد باريس مدريد طوكيو لبنان سوريا ليبيا تركيا ايران فرنسا روسيا الهند الصين يناير أبريل يونيو يوليو أغسطس رمضان'.split(' '))place.add(w2K(w).replace(/^ال/,''));
+  try{for(const k in WORDS)if(k!=='دولة'&&k!=='مدينة')for(const w of WORDS[k])add(w);}catch(e){}
+  try{for(const w of WASLA)if(!/^ال/.test(w)&&!place.has(w2K(w)))add(w);}catch(e){}
   // the words a bot may play and the letter games are built from: our list and «خمّن الكلمة», as tiles
   const tiles=new Map();for(const [k,w] of words){const t=w2T(w);if(w2TileOk(t)&&!/^ال/.test(w)&&!tiles.has(t))tiles.set(t,w);}
   W2L={keys,words,tiles};return W2L;}
@@ -69,7 +72,7 @@ const W2KR=['ضصثقفغعهخحج','شسيبلاتنمكط','ءئؤرذدزظ�
 const W2KA=W2KR.join('');
 // o: {ga:'kk' key action, ok:action of the enter key, okTxt, del:true, cls:c=>'', dis:c=>false, rows}
 function w2Kb(o){const rows=o.rows||W2KR;
-  return `<div class="w2kb" ${o.ok&&!o.noEnter?`data-ok="${o.ok}"`:''}>${rows.map((r,ri)=>`<div>${ri===rows.length-1&&o.ok?`<button class="w2k wide ok" data-ga="${o.ok}" ${o.okDis?'disabled':''}>${o.okTxt||'إدخال'}</button>`:''}${[...r].map(c=>{const dis=o.dis&&o.dis(c);return `<button class="w2k ${o.cls?o.cls(c):''}" data-ga="${o.ga||'kk'}" data-i="${W2KA.indexOf(c)}" ${dis?'disabled':''}>${c}</button>`;}).join('')}${ri===rows.length-1&&o.del!==false&&o.ok?`<button class="w2k wide" data-ga="kdel" aria-label="امسح">⌫</button>`:''}</div>`).join('')}</div>`;}
+  return `<div class="w2kb" ${o.ok&&!o.noEnter?`data-ok="${o.ok}"`:''}>${rows.map((r,ri)=>`<div>${[...r].map(c=>{const dis=o.dis&&o.dis(c);return `<button class="w2k ${o.cls?o.cls(c):''}" data-ga="${o.ga||'kk'}" data-i="${W2KA.indexOf(c)}" ${dis?'disabled':''}>${c}</button>`;}).join('')}${ri===rows.length-1&&o.del!==false&&o.ok?`<button class="w2k wide" data-ga="kdel" aria-label="امسح">⌫</button>`:''}</div>`).join('')}${o.ok?`<button class="btn w2kok ${o.okCls||''}" data-ga="${o.ok}" ${o.okDis?'disabled':''}>${o.okTxt||'إدخال'}</button>`:''}</div>`;}
 // typing into S.draft[key]: the key and delete taps of every typing game
 function w2Type(a,i,key,max){
   if(a==='kk'){const c=W2KA[i];if(!c)return true;const w=String(S.draft[key]||'');if([...w].length<max){S.draft[key]=w+c;render();}return true;}
@@ -499,6 +502,11 @@ GAMES.w_miss=w2Quiz({name:'الكلمة الناقصة',key:'ms',lbc:'#B5562A',t
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#D06C3A"/><rect x="10" y="30" width="80" height="40" rx="10" fill="#FFF6E8"/><rect x="18" y="45" width="16" height="6" rx="3" fill="#B5562A" opacity=".55"/><rect x="38" y="40" width="26" height="16" rx="4" fill="#fff" stroke="#F0B429" stroke-width="3" stroke-dasharray="4 3"/><text x="51" y="53" font-size="13" font-weight="900" fill="#F0B429" text-anchor="middle">؟</text><rect x="68" y="45" width="14" height="6" rx="3" fill="#B5562A" opacity=".55"/></svg>`,
   gen(d,rd){const L=w2Ms();let i=d.qs&&d.qs[rd];if(!(i>=0&&L[i]))i=Math.floor(srng(d,'msf'+rd)()*L.length);const e=L[i],R=srng(d,'ms'+rd);
     const [a,b]=e.q.split('___');return {q:`<span class="w2ph">${escH(a)}<i class="w2blank">؟</i>${escH(b||'')}</span>`,...withOptions(R,e.a,e.w),t:e.t};}});
+
+HELP.w_syn='تطلع لكم كلمة، واختاروا الكلمة اللي معناها نفس معناها (مرادفها)، وانتبهوا: أحيانًا يكون عكسها بين الخيارات. عشرة أسئلة والكل يجاوب بنفس الوقت. أول أربعة أسئلة سهلة بنقطة، وبعدها أربعة متوسطة بنقطتين، وآخر سؤالين صعبة بـ3 نقاط. ثلاث إجابات صح ورا بعض تشعل السلسلة 🔥، وكل جواب صح بعدها عليه نقطة زيادة. ولكل لاعب ورقتين ×2: اضغطها قبل ما تختار، لو جوابك صح تاخذ ضعف النقاط، ولو غلط تنقص نقاط السؤال. الأكثر نقاط يفوز، والأسئلة ما تتكرر عليك لين تخلص.';
+HELP.w_ant='تطلع لكم كلمة، واختاروا عكسها (ضدها)، وانتبهوا: أحيانًا تكون كلمة بنفس معناها بين الخيارات. عشرة أسئلة والكل يجاوب بنفس الوقت. أول أربعة أسئلة سهلة بنقطة، وبعدها أربعة متوسطة بنقطتين، وآخر سؤالين صعبة بـ3 نقاط. ثلاث إجابات صح ورا بعض تشعل السلسلة 🔥، وكل جواب صح بعدها عليه نقطة زيادة. ولكل لاعب ورقتين ×2: اضغطها قبل ما تختار، لو جوابك صح تاخذ ضعف النقاط، ولو غلط تنقص نقاط السؤال. الأكثر نقاط يفوز، والأسئلة ما تتكرر عليك لين تخلص.';
+HELP.w_plur='مرة نعطيكم مفرد وتختارون جمعه، ومرة جمع وتختارون مفرده. الخيارات الغلط غالبًا من نفس الجذر (مثل كتب وكتّاب ومكاتب) فركّزوا. عشرة أسئلة والكل يجاوب بنفس الوقت. أول أربعة أسئلة سهلة بنقطة، وبعدها أربعة متوسطة بنقطتين، وآخر سؤالين صعبة بـ3 نقاط. ثلاث إجابات صح ورا بعض تشعل السلسلة 🔥، وكل جواب صح بعدها عليه نقطة زيادة. ولكل لاعب ورقتين ×2: اضغطها قبل ما تختار، لو جوابك صح تاخذ ضعف النقاط، ولو غلط تنقص نقاط السؤال. الأكثر نقاط يفوز، والأسئلة ما تتكرر عليك لين تخلص.';
+HELP.w_miss='عبارة مشهورة أو تعبير معروف ناقص كلمة، واختاروا الكلمة اللي تكمّله. عشرة أسئلة والكل يجاوب بنفس الوقت. أول أربعة أسئلة سهلة بنقطة، وبعدها أربعة متوسطة بنقطتين، وآخر سؤالين صعبة بـ3 نقاط. ثلاث إجابات صح ورا بعض تشعل السلسلة 🔥، وكل جواب صح بعدها عليه نقطة زيادة. ولكل لاعب ورقتين ×2: اضغطها قبل ما تختار، لو جوابك صح تاخذ ضعف النقاط، ولو غلط تنقص نقاط السؤال. الأكثر نقاط يفوز، والأسئلة ما تتكرر عليك لين تخلص.';
 
 /* ---------- سلسلة الكلمات: a word of the category that starts with the last letter of the one before ---------- */
 const W2CH_X={'حيوان':'بطة حمامة ببغاء جاموس سلحفاة سرطان صرصور ظبي فأر فقمة قندس لقلق نورس وزغ يمامة غزال ثور طاووس عنزة جدي حرباء دودة فراشة نملة نحلة ذبابة هر شبل مهر',

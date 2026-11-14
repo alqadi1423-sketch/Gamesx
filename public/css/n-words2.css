@@ -179,3 +179,5 @@ html.lite .w2 *{animation:none!important;transition:none!important}
 .w2keep{text-align:center;color:var(--mut);font-weight:700;font-size:14px}
 .w2keep b{color:var(--ink);font-size:18px}
 .w2pl{letter-spacing:3px;color:var(--ink)}
+.w2kok{width:100%;min-height:46px;margin-top:2px;background:var(--ok);box-shadow:0 3px 0 #2C7149}
+.w2kok.soft{background:var(--surface-2);color:var(--ink);box-shadow:0 3px 0 var(--edge)}
