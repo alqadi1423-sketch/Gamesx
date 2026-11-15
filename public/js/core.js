@@ -479,6 +479,8 @@ function render(){
   const mb0=app.querySelector('.msgs'),atBot=!mb0||mb0.scrollHeight-mb0.scrollTop-mb0.clientHeight<60;
   // nothing changed on screen (a heartbeat, another player's message that does not show here): the page is left alone
   const html=OUT+(S.modal?modalHTML():'')+(S.gload?'<div class="gload" role="status"><i></i>نجهّز الألعاب…</div>':'');if(html!==S.lastHtml||app.childNodes.length!==S.lastKids){morph(app,html);S.lastHtml=html;S.lastKids=app.childNodes.length;}
+  // the chat and reactions sit in their own bar at the bottom: the page leaves room for it, so it never covers a game
+  document.body.classList.toggle('rxon',!!app.querySelector('.rx'));
   {const mb=app.querySelector('.msgs');if(mb){const L=chatList(),last=L[L.length-1],lk=last?last.i:'';
     if(mb._k!==lk||!mb._s){const first=!mb._s;mb._k=lk;mb._s=1;const j=app.querySelector('.jump');
       if(first||atBot||(last&&last.me)){mb.scrollTop=mb.scrollHeight;if(S.chatJump){S.chatJump=false;if(j)j.classList.remove('on');}}
@@ -489,8 +491,8 @@ function render(){
   const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(dView(),mkCtx());}catch(e){console.error(e);}
   noteHere();
 }
-function topBar(title,back,extra){
-  return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1${String(title).replace(/<[^>]*>/g,'').length>15?' class="long"':''}>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button></div>`;
+function topBar(title,back,extra,noMute){
+  return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1${String(title).replace(/<[^>]*>/g,'').length>15?' class="long"':''}>${title}</h1>${extra||''}${noMute?'':`<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button>`}</div>`;
 }
 const CHEV='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const MODEI={
@@ -716,9 +718,8 @@ function renderGame(){
   // the status card takes the colour of whoever plays now (or of the winner)
   const acc=cover?null:d.win==null?(isSimul(G,d)?null:col(d,d.turn)):typeof d.win==='number'?col(d,d.win):null;
   const fv=favGames().includes(g);
-  OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button>`)}${roomBar()}${scoreBar(sc,d)}
+  OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button><button class="ib" data-a="m-settings" aria-label="إعدادات اللعبة">⚙️</button>`,true)}${roomBar()}${scoreBar(sc,d)}
   <div class="status ${cover?'nil':''} ${acc?'acc':''} ${d.win!=null?'over':''} ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}"${acc?` style="--c:${acc}"`:''}>${cover?'':statusBox(statusHTML(d,G,ctx))}<div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div></div><div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>
-  ${!cover&&canForfeit()?'<div class="ffw"><button class="link" data-a="m-ff">🏳️ انسحب من اللعبة</button></div>':''}
   ${S.mode==='online'?fabs():''}
   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
 }
@@ -791,7 +792,8 @@ function modalHTML(){
     ${h&&(c.kick||[]).length?`<button class="link" data-a="unkick">السماح للمطرودين يرجعون</button>`:''}`:''}
     <label class="lab">على هذا الجوال</label><div class="segs"><button class="seg ${liteOn()?'':'on'}" data-a="lite" data-v="0">حركات كاملة</button><button class="seg ${liteOn()?'on':''}" data-a="lite" data-v="1">خفيفة وأسرع</button></div>
     <div class="segs"><button class="seg ${S.mute?'':'on'}" data-a="mute" aria-pressed="${!S.mute}">🔊 الصوت</button><button class="seg ${S.mute?'on':''}" data-a="mute" aria-pressed="${S.mute}">🔇 بدون صوت</button></div>
-    ${h?`<button class="link" data-a="resetsc" style="color:var(--red)">تصفير نقاط الجلسة</button>`:''}`;
+    ${h?`<button class="link" data-a="resetsc" style="color:var(--red)">تصفير نقاط الجلسة</button>`:''}
+    ${S.st.g&&S.st.d&&!S.browse&&canForfeit()?`<button class="btn soft ffb" data-a="m-ff">🏳️ انسحب من اللعبة</button>`:''}`;
   }
   return `<div class="sheet-bg" data-a="closemodal"><div class="sheet ${m==='help'?'help':m==='settings'?'set':m==='react'?'react':''}" role="dialog" aria-modal="true"><div class="sh-head"><h2>${title}</h2><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div>${inner}${m==='settings'?'<button class="big navy" data-a="closemodal">تم</button>':''}</div></div>`;
 }
