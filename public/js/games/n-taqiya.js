@@ -40,9 +40,12 @@ const tqAlive=d=>d.cr.filter(s=>d.out[s]!=='1');
 const tqV=pt=>pt?TQ_LAPV[pt.l]*(pt.g?2:1):0;
 const tqFmt=ms=>{const t=Math.ceil(Math.max(0,ms)/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
 const tqClosed=d=>d.ev&&d.ev.k==='light'?2:-1;
-const tqSimul=d=>d.ph==='alert'||d.ph==='route'||d.ph==='race';
+// the chase is a simultaneous round (both runners are public by then); the alert is not: who answers would tell who the target is
+const tqSimul=d=>d.ph==='route'||d.ph==='race';
 // who must answer in a simultaneous phase: the target in the alert, the لفّاف and the target in the chase
-function tqNeed(d,s){if(d.win!=null||d.out[s]==='1')return false;if(d.ph==='alert')return s===d.tg;if(d.ph==='route'||d.ph==='race')return s===d.lf||s===d.tg;return false;}
+function tqNeed(d,s){if(d.win!=null||d.out[s]==='1')return false;if(d.ph==='route'||d.ph==='race')return s===d.lf||s===d.tg;return false;}
+// the target's answer to the alert, kept in its private part (ans: {s: 1 «شفتها!» | 0, ms on its own clock})
+const tqAns=d=>{const p=d.tg>=0?S.priv[d.pl[d.tg]]:null;return p&&p.gid===d.gid&&p.k===d.rk&&p.ans&&typeof p.ans==='object'?p.ans:null;};
 const tqAuto=(d,s)=>tqSimul(d)&&d.win==null&&d.out[s]!=='1'&&!tqNeed(d,s);
 // the target's seconds in the alert (the target's own view knows them; the host checks against them)
 const tqLim=d=>d.az?d.az.lim:TQ_T.alert;
@@ -83,7 +86,7 @@ function tqDrop(d){const n=d.pl.length,gs=Array(n).fill(-1),sh=Array(n).fill(-1)
     if(tqCanGuess(d,s,g))gs[s]=g;if(!d.su[s]&&tqCanGuess(d,s,x))sh[s]=x;}
   const wr=sh.some(x=>x===d.tg)?1:0,cat=d.ev&&d.ev.k==='cat'&&d.ev.v===d.tg?1:0;
   const lim=TQ_T.alert+(wr?TQ_T.shout:0)-(cat?TQ_T.cat:0);
-  return tqArm({...d,ph:'alert',rd:d.rd+1,gs,sh,az:{lim,wr,cat,bz:d.pt.b,fz:0,fr:0},a0:Date.now()},TQ_T.alert+TQ_T.shout+TQ_T.grace);}
+  return tqArm({...d,ph:'alert',rd:d.rd+1,gs,sh,az:{lim,wr,cat,bz:d.pt.b,fz:0,fr:0},a0:tqLocal()?0:Date.now()},TQ_T.alert+TQ_T.shout+TQ_T.grace);}
 // «تحسّس»: 2 s less, and the target learns real (1) or fake (2)
 function tqFeel(d){if(d.ph!=='alert'||!d.az||d.az.fz||d.fu[d.tg])return d;return {...d,az:{...d.az,fz:1,fr:d.pt.f?2:1,lim:Math.max(600,d.az.lim-TQ_T.feel)}};}
 function tqAlertEnd(d,p){const seen=!!(p&&p.s===1&&Number.isFinite(p.ms)&&p.ms<=tqLim(d)+150),ms=p&&Number.isFinite(p.ms)?Math.round(p.ms):-1;
@@ -217,7 +220,7 @@ function tqScene(d,me,ctx,o){const fin=d.win!=null,ph=d.ph,n=d.pl.length,sit=tqA
   // the round's event on the map
   const ev=d.ev;
   if(ev&&ev.k==='light'&&!fin&&ph!=='res')s+=TQ_WIN.map(x=>`<rect x="${x-7}" y="${TQ_SKY+21}" width="14" height="${TQ_TOP-TQ_SKY-23}" rx="5" fill="#141C2E"/>`).join('')+`<rect y="${TQ_SKY}" width="${TQW}" height="${TQH-TQ_SKY}" fill="#050A14" opacity=".28"/>`;
-  if(ev&&ev.k==='cat'&&ev.v>=0&&d.cr.includes(ev.v)&&!fin&&ph!=='res'){const [x,y]=tqXY(aOf(ev.v),TQOUT+16);items.push({y:y-1,s:KH.sprite('cat',x,y+6,{s:.8,flip:x>TQCX})+tqPill(x,y+18,'🐈 قطو',{fs:10.5,h:17,cls:'ev'})});}
+  if(ev&&ev.k==='cat'&&ev.v>=0&&d.cr.includes(ev.v)&&!fin&&ph!=='res'){const [x,y]=tqXY(aOf(ev.v)-.34,TQOUT+14);items.push({y:y-1,s:KH.sprite('cat',x,y+6,{s:.8,flip:x>TQCX})+tqPill(x,y+18,'🐈 قطو',{fs:10.5,h:17,cls:'ev'})});}
   // traces: the newest one named on pills, the older ones as faint footprints
   if((ph==='walk'||ph==='alert')&&!fin)d.tr.forEach((t,i)=>{const last=i===d.tr.length-1;for(const x of t.s){const a=aOf(x),[px,py]=tqXY(a,TQOUT);s+=tqSteps(px,py,last?'#7FD3FF':'#9FB3C8');if(last)top+=tqPill(px,py+(Math.cos(a)<-.3?-18:18),'👣 بطّأ',{fs:10.5,h:18,cls:'tr'});}});
   // my secret guess / shout while he walks
@@ -253,12 +256,12 @@ function tqScene(d,me,ctx,o){const fin=d.win!=null,ph=d.ph,n=d.pl.length,sit=tqA
     if(ph==='plan'){const [x,y]=tqXY(TQA0,TQOUT+30);items.push({y,s:KH.kid({who,c,pose:isL?'think':'stand',mood:'k',x,y,s:.92})+KH.cap(x+(isL?-15:15),y-24,'cap',.82)+tqPill(x,y+13,isL?'أنا · اللفّاف':tqNm(d,L),{fs:11,h:18,cls:isL?'me':'lf'})});}
     else if(ph==='walk'||ph==='alert'){const run=ph==='alert';
       wk=(tqWalker(d,KH.kid({who,c,pose:'walk',mood:run?'g':'k',s:.94})+(run?'':KH.cap(15,-24,isL&&d.pt?(d.pt.f?'fake':d.pt.g?'gold':'cap'):'cap',.82))+`<path d="M-30 -40h-12M-28 -30h-16M-30 -20h-10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".5"/>`,tqPill(0,13,isL?'أنا':tqNm(d,L),{fs:11,h:18,cls:isL?'me':'lf',W:1e4})));}
-    else if(ph==='res'&&rr){const nl=rr.nl,[x,y]=tqXY(TQA0,TQOUT+30);items.push({y,s:KH.kid({who:d.pl[nl],c:col(d,nl),pose:'stand',mood:nl===rr.lf?'k':'sad',x,y,s:.92})+KH.cap(x+15,y-24,'cap',.82)+tqPill(x,y+13,(nl===me?'أنا':tqNm(d,nl))+' · يلف الحين',{fs:11,h:18,cls:'lf'})});}}
+    else if(ph==='res'&&rr){const nl=rr.nl,[x,y]=tqXY(TQA0,TQOUT+30);items.push({y,s:KH.kid({who:d.pl[nl],c:col(d,nl),pose:'stand',mood:nl===rr.lf?'k':'sad',x,y,s:.92})+KH.cap(x+15,y-24,'cap',.82)+tqPill(x,y-58,(nl===me?'أنا':tqNm(d,nl))+' · يلف الحين',{fs:11,h:18,cls:'lf'})});}}
   const wBack=Math.cos(S.tqWa&&S.tqWa.gid===d.gid?S.tqWa.a:TQA0)<0;
   s+=`<g class="tq-wb">${wk&&wBack?wk:''}</g>`+items.sort((a,b)=>a.y-b.y).map(i=>i.s).join('')+`<g class="tq-wf">${wk&&!wBack?wk:''}</g>`;
   s+=KH.sprite('sleepcat',TQCX,TQCY)+`<text class="tq-z" x="${TQCX+14}" y="${TQCY-14}">z</text>`;
   // the events' pieces drawn last: the ice-cream cart at the gate, the light-out sign
-  if(ev&&ev.k==='ice'&&(ph==='res'||ph==='plan'||ph==='walk')&&!fin)top+=KH.art.icecart(TQW-46,TQ_GATE+26)+KH.sprite('grocer',TQW-80,TQ_GATE+4,{s:.6})+KH.say(TQW-84,TQ_GATE-14,'آيس كريم! 🍦',{fs:12,dx:-20});
+  if(ev&&ev.k==='ice'&&(ph==='res'||ph==='plan'||ph==='walk')&&!fin)top+=KH.art.icecart(TQW-40,TQ_GATE+34)+KH.sprite('grocer',TQW-74,TQ_GATE+14,{s:.6})+(ph==='res'?KH.say(TQW-78,TQ_GATE-4,'آيس كريم! 🍦',{fs:12,dx:-24}):'');
   // the target's timer arc round their kid (tqTickDom shortens it)
   let zs='',zg='';
   if(iTg){const [x,y]=tqXY(aOf(me),0),[cx,cy]=tqXY(aOf(me),TQOUT+10),R=40,C=2*Math.PI*R,ax=(x+cx)/2,ay=(y+cy)/2-22;
@@ -279,7 +282,7 @@ function tqChase(d,me){const S0=tqMXY(d,d.tg),P=tqRoutes(S0),cl=tqClosed(d),C=['
   s+=KH.sprite('sleepcat',TQM.cx,TQM.cy,{s:.75});
   const [x,y]=S0;s+=KH.kid({who:d.pl[d.lf],c:col(d,d.lf),pose:'walk',s:.72,mood:'g',x:x+36,y:y+44})+KH.kid({who:d.pl[d.tg],c:col(d,d.tg),pose:'walk',s:.72,mood:'k',flip:true,x:x+4,y:y+42})+KH.cap(x+18,y+16,'cap',.8);
   s+=tqPill(x+38,y+56,me===d.lf?'أنا':tqNm(d,d.lf),{fs:10.5,h:17,cls:'lf',W:TQMW})+tqPill(x-2,y+56,me===d.tg?'أنا':tqNm(d,d.tg),{fs:10.5,h:17,cls:me===d.tg?'me':'tg',W:TQMW});
-  s+=tqPill(78,382,TQ_RT[1],{fs:11.5,h:20,cls:'r1',W:TQMW})+tqPill(323,120,TQ_RT[0],{fs:11.5,h:20,cls:'r0',W:TQMW})+tqPill(168,40,TQ_RT[2]+(cl===2?' · مسكّر':''),{fs:11.5,h:20,cls:'r2 '+(cl===2?'off':''),W:TQMW})+tqPill(66,132,'درج',{fs:10,h:16,W:TQMW});
+  s+=tqPill(78,382,TQ_RT[1],{fs:11.5,h:20,cls:'rt1',W:TQMW})+tqPill(323,120,TQ_RT[0],{fs:11.5,h:20,cls:'rt0',W:TQMW})+tqPill(168,40,TQ_RT[2]+(cl===2?' · مسكّر':''),{fs:11.5,h:20,cls:'rt2 '+(cl===2?'off':''),W:TQMW})+tqPill(66,132,'درج',{fs:10,h:16,W:TQMW});
   if(race)s+=KH.burst(180,200,'سباق!',{c:'#F0B429',s:.8});
   return `<div class="tq-map tq-cmap ${tqMbg()}" data-k="cmap"><svg viewBox="0 0 ${TQMW} ${TQMH}" aria-label="خريطة المطاردة">${s}</svg></div>`;}
 
@@ -299,13 +302,13 @@ function tqOutTxt(d,r){const N=s=>tqNm(d,s);
     catch:{i:'✋',t:`${N(r.tg)} مسك ${N(r.lf)}!`,x:`${TQ_RS[r.rt[0]]}: سباق الضغط ${r.rc[1]} مقابل ${r.rc[0]}`},fs:{i:'🎭',t:`مزيّفة! ${N(r.tg)} طاح بالفخ`,x:'−5 عليه، واللفّاف يلف مرة ثانية'},
     fi:{i:'🎭',t:`${N(r.tg)} طنّش… وكانت مزيّفة`,x:'ولا شي صار، واللفّاف يلف مرة ثانية'}})[r.o]||{i:'🧢',t:'',x:''};}
 function tqEvent(d,me){const N=s=>tqNm(d,s),isL=me===d.lf;
-  if(d.win!=null)return {i:'🏆',t:'خلصت اللعبة',x:d.why||'',c:'go'};
-  if(d.ph==='plan')return {i:'🤫',t:isL?'أنت اللفّاف! خطّط بالسر':`${N(d.lf)} يخطط بالسر…`,x:tqEvTxt(d,d.ev),c:'pl'};
-  if(d.ph==='walk')return {i:'🧢',t:isL?`تلف… ورا ${N(d.tg)} 🤫`:`${N(d.lf)} يلف وبيده الطاقية`,x:d.tr.length?`أثر اللفّة ${d.tr[d.tr.length-1].l}: حسّيت إنه بطّأ ورا ${d.tr[d.tr.length-1].s.map(N).join(' و')}`:'طاق طاق طاقية… ورا مين بيحطها؟',c:'wk'};
-  if(d.ph==='alert')return me===d.tg?{i:'💓',t:'حسّيت بشي وراك؟',x:d.az&&d.az.wr?'📣 أحد صرخ باسمك: معك ثانيتين زيادة':'اضغط «شفتها!» قبل ما يخلص الوقت',c:'al'}:{i:'🧢',t:isL?`نزّلتها ورا ${N(d.tg)}!`:'نزّل الطاقية!',x:'مين بينتبه؟',c:'wk'};
-  if(d.ph==='route')return {i:'🏃',t:`${N(d.tg)} شافها! مطاردة`,x:`كل واحد يختار طريقه بالسر · ${d.rt[0]<0?'':''}الرهان ${tqV(d.pt)} نقطة`,c:'ch'};
-  if(d.ph==='race')return {i:'⚡',t:`نفس الطريق: ${TQ_RT[d.rt[0]]}!`,x:'سباق ضغط 3 ثواني: الأسرع يكسب',c:'ch'};
-  if(d.ph==='res'&&d.rr){const o=tqOutTxt(d,d.rr);return {i:o.i,t:o.t,x:o.x,c:'rs '+d.rr.o};}
+  if(d.win!=null)return {i:'🏆',t:'خلصت اللعبة',x:d.why||'',c:'qgo'};
+  if(d.ph==='plan')return {i:'🤫',t:isL?'أنت اللفّاف! خطّط بالسر':`${N(d.lf)} يخطط بالسر…`,x:tqEvTxt(d,d.ev),c:'qpl'};
+  if(d.ph==='walk')return {i:'🧢',t:isL?`تلف… ورا ${N(d.tg)} 🤫`:`${N(d.lf)} يلف وبيده الطاقية`,x:d.tr.length?`أثر اللفّة ${d.tr[d.tr.length-1].l}: حسّيت إنه بطّأ ورا ${d.tr[d.tr.length-1].s.map(N).join(' و')}`:'طاق طاق طاقية… ورا مين بيحطها؟',c:'qwk'};
+  if(d.ph==='alert')return me===d.tg?{i:'💓',t:'حسّيت بشي وراك؟',x:d.az&&d.az.wr?'📣 أحد صرخ باسمك: معك ثانيتين زيادة':'اضغط «شفتها!» قبل ما يخلص الوقت',c:'qal'}:{i:'🧢',t:isL?`نزّلتها ورا ${N(d.tg)}!`:'نزّل الطاقية!',x:'مين بينتبه؟',c:'qwk'};
+  if(d.ph==='route')return {i:'🏃',t:`${N(d.tg)} شافها! مطاردة`,x:`كل واحد يختار طريقه بالسر · ${d.rt[0]<0?'':''}الرهان ${tqV(d.pt)} نقطة`,c:'qch'};
+  if(d.ph==='race')return {i:'⚡',t:`نفس الطريق: ${TQ_RT[d.rt[0]]}!`,x:'سباق ضغط 3 ثواني: الأسرع يكسب',c:'qch'};
+  if(d.ph==='res'&&d.rr){const o=tqOutTxt(d,d.rr);return {i:o.i,t:o.t,x:o.x,c:'qrs q'+d.rr.o};}
   return {i:'🧢',t:'',x:'',c:''};}
 // the round's result: the secrets told, who got what
 function tqResRows(d){const r=d.rr;if(!r)return '';const N=s=>tqNm(d,s);
@@ -342,8 +345,9 @@ GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:4,t
   privOk:(d,r,o,p)=>{const s=d.pl.indexOf(r);if(s<0||!p||typeof p!=='object')return false;if(p.k!==d.rk)return true;
     const okX=x=>x==null||x===-1||tqCanGuess(d,s,x);
     if(p.g!=null||p.s!=null){const same=o&&o.k===p.k&&o.g===p.g&&o.s===p.s;if(!same&&(d.ph!=='walk'||s===d.lf||d.out[s]==='1'))return false;if(!okX(p.g)||!okX(p.s))return false;if(!same&&p.s!=null&&p.s!==-1&&d.su[s])return false;}
+    if(p.ans!=null){const a=p.ans,same=o&&o.k===p.k&&JSON.stringify(o.ans)===JSON.stringify(a);if(!same&&(d.ph!=='alert'||s!==d.tg||!a||typeof a!=='object'||!(a.s===0||a.s===1)||!Number.isInteger(a.ms)||a.ms<0||a.ms>30000))return false;
+      if(!same&&o&&o.k===p.k&&o.ans)return false;}
     if(p.pick==null||p.pick===NOPICK||p.rd!==d.rd)return true;if(!tqNeed(d,s))return false;const x=p.pick;
-    if(d.ph==='alert')return !!x&&typeof x==='object'&&(x.s===0||x.s===1)&&Number.isInteger(x.ms)&&x.ms>=0&&x.ms<=30000;
     if(d.ph==='route')return [0,1,2].includes(x)&&x!==tqClosed(d);
     if(d.ph==='race')return !!x&&typeof x==='object'&&Number.isInteger(x.n)&&x.n>=0&&x.n<=60;
     return false;},
@@ -365,7 +369,7 @@ GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:4,t
     this.sounds(d,me);
     const sitMe=me>=0&&!isL&&d.cr.includes(me)&&d.out[me]!=='1',my=tqMyPriv(d,me,ctx.priv);
     // the target's own clock starts when the cap first shows on this phone (as the speed games time a tap)
-    const iTg=!fin&&ph==='alert'&&me>=0&&me===d.tg&&ctx.my;
+    const myAns=my&&my.ans?my.ans:null,iTg=!fin&&ph==='alert'&&me>=0&&me===d.tg&&!myAns;
     if(iTg&&(!S.tqA||S.tqA.k!==tqAK(d))){const t0=performance.now();S.tqA={k:tqAK(d),t0,bu:d.az&&d.az.bz?t0+2000:0,sent:0};try{KH.snd('heart');buzz();}catch(e){}}
     const racer=!fin&&ph==='race'&&(me===d.lf||me===d.tg)&&ctx.my;
     if(racer&&(!S.tqR||S.tqR.k!==tqAK(d)+':'+d.rd+':'+me))S.tqR={k:tqAK(d)+':'+d.rd+':'+me,t0:performance.now(),n:0,sent:0};
@@ -395,11 +399,11 @@ GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:4,t
       if(iTg){const fz=d.az&&d.az.fz,fr=d.az?d.az.fr:0;
         a=`<button class="big tq-saw" data-ga="see"><svg class="tq-cd" viewBox="0 0 64 64" width="60" height="60" aria-hidden="true"><circle cx="32" cy="32" r="27" class="tq-cdb"/><circle cx="32" cy="32" r="27" class="tq-cdf" stroke-dasharray="169.6 169.6" transform="rotate(-90 32 32)"/><text x="32" y="39" class="tq-cdt">${(tqLim(d)/1000).toFixed(1)}</text></svg><span>شفتها!<small>اضغط قبل ما يخلص الوقت</small></span></button>`+
           `<div class="tq-two"><button class="big tq-feel ${fz?'on':''}" data-ga="feel" ${d.fu[me]||fz?'disabled':''}><i>🖐</i><span>تحسّس<small>${fz?(fr===2?'مزيّفة! لا تضغط 🎭':'حقيقية! اضغط بسرعة'):d.fu[me]?'انستخدم':'حقيقية ولا مزيّفة؟ · −2ث'}</small></span>${tqProp}</button><div class="tq-risk"><b>مزيّفة وضغطت؟</b><small>تخسر 5</small></div></div>`;}
-      else if(me===d.tg)a=`<p class="tq-wait">${my&&my.rd===d.rd&&my.pick&&my.pick.s?'ضغطت «شفتها!» ✓':'فاتتك… 😬'}</p>`;
+      else if(me===d.tg)a=`<p class="tq-wait">${myAns&&myAns.s?'ضغطت «شفتها!» ✓':'فاتتك… 😬'}</p>`;
       else a=`<p class="tq-wait">${isL?`نزّلتها ورا ${N(d.tg)}… هل بينتبه؟`:'نزّل الطاقية… مين بينتبه؟ 👀'}</p>`;}
     else if(ph==='route'){const iR=(isL||me===d.tg)&&me>=0,op=isL?d.tg:d.lf,cl=tqClosed(d);
       if(iR&&ctx.my){const hb=d.hb[op],tot=hb.reduce((x,y)=>x+y,0);
-        a=`<p class="tq-lbl2">اختر طريقك بالسر · <span>عادات ${N(op)} ${tqProp}</span></p><div class="tq-routes">${[0,1,2].map(r=>`<button class="tq-rb r${r} ${S.tqRt===r?'on':''}" data-ga="route" data-i="${r}" ${r===cl?'disabled':''}><b>${TQ_RS[r]}</b><small>${r===cl?'🌑 مسكّر':`${N(op)} <i class="tq-hbp">${[0,1,2].map(k=>`<u class="${k<hb[r]?'on':''}"></u>`).join('')}</i>`}</small>${r!==cl&&tot&&hb[r]===Math.max(...hb)&&hb[r]>0?'<em>عادته!</em>':''}</button>`).join('')}</div>`+
+        a=`<p class="tq-lbl2">اختر طريقك بالسر · <span>عادات ${N(op)} ${tqProp}</span></p><div class="tq-routes">${[0,1,2].map(r=>`<button class="tq-rb rt${r} ${S.tqRt===r?'on':''}" data-ga="route" data-i="${r}" ${r===cl?'disabled':''}><b>${TQ_RS[r]}</b><small>${r===cl?'🌑 مسكّر':`${N(op)} <i class="tq-hbp">${[0,1,2].map(k=>`<u class="${k<hb[r]?'on':''}"></u>`).join('')}</i>`}</small>${r!==cl&&tot&&hb[r]===Math.max(...hb)&&hb[r]>0?'<em>عادته!</em>':''}</button>`).join('')}</div>`+
           `<p class="tq-tip">${isL?'لو اختار نفس طريقك: سباق ضغط. غيره: تفلت':'لو اخترت نفس طريقه: سباق ضغط. غيره: يفلت'}</p>`;}
       else if(iR)a=`<p class="tq-wait">اخترت ${Number.isInteger(my&&my.pick)?TQ_RT[my.pick]:''}… ننتظر ${N(op)}</p>`;
       else a=`<p class="tq-wait">مطاردة! ${nameTag(d,d.tg)} و${nameTag(d,d.lf)} يختارون طريقهم بالسر</p>`;}
@@ -423,12 +427,12 @@ GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:4,t
     if(a==='go'){if(d.ph!=='plan'||me!==d.lf||!ctx.my||!tqAlive(d).includes(i)||i===d.lf)return;act(tqGo(d,{t:i,l:S.tqL,f:S.tqF,g:S.tqG,b:S.tqB}));return;}
     if(a==='shout'){if(d.ph!=='walk'||me<0||me===d.lf||!d.cr.includes(me)||d.su[me])return;const r=d.pl[me],p=tqMyPriv(d,me,S.priv);if(!p||!tqCanGuess(d,me,p.g))return;
       setPriv(r,{...p,gid:d.gid,k:d.rk,s:Number.isInteger(p.s)&&p.s>=0?-1:p.g});return;}
-    if(a==='see'){if(d.ph!=='alert'||me<0||me!==d.tg||!ctx.my)return;const A=S.tqA&&S.tqA.k===tqAK(d)?S.tqA:null;const ms=A?Math.round(performance.now()-A.t0):0;if(A)A.sent=1;simulPick(d,me,{s:1,ms:Math.max(0,Math.min(30000,ms))});return;}
+    if(a==='see'){if(d.ph!=='alert'||me<0||me!==d.tg)return;const A=S.tqA&&S.tqA.k===tqAK(d)?S.tqA:null;if(A&&A.sent)return;const ms=A?Math.round(performance.now()-A.t0):0;if(A)A.sent=1;tqAnswer(d,me,1,ms);return;}
     if(a==='feel'){if(d.ph!=='alert'||me<0||me!==d.tg||!d.pt||!d.az||d.az.fz||d.fu[me])return;act(tqFeel(d));return;}
     if(a==='route'){if(d.ph!=='route'||(me!==d.lf&&me!==d.tg)||me<0||!ctx.my||![0,1,2].includes(i)||i===tqClosed(d))return;S.tqRt=i;simulPick(d,me,i);return;}
     if(a==='tap'){if(d.ph!=='race'||!S.tqR||S.tqR.sent||performance.now()-S.tqR.t0>TQ_T.race)return;S.tqR.n=Math.min(60,S.tqR.n+1);const el=document.querySelector('.tq-tapn');if(el)el.textContent=S.tqR.n;try{KH.snd('tick');}catch(e){}return;}
     if(a==='next'){if(d.ph!=='res'||(me>=0&&d.out[me]==='1'))return;act(tqNext(d));}},
-  resolve(d,picks){if(d.ph==='alert')return tqAlertEnd(d,picks[d.tg]);if(d.ph==='route')return tqRouteEnd(d,picks);if(d.ph==='race')return tqRaceEnd(d,picks);return d;},
+  resolve(d,picks){if(d.ph==='route')return tqRouteEnd(d,picks);if(d.ph==='race')return tqRaceEnd(d,picks);return d;},
   // a player who left: out of the circle; the round starts over when it was the لفّاف or the target
   onSkip(nd,d){let x={...nd,win:null,turn:d.lf};delete x.wins;const al=aliveSeats(x);
     if(al.length<3)return tqEnd(x,'ما بقى لاعبين كفاية');
@@ -438,12 +442,14 @@ GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:4,t
     if(tgGone)return tqRound(x,d.lf);
     return x;},
   bot(d,s,lv){if(d.win!=null||d.ph!=='plan'||s!==d.lf)return d;return tqBotPlan(d,lv);},
-  botPick(d,s,lv){if(!tqNeed(d,s))return NOPICK;if(d.ph==='alert')return tqBotAlert(d,s,lv);if(d.ph==='route')return tqBotRoute(d,s,lv);if(d.ph==='race')return {n:tqBotTaps(lv)};return NOPICK;},
-  botDelay:(d,s,lv)=>d.ph==='plan'?1400+rnd(1600):d.ph==='alert'?Math.min(tqReact(GAMES.taqiya.mask(d,s),s,lv),tqLim(GAMES.taqiya.mask(d,s))+200):d.ph==='route'?1500+rnd(2500):d.ph==='race'?TQ_T.race+rnd(400):BOTMS[lv]+rnd(800),
+  botPick(d,s,lv){if(!tqNeed(d,s))return NOPICK;if(d.ph==='route')return tqBotRoute(d,s,lv);if(d.ph==='race')return {n:tqBotTaps(lv)};return NOPICK;},
+  botDelay:(d,s,lv)=>d.ph==='plan'?1400+rnd(1600):d.ph==='route'?1500+rnd(2500):d.ph==='race'?TQ_T.race+rnd(400):BOTMS[lv]+rnd(800),
   // what every phone learns at a round's result: who misses real caps, who chases fakes
   botSee(nd){try{if(nd.ph!=='res'||!nd.rr)return;const M=tqMem(),k=nd.gid+':'+nd.rr.k;if(M.seen[k])return;M.seen[k]=1;if(++M.n>400){M.seen={};M.n=0;}
     const r=nd.rr,x=M.r[nd.pl[r.tg]]||(M.r[nd.pl[r.tg]]={sp:0,mi:0,fc:0,fi:0});if(r.o==='miss')x.mi++;else if(r.o==='esc'||r.o==='catch')x.sp++;else if(r.o==='fs')x.fc++;else if(r.o==='fi')x.fi++;}catch(e){}}};
 
+// the target answers on its own phone; the host reads it from its private part
+function tqAnswer(d,me,s,ms){const r=d.pl[me],p=tqMyPriv(d,me,S.priv)||{};setPriv(r,{...p,gid:d.gid,k:d.rk,ans:{s,ms:Math.max(0,Math.min(30000,Math.round(ms)))}});}
 /* ---------- the clocks and the moving parts: only the enforcer (this phone, or the room's host) moves the game on ---------- */
 function tqSetD(nd){S.st={...S.st,d:nd};save();render();}
 function tqTick(d,now){const local=tqLocal();
@@ -454,8 +460,10 @@ function tqTick(d,now){const local=tqLocal();
   switch(d.ph){
     case 'plan':if(d.dl>0&&now>=d.dl)act(tqGo(d,{}));return;
     case 'walk':if(now>=d.we){act(tqDrop(d));return;}{const k=Math.floor((now-d.w0)/TQ_T.lap)+1;if(k>d.lp)act(tqLap(d,k));}return;
-    case 'alert':{const key=tqAK(d);if(isBot(d,d.tg)&&d.az&&!d.az.fz&&S.tqBF!==key){S.tqBF=key;if(tqBotFeels(d,botLv(d,d.tg))){act(tqFeel(d));return;}}
-      if(d.dl>0&&now>=d.dl)res();return;}
+    case 'alert':{const key=tqAK(d),ans=tqAns(d);if(ans){act(tqAlertEnd(d,ans));return;}
+      if(isBot(d,d.tg)&&d.az){const lv=botLv(d,d.tg);if(!d.az.fz&&S.tqBF!==key){S.tqBF=key;if(tqBotFeels(d,lv)){act(tqFeel(d));return;}}
+        const R=Math.min(tqReact(GAMES.taqiya.mask(d,d.tg),d.tg,lv),tqLim(d));if(d.a0>0&&now-d.a0>=R){act(tqAlertEnd(d,tqBotAlert(d,d.tg,lv)));return;}}
+      if(d.dl>0&&now>=d.dl)act(tqAlertEnd(d,null));return;}
     case 'route':case 'race':if(d.dl>0&&now>=d.dl)res();return;
     case 'res':if(d.dl>0&&now>=d.dl)act(tqNext(d));return;}}
 // this phone's own view: the walker on the ring, the target's arc and its own timeout, the blur, the race's 3 seconds
@@ -469,13 +477,13 @@ function tqDom(d,now){const ctx=mkCtx(),me=ctx.v!=null&&ctx.v>=0?ctx.v:-1,v=GAME
     S.tqWa={gid:v.gid,a};const [x,y]=tqXY(a,TQOUT);w.style.transform=`translate(${KH.f(x)}px,${KH.f(y)}px)`;w.classList.toggle('fl',Math.cos(a)>0);
     const L=document.querySelector(Math.cos(a)<0?'.tq-wb':'.tq-wf');if(L&&w.parentNode!==L)L.appendChild(w);}
   // the target: the arc, the seconds, «فاتتك» when the time is up on this phone
-  if(v.ph==='alert'&&me>=0&&me===v.tg&&ctx.my&&S.tqA&&S.tqA.k===tqAK(v)){const lim=tqLim(v),el=t-S.tqA.t0,fr=Math.max(0,Math.min(1,1-el/lim));
+  if(v.ph==='alert'&&me>=0&&me===v.tg&&S.tqA&&S.tqA.k===tqAK(v)){const lim=tqLim(v),el=t-S.tqA.t0,fr=Math.max(0,Math.min(1,1-el/lim));
     for(const c of document.querySelectorAll('.tq-arc,.tq-cdf')){const C=c.classList.contains('tq-cdf')?169.6:+c.getAttribute('data-c');c.setAttribute('stroke-dasharray',`${KH.f(C*fr)} ${KH.f(C)}`);}
     const tx=document.querySelector('.tq-cdt');if(tx)tx.textContent=(Math.max(0,lim-el)/1000).toFixed(1);
     const st=document.querySelector('.tq-stage');if(st){st.classList.toggle('gf',S.tqA.bu>t);
       // a short phone: the stage comes up above the buttons, once
       if(!S.tqA.sc){S.tqA.sc=1;const r=st.getBoundingClientRect(),dk=document.querySelector('.tq-dock'),lim=dk?dk.getBoundingClientRect().top:innerHeight;if(r.bottom>lim)try{scrollBy({top:Math.min(r.top,r.bottom-lim+6),behavior:'instant'});}catch(e){}}}
-    if(el>=lim&&!S.tqA.sent){S.tqA.sent=1;simulPick(d,me,{s:0,ms:Math.round(lim)});}}
+    if(el>=lim&&!S.tqA.sent){S.tqA.sent=1;tqAnswer(d,me,0,Math.round(lim));}}
   if(v.ph==='race'&&me>=0&&(me===v.lf||me===v.tg)&&ctx.my&&S.tqR&&S.tqR.k===tqAK(v)+':'+v.rd+':'+me&&!S.tqR.sent){const el=t-S.tqR.t0,b=document.querySelector('.tq-rbar i');if(b)b.style.transform=`scaleX(${Math.max(0,1-el/TQ_T.race).toFixed(3)})`;
     if(el>=TQ_T.race){S.tqR.sent=1;simulPick(d,me,{n:S.tqR.n});}}}
 setInterval(()=>{if(S.st.g!=='taqiya'||!GAMES.taqiya)return;const d=S.st.d;if(!d||d.win!=null)return;const now=Date.now();
