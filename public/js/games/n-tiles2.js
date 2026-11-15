@@ -67,6 +67,11 @@ function k2okSolve(tiles,ok,cap){const C='rybk',cnt=[0,1,2,3].map(()=>Array(15).
         if(cnt[c][pn]){cnt[c][pn]--;used.push(pn);run.push(code(c,pn));}else if(ww<w){ww++;run.push('*');}else break;
         if(run.length>=3){cur.push(run.slice());go(w-ww,left-1-used.length,cov+run.length);cur.pop();}}
       used.forEach(pn=>cnt[c][pn]++);}
+    // a natural 1 can also close a run at the top (…12-13-1): walk down from 13 with naturals or wilds
+    if(n===1){let ww=0;const used=[],run=[code(c,1)];
+      for(let p=13;p>=2;p--){if(cnt[c][p]){cnt[c][p]--;used.push(p);run.unshift(code(c,p));}else if(ww<w){ww++;run.unshift('*');}else break;
+        if(run.length>=3){cur.push(run.slice());go(w-ww,left-1-used.length,cov+run.length);cur.pop();}}
+      used.forEach(p=>cnt[c][p]++);}
     // or leave it out
     dead.push(code(c,n));go(w,left-1,cov);dead.pop();cnt[c][n]++;}
   go(W,N,0);best.melds=best.melds.map(m=>m.map(x=>x==='*'?ok:x));return best;}
@@ -187,7 +192,7 @@ const k2dV=(t,h,col)=>`<svg class="dsv" viewBox="0 0 20 40" height="${h||76}" ar
 // a tile on the table: doubles stand across the line
 const k2dOn=(t,cls,col,k)=>`<span class="dom ${k2dDbl(t)?'dbl':''} ${cls||''}"${k?` data-k="${k}"`:''}>${k2dDbl(t)?k2dV(t,44,col):k2dH(t,44,col)}</span>`;
 // the hand: standing tiles, or (many tiles) lying tiles in rows
-function k2dHand(d,v,legal,my,sel,col,ga){const hs=cardsOf(d.hands[v]||'');const ids=handIds(hs,'kd'+v+'-'),flat=hs.length>9,f=t=>flat?k2dH(t,54,col):k2dV(t,70,col);
+function k2dHand(d,v,legal,my,sel,col,ga,fl){const hs=cardsOf(d.hands[v]||'');const ids=handIds(hs,'kd'+v+'-'),flat=hs.length>(fl||9),f=t=>flat?k2dH(t,54,col):k2dV(t,70,col);
   return `<div class="${flat?'k2dgrid':'hand dhand'} k2dh">${hs.map((t,i)=>t==='??'?`<span class="dom k2dbk" id="${ids[i]}"></span>`:my&&legal.includes(i)?`<button class="dom pick ${sel===i?'sel':''}" id="${ids[i]}" data-ga="${ga||'tile'}" data-i="${i}">${f(t)}</button>`:`<button class="dom ${my?'dim':''}" id="${ids[i]}" disabled>${f(t)}</button>`).join('')}</div>`;}
 const k2dDeal=(d,m,k)=>{const n=d.pl.length,all=shuffle(k2dSet(m)),hands=Array(n).fill('');for(let s=0;s<n;s++)if(d.out[s]!=='1')hands[s]=all.splice(0,k).join('');return {hands,bone:all.join('')};};
 const k2dDraw=(d,s)=>{const j=rnd(d.bone.length/2)*2,t=d.bone.slice(j,j+2),hands=[...d.hands];hands[s]+=t;return {...d,hands,bone:d.bone.slice(0,j)+d.bone.slice(j+2),dt:t};};
@@ -274,7 +279,7 @@ GAMES.k_fives={name:'الدومينو الخمسات',cat:'cards',lbc:'#6B4F3A',
     if(v<0)return h+'</div>';const L=my?k2fLegal(d,v):[],sel=my?k2Sel(d,'fv',d.hands[v]):[],si=sel.length?sel[0]:-1;
     if(my&&si>=0){const t=cardsOf(d.hands[v])[si];h+=k2Btns([...k2fFits(d,t).map(e=>['lrud'.indexOf(e),K2FEN[e],'navy']),[9,'رجوع','soft']],'end');}
     else if(my&&!L.length)h+=k2Btns([[0,d.bone?'اسحب من المخزن':'مرّر',d.bone?'blue':'navy']],d.bone?'draw':'pass');
-    h+=`<p class="lbl hlbl">قطعك (${k2fPips(d,v)} نقطة)</p>`+k2dHand(d,v,L,my,si);
+    h+=`<p class="lbl hlbl">قطعك (${k2fPips(d,v)} نقطة)</p>`+k2dHand(d,v,L,my,si,false,'',7);// from 8 tiles the standing ones overlap and hide pips: lay them flat
     return h+'</div>';},
   click(a,i,d,ctx){if(!ctx.my)return;const s=d.turn;if(a==='next'){if(d.ph==='sum')act(k2fNext(d));return;}if(d.ph!=='play')return;const hs=d.hands[s];
     if(a==='draw'){if(!d.bone||k2fLegal(d,s).length)return;act({...k2dDraw(d,s),last:`${nameTag(d,s)} سحب من المخزن`});return;}
@@ -413,8 +418,9 @@ function k2duCanAdd(d,s,c){if(!d.tb.length)return s===d.att;if(d.tb.length>=d.li
 const k2duAdds=(d,s)=>cardsOf(d.hands[s]).map((c,i)=>k2duCanAdd(d,s,c)?i:-1).filter(i=>i>=0);
 const k2duDefs=d=>{const u=d.tb.find(p=>!p[1]);return u?cardsOf(d.hands[d.def]).map((c,i)=>k2duBeats(d.tr,u[0],c)?i:-1).filter(i=>i>=0):[];};
 function k2duDeal(d){const n=d.pl.length,R=n>6?'23456789TJQKA':'6789TJQKA',all=[];for(const s of 'shdc')for(const r of R)all.push(r+s);
-  const dk=shuffle(all),hands=Array(n).fill('');for(let k=0;k<6;k++)for(let s=0;s<n;s++)if(d.out[s]!=='1')hands[s]+=dk.shift();
-  const tc=dk[dk.length-1],tr=tc[1];let att=-1,lo=99;hands.forEach((h,s)=>cardsOf(h).forEach(c=>{if(c[1]===tr&&k2duV(c)<lo){lo=k2duV(c);att=s;}}));
+  const dk=shuffle(all),hands=Array(n).fill('');let lc='';for(let k=0;k<6;k++)for(let s=0;s<n;s++)if(d.out[s]!=='1')hands[s]+=(lc=dk.shift());
+  // the trump is the bottom card of the stock; with six players nothing is left, so the last card dealt (the dealer's) shows it and stays in his hand
+  const tc=dk.length?dk[dk.length-1]:lc,tr=tc[1];let att=-1,lo=99;hands.forEach((h,s)=>cardsOf(h).forEach(c=>{if(c[1]===tr&&k2duV(c)<lo){lo=k2duV(c);att=s;}}));
   if(att<0)att=aliveSeats(d)[rnd(aliveSeats(d).length)];const nd={...d,hands:hands.map(h=>k2duSortH(h,tr)),dk:dk.join(''),tc,tr,tb:[],att,def:nextSeat(d,att),ph:'att',turn:att,ti:0,np:0,fo:[],last:''};
   return {...nd,lim:Math.min(6,cardsOf(nd.hands[nd.def]).length),last:lo<99?`${nameTag(d,att)} عنده أصغر حكم ويبدأ الهجوم`:''};}
 // the next thrower who can still add a card (the others pass by themselves); none left ends the bout
@@ -429,7 +435,7 @@ function k2duBoutEnd(d){const took=d.ph==='take';let nd={...d};const all=d.tb.fl
   {const n=d.pl.length,ord=[d.att];for(let k=1;k<n;k++){const s=(d.def+k)%n;if(s!==d.att&&s!==d.def)ord.push(s);}nd=k2duRefill(nd,[...ord,d.def].filter(s=>d.out[s]!=='1'));}
   // out of the game: no cards and no stock
   let out=nd.out,fo=[...(d.fo||[])];if(!nd.dk)nd.pl.forEach((_,s)=>{if(out[s]!=='1'&&!nd.hands[s]){out=setAt(out,s,'1');fo.push(s);}});nd={...nd,out,fo};
-  const al=aliveSeats(nd);if(al.length<=1){const fool=al.length?al[0]:-1;const ws=nd.pl.map((_,s)=>s).filter(s=>s!==fool);
+  const al=aliveSeats(nd);if(al.length<=1){const fool=al.length?al[0]:-1;const ws=fo.filter(s=>s!==fool);// winners: the ones who got rid of their cards, never a player who left
     if(fool<0)return {...nd,win:'d',ph:'end',last:'خلصوا كلهم مع بعض، ما فيه أحمق'};return {...nd,ph:'end',fool,win:fo[0]??ws[0],wins:ws,last:`${nameTag(nd,fool)} هو الأحمق 🃏`};}
   let att=took?nextSeat(nd,d.def):d.def;if(nd.out[att]==='1')att=nextSeat(nd,att);const def=nextSeat(nd,att);
   return {...nd,att,def,ph:'att',turn:att,ti:0,np:0,lim:Math.min(6,cardsOf(nd.hands[def]).length)};}
@@ -451,7 +457,15 @@ GAMES.k_durak={name:'الأحمق',cat:'cards',lbc:'#4E5D2A',teams:'none',outDon
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
   points:d=>d.hands.map((h,s)=>d.out[s]==='1'?'✓':cardsOf(h).length+' ورق'),
   winText:d=>d.fool>=0&&d.win!=='d'?`${nm(d,d.fool)} هو الأحمق! 🃏`:null,
-  onSkip(nd,d){if(nd.win!=null)return nd;const al=aliveSeats(nd);if(al.length<2)return nd;// a player who left: start a fresh bout without him
+  onSkip(nd,d){const fo=d.fo||[];// the last one holding cards after a leaver is the fool when someone already got out
+    if(nd.win!=null&&d.win==null&&typeof nd.win==='number'&&fo.length)return {...nd,ph:'end',fool:nd.win,win:fo[0],wins:fo.slice(),last:`${nameTag(nd,nd.win)} هو الأحمق 🃏`};
+    if(nd.win!=null)return nd;// a player who left: start a fresh bout without him (the cards on the table are put away)
+    // everyone fills up to 6 from the stock as after a bout; with the stock gone, a player whose last cards were on the table is out too
+    if(nd.dk){const n=nd.pl.length,ord=[];for(let k=0;k<n;k++){const s=(d.att+k)%n;if(nd.out[s]!=='1')ord.push(s);}nd=k2duRefill(nd,ord);}
+    if(!nd.dk){let out=nd.out;const f2=[...fo];nd.pl.forEach((_,s)=>{if(out[s]!=='1'&&!nd.hands[s]){out=setAt(out,s,'1');f2.push(s);}});nd={...nd,out,fo:f2};
+      const a2=aliveSeats(nd);if(a2.length<=1){if(!a2.length)return {...nd,tb:[],win:'d',ph:'end',last:'خلصوا كلهم مع بعض، ما فيه أحمق'};
+        return {...nd,tb:[],ph:'end',fool:a2[0],win:f2[0],wins:f2.slice(),last:`${nameTag(nd,a2[0])} هو الأحمق 🃏`};}}
+    const al=aliveSeats(nd);if(al.length<2)return nd;
     let att=nd.out[d.att]==='1'?nextSeat(nd,d.att):d.att;const def=nextSeat(nd,att);return {...nd,tb:[],att,def,ph:'att',turn:att,ti:0,np:0,lim:Math.min(6,cardsOf(nd.hands[def]).length)};},
   onTimeout(d){if(d.ph==='def')return k2duTake(d);if(!d.tb.length)return k2duAdd(d,d.turn,0);return k2duPass(d);},
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';const me=!ctx.local&&d.turn===ctx.v;
@@ -470,7 +484,7 @@ GAMES.k_durak={name:'الأحمق',cat:'cards',lbc:'#4E5D2A',teams:'none',outDon
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const s=d.turn;
     if(a==='do'){if(i===0&&d.ph==='def')act(k2duTake(d));else if(i===1&&d.ph!=='def'&&d.tb.length)act(k2duPass(d));return;}
     if(a==='card'){if(d.ph==='def'){if(s===d.def)act(k2duBeat(d,i));return;}act(k2duAdd(d,s,i));}}};
-HELP.k_durak='الأحمق (دوراك) لعبة روسية مشهورة. لين 6 لاعبين نلعب بـ36 ورقة (من 6 لين الإكة)، و7 و8 بالكوتشينة كاملة. كل واحد ياخذ 6 أوراق، وآخر ورقة في الكومة مكشوفة ونوعها هو الحكم. اللي عنده أصغر حكم يبدأ يهاجم اللي بعده: ينزّل ورقة، والمدافع لازم يصدّها بورقة أعلى من نفس النوع أو بأي حكم (والحكم ما يصدّه إلا حكم أعلى)، أو ياخذ الورق كله. بعد كل صدّة يقدر المهاجم وبعده الباقين (غير المدافع) يرمون ورق بنفس أرقام اللي على الطاولة، لين 6 أوراق بالهجمة وبدون ما يزيدون على ورق المدافع. لو صدّ كل شي ينرمى الورق ويصير هو المهاجم الجاي، ولو أخذ الورق يقدرون يرمون له زيادة، وياخذه كله ويروح الهجوم للي بعده. بعد كل هجمة كل واحد يكمّل لين 6 من الكومة: المهاجم أول والمدافع آخر واحد. لما تخلص الكومة اللي يخلّص ورقه ينجى، وآخر واحد يبقى معه ورق هو «الأحمق» ويخسر، والباقين كلهم فايزين.';
+HELP.k_durak='الأحمق (دوراك) لعبة روسية مشهورة. لين 6 لاعبين نلعب بـ36 ورقة (من 6 لين الإكة)، و7 و8 بالكوتشينة كاملة. كل واحد ياخذ 6 أوراق، وآخر ورقة في الكومة مكشوفة ونوعها هو الحكم (بستة لاعبين ما يبقى كومة، فآخر ورقة توزعت تنكشف وتبقى عند صاحبها). اللي عنده أصغر حكم يبدأ يهاجم اللي بعده: ينزّل ورقة، والمدافع لازم يصدّها بورقة أعلى من نفس النوع أو بأي حكم (والحكم ما يصدّه إلا حكم أعلى)، أو ياخذ الورق كله. بعد كل صدّة يقدر المهاجم وبعده الباقين (غير المدافع) يرمون ورق بنفس أرقام اللي على الطاولة، لين 6 أوراق بالهجمة وبدون ما يزيدون على ورق المدافع. لو صدّ كل شي ينرمى الورق ويصير هو المهاجم الجاي، ولو أخذ الورق يقدرون يرمون له زيادة، وياخذه كله ويروح الهجوم للي بعده. بعد كل هجمة كل واحد يكمّل لين 6 من الكومة: المهاجم أول والمدافع آخر واحد. لما تخلص الكومة اللي يخلّص ورقه ينجى، وآخر واحد يبقى معه ورق هو «الأحمق» ويخسر، واللي خلّصوا ورقهم كلهم فايزين (اللي ينسحب ما يفوز).';
 // the bot: counts the cards gone and the cards it saw taken; attacks with its lowest non-trumps (pairs first), throws in cheap
 // cards (anything it can spare when the defender is taking), beats with the cheapest card that does it and keeps its trumps,
 // and takes low attacks rather than spend a high trump while the stock is still big
@@ -619,7 +633,10 @@ function k2gfDraw(d,from){if(from==='disc'){const c=d.disc.slice(-2);return {...
   let dk=d.dk,disc=d.disc;if(!dk){const top=disc.slice(-2);dk=shuffle(cardsOf(disc.slice(0,-2))).join('');disc=top;}
   return {...d,dk:dk.slice(2),disc,dc:dk.slice(0,2),fd:0,last:`${nameTag(d,d.turn)} سحب من الكومة`};}
 function k2gfFlip(d,p){const s=d.turn;if(d.up[s][p]!=='0')return d;const up=d.up.map((u,k)=>k===s?setAt(u,p,'1'):u);const nd={...d,up};
-  if(up[s].split('').filter(x=>x==='1').length<2)return nd;const nx=nextSeat(d,s);return nx===d.st0?{...nd,ph:'play',turn:d.st0,last:'كل واحد كشف ورقتين، يلا نلعب'}:{...nd,turn:nx};}
+  if(up[s].split('').filter(x=>x==='1').length<2)return nd;return k2gfFlipNext(nd,s);}
+// the next player still to turn up two cards; when nobody is left the hole starts with the opener (or the next one if he left)
+function k2gfFlipNext(d,s){const n=d.pl.length;for(let k=1;k<=n;k++){const x=(s+k)%n;if(d.out[x]!=='1'&&d.up[x].split('').filter(y=>y==='1').length<2)return {...d,turn:x};}
+  const st=d.out[d.st0]==='1'?nextSeat(d,d.st0):d.st0;return {...d,ph:'play',turn:st,st0:st,last:'كل واحد كشف ورقتين، يلا نلعب'};}
 function k2gfGrid(d,s,can,mini){const cs=cardsOf(d.hands[s]),u=d.up[s],lm=d.lm&&d.lm.s===s?d.lm.p:-1;
   return `<div class="k2gf ${mini?'mini':''}">${cs.map((c,p)=>{const show=u[p]==='1'&&c!=='??';const k=`g${s}-${p}-${show?c:'b'}`;
     return can&&can.includes(p)?`<button class="k2gc can" data-ga="pos" data-i="${p}" data-k="${k}">${cardHTML(show?c:'??',!mini)}</button>`:`<span class="k2gc ${p===lm?'lp':''}" data-k="${k}">${cardHTML(show?c:'??',!mini)}</span>`;}).join('')}</div>`;}
@@ -631,6 +648,9 @@ GAMES.k_golf={name:'غولف الورق',cat:'cards',lbc:'#2E7D4F',teams:'none',
   viewer:d=>d.win!=null||d.ph==='opt'?null:d.turn,coverMsg:d=>d.last||'',
   points:d=>d.sc.slice(),
   winText:d=>`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بأقل مجموع (${d.sc[d.win]})`,
+  // a player who leaves while the cards are being turned up: the flipping goes on with whoever still has to flip
+  onSkip(nd,d){if(nd.win!=null)return nd;if(nd.ph==='flip')return k2gfFlipNext(nd,nd.out[d.turn]==='1'?d.turn:nd.turn-1);
+    if(nd.ph==='play'&&nd.out[d.turn]==='1'&&d.dc)return {...nd,disc:d.disc+d.dc,dc:'',fd:0};return nd;},
   onTimeout(d){if(d.ph==='opt')return k2gfDeal({...d,nh:4});if(d.ph==='sum')return k2gfDeal({...d,ho:d.ho+1,last:''});const s=d.turn;
     if(d.ph==='flip')return k2gfFlip(d,d.up[s].indexOf('0'));if(!d.dc)return k2gfDraw(d,'stock');if(d.fd)return k2gfPut(d,d.up[s].indexOf('0')>=0?d.up[s].indexOf('0'):0);return k2gfThrow(d);},
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='opt')return 'كم حفرة نلعب؟';if(d.ph==='sum')return s+'انتهت الحفرة';const me=!ctx.local&&d.turn===ctx.v;

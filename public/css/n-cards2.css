@@ -48,6 +48,7 @@
 .c2lb{text-align:center;margin:4px 0 0}
 .c2opts{margin:8px 0}.c2opts .btn{min-height:44px;min-width:50px;padding:0 14px;font-size:17px}
 .c2opts .btn.bsuit{min-width:60px;font-size:26px}
+.c2opts.c2spb{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.c2opts.c2spb .btn{min-width:0;min-height:40px;padding:0;font-size:16px}
 .c2hand.bhand.bhand{--cw:50px}
 .c2hand.big.bhand.bhand{--cw:44px}
 .bhand .bcard.sel .card.card.card{transform:translateY(-18px);box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),var(--ring),0 8px 14px rgba(14,28,46,.24)}

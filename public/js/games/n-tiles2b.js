@@ -63,7 +63,7 @@ GAMES.k_snap={name:'اللقطة',cat:'cards',lbc:'#D9582B',teams:'none',
   click(a,i,d,ctx){if(d.win!=null)return;
     if(a==='flip'){if(!ctx.my||d.ph!=='play')return;act(k2snFlip(d));return;}
     if(a==='slap'){if(d.ph!=='slap')return;const s=k2TapSeat(d,ctx,i);if(s<0||d.out[s]==='1'||hasPicked(d,s))return;simulPick(d,s,{ms:k2Ms(d)});render();}}};
-HELP.k_snap='الورق كله يتوزع مقلوب (ولو كنتوا 5 وفوق كوتشينتين). بالدور كل واحد يقلب ورقة من كومته على كومته المكشوفة. أول ما تصير ورقتين مكشوفات فوق بنفس الرقم عند أي اثنين، اضغط «لقطة!» بسرعة: الأسرع ياخذ الكومتين المكشوفات ويحطها تحت كومته. اللي يضغط غلط (ما فيه ورقتين متشابهات) يدفع ورقة لكل واحد. لو خلصت كومتك تنقلب كومتك المكشوفة وتكمّل منها، واللي يخلص ورقه كله يطلع. آخر واحد يبقى معه ورق يفوز (ولو طالت مرة، بعد 260 قلبة يفوز صاحب أكثر ورق). على نفس الجوال كل واحد له زر بلونه.';
+HELP.k_snap='الورق كله يتوزع مقلوب (ولو كنتوا 5 وفوق كوتشينتين). بالدور كل واحد يقلب ورقة من كومته على كومته المكشوفة. أول ما تصير ورقتين مكشوفات فوق بنفس الرقم عند أي اثنين، اضغط «لقطة!» بسرعة: الأسرع ياخذ الكومتين المكشوفات ويحطها تحت كومته. اللي يضغط غلط (ما فيه ورقتين متشابهات) يدفع ورقة لكل واحد. لو خلصت كومتك تنقلب كومتك المكشوفة وتكمّل منها، واللي يخلص ورقه كله يطلع. آخر واحد يبقى معه ورق يفوز (ولو طالت مرة، بعد 260 قلبة يفوز صاحب أكثر ورق).';
 
 /* =================================================================
    الحرب الكبرى (Egyptian Ratscrew-style slap war). The pack is dealt face down. In turn each plays his top card onto the
@@ -197,7 +197,7 @@ GAMES.k_speed={name:'السرعة',cat:'cards',lbc:'#1F6FB2',teams:'none',
       if(ps.length===1){S.k2sps=null;simulPick(d,s,{c,p:ps[0],ms:k2Ms(d)});render();return;}S.k2sps=[d.gid+':'+d.rd+':'+s,k];render();return;}
     if(a==='to'){const sel=Array.isArray(S.k2sps)&&S.k2sps[0]===d.gid+':'+d.rd+':'+s?S.k2sps[1]:-1;const c=H[sel];if(!c||!d.mid[k]||!k2spAdj(c,d.mid[k].slice(-2)))return;S.k2sps=null;simulPick(d,s,{c,p:k,ms:k2Ms(d)});render();}}};
 GAMES.k_speed.net={local:['card'],ui:['k2sps']};
-HELP.k_speed='لعبة السرعة: الكل يلعب بنفس الوقت. كل واحد معه 5 أوراق بيده وكومة مقلوبة له، وبالوسط كومات مكشوفة (2 لين 3 لاعبين، 3 لـ4 و5، و4 من 6 وفوق) واحتياط. بكل جولة كل واحد يقدر يحط ورقة وحدة على أي كومة بالوسط لو رقمها أعلى أو أقل بواحد من اللي فوق (الإكة تمشي مع الشايب ومع الاثنين). الجوال يحسب سرعتك، وصاحب الغرفة يرتب الأوراق حسب الأسرع: لو سبقك أحد وصارت ورقتك ما تمشي ترجع ليدك. بعد ما تلعب تكمّل يدك لين 5 من كومتك. لو محد عنده لعب تنقلب ورقة جديدة على كل كومة من الاحتياط. أول واحد يخلّص ورقه كله يفوز. على نفس الجوال كل واحد له صف بلونه ويلعب منه.';
+HELP.k_speed='لعبة السرعة: الكل يلعب بنفس الوقت. كل واحد معه 5 أوراق بيده وكومة مقلوبة له، وبالوسط كومات مكشوفة (2 لين 3 لاعبين، 3 لـ4 و5، و4 من 6 وفوق) واحتياط. بكل جولة كل واحد يقدر يحط ورقة وحدة على أي كومة بالوسط لو رقمها أعلى أو أقل بواحد من اللي فوق (الإكة تمشي مع الشايب ومع الاثنين). الجوال يحسب سرعتك، وصاحب الغرفة يرتب الأوراق حسب الأسرع: لو سبقك أحد وصارت ورقتك ما تمشي ترجع ليدك. بعد ما تلعب تكمّل يدك لين 5 من كومتك. لو محد عنده لعب تنقلب ورقة جديدة على كل كومة من الاحتياط. أول واحد يخلّص ورقه كله يفوز.';
 
 /* =================================================================
    سوليتير السباق (a Klondike race). Everyone plays the same deal at once, each on his own board: seven columns (1 to 7 cards,
@@ -295,7 +295,7 @@ GAMES.k_soli={name:'سوليتير السباق',cat:'cards',lbc:'#1E7A52',teams
     if(a==='done'){S.sel=[];setPriv(r,{...k2kDone(d,v,p),st});return;}
     if(a==='auto'){const q=k2kAuto(p,i);if(q)put(q);else{S.sel=[];render();}return;}
     if(a==='to'){const src=Array.isArray(S.sel)&&S.sel[0]===d.gid+':kl'?S.sel[1]:null;if(src==null)return;const q=k2kMove(p,src,i);if(q)put(q);else{S.sel=[];render();}}}};
-HELP.k_soli='سباق سوليتير (كلوندايك): الكل يلعب نفس التوزيعة بنفس الوقت، كل واحد على لوحه. فيه 7 أعمدة (من ورقة لين 7، اللي فوق مكشوفة) وكومة تقلب منها ورقة ورقة وتعيدها كل ما خلصت. رتّب الأعمدة نازل بألوان متبادلة (أحمر على أسود)، والعمود الفاضي ما ينحط فيه إلا شايب، وطلّع الأوراق للبيوت الأربعة فوق من الإكة لين الشايب بنفس النوع. اضغط ورقة عشان تختارها وبعدها اضغط مكانها، ولو ضغطتها مرتين تروح لأحسن مكان. أول واحد يطلّع الـ52 كلها للبيوت يفوز، ولو وقف الكل (زر «خلاص») أو خلص الوقت (10 دقايق) يفوز صاحب أكثر أوراق بالبيوت. على نفس الجوال كل واحد يلعب دوره على نفس التوزيعة، والأكثر بالبيوت (وبعده الأسرع) يفوز.';
+HELP.k_soli='سباق سوليتير (كلوندايك): الكل يلعب نفس التوزيعة بنفس الوقت، كل واحد على لوحه. فيه 7 أعمدة (من ورقة لين 7، اللي فوق مكشوفة) وكومة تقلب منها ورقة ورقة وتعيدها كل ما خلصت. رتّب الأعمدة نازل بألوان متبادلة (أحمر على أسود)، والعمود الفاضي ما ينحط فيه إلا شايب، وطلّع الأوراق للبيوت الأربعة فوق من الإكة لين الشايب بنفس النوع. اضغط ورقة عشان تختارها وبعدها اضغط مكانها، ولو ضغطتها مرتين تروح لأحسن مكان. أول واحد يطلّع الـ52 كلها للبيوت يفوز، ولو وقف الكل (زر «خلاص») أو خلص الوقت (10 دقايق) يفوز صاحب أكثر أوراق بالبيوت.';
 
 /* ---------- sides that score together: the engine's teams, partners across a table of four, else each alone ---------- */
 const k2Side=(d,s)=>d.tm?d.tm[s]:d.pairs?s%2:s;
@@ -509,11 +509,17 @@ const k2poSoft=cs=>{let t=0,a=0;for(const c of cs){const r=k2rv(c);t+=r>10?10:r=
 const k2poTen=c=>'TJQK'.includes(c[0]);
 const k2poPon=(h)=>h.c.length===4&&!h.sp&&cardsOf(h.c).some(c=>c[0]==='A')&&cardsOf(h.c).some(k2poTen);
 const k2poRank=h=>{const cs=cardsOf(h.c),t=k2poTot(cs);if(t>21)return 0;if(k2poPon(h))return 100;if(cs.length>=5)return 90;return t;};
-const k2poPlayers=d=>{const n=d.pl.length,o=[];for(let k=1;k<n;k++){const s=(d.bk+k)%n;if(d.out[s]!=='1')o.push(s);}return o;};
+// out = left the game (the engine's key); bust = sits this deal out for lack of chips (the game's own key)
+const k2poSits=(d,s)=>d.out[s]==='1'||(d.bust||'')[s]==='1';
+const k2poPlayers=d=>{const n=d.pl.length,o=[];for(let k=1;k<n;k++){const s=(d.bk+k)%n;if(!k2poSits(d,s))o.push(s);}return o;};
+// the seats still in the match: not gone, and with chips to bet (the banker always)
+const k2poLive=d=>aliveSeats(d).filter(s=>d.ch[s]>=2||s===d.bk);
+const k2poFinal=d=>k2Win(d,k2Best(d,d.ch,true));
 function k2poDraw(d){let dk=d.dk;if(dk.length<2)dk=shuffle(deck52()).join('');return [dk.slice(0,2),dk.slice(2)];}
 function k2poRound(d){let dk=d.dk,used='';d.hs.forEach(H=>(H||[]).forEach(h=>used+=h.c));dk=d.shuf?shuffle(cardsOf(dk+used)).join(''):dk+used;
   // players without chips sit out
-  let out=d.out;d.pl.forEach((_,s)=>{if(s!==d.bk&&d.ch[s]<2)out=setAt(out,s,'1');});const nd={...d,out,dk,shuf:0};const hs=d.pl.map(()=>[]);
+  const bust=d.pl.map((_,s)=>s!==d.bk&&d.ch[s]<2?'1':'0').join('');const nd={...d,bust,dk,shuf:0};const hs=d.pl.map(()=>[]);
+  if(!k2poPlayers(nd).length)return k2poFinal({...nd,hs,ph:'sum',sum:{nb:-1,msg:''}});
   for(const s of [...k2poPlayers(nd),d.bk]){const [c,r]=k2poDraw({dk:nd.dk});nd.dk=r;hs[s]=[{c,u:'0',b:0,st:'',tw:0,lb:0,sp:0}];}
   const P=k2poPlayers(nd);return {...nd,hs,hi:0,ph:'bet',turn:P[0],sum:null,last:`الجولة ${d.ro+1}: ${nm(d,d.bk)} هو البنك`};}
 function k2poSecond(d){const hs=d.hs.map(H=>H.map(h=>({...h})));let dk=d.dk;for(const s of [...k2poPlayers(d),d.bk]){const [c,r]=k2poDraw({dk});dk=r;hs[s][0].c+=c;hs[s][0].u+='0';}
@@ -522,7 +528,7 @@ function k2poSecond(d){const hs=d.hs.map(H=>H.map(h=>({...h})));let dk=d.dk;for(
     return k2poEnd({...nd,ch,shuf:1},'بنت بنك! البنك عنده بونتون وأخذ دبل');}
   const P=k2poPlayers(nd);return k2poNextHand({...nd,ph:'play',turn:P[0],hi:0},true);}
 // moves to the next hand that still needs a decision (pontoons and five-card tricks stop by themselves)
-function k2poNextHand(d,fresh){let s=d.turn,hi=fresh?0:d.hi+1;const P=k2poPlayers(d);let k=P.indexOf(s);
+function k2poNextHand(d,fresh){let s=d.turn,hi=fresh?0:d.hi+1;const P=k2poPlayers(d);let k=P.indexOf(s);if(k<0)k=P.length;
   while(k<P.length){s=P[k];const H=d.hs[s];while(hi<H.length){const h=H[hi];if(!h.st){if(k2poPon(h)){d={...d,hs:d.hs.map((X,q)=>q===s?X.map((y,j)=>j===hi?{...y,st:'pon',u:'1'.repeat(y.c.length/2)}:y):X)};hi++;continue;}return {...d,turn:s,hi};}hi++;}k++;hi=0;}
   const hs=d.hs.map((H,q)=>q===d.bk?H.map(h=>({...h,u:'1'.repeat(h.c.length/2)})):H);return {...d,hs,ph:'bank',turn:d.bk,hi:0};}
 function k2poSet(d,s,hi,f){return {...d,hs:d.hs.map((H,q)=>q===s?H.map((h,j)=>j===hi?f({...h}):h):H)};}
@@ -544,10 +550,11 @@ function k2poBankDone(d){const B=d.hs[d.bk][0],br=k2poRank(B),bc=cardsOf(B.c).le
   const t=k2poTot(cardsOf(B.c));return k2poEnd({...d,ch,shuf},br===0?`البنك احترق (${t})`:bc>=5?'البنك جاب خمس أوراق':`البنك وقف على ${t}`);}
 function k2poEnd(d,msg){// a player's pontoon (not split) takes the bank, the nearest to the banker's left first
   const hs=d.hs.map(H=>H.map(h=>({...h,u:'1'.repeat(h.c.length/2)})));const bp=k2poPon(d.hs[d.bk][0]);const nb=bp?-1:k2poPlayers(d).find(s=>d.hs[s].some(h=>k2poPon(h)));
-  const nd={...d,hs,ph:'sum',sum:{nb:nb>=0?nb:-1,msg},turn:d.bk,last:msg};const al=d.pl.map((_,s)=>s).filter(s=>d.ch[s]>=2||s===d.bk);
-  if(d.ro+1>=d.nr||al.length<2)return k2Win(nd,k2Best({...nd,out:'0'.repeat(d.pl.length)},d.ch,true));return nd;}
-function k2poNext(d){let bk=d.sum&&d.sum.nb>=0?d.sum.nb:d.bk;if(d.ch[bk]<=0){const c=d.pl.map((_,s)=>s).filter(s=>d.ch[s]>0);bk=c.find(s=>s>bk)??c[0]??bk;}
-  return k2poRound({...d,bk,ro:d.ro+1,out:d.pl.map((_,s)=>d.out[s]==='1'&&d.ch[s]<2?'1':'0').join('')});}
+  const nd={...d,hs,ph:'sum',sum:{nb:nb>=0?nb:-1,msg},turn:d.bk,last:msg};// the winner is the richest of the players still in the game (one who left never wins)
+  if(d.ro+1>=d.nr||k2poLive(d).length<2)return k2poFinal(nd);return nd;}
+// the next banker: a player's pontoon, or the same banker; one who left or has no chips passes it to the next with chips
+function k2poBank(d,bk){if(d.out[bk]==='1'||d.ch[bk]<=0){const c=aliveSeats(d).filter(s=>d.ch[s]>0);bk=c.find(s=>s>bk)??c[0]??bk;}return bk;}
+function k2poNext(d){return k2poRound({...d,bk:k2poBank(d,d.sum&&d.sum.nb>=0?d.sum.nb:d.bk),ro:d.ro+1});}
 const k2poCards=(h,see)=>cardsOf(h.c).map((c,i)=>see||h.u[i]==='1'?c:'??');
 GAMES.k_pont={name:'ورق الحظ',cat:'cards',lbc:'#14532D',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1D6B3B"/><ellipse cx="50" cy="56" rx="42" ry="34" fill="#27894D"/><g transform="rotate(-10 40 50)"><rect x="24" y="28" width="30" height="42" rx="5" fill="#fff"/><text x="39" y="56" font-size="20" font-weight="900" text-anchor="middle" fill="#2D4763">A</text></g><g transform="rotate(10 60 50)"><rect x="46" y="26" width="30" height="42" rx="5" fill="#fff"/><text x="61" y="54" font-size="20" font-weight="900" text-anchor="middle" fill="#D43C33">K</text></g>${[0,1,2].map(k=>`<ellipse cx="${24+k*4}" cy="${82-k*4}" rx="12" ry="4" fill="#F0B429" stroke="#9A6A00" stroke-width="1.2"/>`).join('')}<text x="72" y="86" font-size="14" font-weight="900" fill="#FFE07A">21</text></svg>`,
@@ -558,6 +565,14 @@ GAMES.k_pont={name:'ورق الحظ',cat:'cards',lbc:'#14532D',teams:'none',
   viewer:d=>d.win!=null?null:d.turn,coverMsg:d=>d.last||'',
   points:d=>d.ch.slice(),
   winText:d=>`فاز ${(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بـ${d.ch[d.win]} فيشة`,
+  // a player who leaves: his hands are dropped (no pay either way) and the turn goes on; if the banker leaves the deal starts again with a new bank
+  onSkip(nd,d){if(nd.win!=null)return nd;const x=d.pl.map((_,s)=>s).find(s=>d.out[s]!=='1'&&nd.out[s]==='1');if(x==null)return nd;
+    if(k2poLive(nd).length<2)return k2poFinal({...nd,ph:'sum',sum:{nb:-1,msg:''}});if(nd.ph==='sum')return nd;
+    if(x===d.bk)return {...k2poRound({...nd,bk:k2poBank(nd,x)}),last:`${nm(d,x)} طلع، انعادت الجولة ببنك جديد`};
+    const hs=nd.hs.map((H,q)=>q===x?[]:H),n2={...nd,hs};if(d.turn!==x)return n2;
+    const P0=k2poPlayers(d),P1=k2poPlayers(n2),nx=P0.slice(P0.indexOf(x)+1).find(s=>P1.includes(s));
+    if(d.ph==='bet')return nx!=null?{...n2,turn:nx}:k2poSecond(n2);
+    return k2poNextHand({...n2,turn:nx!=null?nx:-1},true);},
   onTimeout(d){if(d.ph==='sum')return k2poNext(d);if(d.ph==='bet')return GAMES.k_pont.doBet(d,2);if(d.ph==='bank')return k2poBankDone(d);
     const h=d.hs[d.turn][d.hi];return k2poTot(cardsOf(h.c))>=15?k2poStick(d):k2poTwist(d);},
   doBet(d,b){const s=d.turn;if(!K2PB.includes(b)||b>d.ch[s])b=Math.min(2,d.ch[s]);const nd=k2poSet(d,s,0,h=>({...h,b,b0:b}));const P=k2poPlayers(d),k=P.indexOf(s);
@@ -565,7 +580,7 @@ GAMES.k_pont={name:'ورق الحظ',cat:'cards',lbc:'#14532D',teams:'none',
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';const me=!ctx.local&&d.turn===ctx.v;
     const w=d.ph==='bet'?'راهن على ورقتك':d.ph==='bank'?'البنك يكشف ويسحب':'اسحب، اشترِ أو وقف';return s+(me?`<b class="yt">${w}</b>`:`دور ${nameTag(d,d.turn)}: ${w}`)+` • جولة ${d.ro+1} من ${d.nr}`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph!=='sum';
-    let h=`<div class="k2 k2po">${k2Seats(d,s=>`<em>${d.ch[s]}🪙</em>${s===d.bk?'<u>🏦</u>':''}`,s=>d.turn===s&&d.ph!=='sum'&&d.win==null)}`;
+    let h=`<div class="k2 k2po">${k2Seats({...d,out:d.pl.map((_,s)=>k2poSits(d,s)?'1':'0').join('')},s=>`<em>${d.ch[s]}🪙</em>${s===d.bk?'<u>🏦</u>':''}`,s=>d.turn===s&&d.ph!=='sum'&&d.win==null)}`;
     const hand=(s,see)=>(d.hs[s]||[]).map((x,j)=>{const cs=k2poCards(x,see),t=cs.includes('??')?null:k2poTot(cs);
       return `<div class="k2poh ${s===d.turn&&j===d.hi&&d.ph==='play'?'on':''} ${x.st}"><div class="k2poc">${cs.map((c,i)=>`<span data-k="h${s}-${j}-${i}">${cardHTML(c)}</span>`).join('')}</div><small>${t!=null?t:''}${x.b?` • ${x.b}🪙`:''}${x.st==='bust'?' • احترق':x.st==='pon'?' • بونتون!':x.st==='five'?' • خمسة':x.st==='stick'?' • وقف':''}</small></div>`;}).join('');
     const B=d.bk;h+=`<div class="k2felt k2pot"><div class="k2pob"><span class="k2pon" style="--c:${col(d,B)}">🏦 ${nm(d,B)}</span>${hand(B,v===B||d.ph==='bank'||d.ph==='sum')}</div>
