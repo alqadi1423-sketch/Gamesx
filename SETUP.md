@@ -43,7 +43,7 @@ available:()=>WSROOM.app()||/(\.workers\.dev|^games\.example\.com|^localhost|^12
 
 ## 1. سوّ مفتاح جديد (مرة وحدة، على جهازك)
 ```
-keytool -genkeypair -v -keystore alaabna-release.jks -alias alaabna -keyalg RSA -keysize 4096 -validity 10000
+keytool -genkeypair -v -keystore alaabna-release.jks -alias alaabna -keyalg EC -groupname secp256r1 -sigalg SHA256withECDSA -validity 10000
 ```
 1. يسألك عن كلمة سر: اختر وحدة قوية. keytool يستخدم نفسها للملف وللمفتاح
 2. احفظ الملف وكلمة السر برّا المستودع (مثلًا في مدير كلمات السر). لو ضاع المفتاح ما تقدر تحدّث التطبيق فوق النسخ المثبّتة أبد
