@@ -520,16 +520,23 @@ function fitMeasure(){
   const ae=document.activeElement,kb=vh<FIT.fullH*.8&&!!ae&&b.contains(ae)&&/^(INPUT|TEXTAREA)$/.test(ae.tagName);
   if(de.classList.contains('fitkb')!==kb)de.classList.toggle('fitkb',kb);
   if(kb){app.dataset.fo='1';ae.scrollIntoView({block:'nearest'});return;}
-  const z=FIT.z,natH=b.getBoundingClientRect().height/z,avail=zn.clientHeight,sw=b.scrollWidth,cw=b.clientWidth;
-  let nz=Math.min(1,avail/Math.max(1,natH),sw>cw+2?cw/sw:1);
+  // what sticks out under the board (a badge, a shadow) counts too, so the zone never scrolls by a few pixels
+  const z=FIT.z,avail=zn.clientHeight,r=b.getBoundingClientRect(),bot=r.bottom-zn.getBoundingClientRect().top+zn.scrollTop,extra=Math.max(0,zn.scrollHeight-Math.max(avail,bot)),natH=(r.height+extra)/z,sw=b.scrollWidth,cw=b.clientWidth;
+  let nz=Math.min(1,natH>avail?(avail-4)/natH:1,sw>cw+2?cw/sw:1);
   const over=nz<FIT_MIN;nz=Math.max(FIT_MIN,Math.floor(nz*100)/100);
   if(over)app.dataset.fo='1';else delete app.dataset.fo;
   if(Math.abs(nz-z)>.004){FIT.z=nz;app.style.setProperty('--bz',nz);}
 }
 // secondary content of a game (a log, a score sheet, a clue list): in the fixed screen it is one small button under the board
 // that opens it in a sheet, so it never pushes the board down; without the fixed screen it shows in place as before
-function fitFold(key,label,html){if(!FIT.on)return html;S.fold=S.fold||{};S.fold[key]={label,html};
+const FIT_FOLD=!/[?&]fit=nofold\b/.test(location.search);
+function fitFold(key,label,html){if(!FIT.on||!FIT_FOLD)return html;S.fold=S.fold||{};S.fold[key]={label,html};
   return `<button class="ffold" data-a="m-fold" data-v="${key}">${label}<i>▴</i></button>`;}
+// parts of a game that sit one under the other (the categories of a review): in the fixed screen one shows at a time,
+// with a row of tabs above it, instead of a tall stack; «?fit=notabs» keeps the stack (and lets the scale do the fitting)
+const FIT_TABS=!/[?&]fit=notabs\b/.test(location.search);
+function fitTabs(key,tabs){if(!FIT.on||!FIT_TABS||tabs.length<2)return tabs.map(t=>t[1]).join('');S.ftab=S.ftab||{};const k=Math.min(tabs.length-1,S.ftab[key]||0);
+  return `<div class="ftabs" role="tablist">${tabs.map((t,i)=>`<button class="ftab ${i===k?'on':''}" role="tab" aria-selected="${i===k}" data-a="ftab" data-k="${key}" data-v="${i}">${t[0]}</button>`).join('')}</div>${tabs[k][1]}`;}
 // the board's scale: code that moves things by screen distances divides by it (inside the board a pixel is smaller)
 const fitZ=()=>FIT.b&&FIT.b.isConnected?FIT.z:1;
 addEventListener('resize',()=>{if(FIT.b)fitMeasure();});
@@ -975,6 +982,7 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
     case 'm-settings':S.modal='settings';render();break;
     case 'lite':lsSet(LSK.lite,t.dataset.v==='1'?'1':'0');applyLite();render();break;
     case 'm-help':S.modal='help';render();break;
+    case 'ftab':S.ftab=S.ftab||{};S.ftab[t.dataset.k]=+t.dataset.v||0;render();break;
     case 'm-fold':S.foldK=t.dataset.v;S.modal='fold';render();break;
     case 'm-react':S.modal='react';render();break;
     case 'm-chat':S.modal='chat';S.chatSeen=Date.now();S.chatJump=false;render();setTimeout(()=>{const b=document.querySelector('.msgs');if(b)b.scrollTop=b.scrollHeight;},0);break;
