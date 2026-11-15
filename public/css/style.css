@@ -929,7 +929,15 @@ input.code::placeholder{color:var(--mut);opacity:.6}
 @keyframes sh-toast{0%{opacity:0;transform:translate(-50%,12px) scale(.96)}10%,85%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,6px)}}
 .ytb{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;z-index:45;padding:10px 26px;border-radius:99px;background:var(--c);background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0));color:#fff;font-weight:900;font-size:21px;white-space:nowrap;text-shadow:0 1px 0 rgba(0,0,0,.15);box-shadow:0 0 0 3px rgba(255,255,255,.85),0 12px 28px rgba(0,0,0,.28);transform:translateX(-50%);animation:ytb 1.7s var(--ease) forwards;pointer-events:none}
 @keyframes ytb{0%{opacity:0;transform:translate(-50%,-70px) scale(.9)}14%{opacity:1;transform:translate(-50%,0) scale(1.06)}22%{transform:translate(-50%,0) scale(1)}80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-24px)}}
-.rx{position:fixed;left:14px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:5;display:flex;gap:10px}
+.rx{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(540px,100%);z-index:6;display:flex;align-items:center;gap:10px;padding:7px 14px calc(7px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--edge);box-shadow:0 -6px 16px rgba(10,20,35,.10)}
+/* the bar takes its own room: the page, a game's own bottom buttons and the notes sit above it */
+body.rxon{--rxh:calc(62px + env(safe-area-inset-bottom))}
+body.rxon #app{padding-bottom:calc(28px + var(--rxh))}
+body.rxon .hd-dock,body.rxon .tq-dock{bottom:var(--rxh)}
+body.rxon .toast{bottom:calc(14px + var(--rxh))}
+body.rxon .chatpop{top:auto;bottom:calc(8px + var(--rxh));left:max(14px,calc(50% - 256px));transform:none;animation:popup .22s var(--ease)}
+@keyframes popup{from{opacity:0;transform:translateY(12px)}}
+.sheet .ffb{display:block;width:100%;margin-top:18px;color:var(--red)}
 .badge{position:absolute;top:-4px;left:-4px;min-width:20px;height:20px;padding:0 4px;border-radius:99px;background:var(--red);color:#fff;font-size:12px;font-style:normal;line-height:20px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:40}
 
@@ -1066,7 +1074,7 @@ html.lite .gload i{animation-duration:.8s!important;animation-iteration-count:in
 .rxe{aspect-ratio:1;padding:7px;border-radius:var(--r-l);background:var(--surface-2);box-shadow:0 3px 0 var(--edge);transition:transform var(--t1) var(--spring)}
 .rxe svg{width:100%;height:100%;display:block}
 .rxe:active{transform:scale(.86)}
-.rxb{position:relative;width:52px;height:52px;padding:10px;border-radius:50%;background:var(--surface);color:var(--navy);box-shadow:0 1px 0 var(--edge),0 6px 18px rgba(10,20,35,.18);transition:transform var(--t1) var(--spring)}
+.rxb{position:relative;width:48px;height:48px;padding:10px;border-radius:50%;background:var(--surface);color:var(--navy);box-shadow:0 1px 0 var(--edge),0 6px 18px rgba(10,20,35,.18);transition:transform var(--t1) var(--spring)}
 .rxb>svg{width:100%;height:100%;display:block}
 .rxb:active{transform:scale(.9)}
 .floatrx{position:absolute;z-index:30;width:56px;height:56px;pointer-events:none;animation:floatup 1.8s var(--ease) forwards;will-change:transform,opacity}
@@ -1208,3 +1216,11 @@ html.lite .floatrx{will-change:auto}
 .status .sm{min-height:40px}
 /* a phone on its side: sheets (the result above all) scroll inside instead of hiding their buttons below the edge */
 @media (max-height:500px){.sheet{max-height:94vh;max-height:94dvh;overflow-y:auto}}
+/* a seat the host's bot plays while its player is away, and the line that gives it back */
+.pt .pk.ab{left:auto;right:5px;background:#E3EEFB;font-size:10px}
+.players.four .pt .pk.ab,.players.many .pt .pk.ab{left:auto;right:4px}
+.abme{display:block;font-size:14px;font-weight:800;color:var(--navy);margin-top:2px}.abme .sm{margin-inline-start:6px}
+.status:has(.abme){height:auto;min-height:68px}.st-main:has(.abme){display:block}
+/* «انسحاب»: a quiet link under the board, and a sheet that asks first */
+.ffw{text-align:center;margin:14px 0 76px}.ffw .link{font-size:15px;color:var(--mut);display:inline-block}
+.sheet.ff p{margin:4px 0 0;font-size:16px;line-height:1.6;text-align:center}.sheet.ff .acts .btn{flex:1;min-width:130px}

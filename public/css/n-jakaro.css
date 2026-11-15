@@ -1,0 +1,56 @@
+/* «جكارو»: the wooden board on a table, glass marbles, real cards. Transform/opacity only, finite animations. */
+.jkwrap{--jkt:#EFE6D6;--jkt2:#E2D5BF;--jkink:#2A1A0E;--jkchip:rgba(255,252,245,.95);margin:0 -6px;padding:6px 6px 4px;border-radius:18px;background:radial-gradient(120% 90% at 50% 35%,var(--jkt),var(--jkt2));color:var(--jkink)}
+@media (prefers-color-scheme:dark){.jkwrap{--jkt:#2B2622;--jkt2:#1B1714;--jkink:#F3E7D3;--jkchip:rgba(42,34,28,.95)}}
+.jklv{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:0 0 6px}
+.jklv .seg{font-size:13px;padding:5px 10px}
+.jklv .lvb{font-size:12.5px;font-weight:800;padding:3px 10px;border-radius:12px;background:var(--jkchip);box-shadow:0 1px 4px rgba(60,35,10,.18)}
+.jklv .lvb.luck{color:#2E7D32}
+.jkc{text-align:center;margin:0 0 6px}
+.jkban{margin:0 auto 6px;width:max-content;max-width:100%;padding:6px 14px;border-radius:14px;color:#fff;font-weight:800;font-size:14px;background:#FF5A36;box-shadow:0 4px 12px rgba(120,40,10,.3);animation:jk-in .32s ease-out both}
+.jkban.boost{background:#2E8FD8}.jkban.shield{background:#3E9E52}
+@keyframes jk-in{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:none}}
+.jkseats{display:flex;gap:4px;justify-content:space-between;flex-wrap:wrap;margin:2px 0}
+.jks{position:relative;display:flex;align-items:center;gap:4px;height:32px;padding:0 3px 0 8px;border-radius:16px;background:var(--jkchip);box-shadow:0 1px 5px rgba(60,35,10,.2);min-width:0;flex:0 1 auto}
+.jks .av,.jks .av svg{width:26px;height:26px;display:block}
+.jks span{display:flex;flex-direction:column;line-height:1;min-width:0}
+.jks b{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
+.jks small{font-size:10px;font-weight:700;opacity:.75;white-space:nowrap;display:flex;align-items:center;gap:3px}
+.jks .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.jks em{position:absolute;top:-7px;inset-inline-end:-4px;font-style:normal;font-size:11px;width:18px;height:18px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.jks.turn{box-shadow:0 0 0 2.5px #FFC933,0 0 12px 2px rgba(255,190,40,.55)}
+.jks.gone{opacity:.45}
+.jkb{display:block;width:100%;max-width:460px;margin:0 auto;aspect-ratio:1/1;height:auto;overflow:hidden;touch-action:manipulation}
+.jkz{transform-box:view-box;transform-origin:0 0;transition:transform .35s cubic-bezier(.3,.7,.3,1)}
+.jkmb{transition:none}.jkmb.can{cursor:pointer}
+.jkmini{pointer-events:none}
+.jkhint{text-align:center;margin:6px 4px 0;min-height:20px;font-size:14px}
+.jkhint b{color:#8E1A2B}
+@media (prefers-color-scheme:dark){.jkhint b{color:#FFB4A8}}
+.jkhand{display:block;width:100%;max-width:440px;margin:0 auto -6px;overflow:visible}
+.jkhand [data-ga]{cursor:pointer}
+.jkchips{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin:6px 0 0}
+.jkchips .chip{border:0;border-radius:11px;padding:3px 9px;font:800 13px inherit;background:var(--jkchip);color:var(--jkink);box-shadow:0 2px 0 rgba(60,35,10,.2)}
+.jkchips .chip.on{background:#FFD54A;color:#2A1A0E}
+.jkchips .chip.burn{background:#E0531A;color:#fff}
+.jkchips .chip.pw{background:#5E361D;color:#F4DDB2;box-shadow:0 0 0 2px #E2B648}
+.jkchips .chip.pw.on{background:#E2B648;color:#3A2014}
+.jksplit{margin:6px auto 0;max-width:380px;padding:6px 8px;border-radius:14px;background:var(--jkchip);box-shadow:0 1px 5px rgba(60,35,10,.18);text-align:center}
+.jksplit small{display:block;font-size:12px;font-weight:700;opacity:.8;margin-bottom:4px}
+.jkrail{display:flex;gap:4px;justify-content:center}
+.jkrail .nb{flex:1;border:0;border-radius:10px;padding:4px 0 2px;font:800 16px inherit;background:#FFE7A6;color:#5A3A08;display:flex;flex-direction:column;align-items:center;line-height:1}
+.jkrail .nb i{font-style:normal;font-size:10.5px;font-weight:700;color:#2E7D4F;margin-top:2px}
+.jkrail .nb.on{background:#FFC933;box-shadow:0 0 0 2px #B07A00}
+.jkacts{display:flex;gap:8px;align-items:center;margin:8px 0 2px}
+.jkacts .undo{width:46px;height:46px;flex:none;border-radius:50%;font-size:22px;padding:0}
+.jkgo{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;min-height:46px}
+.jkgo small{font-size:12px;font-weight:700;opacity:.92}
+.jkfull{flex:none;font-size:12.5px;padding:6px 10px}
+html.lite .jkz{transition:none}
+html.lite .jkban{animation:none}
+@media (prefers-reduced-motion:reduce){.jkz{transition:none}.jkban{animation:none}}
+.jklvs{display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;flex:0 1 auto;min-width:0}
+.jklvs .lvb{font-size:11px;font-weight:800;padding:1px 8px;border-radius:10px;background:var(--jkchip);box-shadow:0 1px 3px rgba(60,35,10,.15);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}.jklvs .lvb.luck{color:#2E7D32}
+.jkhint{margin-top:4px;font-size:13.5px;line-height:1.35}
+.jkacts{margin-top:4px}
+.jksplit{padding:4px 6px}.jksplit small{margin-bottom:2px}
+.jks.xs{height:28px;padding:0 2px 0 5px;gap:2px}.jks.xs .av,.jks.xs .av svg{width:22px;height:22px}.jks.xs b{font-size:11px;max-width:44px}.jks.xs small{font-size:9px}

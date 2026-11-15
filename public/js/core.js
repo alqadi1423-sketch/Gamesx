@@ -46,7 +46,8 @@ try{localStorage.removeItem('alaabna.v3');}catch(e){}
 /* a game has d.pl = list of roles (colours) taking part; seat i plays role d.pl[i] */
 // bots get a person's name in local mode (سالم، نوف…) unless the player typed one
 const BOTN=['سالم','نوف','مشعل','غلا','بندر','جود','زياد','لين'];
-function pnameText(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return String(n).trim().slice(0,14)||(S.mode==='local'&&S.bots[r]?'🤖 '+BOTN[r]:NAMES[r]);}
+// (direction overrides and isolates are dropped: a name with one would turn the rest of the sentence around it)
+function pnameText(r){const n=(S.mode==='local'?S.localNames[r]:(r===S.me?S.myName:S.names[r]))||'';return String(n).replace(/[\u202A-\u202E\u2066-\u2069]/g,'').trim().slice(0,14)||(S.mode==='local'&&S.bots[r]?'🤖 '+BOTN[r]:NAMES[r]);}
 // the same name, escaped for HTML (pnameText is for textContent, such as toasts)
 function pname(r){return escH(pnameText(r));}
 /* ================= bots: only on one phone (local mode) ================= */
@@ -68,7 +69,13 @@ const S={draft:{},sel:[],mode:null,localN:2,localNames:[],myName:lsGet(LSK.name)
   chat:{},myChat:[],chatSeen:Date.now(),chatSkip:new Set(),chatIn:{},avs:{},seen:null,roomErr:null,joining:false,gw:false,rolled:false,tgt:null,pending:false,browse:false,modal:null,showResult:false,winKey:null,wasMy:false,rxSeen:{}};
 // while a game animates the screen by hand (holdRender), the next real render repaints it in full even if its HTML is unchanged
 {let hr=!!S.holdRender;Object.defineProperty(S,'holdRender',{get:()=>hr,set:v=>{hr=v;S.lastHtml=null;},enumerable:true,configurable:true});}
-try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){S.localN=l.n||2;S.localNames=l.names||[];S.bots=l.bots||{};}}catch(e){}
+// the table kept on this phone, checked: a damaged or hand-edited copy gives 2..8 players, names as text and bots of level 1..3,
+// with one person at least
+function cleanTable(l){const n=Math.round(+(l&&l.n)),o={n:n>=2&&n<=MAXP?n:2,names:[],bots:{}};if(!l||typeof l!=='object')return o;
+  if(Array.isArray(l.names))o.names=l.names.slice(0,MAXP).map(x=>typeof x==='string'?x.slice(0,14):'');
+  if(l.bots&&typeof l.bots==='object')for(let r=0;r<MAXP;r++)if([1,2,3].includes(l.bots[r]))o.bots[r]=l.bots[r];
+  if([...Array(o.n).keys()].every(r=>o.bots[r]))delete o.bots[0];return o;}
+try{const l=JSON.parse(lsGet(LSK.local)||'null');if(l){const t=cleanTable(l);S.localN=t.n;S.localNames=t.names;S.bots=t.bots;}}catch(e){}
 // the teams last chosen on this phone (local play keeps them between games)
 function localTeams(){try{const l=JSON.parse(lsGet(LSK.local)||'null');const o={};if(l&&CFGOK.teams(l.teams))o.teams=l.teams;if(l&&tmOk(l.tm))o.tm={...l.tm};return o;}catch(e){return {};}}
 S.bots=S.bots||{};
@@ -168,12 +175,15 @@ function publish(rx){save();if(S.mode!=='online'||!S.nr)return;schedulePublish(r
 function save(){
   if(S.mode==='local'){lsSet(LSK.local,JSON.stringify({n:S.localN,names:S.localNames,bots:S.bots,teams:cfg().teams||0,tm:cfg().tm||{}}));if(S.st.g&&S.st.d)lsSet(LSK.lgame,JSON.stringify({st:S.st,priv:S.priv,n:S.localN,names:S.localNames,bots:S.bots}));}
   if(S.mode!=='online'||!S.code)return;const h=amHost();
-  lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',ep:S.epoch,host:h,me:S.me,st:h?S.st:(S.hst||S.st),priv:h?S.priv:(S.me!=null?{[S.me]:S.priv[S.me]}:{}),ids:S.ids,lastN:h?S.lastN:{},n:S.sentN}));}
-function loadSaved(){try{return JSON.parse(lsGet(LSK.room)||'null');}catch(e){return null;}}
+  lsSet(LSK.room,JSON.stringify({code:S.code,via:S.via||'net',ep:S.epoch,host:h,me:S.me,st:h?S.st:(S.hst||S.st),priv:h?S.priv:(S.me!=null?{[S.me]:S.priv[S.me]}:{}),ids:S.ids,lastN:h?S.lastN:{},n:S.sentN,b:!!S.browse}));}
+// (only a room this app could have saved: an object with a room code of letters and digits)
+function loadSaved(){try{const v=JSON.parse(lsGet(LSK.room)||'null');return v&&typeof v==='object'&&!Array.isArray(v)&&typeof v.code==='string'&&/^[A-Za-z0-9]{1,12}$/.test(v.code)?v:null;}catch(e){return null;}}
 // a local game that was not finished when the app closed or went home
-function loadLocal(){try{const l=JSON.parse(lsGet(LSK.lgame)||'null');const d=l&&l.st&&l.st.d;return d&&d.win==null&&Array.isArray(d.pl)&&hasG(l.st.g)?l:null;}catch(e){return null;}}
-function localResume(){const l=loadLocal();if(!l)return;S.mode='local';S.me=null;S.localN=Math.max(2,Math.min(MAXP,l.n||l.st.d.pl.length));S.localNames=l.names||[];S.bots=l.bots||{};
-  S.st={...l.st,cfg:{...CFG0,...(l.st.cfg||{})},sc:Array.isArray(l.st.sc)&&l.st.sc.length>=MAXP?l.st.sc:Array(MAXP).fill(0)};S.priv=Array(MAXP).fill(null).map((x,r)=>(l.priv||[])[r]??null);
+// (a damaged copy, one that is not a state this app could have made, is not offered)
+// (ended=true: also a game that has ended, for a reload that comes back to its result)
+function loadLocal(ended){try{const l=JSON.parse(lsGet(LSK.lgame)||'null');const d=l&&l.st&&l.st.d;return d&&(ended||d.win==null)&&Array.isArray(d.pl)&&hasG(l.st.g)&&cleanD(d)?l:null;}catch(e){return null;}}
+function localResume(l){l=l||loadLocal();if(!l)return;S.mode='local';S.me=null;const t=cleanTable({...l,n:Number.isInteger(l.n)&&l.n>=2&&l.n<=MAXP?l.n:l.st.d.pl.length});S.localN=t.n;S.localNames=t.names;S.bots=t.bots;
+  S.st={...l.st,s:Number.isInteger(l.st.s)?l.st.s:0,cfg:cleanCfg(l.st.cfg),sc:cleanSc(l.st.sc)||Array(MAXP).fill(0)};S.priv=Array(MAXP).fill(null).map((x,r)=>{const p=Array.isArray(l.priv)?l.priv[r]:null;return p&&typeof p==='object'?p:null;});
   S.seen=null;S.browse=false;S.showResult=false;resetUI();afterChange();}
 
 /* ================= turn timer ================= */
@@ -270,7 +280,7 @@ async function enterRoom(code,host,restore,given){
     if(why==='noroom'){S.joining=false;S.roomErr='ما فيه غرفة بهالرمز. تأكد من الرمز، أو أنشئ غرفة جديدة.';render();return;}
     S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
   netReset();S.codeTries=0;
-  S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatSkip=new Set();S.chatIn={};S.avs={};S.chatJump=false;S.chatTray=false;S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=false;S.modal=null;
+  S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatSkip=new Set();S.chatIn={};S.avs={};S.chatJump=false;S.chatTray=false;S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=!!(restore&&restore.b&&restore.st&&restore.st.g);S.modal=null;
   S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();tabEnter(code);
   // a saved room: its state, the seat table and the epoch it was at; a saved host takes the room back only if nobody else did (net.js)
   if(restore&&restore.st){S.st={cfg:{...CFG0},...restore.st,cfg:cleanCfg(restore.st.cfg)};if(!cleanSc(S.st.sc))S.st.sc=Array(MAXP).fill(0);
@@ -365,12 +375,25 @@ function turnTxt(d,ctx){
   return `دور ${nameTag(d,d.turn)}`;
 }
 // seats whose player is not in the room; with all=false only those gone for longer than GRACE (they can be skipped)
-function absentSeats(d,G,all,slack){if(S.mode!=='online'||d.win!=null)return [];const off=s=>{const r=d.pl[s];return !S.roles.has(r)&&(all||Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE-(slack||0));};
+// (a seat the host's bot plays for its away player is not waited for: net.js abRoles)
+function absentSeats(d,G,all,slack){if(S.mode!=='online'||d.win!=null)return [];const ab=abRoles();const off=s=>{const r=d.pl[s];return !S.roles.has(r)&&!ab.includes(r)&&(all||Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE-(slack||0));};
   if(isSimul(G,d))return aliveSeats(d).filter(s=>off(s)&&!hasPicked(d,s));return off(d.turn)?[d.turn]:[];}
+// seats that leave the round (gone for good, kicked, or forfeit): the turn moves on, the game tidies up after them (onSkip),
+// and the last one left wins (nobody left: a draw)
+function outSeats(d,ss,line){const G=GAMES[S.st.g];let out=d.out;for(const x of ss)out=setAt(out,x,'1');const al=aliveSeats(d,out);
+  const nd={...d,out,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,win:al.length===1?al[0]:al.length?null:'d'};if(line&&'last' in d)nd.last=line;return G.onSkip?G.onSkip(nd,d):nd;}
 // the host (or the one phone) takes the players who are gone out of the round
 // (slack: a player's phone asked for it after its own GRACE; this phone may have seen the seat go a few seconds later)
-function skipAbsent(slack){const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];const gone=absentSeats(d,G,false,slack);if(!gone.length)return;let out=d.out;for(const x of gone)out=setAt(out,x,'1');const al=aliveSeats(d,out);
-  const nd={...d,out,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}
+function skipAbsent(slack){const d=S.st.d;if(!d||d.win!=null)return;const G=GAMES[S.st.g];const gone=absentSeats(d,G,false,slack);if(!gone.length)return;act(outSeats(d,gone));}
+/* «انسحاب»: a player leaves this round on purpose; the others play on with the engine's usual way of taking a seat out.
+   Online the player asks the host ('out'); on one phone it is the player holding the phone */
+function forfeitSeat(){const d=S.st.d;if(!d||d.win!=null)return -1;if(S.mode==='online')return S.me==null?-1:d.pl.indexOf(S.me);
+  if(S.mode!=='local')return -1;const v=mkCtx().v;return v!=null&&v>=0&&!isBot(d,v)?v:-1;}
+const canForfeit=()=>{const d=S.st.d,s=forfeitSeat();return s>=0&&d.out[s]!=='1'&&aliveSeats(d).length>=2;};
+function forfeit(s){const d=S.st.d;if(!d||d.win!=null||!(s>=0)||d.out[s]==='1')return;act(outSeats(d,[s],`🏳️ ${nm(d,s)} انسحب`));}
+function askForfeit(){const d=S.st.d,s=forfeitSeat();if(!d||s<0||d.out[s]==='1')return;if(netDown())return;
+  if(S.mode==='online'&&!amHost()){if(queueIntent({t:'out',gid:d.gid}))toast('انسحبت، اللعب يكمل للباقين');return;}
+  forfeit(s);toast('انسحبت، اللعب يكمل للباقين');}
 function winTitle(d,G,ctx){if(d.tm&&typeof d.win==='number'&&TEAMS[d.tm[d.win]]&&!(G.winText&&G.winText(d))){const t=d.tm[d.win];return !ctx.local&&ctx.v>=0&&d.tm[ctx.v]===t?'فاز فريقك! 🎉':`فاز فريق ${teamName(t)}!`;}
   if(Array.isArray(d.wins)&&d.wins.length>1&&!(G.winText&&G.winText(d)))return !ctx.local&&d.wins.includes(ctx.v)?'فزتوا! 🎉':`فاز ${d.wins.map(w=>nm(d,w)).join(' و')}!`;return G.winText&&G.winText(d)||(d.win==='d'?'تعادل!':(!ctx.local&&d.win===ctx.v?'فزت! 🎉':`فاز ${nm(d,d.win)}!`));}
 function statusHTML(d,G,ctx){try{
@@ -384,6 +407,11 @@ function statusHTML(d,G,ctx){try{
   const gone=absentSeats(d,G),wait=gone.length?[]:absentSeats(d,G,true);
   if(!ctx.local&&gone.length)s+=`<br><span class="gone">${gone.map(x=>nm(d,x)).join('، ')} طلع <button class="sm" data-a="skip">تخطّاه</button></span>`;
   else if(!ctx.local&&wait.length)s+=`<br><span class="gone">${wait.map(x=>nm(d,x)).join('، ')} انقطع، ننتظره شوي…</span>`;
+  // seats the host's bot plays while their players are away; a player who is back takes his seat with one tap
+  const ab=abRoles().filter(r=>d.pl.includes(r));
+  if(!ctx.local&&ab.length){const oth=ab.filter(r=>r!==S.me);
+    if(S.me!=null&&ab.includes(S.me))s+=`<br><span class="abme">🤖 البوت يلعب عنك <button class="sm go" data-a="abstop">رجعت! وقف اللعب التلقائي</button></span>`;
+    if(oth.length)s+=`<br><span class="gone">🤖 يلعب عنه البوت: ${oth.map(r=>nm(d,d.pl.indexOf(r))).join('، ')}</span>`;}
   return s;}catch(e){console.error(e);return '';}
 }
 /* the status card always has the same height: one quiet line for what just happened, one line for what to do now */
@@ -451,6 +479,8 @@ function render(){
   const mb0=app.querySelector('.msgs'),atBot=!mb0||mb0.scrollHeight-mb0.scrollTop-mb0.clientHeight<60;
   // nothing changed on screen (a heartbeat, another player's message that does not show here): the page is left alone
   const html=OUT+(S.modal?modalHTML():'')+(S.gload?'<div class="gload" role="status"><i></i>نجهّز الألعاب…</div>':'');if(html!==S.lastHtml||app.childNodes.length!==S.lastKids){morph(app,html);S.lastHtml=html;S.lastKids=app.childNodes.length;}
+  // the chat and reactions sit in their own bar at the bottom: the page leaves room for it, so it never covers a game
+  document.body.classList.toggle('rxon',!!app.querySelector('.rx'));
   {const mb=app.querySelector('.msgs');if(mb){const L=chatList(),last=L[L.length-1],lk=last?last.i:'';
     if(mb._k!==lk||!mb._s){const first=!mb._s;mb._k=lk;mb._s=1;const j=app.querySelector('.jump');
       if(first||atBot||(last&&last.me)){mb.scrollTop=mb.scrollHeight;if(S.chatJump){S.chatJump=false;if(j)j.classList.remove('on');}}
@@ -461,8 +491,8 @@ function render(){
   const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(dView(),mkCtx());}catch(e){console.error(e);}
   noteHere();
 }
-function topBar(title,back,extra){
-  return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1${String(title).replace(/<[^>]*>/g,'').length>15?' class="long"':''}>${title}</h1>${extra||''}<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button></div>`;
+function topBar(title,back,extra,noMute){
+  return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1${String(title).replace(/<[^>]*>/g,'').length>15?' class="long"':''}>${title}</h1>${extra||''}${noMute?'':`<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button>`}</div>`;
 }
 const CHEV='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const MODEI={
@@ -548,7 +578,7 @@ function roomBar(full){try{
   if(S.mode!=='online')return '';
   const pl=players(),h=actingHost(),near=S.via==='near';
   const av=pl.map(r=>`<span class="av ${r===S.me?'me':''}" data-r="${r}" style="--c:${COLS[r]}">${avOf(r)||kface(r)}${r===h?'<em>👑</em>':''}</span>`).join('');
-  let s=`<div class="roombar"><div class="rb-code"><small>${near?'📶 غرفة قريبة':'رمز الغرفة'}${cfg().lock?' 🔒':''}</small><b class="code">${S.code}</b></div>${near?'':'<button class="rbb" data-a="copy" aria-label="نسخ الرمز">نسخ</button>'}<div class="rb-av">${av}</div><button class="rbb" data-a="m-settings" aria-label="الإعدادات">⚙️</button></div>`;
+  let s=`<div class="roombar"><div class="rb-code"><small>${near?'📶 غرفة قريبة':'رمز الغرفة'}${cfg().lock?' 🔒':''}</small><b class="code">${escH(S.code)}</b></div>${near?'':'<button class="rbb" data-a="copy" aria-label="نسخ الرمز">نسخ</button>'}<div class="rb-av">${av}</div><button class="rbb" data-a="m-settings" aria-label="الإعدادات">⚙️</button></div>`;
   // the connection is down, or nobody else is in this room (most likely a mistyped code): say it where everyone looks
   if(S.needUpd)s+='<p class="updb" role="status">حدّث التطبيق عشان تلعب في هالغرفة</p>';
   if(S.offline)s+=`<p class="err" role="status">${S.offline==='full'?'الغرفة مليانة، نحاول ندخل مرة ثانية…':'انقطع الاتصال، نحاول نرجع…'}</p>`;
@@ -606,7 +636,7 @@ function gridWarm(){app.dataset.gv='0';const ric=window.requestIdleCallback||(f=
   ric(step,{timeout:2000});}
 // games each way of playing leaves out (owner's review of every game): on one phone passed around, games whose fun is many secret
 // picks or racing on one screen; against bots, games whose fun is people (drawing, acting, talking) or pure luck
-const NOLOCAL=new Set(["arena", "caps", "close", "g_cycles", "geo", "hide", "islam", "k_ers", "k_snap", "k_soli", "k_speed", "lowu", "mafia", "major", "math", "odd", "p_2t1l", "p_auction", "p_major", "p_most", "p_who", "prov", "r_dhow", "rps", "sci", "scr", "seq", "stroop", "tf", "trivia", "two3", "u_bin", "u_cage", "u_futo", "u_hito", "u_kakuro", "u_light", "u_link", "u_maze", "u_nono", "u_slide", "u_slither", "u_star", "u_words", "w_ant", "w_cross", "w_miss", "w_plur", "w_syn", "war", "z_animal", "z_body", "z_emoji", "z_flags", "z_hist", "z_invent", "z_kora", "z_logic", "z_lugha", "z_riddle", "z_saudi", "z_space", "z_sport"]),NOBOT=new Set(["bara", "d_beetle", "d_bunco", "d_ceelo", "d_chi", "d_golf", "mafia", "major", "p_2t1l", "p_fake", "p_forbid", "p_major", "p_mime", "p_most", "p_potato", "p_qa", "p_story", "snakes", "tele"]);
+const NOLOCAL=new Set(["arena", "caps", "close", "g_cycles", "geo", "hide", "islam", "k_ers", "k_snap", "k_soli", "k_speed", "lowu", "mafia", "major", "math", "odd", "p_2t1l", "p_auction", "p_major", "p_most", "p_who", "prov", "r_dhow", "rps", "sci", "scr", "seq", "stroop", "tf", "trivia", "two3", "u_bin", "u_cage", "u_futo", "u_hito", "u_kakuro", "u_light", "u_link", "u_maze", "u_nono", "u_slide", "u_slither", "u_star", "u_words", "w_ant", "w_cross", "w_miss", "w_plur", "w_syn", "war", "z_animal", "z_body", "z_emoji", "z_flags", "z_hist", "z_invent", "z_kora", "z_logic", "z_lugha", "z_riddle", "z_saudi", "z_space", "z_sport","taqiya"]),NOBOT=new Set(["bara", "d_beetle", "d_bunco", "d_ceelo", "d_chi", "d_golf", "mafia", "major", "p_2t1l", "p_fake", "p_forbid", "p_major", "p_mime", "p_most", "p_potato", "p_qa", "p_story", "snakes", "tele"]);
 function modeKey(){if(S.mode!=='local')return 'net';const b=Object.keys(S.bots||{}).filter(r=>+r<S.localN).length,h=S.localN-b;return (h>=2?'L':'')+(b?'B':'');}
 // automated test runs (navigator.webdriver) keep every game in every way of playing so each one stays covered, unless they ask (__modesOn)
 function modeOk(k){if(navigator.webdriver&&!window.__modesOn)return true;const m=modeKey();return !(m.includes('L')&&NOLOCAL.has(k))&&!(m.includes('B')&&NOBOT.has(k));}
@@ -631,7 +661,9 @@ function renderGrid(){
   if(S.mode==='local')mid=localLive()+localSetup();
   else{
     const live=S.st.g&&S.st.d&&GAMES[S.st.g];
-    if(live)mid+=liveCard(S.st.g,'resumegame','اللعبة الحالية','ارجع لها');
+    // the game goes on while this player looks at the list: the card says when it waits for him
+    let sub='اللعبة الحالية';if(live)try{const d=S.st.d;if(d.win==null){if(S.me!=null&&abOn(S.me))sub='🤖 البوت يلعب عنك الحين';else if(mkCtx().my)sub='دورك! 🎯';}}catch(e){}
+    if(live)mid+=liveCard(S.st.g,'resumegame',sub,'ارجع لها');
     mid+=players().length<2?(S.roomEmpty?'':'<p class="note">أرسل الرمز لأصحابك</p>'):canPick()?'':'<p class="note">صاحب الغرفة 👑 يختار اللعبة</p>';
   }
   const q=normQ(S.draft.q||''),cat=!q&&CATN[S.gcat]?S.gcat:'',n=hereN(),all=modeGames();
@@ -656,7 +688,7 @@ function scoreBar(sc,d){try{
   const G=GAMES[S.st.g];let pts=null;try{pts=G.points?G.points(d):(Array.isArray(d.pts)?d.pts:null);}catch(e){}
   const simul=isSimul(G,d),n=d.pl.length,tm=Array.isArray(d.tm)&&d.tm.length===n&&d.tm.every(t=>TEAMS[t])?d.tm:null;
   return `<div class="players ${n>4?'many':n>3?'four':''} ${tm?'teams':''}" style="--n:${Math.min(n,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&!(typeof G.noTurn==='function'?G.noTurn(d):G.noTurn)&&d.turn===s;
-    const pk=simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u class="pk ok">✓</u>':'<u class="pk">…</u>'):'';
+    const pk=(simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u class="pk ok">✓</u>':'<u class="pk">…</u>'):'')+(d.win==null&&abOn(r)?'<u class="pk ab" title="يلعب عنه البوت" aria-label="يلعب عنه البوت">🤖</u>':'');
     const won=typeof d.win==='number'&&(d.win===s||(Array.isArray(d.wins)&&d.wins.includes(s)));
     return `<div class="pt ${on?'on':''} ${me?'me':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}${tm?`;--tc:${TEAMS[tm[s]].c}`:''}"><i>${kface(r,{mood:won?'g':d.out[s]==='1'&&!G.outDone?'sad':on?'g':null})}${sc[r]?`<b>${escH(sc[r])}</b>`:''}${tm?`<s class="tmb">${TEAMS[tm[s]].e}</s>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${escH(pts[s])}</em>`:''}</div>${pk}</div>`;}).join('')}</div>${tm?teamStrip(d,pts):''}`;}catch(e){console.error(e);return '';}
 }
@@ -686,7 +718,7 @@ function renderGame(){
   // the status card takes the colour of whoever plays now (or of the winner)
   const acc=cover?null:d.win==null?(isSimul(G,d)?null:col(d,d.turn)):typeof d.win==='number'?col(d,d.win):null;
   const fv=favGames().includes(g);
-  OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button>`)}${roomBar()}${scoreBar(sc,d)}
+  OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button><button class="ib" data-a="m-settings" aria-label="إعدادات اللعبة">⚙️</button>`,true)}${roomBar()}${scoreBar(sc,d)}
   <div class="status ${cover?'nil':''} ${acc?'acc':''} ${d.win!=null?'over':''} ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}"${acc?` style="--c:${acc}"`:''}>${cover||typeof CASTX==='undefined'?'':CASTX.status(g,d,ctx)}${cover?'':statusBox(statusHTML(d,G,ctx))}<div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div></div><div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>
   ${S.mode==='online'?fabs():''}
   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
@@ -742,6 +774,10 @@ function modalHTML(){
       ${players().filter(r=>r!==S.me&&S.ids[r]).map(r=>{const hid=hideSet().has(S.ids[r]);return `<div class="cpr" style="--c:${COLS[r]}"><i class="cav">${chatFace(r)}</i><b>${pname(r)}</b><button class="sm ${hid?'go':''}" data-a="chathide" data-i="${r}">${hid?'أظهر رسائله':'اخفِ رسائله'}</button></div>`;}).join('')||'<p class="note">ما فيه أحد غيرك في الغرفة</p>'}
       </div>`:'';
     return `<div class="sheet-bg" data-a="closemodal"><div class="sheet chat"><div class="sh-head"><h2>المحادثة</h2><div class="sh-acts"><button class="x ${S.chatPpl?'on':''}" data-a="chatppl" aria-label="الأشخاص والإخفاء" aria-pressed="${!!S.chatPpl}">👥</button><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div></div>${ppl}${chatHTML()}</div></div>`;}
+  else if(m==='ff'){if(!canForfeit()){S.modal=null;return '';}const n=aliveSeats(S.st.d).length;
+    return `<div class="sheet-bg" data-a="closemodal"><div class="sheet ff" role="dialog" aria-modal="true"><div class="sh-head"><h2>🏳️ تنسحب؟</h2><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div>
+      <p>${n>2?'بتطلع من هالجولة، واللعب يكمل للباقين. وتلعب معهم الجولة الجاية.':'بتطلع من هالجولة، والفوز يروح للي قدامك.'}</p>
+      <div class="acts"><button class="btn red" data-a="ff">إيه، انسحب</button><button class="btn soft" data-a="closemodal">لا، بكمل</button></div></div></div>`;}
   else if(m==='react'){title='رد سريع';inner=`<div class="rxs">${RX.map(i=>`<button class="rxe" data-a="rx" data-i="${i}" aria-label="${EMJ[i].n}">${EMJ[i].svg}</button>`).join('')}</div>`;}
   else if(m==='settings'){
     const opt=(key,val,label)=>`<button class="seg ${c[key]===val?'on':''}" data-a="cfg" data-k="${key}" data-v="${val}" ${h?'':'disabled'}>${label}</button>`;
@@ -758,7 +794,8 @@ function modalHTML(){
     ${h&&(c.kick||[]).length?`<button class="link" data-a="unkick">السماح للمطرودين يرجعون</button>`:''}`:''}
     <label class="lab">على هذا الجوال</label><div class="segs"><button class="seg ${liteOn()?'':'on'}" data-a="lite" data-v="0">حركات كاملة</button><button class="seg ${liteOn()?'on':''}" data-a="lite" data-v="1">خفيفة وأسرع</button></div>
     <div class="segs"><button class="seg ${S.mute?'':'on'}" data-a="mute" aria-pressed="${!S.mute}">🔊 الصوت</button><button class="seg ${S.mute?'on':''}" data-a="mute" aria-pressed="${S.mute}">🔇 بدون صوت</button></div>
-    ${h?`<button class="link" data-a="resetsc" style="color:var(--red)">تصفير نقاط الجلسة</button>`:''}`;
+    ${h?`<button class="link" data-a="resetsc" style="color:var(--red)">تصفير نقاط الجلسة</button>`:''}
+    ${S.st.g&&S.st.d&&!S.browse&&canForfeit()?`<button class="btn soft ffb" data-a="m-ff">🏳️ انسحب من اللعبة</button>`:''}`;
   }
   return `<div class="sheet-bg" data-a="closemodal"><div class="sheet ${m==='help'?'help':m==='settings'?'set':m==='react'?'react':''}" role="dialog" aria-modal="true"><div class="sh-head"><h2>${title}</h2><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div>${inner}${m==='settings'?'<button class="big navy" data-a="closemodal">تم</button>':''}</div></div>`;
 }
@@ -796,11 +833,14 @@ function floatRx(r,i){if(!emoOk(i))return;const now=Date.now();S.rxLast=S.rxLast
   document.body.appendChild(el);sfx('pop');setTimeout(()=>el.remove(),1900);}
 function rxRateOk(){const now=Date.now();S.rxT=(S.rxT||[]).filter(t=>now-t<10000);if(S.rxT.length>=8||now-(S.rxT[S.rxT.length-1]||0)<600)return false;S.rxT.push(now);return true;}
 /* ================= this phone's stats ================= */
-function statsGet(){try{const o=JSON.parse(lsGet(LSK.stats)||'null');if(o&&typeof o==='object'&&o.g&&typeof o.g==='object')return {g:o.g,ids:Array.isArray(o.ids)?o.ids:[]};}catch(e){}return {g:{},ids:[]};}
+// (each game is [played, won], whole numbers with won ≤ played: a damaged copy keeps only what reads as such)
+function statsGet(){try{const o=JSON.parse(lsGet(LSK.stats)||'null');if(o&&typeof o==='object'&&o.g&&typeof o.g==='object'){const g={};
+  for(const k of Object.keys(o.g)){const e=o.g[k];if(k==='__proto__'||!Array.isArray(e))continue;const p=Math.min(1e6,Math.max(0,Math.floor(+e[0]||0)));if(p)g[k]=[p,Math.min(p,Math.max(0,Math.floor(+e[1]||0)))];}
+  return {g,ids:Array.isArray(o.ids)?o.ids.filter(x=>typeof x==='string'):[]};}}catch(e){}return {g:{},ids:[]};}
 function noteStats(g,d,won){const o=statsGet();if(!d||o.ids.includes(d.gid))return;o.ids=[...o.ids,d.gid].slice(-30);const e=Array.isArray(o.g[g])?o.g[g]:[0,0];e[0]=(+e[0]||0)+1;if(won)e[1]=(+e[1]||0)+1;o.g[g]=e;lsSet(LSK.stats,JSON.stringify(o));}
 function statsAll(){const o=statsGet();let n=0,w=0,k=0;for(const g in o.g){const e=o.g[g];if(!Array.isArray(e))continue;n+=+e[0]||0;w+=+e[1]||0;k++;}return {n,w,k};}
 function renderStats(){const o=statsGet(),fav=new Set(favGames()),t=statsAll();
-  const ks=Object.keys(o.g).filter(g=>GAMES[g]&&Array.isArray(o.g[g])).sort((a,b)=>o.g[b][0]-o.g[a][0]);
+  const ks=Object.keys(o.g).filter(g=>Object.prototype.hasOwnProperty.call(GAMES,g)&&Array.isArray(o.g[g])).sort((a,b)=>o.g[b][0]-o.g[a][0]);
   OUT=`${topBar('إحصائياتي','home')}${typeof CASTX!=='undefined'?CASTX.stats(t):''}<div class="stt"><span><b>${t.n}</b><small>لعبة خلصت</small></span><span><b>${t.w}</b><small>فوز</small></span><span><b>${t.n?Math.round(t.w/t.n*100):0}٪</b><small>نسبة الفوز</small></span></div>
 
   ${ks.length?`<div class="stl">${ks.map(g=>{const p=+o.g[g][0]||0,w=+o.g[g][1]||0;return `<button class="str" data-a="quick" data-v="${g}"><span class="gi">${GAMES[g].icon}</span><span class="lv-tx"><b>${fav.has(g)?'⭐ ':''}${GAMES[g].name}</b><small>${p} مرة • ${w} فوز</small></span><i class="stb" aria-hidden="true"><i style="width:${p?Math.round(w/p*100):0}%"></i></i></button>`;}).join('')}</div><button class="link" data-a="statsreset">تصفير الإحصائيات</button>`:'<p class="gempty">ما خلصت ولا لعبة للحين</p>'}`;}
@@ -831,8 +871,10 @@ app.addEventListener('click',e=>{
     // a secret game online: the host plays on the whole state, the others ask the host (net.js)
     // online a guest's move goes to the host first: the button answers at once so the tap never feels lost
     if(S.mode==='online'&&!amHost()){t.classList.add('tap-ok');setTimeout(()=>t.classList.remove('tap-ok'),220);}
-    if(S.mode==='online'&&isSecretG(G)){if(amHost())G.click(a,i,S.st.d,mkCtx(S.st.d,S.priv));else netClick(G,a,i);return;}
-    G.click(a,i,S.st.d,mkCtx());return;}
+    // what was typed before the tap goes with the move it makes, so a move that does not count gives it back (net.js putBack)
+    S.clickSnap=S.mode==='online'&&!amHost()?draftSnap():null;
+    try{if(S.mode==='online'&&isSecretG(G)){if(amHost())G.click(a,i,S.st.d,mkCtx(S.st.d,S.priv));else netClick(G,a,i);return;}
+      G.click(a,i,S.st.d,mkCtx());}finally{S.clickSnap=null;}return;}
   if(!GREADY&&!PRE_LOAD_OK.has(t.dataset.a)){const snap={dataset:{...t.dataset}};whenGames(()=>shellAct(snap));return;}
   shellAct(t);});
 function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
@@ -862,7 +904,7 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
     case 'resume':{const sv=loadSaved();if(sv)enterRoom(sv.code,false,sv);break;}
     case 'leave':leaveRoom();break;
     case 'grid':if(S.mode==='local'&&S.st.d&&S.st.d.win==null&&!S.browse){S.browse=true;S.showResult=false;render();break;}setGame(null);break;
-    case 'lresume':localResume();break;
+    case 'lresume':localResume();if(!(S.mode==='local'&&S.st.d)){toast('اللعبة ما عادت محفوظة');render();}break;
     case 'browse':S.browse=true;S.showResult=false;render();break;
     case 'resumegame':S.browse=false;render();break;
     case 'gcat':S.gcat=t.dataset.v||'';if(S.draft.q)S.draft.q='';render();{const m=app.querySelector('.gsent');if(m&&scrollY>m.offsetTop)window.scrollTo(0,m.offsetTop);}break;
@@ -903,8 +945,11 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
     case 'closemodal':S.modal=null;S.chatPpl=false;render();break;
     case 'rx':{S.modal=null;if(!emoOk(i))break;if(!rxRateOk()){toast('شوي شوي على الردود ✋');render();break;}const rx={e:i,t:Date.now()};S.rxSeen[S.me]=rx.t;render();floatRx(S.me,i);publish(rx);break;}
     case 'cfg':{if(!isHost())return;let v=t.dataset.v;v=v==='true'?true:v==='false'?false:/^\d+$/.test(v)?+v:v;const p={[t.dataset.k]:v};if(t.dataset.k==='lock'&&v)p.members=players().map(r=>S.ids[r]).filter(Boolean);setCfg(p);if(t.dataset.k==='chat')toast(v?'المحادثة انفتحت 💬':'المحادثة انقفلت للكل 🔇');break;}
-    case 'kick':{if(!isHost())return;const r=i,fp=S.ids[r];if(!fp||fp===SEAL.fp)return;S.ids[r]=null;recomputeRoles();setCfg({kick:[...new Set([...(cfg().kick||[]),fp])]});const d=S.st.d;if(d&&d.win==null&&d.pl.includes(r)){const s=d.pl.indexOf(r);const out=setAt(d.out,s,'1');const al=aliveSeats(d,out);const G=GAMES[S.st.g];
-      const nd={...d,out,turn:d.turn===s?nextSeat(d,s,out):d.turn,win:al.length===1?al[0]:null};act(G.onSkip?G.onSkip(nd,d):nd);}toast(pnameText(r)+' طلع من الغرفة');break;}
+    case 'kick':{if(!isHost())return;const r=i,fp=S.ids[r];if(!fp||fp===SEAL.fp)return;S.ids[r]=null;recomputeRoles();setCfg({kick:[...new Set([...(cfg().kick||[]),fp])]});const d=S.st.d;if(d&&d.win==null&&d.pl.includes(r)&&d.out[d.pl.indexOf(r)]!=='1')act(outSeats(d,[d.pl.indexOf(r)]));toast(pnameText(r)+' طلع من الغرفة');break;}
+    case 'm-ff':if(canForfeit()){S.modal='ff';render();}break;
+    case 'ff':S.modal=null;askForfeit();render();break;
+    // back from being away: the bot gives the seat back
+    case 'abstop':if(S.mode!=='online'||S.me==null)break;if(amHost()){if(S.ab[S.me]){delete S.ab[S.me];publish();}}else{if(netDown())break;if(queueIntent({t:'me'}))S.abR=(S.abR||[]).filter(r=>r!==S.me);}toast('رجعت! العب أنت 👍');render();break;
     case 'unkick':if(!isHost())return;setCfg({kick:[]});break;
     case 'recode':{const c=S.code;leaveRoom();S.mode='lobby';render();const el=document.getElementById('code');if(el){el.value=c;el.focus();}break;}
     case 'resetsc':if(!isHost())return;S.st={...S.st,sc:Array(MAXP).fill(0),s:S.st.s+1};afterChange();toast('تصفّرت النقاط');break;
@@ -996,11 +1041,16 @@ function saveMeta(){try{const ids=[...recentGames(),...favGames(),...NEWG];const
   const m={n:Object.keys(GAMES).length,g};lsSet(LSK.meta,JSON.stringify(m));Object.assign(GMETA,m);}catch(e){}}
 // where this tab is (home, lobby, the game list, a game, a room), kept for this tab only, so reloading the page comes back to it
 const HEREK='alaabna.here';
-function noteHere(){if(S.hereWait)return;try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);}}catch(e){}}
+function noteHere(){if(S.hereWait)return;try{const h=JSON.stringify({m:S.mode,b:!!S.browse,g:!!(S.st.g&&S.st.d),c:S.mode==='online'?S.code:null});if(h!==S.hereLast){S.hereLast=h;sessionStorage.setItem(HEREK,h);
+  // the saved room keeps whether its list or its game was on screen, so «ارجع لغرفتك» comes back to the same place
+  if(S.mode==='online'&&S.code)save();}}catch(e){}}
+// a local game is written again as the page goes (a reload, the app closed): a copy wiped meanwhile is not lost
+try{window.addEventListener('pagehide',()=>{if(S.mode==='local')save();});}catch(e){}
 function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)||'null');}catch(e){}if(!h||typeof h!=='object')return false;
-  if(h.m==='local'){const l=h.g&&loadLocal();if(l){localResume();if(h.b){S.browse=true;render();}return true;}if(h.g)return false;
+  if(h.m==='local'){const l=h.g&&loadLocal(true);if(l){localResume(l);if(h.b){S.browse=true;render();}return true;}
+    // a game that had ended (or is no longer kept): this phone's game list, with its players as they were
     S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0,...localTeams()}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();return true;}
-  if(h.m==='online'){const sv=loadSaved();if(sv&&sv.code&&sv.code===h.c&&sv.via!=='near'){S.mode='lobby';render();enterRoom(sv.code,false,sv);return true;}S.mode='lobby';render();getRoom();return true;}
+  if(h.m==='online'){const sv=loadSaved();if(sv&&sv.code&&sv.code===h.c&&sv.via!=='near'){S.mode='lobby';render();enterRoom(sv.code,false,{...sv,b:!!h.b});return true;}S.mode='lobby';render();getRoom();return true;}
   if(h.m==='lobby'){S.mode='lobby';render();getRoom();return true;}
   if(h.m==='stats'){S.mode='stats';render();return true;}
   return false;}

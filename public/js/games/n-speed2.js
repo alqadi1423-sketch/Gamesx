@@ -32,7 +32,7 @@ function s2ScRes(d,picks,RN){const n=d.pl.length;
 function s2ScBoard(d,unit){if(!Array.isArray(d.lr)||!Array.isArray(d.sg))return '';
   const rows=seatsOf(d).filter(s=>d.lr[s]!=null||d.out[s]!=='1').map(s=>({s,v:d.lr[s]})).sort((a,b)=>(b.v??-1e9)-(a.v??-1e9));if(!rows.length)return '';
   const mx=Math.max(1,...rows.map(r=>r.v||0));
-  return `<div class="spr" id="spr${d.rd}"><div class="spr-h">نتيجة الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${rows.map((r,j)=>`<div class="spr-r ${d.sg[r.s]===2?'w':''} ${r.v==null?'nt':''}" style="--c:${col(d,r.s)};--j:${j}"><i class="spr-m">${d.sg[r.s]===2?'⭐':r.v==null?'':j+1}</i><b>${escH(nm(d,r.s))}</b><span class="spr-bar">${r.v>0?`<i style="width:${Math.max(8,Math.round(r.v/mx*100))}%"></i>`:''}</span><em>${r.v==null?'—':r.v+' '+unit}</em>${d.sg[r.s]?`<u class="spr-g">+${d.sg[r.s]}</u>`:''}</div>`).join('')}</div>`;}
+  return `<div class="spr" id="spr${d.rd}"><div class="spr-h">نتيجة الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${rows.map((r,j)=>`<div class="spr-r ${d.sg[r.s]===2?'w':''} ${r.v==null?'nt':''}" style="--c:${col(d,r.s)};--j:${j}"><i class="spr-m">${d.sg[r.s]===2?'⭐':r.v==null?'':j+1}</i><b>${nm(d,r.s)}</b><span class="spr-bar">${r.v>0?`<i style="width:${Math.max(8,Math.round(r.v/mx*100))}%"></i>`:''}</span><em>${r.v==null?'—':r.v+' '+unit}</em>${d.sg[r.s]?`<u class="spr-g">+${d.sg[r.s]}</u>`:''}</div>`).join('')}</div>`;}
 // the board under the start button and at the end
 const s2Board=(o,d)=>(o.board?o.board(d):o.score?s2ScBoard(d,o.unit):spdBoard(d))+(o.legend&&d.rd>0?`<p class="note s2leg">${o.legend}</p>`:'');
 // what this phone sent, while it waits for the others

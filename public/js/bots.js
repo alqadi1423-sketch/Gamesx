@@ -315,37 +315,7 @@ GAMES.ludo.bot=(d,s,lv)=>{if(d.roll==null)return luRoll(d);const r=d.roll,mv=luM
     if(lv===3){v-=danger(nd.tk,p1)*28;v+=danger(d.tk,p0)*22;if(d.vr&&p1>=0&&p1<=T-2&&paired(nd.tk,cell(s,p1)))v+=8;}return v+Math.random();};
   return luApply(d,s,mv.sort((a,b)=>val(b)-val(a))[0],r);};
 GAMES.ludo.botDelay=(d,s,lv)=>d.roll==null?700+rnd(400):900+rnd(500);
-const JKCOST={A:3,K:3,J:3,7:2,4:1,Q:1,5:1};
-GAMES.jakaro.bot=(d,s,lv)=>{const cs=jkCtl(d,s),cards=cardsOf(d.hd[s]),n=d.pl.length,L=jkL(d);const opts=[];
-  cards.forEach((c,i)=>jkOpts(d,cs,c).forEach(o=>opts.push([i,o])));
-  if(!opts.length){// no move: burn the least useful card
-    const i=cards.map((c,i)=>[i,JKCOST[c[0]]||0]).sort((a,b)=>a[1]-b[1])[0][0];return jkPlay(d,i,null);}
-  if(lvRand(lv))return jkPlay(d,...pickR(opts));const team=jkTeamOf(d,s);
-  const pos=q=>q<0?-12:q>=L?L+25+(q-L)*3:q;
-  // hard also counts how exposed its marbles end up: a foe marble 1 to 13 holes behind can land on it with one card
-  const exposed=mb=>{let r=0;const occ={};for(let p=0;p<n;p++)for(let k=0;k<4;k++){const q=mb[p*4+k];if(q>=0&&q<L)occ[jkCell({...d,mb},p,q)]=p;}
-    for(const p of team)for(let k=0;k<4;k++){const q=mb[p*4+k];if(q<=0||q>=L)continue;const c=jkCell({...d,mb},p,q);let hit=0;
-      for(let t=1;t<=13;t++){const o=occ[(c-t+L)%L];if(o!=null&&!team.includes(o)&&d.out[o]!=='1'){hit++;}}if(hit)r+=(q+12)*Math.min(1,.35*hit);}return r;};
-  const val=([i,o])=>{const nd=jkPlay(d,i,o);if(nd.win!=null&&(nd.win===s||(nd.wins||[]).includes(s)))return 1e9;let v=0;
-    for(let p=0;p<n;p++)for(let k=0;k<4;k++){const x=pos(nd.mb[p*4+k])-pos(d.mb[p*4+k]);v+=team.includes(p)?x:-x*(lv===3?.9:.5);}
-    if(lv===3)v-=.22*(exposed(nd.mb)-exposed(d.mb));
-    return v-(JKCOST[cards[i][0]]||0)*(lv===3?1.5:.5)+Math.random();};
-  const b=opts.sort((x,y)=>val(y)-val(x))[0];return jkPlay(d,b[0],b[1]);};
-
-/* ---------- guess the person (people or animals) ---------- */
-// medium and hard ask the question that splits the board most evenly, and they guess at once when a rival is one step from naming
-// their own secret (a wrong guess costs no more than waiting); easy asks what it notices first and guesses early now and then
-GAMES.guess.bot=(d,s,lv)=>{const ts=targets(d,s);if(!ts.length)return;const D=gDeck(d);
-  const left=(a,o)=>[...elSeg(d,a,o)].map((c,k)=>c==='0'?k:-1).filter(k=>k>=0);
-  const o=lv===1?pickR(ts):[...ts].sort((a,b)=>left(s,a).length-left(s,b).length)[0];S.tgt=o;const L=left(s,o);
-  const threat=Math.min(99,...d.pl.map((_,a)=>a!==s&&d.out[a]!=='1'&&!sameTeam(d,a,s)?left(a,s).length:99));
-  let go=L.length===1||(lv===1&&L.length<=3&&Math.random()<.35)||(lv>1&&threat===1);
-  const yes=i=>L.filter(k=>!!D.Q[i][1](gItem(d,k))).length;
-  const useful=D.Q.map((q,i)=>i).filter(i=>{const y=yes(i);return y>0&&y<L.length;});
-  if(go||!useful.length){S.gw=true;return botDo(d,s,'guess',pickR(L));}
-  if(lv===1&&Math.random()<.6)return botDo(d,s,'ask',pickR(useful));
-  let best=useful[0],bv=1e9;for(const i of useful){const v=Math.abs(L.length/2-yes(i))+Math.random()*[0,4,1.5,.1][lv];if(v<bv){bv=v;best=i;}}
-  return botDo(d,s,'ask',best);};
+// jakaro: its bots live in n-jakaro-ui.js (they read the rule flags of JK_RULES)
 
 /* ---------- minefield ---------- */
 GAMES.mines.bot=(d,s,lv)=>{const z=d.z,N=z*z;const unk=[];for(let i=0;i<N;i++)if(d.rv[i]==='.')unk.push(i);

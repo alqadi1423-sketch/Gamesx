@@ -51,7 +51,7 @@ const CASTX=(()=>{
     p_potato:{o:'apron',hat:'chefhat',a:'spoon',ho:'apron',hh:'chefhat',ha:'spoon',w:'نجيت من البطاطا!'},
     bingo:{a:'pencil',ha:'mic',w:'بنقو!'},p_mime:{a:null,ha:'mic'},p_qa:{ha:'mic'},p_20q:{a:'lens',hh:'bulb'},p_who:{hat:'bulb'},
     luck:{a:'coin',w:'الحظ معك!'},cups:{a:null},rps:{a:null,w:'غلبتهم!'},
-    hide:{a:null,ha:null,h:0,hp:'count',w:'لقيتهم!'},
+    hide:{a:null,ha:null,h:0,hp:'count',w:'لقيتهم!'},taqiya:{a:null,ha:null,w:'لقيت الطاقية!'},
     // quizzes: one host with a microphone, contestants with buzzers
     sci:lab,z_space:lab,z_body:lab,z_invent:lab,z_animal:lab,
     islam:sheikh,z_hist:{ho:'thobe',a:'book'},z_lugha:{a:'book'},z_saudi:{ho:'thobe',a:'flag'},
@@ -61,7 +61,8 @@ const CASTX=(()=>{
     prov:{o:'thobe',a:'book',ho:'thobe',ha:'book',w:'مثل في محله!'},w_poem:{o:'thobe',a:'book',ho:'thobe',ha:'book',w:'بيت يسوى!'},
     w_cross:{a:'pencil'},w_crypt:{a:'lens'},w_grid:{a:'lens'},w_hive:{a:'letter'},scr:{a:'letter'},
     // mind
-    guess:{hat:'bulb'},num:{hat:'bulb'},mm:{a:'lens'},wires:{a:'lens',w:'فكّيت القنبلة!'},treasure:{a:'lens',ha:'coin',w:'لقيت الكنز!'},
+    guess:{hat:'bulb'},gs_animal:{hat:'bulb'},gs_country:{a:'flag',ha:'flag'},gs_land:{a:'flag',ha:'flag'},gs_job:{hat:'bulb',w:'عرفت المهنة!'},
+    gs_food:{o:'apron',hat:'chefhat',a:'spoon',ho:'apron',hh:'chefhat',ha:'spoon',hp:'stand',w:'عرفت الطبخة!'},num:{hat:'bulb'},mm:{a:'lens'},wires:{a:'lens',w:'فكّيت القنبلة!'},treasure:{a:'lens',ha:'coin',w:'لقيت الكنز!'},
     nim:paper,c31:paper,g_sim:paper,g_lines:paper,g_notakto:paper,g_swallow:paper,g_hacken:paper,
     // puzzles
     sudo:paper,u_kakuro:paper,u_nono:paper,u_futo:paper,u_cage:paper,u_bin:paper,u_hito:paper,u_star:paper,u_slither:paper,u_link:paper,

@@ -22,7 +22,7 @@ function seatPick(d,ctx,s,rd){const pv=(ctx&&ctx.priv)||S.priv;const p=pv&&pv[d.
   if(!p||p.gid!==d.gid||p.rd!==rd||p.pick==null||p.pick===NOPICK)return null;
   return S.mode==='local'||(ctx&&s===ctx.v)||d.win!=null?p.pick:null;}
 // a player marker in the player's colour
-const pDot=(d,s,cls)=>`<i class="pdot ${cls||''}" style="--c:${col(d,s)}" title="${escH(nm(d,s))}"></i>`;
+const pDot=(d,s,cls)=>`<i class="pdot ${cls||''}" style="--c:${col(d,s)}" title="${nm(d,s)}"></i>`;
 // who has handed in an answer this round (filled) and who we still wait for (hollow)
 function qzWho(d,ctx){if(d.win!=null)return '';const al=seatsOf(d).filter(s=>d.out[s]!=='1');if(al.length<2)return '';
   return `<div class="qz-who">${al.map(s=>pDot(d,s,hasPicked(d,s)?'on':'')).join('')}</div>`;}
@@ -40,7 +40,7 @@ function rpsLast(d){if(!d.res)return null;const es=d.res.split('، ');const out=
     out.push({s,k,got:+((/\+(\d+)/.exec(r)||[0,0])[1])});}
   return out.length?out:null;}
 function rpsDuel(d){const L=rpsLast(d);if(!L)return '';const mx=Math.max(...L.map(x=>x.got));const two=L.length===2;const pg=d.pg;
-  const hand=(x,j)=>`<div class="rps-p ${mx>0?(x.got===mx?'w':'l'):'t'}" style="--c:${col(d,x.s)};--j:${j}"><span class="rps-h k${x.k} ${two&&j===1?'mir':''} ${x.k===pg?'gold':''}">${RPS[x.k]}</span><b>${escH(nm(d,x.s))}</b>${x.got?`<em>+${x.got}</em>`:''}</div>`;
+  const hand=(x,j)=>`<div class="rps-p ${mx>0?(x.got===mx?'w':'l'):'t'}" style="--c:${col(d,x.s)};--j:${j}"><span class="rps-h k${x.k} ${two&&j===1?'mir':''} ${x.k===pg?'gold':''}">${RPS[x.k]}</span><b>${nm(d,x.s)}</b>${x.got?`<em>+${x.got}</em>`:''}</div>`;
   return `<div class="rps-duel ${two?'two':''}" id="rpd${d.rd}"><div class="rps-hd">${d.win!=null?'الجولة الأخيرة':`الجولة ${d.rd}`}${mx>0?'':'<span>تعادل</span>'}</div>
     <div class="rps-row">${two?hand(L[0],0)+'<i class="rps-vs">ضد</i>'+hand(L[1],1):L.map(hand).join('')}</div></div>`;}
 // the last hands of every other player, newest first, so a player can read their habits

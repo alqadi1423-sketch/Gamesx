@@ -102,7 +102,7 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',noTim
     s+=CATF.map((c,k)=>`<div class="ccat ${k===d.gd?'gold':''}"><h4>${CATI[k]} ${c}${k===d.gd?' <em class="cgold">⭐ ×2</em>':''}</h4><div class="cans">${d.pl.map((_,x)=>{const w=d.ans[x][k];const st=d.sa[x][k];const key=x+'_'+k;
         const rej=sc?d.rejF[x][k]:cRejected(d,x,k);const mine=myOb&&myOb.includes(key);const pts=sc?d.rs[x][k]:null;
         const icon=!w?'—':st===0?'✗':rej?'👎':st===2?'✓':'؟';const tap=canVote&&st===1&&x!==v;
-        return `<${tap?'button':'span'} class="ca s${st} ${w?'':'none'} ${rej?'rej':''} ${mine?'mine':''}" style="--c:${col(d,x)}" ${tap?`data-ga="ob" data-i="${x*5+k}"`:''}><small>${nm(d,x)}</small><b>${w?escH(w):'ما كتب'}</b><i>${icon}${pts!=null?` ${pts?'+'+pts:'0'}`:''}</i></${tap?'button':'span'}>`;}).join('')}</div></div>`).join('');
+        return `<${tap?'button':'span'} class="ca cs${st} ${w?'':'none'} ${rej?'rej':''} ${mine?'mine':''}" style="--c:${col(d,x)}" ${tap?`data-ga="ob" data-i="${x*5+k}"`:''}><small>${nm(d,x)}</small><b>${w?escH(w):'ما كتب'}</b><i>${icon}${pts!=null?` ${pts?'+'+pts:'0'}`:''}</i></${tap?'button':'span'}>`;}).join('')}</div></div>`).join('');
     if(!sc){const done=d.seq||S.mode==='local'?false:(()=>{const p=v>=0?S.priv[d.pl[v]]:null;return !!(p&&p.ob&&p.ob.k===cKey(d)&&p.ob.ok);})();
       s+=d.seq||S.mode==='local'?`<button class="btn red wide" data-ga="calc">احسب النقاط ✓</button>`:v>=0?`<button class="btn red wide" data-ga="ok" ${done?'disabled':''}>${done?'✓ ننتظر الباقين':'تمام، احسبوا ✓'}</button>`:'';}
     else if(d.win==null){const tot=d.pl.map((_,x)=>[x,d.rs[x].reduce((a,b)=>a+b,0)]).sort((a,b)=>b[1]-a[1]);
@@ -111,7 +111,11 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',noTim
   onDraft(k,val){const m=/^c(\d+)_(\d+)_(\d)$/.exec(k);const d=S.st.d;if(!m||!d||d.ph!=='write'||+m[1]!==d.r)return;const s=+m[2];if(s!==mkCtx().v&&!(d.seq&&s===d.wr))return;
     // the sheet goes to the private part while typing, so the host has it when time is up
     const r=d.pl[s];const p=cMine(d,r);if(p.ca&&p.ca.k===cKey(d)&&p.ca.stop)return;const a=CATF.map((_,j)=>String(S.draft[`c${d.r}_${s}_${j}`]??(p.ca&&p.ca.k===cKey(d)?p.ca.a[j]:'')??'').slice(0,18));
-    S.priv[r]={...p,ca:{k:cKey(d),a,stop:false}};clearTimeout(cSaveT);cSaveT=setTimeout(()=>{const d2=S.st.d;if(d2&&d2.gid===d.gid&&d2.ph==='write')cSend(d2,r);},400);
+    const ca={k:cKey(d),a,stop:false};S.priv[r]={...p,ca};clearTimeout(cSaveT);
+    // online the host's next message may come in before this goes and put back its own copy (still without this sheet):
+    // what goes is what was typed, unless the sheet was handed in meanwhile
+    cSaveT=setTimeout(()=>{const d2=S.st.d;if(!d2||d2.gid!==d.gid||d2.ph!=='write'||cKey(d2)!==ca.k)return;const cur=cMine(d2,r);
+      if(!(cur.ca&&cur.ca.k===ca.k&&cur.ca.stop))S.priv[r]={...cur,ca};cSend(d2,r);},400);
     const b=app.querySelector('.cstopb');if(b&&!d.stop){const full=a.every(w=>catOkL(w,d.L,0)||catOkL(w,d.L,1));b.disabled=!full;}
     const lab=app.querySelector(`[data-draft="${k}"]`);if(lab){const w=val.trim();lab.parentNode.className=w&&!catOkL(w,d.L,+m[3])?'bad':w?'ok':'';}},
   click(a,i,d,ctx){const v=ctx.v;

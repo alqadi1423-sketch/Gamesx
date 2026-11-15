@@ -10,7 +10,10 @@ window.WSROOM={
   // opts.create: this phone opens a new room (the server refuses a code already in use: 'taken');
   // opts.need: joining someone's room, which must already be open (the server refuses a code nobody opened: 'noroom')
   room(){return {join:(name,opts={})=>new Promise((ok,no)=>{
-    const url=(WSROOM.app()?'wss://gamesx.alqadi1423.workers.dev/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name)+(opts.create?'?c=1':opts.need?'?j=1':'');
+    const base=WSROOM.app()?'wss://gamesx.alqadi1423.workers.dev/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
+    // once in, coming back after a cut is joining a room that is open: the one who made it must not ask to make it again
+    // (the server answers a second ?c=1 with 'taken', which would put the room's own maker out of it)
+    const url=()=>base+(opened?'?j=1':opts.create?'?c=1':opts.need?'?j=1':'');
     // a ping every PING ms; a socket that hears nothing for DEAD ms is taken as dead (a phone changing networks can keep one open for minutes)
     const PING=20000,DEAD=2*PING-5000;
     let ws=null,me=null,mine={},peers={},hs=[],sts=[],closed=false,opened=false,up=false,ping=null,again=null,tries=0,lastRx=0;
@@ -32,7 +35,7 @@ window.WSROOM={
       leave:async()=>{hs=[];sts=[];stop();}};
     const connect=()=>{
       if(closed)return;clearTimeout(again);drop();lastRx=Date.now();
-      let w;try{w=ws=new WebSocket(url);}catch(e){retry();return;}
+      let w;try{w=ws=new WebSocket(url());}catch(e){retry();return;}
       w.onmessage=e=>{if(w!==ws||closed)return;lastRx=Date.now();let m;try{m=JSON.parse(e.data);}catch(x){return;}
         if(m.t==='noroom'||m.t==='taken'){if(!opened){stop();no(new Error(m.t));}else{stop();tell('bye');}return;}
         // nobody in the room at all: someone else's room this cannot be (also with a room server older than the 'noroom' rule)

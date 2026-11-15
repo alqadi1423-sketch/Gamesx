@@ -53,3 +53,8 @@ html.lite .kh-banner,html.lite .kh-card{animation:none}
 @media (prefers-reduced-motion:reduce){.kh-home .kp,.cover .cv-kid,.kh-rs,.kh-bub{animation:none}}
 /* a short landscape screen keeps its room for the ways to play */
 @media (max-height:480px){.kh-home{display:none}.kh-home+.hx-tiles{margin-top:12px}}
+/* a heartbeat ring (finite: about four seconds of beats), first used by «طاق طاق طاقية» */
+.kh-beat{animation:kh-beat .45s ease-out 9;transform-box:fill-box;transform-origin:center}
+@keyframes kh-beat{from{transform:scale(.88);opacity:1}to{transform:scale(1.22);opacity:.25}}
+html.lite .kh-beat{animation:none}
+@media (prefers-reduced-motion:reduce){.kh-beat{animation:none}}
