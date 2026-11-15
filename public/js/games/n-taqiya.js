@@ -1,496 +1,415 @@
 'use strict';
 /* =====================================================================================================
-   «طاق طاق طاقية – دائرة الحارة» (taqiya): the kids sit in a circle in a courtyard at night; one of them, «اللفّاف»,
-   walks round the circle with the cap and drops it behind somebody. Built on the shared kit KH (js/kit-hara.js).
+   «طاق طاق طاقية» (taqiya), v2: the real circle game, felt with the hands and the ears.
+   One goal: don't get caught napping. If the cap lands behind you, catch the one who dropped it.
 
-   A round:
-   1. الخطة (plan): the لفّاف picks in secret behind whom (the target), how many laps (1/2/3, worth 10/15/20 points), a real
-      cap or a fake (2 fakes a player a game, counted in public), and maybe the golden cap (doubles the points, once a game)
-      and «غفلة» (the target's screen blurs for 2 s, once a game).
-   2. اللف (walk): he walks round the ring, lap by lap. Every lap after the first leaves a public trace: «حسّيت إنه بطّأ ورا
-      X وY»: one name is the target, the other a decoy drawn on the host (three names when the light is out). Meanwhile every
-      sitter guesses the target in secret (+5 when right) and may spend their one «صرخة» a game on a name: right, the target
-      gets 2 s more and a warning; wrong, the shouter loses 5.
-   3. الانتباه (alert): only the target sees the cap glowing behind them, with a heartbeat. 4 s (+2 shouted, −1 when the
-      round's cat crossed behind them), timed on the target's own phone from the moment the cap appears. «شفتها!» or wait.
-      «تحسّس» (once a game) costs 2 s and says whether the cap is real.
-        real, missed: the لفّاف sits in the target's place and takes the lap points from them; the target goes round next.
-        fake, spotted: the target loses 5. fake, ignored: nothing; the لفّاف goes round again.
-        real, spotted: the chase.
-   4. المطاردة (chase): both pick a route in secret: «طريق الشارع / الحوش / السطح» (everyone's route habits are shown; the
-      light going out closes the roof). Different routes: the لفّاف gets away (takes the lap points, the target goes round).
-      The same route: a 3-second tap race on both phones decides: the target taps more (or as many): caught, the target takes
-      the lap points from the لفّاف, who goes round again; the لفّاف taps more: he gets away. The faster tapper gets +5.
-   Every round the host draws one event: a cat crosses behind a sitter (their alert is 1 s shorter), the light goes out (the
-   roof route is closed, the traces name three), or the ice-cream seller passes (the next round is one lap only).
-   The game: 5 minutes (online) or 2 × players rounds, whichever comes first; anyone who never went round gets a last turn.
-   Points never go below 0 and move through d.dsc; the most points wins.
+   The walker («اللفّاف») drags their kid round the ring with a finger; every step moves the chant on
+   («طاق طاق طاقية… شبّاك ورا شبّاك…», sung by a synth; a real recording plays instead once audio/taqiya.json names it). A flick (or the cap button) drops the cap behind the sitter they are passing.
+   They keep walking to bluff; when they come right round to the cap again, that sitter is «شرب»: −1, and they swap.
+   Every sitter sees the circle from their own place: the others in front, nothing behind. They hear the steps behind
+   them (stereo, nearer and louder), see the walker's shadow sweep over the floor, feel the heartbeat when he is right
+   behind. A quick twist of the phone (or the «التفت» button, or a swipe down) turns round: 3 looks a round. The cap
+   there: grab it and chase. The chase is run by drawing circles with a finger (the speed is capped and checked on the
+   host): the walker races for the empty place, the chaser tries to touch him first.
+   Points: +1 the walker who takes a place, +1 the chaser who touches, −1 the one caught napping (never below 0).
+   5 minutes; the most points wins.
 
-   Secrets online (mask): the plan (target, laps, fake, gold, غفلة) is the لفّاف's alone until the alert ends; the target
-   learns only that they are the target (az: their time, warned, blurred, what «تحسّس» said). Guesses and shouts are each
-   sitter's own (private part, then d.gs/d.sh masked) until the round's result. The walk's end time (we) would tell the laps:
-   the لفّاف's only. Private parts are never shown to others (privShow), so nobody learns who is the target from who answered.
+   Online: the walker's steps, drop and the runners' distances go in their private parts (hidden from all others);
+   the host clamps and checks them and publishes positions. Where the cap lies (dp) is the walker's alone until it is
+   found or the lap comes round; a look is answered by the host. Bots (and absent players) are moved by the host.
    ===================================================================================================== */
-const TQ_T={plan:25000,lap:5000,alert:4000,shout:2000,cat:1000,feel:2000,grace:2500,route:12000,race:3000,rgrace:3500,res:9000,game:300000};
-const TQ_LAPV=[0,10,15,20];
-const TQ_RT=['طريق الشارع','طريق الحوش','طريق السطح'],TQ_RS=['الشارع','الحوش','السطح'];
-const TQ_EVK=['cat','light','ice'];
+const TQ={VW:300,VR:520,VA:110,LOOKS:3,GAME:300000,RES:3200,CHASE:9000,TICK:200,TAG:60,DROP2:2000,WALKMAX:40000};
+// the chant, a word a step (a real recording at audio/taqiya-chant.mp3 plays instead of the sung melody if it is there)
+const TQ_CHANT=['طاق','طاق','طاقية','شبّاك','ورا','شبّاك','رنّ','رنّ','يا جرس','حوّل','واركب','الفرس'];
+const TQ_STEP=40; // milli-laps a step
 const tqLocal=()=>S.mode==='local';
-const tqAlive=d=>d.cr.filter(s=>d.out[s]!=='1');
-const tqV=pt=>pt?TQ_LAPV[pt.l]*(pt.g?2:1):0;
-const tqFmt=ms=>{const t=Math.ceil(Math.max(0,ms)/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
-const tqClosed=d=>d.ev&&d.ev.k==='light'?2:-1;
-// the chase is a simultaneous round (both runners are public by then); the alert is not: who answers would tell who the target is
-const tqSimul=d=>d.ph==='route'||d.ph==='race';
-// who must answer in a simultaneous phase: the target in the alert, the لفّاف and the target in the chase
-function tqNeed(d,s){if(d.win!=null||d.out[s]==='1')return false;if(d.ph==='route'||d.ph==='race')return s===d.lf||s===d.tg;return false;}
-// the target's answer to the alert, kept in its private part (ans: {s: 1 «شفتها!» | 0, ms on its own clock})
-const tqAns=d=>{const p=d.tg>=0?S.priv[d.pl[d.tg]]:null;return p&&p.gid===d.gid&&p.k===d.rk&&p.ans&&typeof p.ans==='object'?p.ans:null;};
-const tqAuto=(d,s)=>tqSimul(d)&&d.win==null&&d.out[s]!=='1'&&!tqNeed(d,s);
-// the target's seconds in the alert (the target's own view knows them; the host checks against them)
-const tqLim=d=>d.az?d.az.lim:TQ_T.alert;
-// can sitter s guess / shout g?
-const tqCanGuess=(d,s,g)=>Number.isInteger(g)&&g!==s&&g!==d.lf&&d.cr.includes(g)&&d.out[g]!=='1';
+const tqMod=x=>((x%1000)+1000)%1000;
+const tqW=x=>{x=tqMod(x);return x>500?x-1000:x;};   // −500..500
+const tqSlot=(d,i)=>{const m=d.cr.length;return Math.round(1000*(i+(m%2?0:.5))/m);};
+const tqTh=(d,s)=>{const i=d.cr.indexOf(s);return i<0?0:tqSlot(d,i);};
+const tqNm=(d,s)=>escH(pnameText(d.pl[s]));
+// a bot plays this seat: a bot on this phone, or the host's bot for a player who left the room
+const tqIsBot=(d,s)=>isBot(d,s)||(S.mode==='online'&&typeof abOn==='function'&&abOn(d.pl[s]));
+const tqPriv=(d,s)=>{const p=S.priv[d.pl[s]];return p&&p.gid===d.gid&&p.k===d.rk?p:null;};
 
-/* ---------- the circle: n−1 sitters in seat order, the لفّاف walks a ring outside them ---------- */
-const TQW=360,TQH=440,TQCX=180,TQCY=262,TQRX=118,TQRY=84,TQOUT=40,TQKY=.6,TQA0=Math.PI;
-const tqOff=m=>m%2?0:Math.PI/m;
-const tqAng=(d,s)=>{const m=d.cr.length,i=d.cr.indexOf(s);return i<0?0:i/m*2*Math.PI+tqOff(m);};
-const tqXY=(a,out=0)=>[TQCX-(TQRX+out)*Math.sin(a),TQCY+(TQRY+out*TQKY)*Math.cos(a)];
-// the walk: a laps of the ring from the back, then on to the target: lap k starts at w0+(k−1)·lap
-function tqWalkMs(d,t,l){const aT=tqAng(d,t);let fr=(((aT-TQA0)%(2*Math.PI))+2*Math.PI)%(2*Math.PI)/(2*Math.PI);if(fr<.08)fr+=.08;return Math.round(((l-1)+fr)*TQ_T.lap);}
-
-/* ---------- the clocks: online the host's deadlines; on one phone they start when the right player holds it ---------- */
-const tqArm=(d,T)=>tqLocal()?{...d,dl:0,T}:{...d,dl:Date.now()+T,T};
-
-/* ---------- the rules ---------- */
-function tqRound(d,lf){const n=d.pl.length;
-  const sit=tqAlive(d).filter(s=>s!==lf),k=TQ_EVK[rnd(3)],ev={k,v:k==='cat'&&sit.length?sit[rnd(sit.length)]:-1};
-  const bl=d.bl.slice();bl[lf]++;
-  return tqArm({...d,ph:'plan',lf,turn:lf,rk:d.rk+1,rd:d.rd+1,tg:-1,pt:null,w0:0,we:0,lp:0,tr:[],gs:Array(n).fill(-1),sh:Array(n).fill(-1),az:null,a0:0,
-    ev,one:d.nx1?1:0,nx1:0,rt:[-1,-1],rc:[-1,-1],ms:-1,bl},TQ_T.plan);}
-// the plan {t,l,f,g,b} made legal; the walk starts
-function tqGo(d,p){const lf=d.lf,sit=tqAlive(d).filter(s=>s!==lf);
-  const t=sit.includes(p.t)?p.t:sit[rnd(sit.length)],l=d.one?1:[1,2,3].includes(p.l)?p.l:1,f=p.f&&d.fk[lf]>0?1:0,g=!f&&p.g&&!d.gu[lf]?1:0,b=p.b&&!d.gh[lf]?1:0;
-  const wd=tqWalkMs(d,t,l),now=Date.now(),loc=tqLocal();
-  return {...d,ph:'walk',turn:lf,tg:t,pt:{t,l,f,g,b,wd},w0:loc?0:now,we:loc?0:now+wd,lp:1,dl:0,T:0};}
-// a new lap: the trace of the one before (the target and a decoy; two decoys when the light is out)
-function tqLap(d,k){const sit=tqAlive(d).filter(s=>s!==d.lf&&s!==d.tg),nd=d.ev&&d.ev.k==='light'?2:1,dec=[];
-  while(dec.length<nd&&dec.length<sit.length){const x=sit[rnd(sit.length)];if(!dec.includes(x))dec.push(x);}
-  const s=[d.tg,...dec].sort(()=>Math.random()-.5);return {...d,lp:k,tr:[...d.tr,{l:k-1,s}]};}
-// the drop: the guesses and shouts are read (private parts on the host; bots think now), the target's alert begins
-function tqDrop(d){const n=d.pl.length,gs=Array(n).fill(-1),sh=Array(n).fill(-1);
-  for(const s of tqAlive(d)){if(s===d.lf)continue;let g=-1,x=-1;
-    if(isBot(d,s)){const b=tqBotGuess(d,s,botLv(d,s));g=b.g;x=b.s;}
-    else{const p=S.priv[d.pl[s]];if(p&&p.gid===d.gid&&p.k===d.rk){g=p.g;x=p.s;}}
-    if(tqCanGuess(d,s,g))gs[s]=g;if(!d.su[s]&&tqCanGuess(d,s,x))sh[s]=x;}
-  const wr=sh.some(x=>x===d.tg)?1:0,cat=d.ev&&d.ev.k==='cat'&&d.ev.v===d.tg?1:0;
-  const lim=TQ_T.alert+(wr?TQ_T.shout:0)-(cat?TQ_T.cat:0);
-  return tqArm({...d,ph:'alert',rd:d.rd+1,gs,sh,az:{lim,wr,cat,bz:d.pt.b,fz:0,fr:0},a0:tqLocal()?0:Date.now()},TQ_T.alert+TQ_T.shout+TQ_T.grace);}
-// «تحسّس»: 2 s less, and the target learns real (1) or fake (2)
-function tqFeel(d){if(d.ph!=='alert'||!d.az||d.az.fz||d.fu[d.tg])return d;return {...d,az:{...d.az,fz:1,fr:d.pt.f?2:1,lim:Math.max(600,d.az.lim-TQ_T.feel)}};}
-function tqAlertEnd(d,p){const seen=!!(p&&p.s===1&&Number.isFinite(p.ms)&&p.ms<=tqLim(d)+150),ms=p&&Number.isFinite(p.ms)?Math.round(p.ms):-1;
-  if(!d.pt.f&&seen)return tqArm({...d,ph:'route',rd:d.rd+1,ms},TQ_T.route);
-  return tqFinish({...d,ms},d.pt.f?(seen?'fs':'fi'):'miss',{});}
-function tqRouteEnd(d,picks){const op=[0,1,2].filter(r=>r!==tqClosed(d)),ok=r=>Number.isInteger(r)&&op.includes(r);
-  const rl=ok(picks[d.lf])?picks[d.lf]:op[rnd(op.length)],rg=ok(picks[d.tg])?picks[d.tg]:op[rnd(op.length)];
-  const nd={...d,rt:[rl,rg]};if(rl!==rg)return tqFinish(nd,'esc',{});
-  return tqArm({...nd,ph:'race',rd:d.rd+1},TQ_T.race+TQ_T.rgrace);}
-function tqRaceEnd(d,picks){const c=s=>{const p=picks[s];return p&&Number.isInteger(p.n)?Math.max(0,Math.min(60,p.n)):0;};const nl=c(d.lf),nt=c(d.tg);
-  const rb=nl>nt?d.lf:nt>nl?d.tg:-1;return tqFinish({...d,rc:[nl,nt]},nt>=nl?'catch':'esc',{rb});}
-/* the round's points and who sits where: miss/esc the لفّاف takes the target's place; catch/fs/fi he goes round again */
-function tqFinish(d,o,x){const n=d.pl.length,lf=d.lf,tg=d.tg,pt=d.pt,V=tqV(pt),dl=Array(n).fill(0);
-  if(o==='miss'||o==='esc'){dl[lf]+=V;dl[tg]-=V;}else if(o==='catch'){dl[tg]+=V;dl[lf]-=V;}else if(o==='fs')dl[tg]-=5;
-  if(x.rb>=0)dl[x.rb]+=5;
-  for(let s=0;s<n;s++){if(d.gs[s]>=0&&d.gs[s]===tg)dl[s]+=5;if(d.sh[s]>=0&&d.sh[s]!==tg)dl[s]-=5;}
-  const pd=d.pd.map((v,s)=>Math.max(0,Math.min(999,v+dl[s]))),dp=pd.map((v,s)=>v-d.pd[s]);
-  const gr=d.gr.slice();for(let s=0;s<n;s++)if(d.gs[s]>=0&&d.gs[s]===tg)gr[s]++;
-  const fk=d.fk.slice(),gu=d.gu.slice(),gh=d.gh.slice(),su=d.su.slice(),fu=d.fu.slice(),hb=d.hb.map(h=>h.slice());
-  if(pt.f)fk[lf]=Math.max(0,fk[lf]-1);if(pt.g)gu[lf]=1;if(pt.b)gh[lf]=1;if(d.az&&d.az.fz)fu[tg]=1;
-  d.sh.forEach((v,s)=>{if(v>=0)su[s]=1;});
-  if(d.rt[0]>=0){hb[lf][d.rt[0]]++;hb[tg][d.rt[1]]++;}
-  const nl=o==='miss'||o==='esc'?tg:lf,cr=d.cr.slice();if(nl===tg){const i=cr.indexOf(tg);if(i>=0)cr[i]=lf;}
-  const rr={k:d.rk,o,lf,tg,l:pt.l,f:pt.f,g:pt.g,b:pt.b,V,dp,gs:d.gs.slice(),sh:d.sh.slice(),rt:d.rt.slice(),rc:d.rc.slice(),ms:d.ms??-1,fz:d.az&&d.az.fz?1:0,wr:d.az?d.az.wr:0,ev:d.ev?d.ev.k:'',rb:x.rb>=0?x.rb:-1,nl};
-  return tqArm({...d,ph:'res',turn:lf,pd,gr,fk,gu,gh,su,fu,hb,cr,rr,nx1:d.ev&&d.ev.k==='ice'?1:0},TQ_T.res);}
-// the next round, or the end (time or rounds up; anyone who never went round gets their turn first)
-function tqNext(d){const rn=d.rn+1,over=rn>=d.RN||(d.end>0&&Date.now()>=d.end);let nl=d.rr?d.rr.nl:d.lf,cr=d.cr.slice();
-  if(nl!==d.lf&&d.out[nl]==='1')nl=d.lf;
-  if(over){const al=aliveSeats(d),pend=al.filter(s=>!d.bl[s]);if(!pend.length||al.length<3)return tqEnd(d,d.end>0&&Date.now()>=d.end?'خلص الوقت ⏱':'خلصت الجولات');
-    if(!pend.includes(nl)){const n=d.pl.length,p=pend.slice().sort((a,b)=>((a-nl+n)%n)-((b-nl+n)%n))[0];const i=cr.indexOf(p);if(i>=0)cr[i]=nl;nl=p;}}
-  return tqRound({...d,rn,cr,fin:over?1:0},nl);}
+/* ---------- the rules (pure; the host runs them) ---------- */
+// a round: walker L stands up behind the place at milli-lap th
+function tqRound(d,L,th,now){return {...d,ph:'walk',lf:L,turn:L,rk:d.rk+1,wp:th,w0:th,t0:now,ht:now,mv:now,dp:null,lk:d.pl.map(()=>0),lr:null,ch:null,rs:null,dl:0};}
+// the slot nearest to a milli-lap position; and the drop behind seat s while passing (else the nearest)
+function tqNearest(d,wp){let b=0,bd=1e9;d.cr.forEach((s,i)=>{const x=Math.abs(tqW(tqSlot(d,i)-wp));if(x<bd){bd=x;b=i;}});return b;}
+function tqDrop(d,s){if(d.ph!=='walk'||d.dp)return d;const m=d.cr.length,half=Math.round(600/m);let i=d.cr.indexOf(s);
+  if(i<0||d.out[s]==='1'||Math.abs(tqW(tqSlot(d,i)-d.wp))>half)i=tqNearest(d,d.wp);const at=d.wp-tqW(d.wp-tqSlot(d,i));
+  return {...d,dp:{s:d.cr[i],p:at}};}
+// a sitter turns round: the host answers; the cap behind them starts the chase
+function tqLook(d,s,now){if(d.ph!=='walk'||s===d.lf||!d.cr.includes(s)||d.out[s]==='1'||d.lk[s]>=TQ.LOOKS)return d;
+  const lk=d.lk.slice();lk[s]++;const hit=!!(d.dp&&d.dp.s===s);const lr={s,hit:hit?1:0,k:(d.lr?d.lr.k:0)+1,at:d.wp};
+  const nd={...d,lk,lr};if(!hit)return nd;
+  return {...nd,ph:'chase',ch:{c:s,w:d.wp,c0:d.dp.p,cc:d.dp.p,w0:d.wp,goal:d.dp.p+1000,t0:now},ht:now,dl:now+TQ.CHASE};}
+// the end of a round. o: nap (the lap came round: «شرب»), esc (the walker reached the place), tag (the chaser touched him)
+function tqFinish(d,o,now){const L=d.lf,t=d.dp?d.dp.s:-1,dl=d.pl.map(()=>0);
+  if(o==='nap'){dl[L]++;dl[t]--;}else if(o==='esc')dl[L]++;else if(o==='tag')dl[t]++;
+  const pd=d.pd.map((v,s)=>Math.max(0,v+dl[s])),dp=pd.map((v,s)=>v-d.pd[s]),cr=d.cr.slice();let nl=L;
+  if(o==='nap'||o==='esc'){const i=cr.indexOf(t);if(i>=0)cr[i]=L;nl=t;}
+  const nth=o==='tag'?tqMod(d.ch?d.ch.w:d.wp):(d.dp?tqMod(d.dp.p):tqMod(d.wp));
+  return {...d,ph:'res',pd,cr,rs:{o,w:L,t,dp,nl,th:nth},dl:now+TQ.RES,ht:now};}
+function tqNext(d,now){if(d.end>0&&now>=d.end)return tqEnd(d,'خلص الوقت ⏱');const al=aliveSeats(d);if(al.length<3)return tqEnd(d,'ما بقى لاعبين كفاية');
+  const r=d.rs||{nl:d.lf,th:tqMod(d.wp)};let L=r.nl;if(d.out[L]==='1'){L=d.cr.find(s=>d.out[s]!=='1');d={...d,cr:d.cr.filter(s=>s!==L)};}
+  return tqRound({...d,rn:d.rn+1},L,r.th,now);}
 function tqEnd(d,why){const pd=d.pd.slice(),al=aliveSeats(d),mx=Math.max(...al.map(s=>pd[s])),top=al.filter(s=>pd[s]===mx);
-  return {...d,ph:'end',dsc:pd,win:top[0],wins:top,why,dl:0,end:0,turn:d.lf};}
+  return {...d,ph:'end',dsc:pd,win:top[0],wins:top,why,dl:0,turn:d.lf};}
+// one host step of the walk: the walker's new place (clamped to a walking pace), the drop, «شرب»
+function tqWalk(d,now,want,drop,auto){const dt=Math.max(1,Math.min(1000,now-d.ht));let wp=d.wp,mv=d.mv;
+  const hi=wp+Math.ceil(TQ.VW*dt/1000*1.3)+15;if(Number.isFinite(want)&&want>wp){wp=Math.min(Math.round(want),hi);if(!auto)mv=now;}
+  let nd={...d,wp,ht:now,mv};if(drop!=null&&!nd.dp&&wp-d.w0>=60)nd=tqDrop(nd,drop);
+  // nobody may stall the circle: no drop after two laps (or 40 s): it falls behind the next one passed
+  if(!nd.dp&&(wp-d.w0>=TQ.DROP2||now-d.t0>TQ.WALKMAX))nd=tqDrop(nd,nd.cr[tqNearest(nd,wp)]);
+  if(nd.dp&&nd.wp>=nd.dp.p+1000)return tqFinish({...nd,wp:nd.dp.p+1000},'nap',now);
+  return nd;}
+// one host step of the chase: each runner's distance (clamped to a running pace)
+function tqRun(d,now,wantW,wantC){const ch=d.ch,dt=Math.max(1,Math.min(1000,now-d.ht)),cap=Math.ceil(TQ.VR*dt/1000*1.25)+10;
+  const w=Number.isFinite(wantW)&&wantW>ch.w?Math.min(Math.round(wantW),ch.w+cap):ch.w,cc=Number.isFinite(wantC)&&wantC>ch.cc?Math.min(Math.round(wantC),ch.cc+cap):ch.cc;
+  const nd={...d,ch:{...ch,w,cc},wp:w,ht:now};
+  if(cc>=w-TQ.TAG)return tqFinish(nd,'tag',now);
+  if(w>=ch.goal)return tqFinish(nd,'esc',now);
+  if(now>=d.dl){const left=(ch.goal-w)/1000,gap=(w-cc)/1000;return tqFinish(nd,left<=gap?'esc':'tag',now);}
+  return nd;}
 
-/* ---------- bots: they read only GAMES.taqiya.mask(d, seat), plus what every phone saw (S.tqMem, from public results) ---------- */
-function tqMem(){return S.tqMem||(S.tqMem={seen:{},n:0,r:{}});}
-const tqSt=(d,s)=>tqMem().r[d.pl[s]]||{sp:0,mi:0,fc:0,fi:0};
-// how often this player missed a real cap (smoothed): the لفّاف's favourite targets
-const tqLate=(d,s)=>{const x=tqSt(d,s);return (x.mi+.6)/(x.sp+x.mi+1.2);};
-const tqArgmax=(xs,f)=>{let b=-Infinity,o=xs[0];for(const x of xs){const v=f(x);if(v>b){b=v;o=x;}}return o;};
-function tqBotPlan(d,lv){const v=GAMES.taqiya.mask(d,d.lf),lf=v.lf,sit=tqAlive(v).filter(s=>s!==lf);if(!sit.length)return tqGo(d,{});
-  const mx=Math.max(1,...v.pd),cat=s=>v.ev&&v.ev.k==='cat'&&v.ev.v===s;let t;
-  if(lv===1)t=sit[rnd(sit.length)];
-  else t=tqArgmax(sit,s=>tqLate(v,s)*(lv===3?2.2:1.2)+(cat(s)?(lv===3?.7:.3):0)+(lv===3?.35*v.pd[s]/mx:0)+Math.random()*(lv===3?.35:.8));
-  const late=tqLate(v,t),light=v.ev&&v.ev.k==='light',rl=v.RN-v.rn;
-  let l=lv===1?1+rnd(3):lv===2?(light?3:Math.random()<.55?2:1+rnd(3)):(light||late>.55?3:sit.length>=4?2:Math.random()<.5?2:1);
-  const fakeP=v.fk[lf]>0?(lv===1?.2:lv===2?.3:(tqSt(v,t).fc>tqSt(v,t).fi?.45:.28)):0,f=Math.random()<fakeP?1:0;
-  const g=!f&&!v.gu[lf]&&(lv===1?Math.random()<.1:lv===2?(late>.5&&Math.random()<.5)||rl<=2:late>.55||rl<=2||v.fin)?1:0;
-  const b=!v.gh[lf]&&(lv===1?Math.random()<.08:lv===2?Math.random()<.25:late<.4||g)?1:0;
-  return tqGo(d,{t,l,f,g,b});}
-// a sitter's guess (and maybe its shout) at the drop, from the public traces
-function tqBotGuess(d,s,lv){const v=GAMES.taqiya.mask(d,s),cand=tqAlive(v).filter(x=>x!==s&&x!==v.lf);if(!cand.length)return {g:-1,s:-1};
-  let pool=cand;for(const t of v.tr){const q=pool.filter(x=>t.s.includes(x));if(q.length)pool=q;}
-  const any=a=>a[rnd(a.length)];let g;
-  if(lv===1)g=Math.random()<.5?any(cand):any(pool);
-  else if(!v.tr.length&&lv===3)g=tqArgmax(cand,x=>tqLate(v,x)+(v.ev&&v.ev.k==='cat'&&v.ev.v===x?.4:0)+Math.random()*.5);
-  else g=any(pool);
-  const sure=v.tr.length>0&&pool.length===1;let sh=-1;
-  if(!v.su[s]){if(lv===3&&sure&&v.pd[v.lf]>=v.pd[s])sh=pool[0];else if(lv===2&&sure&&Math.random()<.5)sh=pool[0];else if(lv===1&&Math.random()<.06)sh=any(cand);}
-  return {g,s:sh};}
-// the target's reaction (fixed per round, so the bot's delay and its answer agree)
-function tqReact(d,s,lv){const k=d.gid+':'+d.rk+':'+s+':'+(d.az&&d.az.fz?1:0);
-  if(!S.tqBR||S.tqBR.k!==k)S.tqBR={k,r:(lv===1?1500+rnd(3600):lv===2?1000+rnd(2600):650+rnd(1500))+(d.az&&d.az.bz?900:0)+(d.az&&d.az.fz?250:0)};return S.tqBR.r;}
-function tqBotAlert(d,s,lv){const v=GAMES.taqiya.mask(d,s),R=tqReact(v,s,lv),lim=tqLim(v);
-  if(v.az&&v.az.fr===2)return {s:lv===1&&Math.random()<.3?1:0,ms:Math.min(R,lim)};
-  return R<=lim?{s:1,ms:R}:{s:0,ms:lim};}
-// «تحسّس» when the لفّاف still has fakes and there is time for it
-function tqBotFeels(d,lv){const v=GAMES.taqiya.mask(d,d.tg);if(!v.az||v.az.fz||v.fu[d.tg]||!(v.fk[v.lf]>0))return false;
-  return lv===1?Math.random()<.1:lv===2?Math.random()<.35:v.az.lim>=3000&&Math.random()<.75;}
-function tqBotRoute(d,s,lv){const op=[0,1,2].filter(r=>r!==tqClosed(d));if(lv===1)return op[rnd(op.length)];
-  const P=x=>{const h=d.hb[x],t=h.reduce((a,b)=>a+b,0)+3;return r=>(h[r]+1)/t;},pL=P(d.lf),pT=P(d.tg);
-  if(Math.random()<(lv===3?.22:.4))return op[rnd(op.length)];
-  // the target follows the لفّاف's habit; the لفّاف avoids his own habit and the target's
-  return s===d.tg?tqArgmax(op,r=>pL(r)+Math.random()*.05):tqArgmax(op,r=>-(pL(r)+pT(r))+Math.random()*.05);}
-const tqBotTaps=lv=>lv===1?10+rnd(7):lv===2?13+rnd(7):16+rnd(8);
+/* ---------- bots (and players who left the room): moved by the host, reading only what their seat sees ---------- */
+const tqLv=(d,s)=>isBot(d,s)?botLv(d,s):2;
+// the walker: its own pace, a bluff (lingering behind someone), then the drop behind its pick while passing
+function tqBotWalk(d,now,lv){const k=d.gid+':'+d.rk;let B=S.tqBW;
+  if(!B||B.k!==k){const sit=d.cr.filter(s=>d.out[s]!=='1');B=S.tqBW={k,t:sit[rnd(sit.length)],v:(lv===1?150:lv===2?150:150)+rnd(lv===1?80:lv===2?110:150),run:lv===1?rnd(200):lv===2?rnd(700):250+rnd(900),ling:0,next:now+800+rnd(1500)};}
+  const dt=Math.max(1,Math.min(1000,now-d.ht));let v=d.dp?(lv===3?270:lv===2?235:190):B.v,drop=null;
+  if(now<B.ling)v=40;else if(!d.dp&&lv>=2&&now>B.next){B.next=now+1500+rnd(2500);const near=d.cr.some(s=>Math.abs(tqW(d.wp-tqTh(d,s)))<45);if(near&&Math.random()<(lv===3?.7:.45))B.ling=now+500+rnd(800);}
+  if(!d.dp&&d.wp-d.w0>=B.run&&Math.abs(tqW(d.wp-tqTh(d,B.t)))<40)drop=B.t;
+  return {want:d.wp+v*dt/1000,drop};}
+// a sitter: after the steps pass right behind, a look now and then (more when he lingered there), 3 a round
+function tqBotLooks(d,nd,now){const m=S.tqBL&&S.tqBL.k===d.gid+':'+d.rk?S.tqBL:(S.tqBL={k:d.gid+':'+d.rk,at:{},ling:{}});let x=nd;
+  for(const s of d.cr){if(d.out[s]==='1'||!tqIsBot(d,s)||x.lk[s]>=TQ.LOOKS||x.ph!=='walk')continue;const lv=tqLv(d,s),th=tqTh(d,s),a=tqW(d.wp-th),b=tqW(x.wp-th);
+    if(Math.abs(b)<45&&x.wp-d.wp<12)m.ling[s]=(m.ling[s]||0)+1;
+    if(a<0&&b>=0&&!(m.at[s]>now)){const long=x.wp-x.w0>700?.15:0,lg=(m.ling[s]||0)>=2?.3:0;m.ling[s]=0;
+      const P=(lv===1?.2:lv===2?.32:.42)+lg+long+(lv===3&&x.lk[s]===0?.08:0);if(Math.random()<P)m.at[s]=now+(lv===1?900+rnd(1300):lv===2?500+rnd(900):280+rnd(600));}
+    // the walker comes round again after a long walk: a careful sitter checks before the lap closes
+    if(lv>=2&&b<0&&b>-120&&x.wp-x.w0>900&&x.lk[s]<TQ.LOOKS-1&&!(m.at[s]>0)&&Math.random()<(lv===3?.08:.04))m.at[s]=now+300;
+    if(m.at[s]>0&&now>=m.at[s]){m.at[s]=0;x=tqLook(x,s,now);if(x.ph!=='walk')return x;}}
+  return x;}
+const tqBotRun=lv=>TQ.VR*(lv===1?.7+Math.random()*.15:lv===2?.78+Math.random()*.14:.86+Math.random()*.11);
 
-/* ---------- drawing: the courtyard at night (a CSS background made once) ---------- */
-const TQ_SKY=40,TQ_TOP=88,TQ_WIN=[52,96,264,308],TQ_DOOR=180,TQ_GATE=TQH-62;
-function tqStars(){let a='',b='',r=7;const R=()=>(r=(r*9301+49297)%233280)/233280;for(let i=0;i<22;i++){const x=KH.f(R()*TQW),y=KH.f(R()*(TQ_SKY-4)),k=R();if(k>.5)a+=`M${x} ${y}h0`;else b+=`M${x} ${y}h0`;}
+/* ---------- the host: every 200 ms it moves the round on from the phones' private parts, the bots and the clocks ---------- */
+function tqHost(d,now){
+  if(d.ph==='walk'){const L=d.lf;let want,drop=null;
+    let auto=false;
+    if(tqIsBot(d,L)){const b=tqBotWalk(d,now,tqLv(d,L));want=b.want;drop=b.drop;}
+    else{const p=tqPriv(d,L);if(p){if(Number.isFinite(p.wp))want=p.wp;if(p.dr&&Number.isInteger(p.dr.s))drop=p.dr.s;}
+      // a walker who stands still: the host walks them on slowly, so the circle never stops
+      if(!(want>d.wp)&&now-d.mv>3500){want=d.wp+TQ.VA*Math.min(1000,now-d.ht)/1000;auto=true;}}
+    let nd=tqWalk(d,now,want,drop,auto);if(nd.ph==='walk')nd=tqBotLooks(d,nd,now);return nd;}
+  if(d.ph==='chase'){const ch=d.ch,dt=Math.min(1000,now-d.ht)/1000,run=(s,base,cur)=>{if(tqIsBot(d,s))return cur+tqBotRun(tqLv(d,s))*dt;const p=tqPriv(d,s);return p&&Number.isFinite(p.rn)?base+p.rn:cur;};
+    return tqRun(d,now,run(d.lf,ch.w0,ch.w),run(ch.c,ch.c0,ch.cc));}
+  if(d.ph==='res'&&now>=d.dl)return tqNext(d,now);
+  return d;}
+function tqPush(nd){const was=S.inIntent;S.inIntent=true;try{act(nd);}finally{S.inIntent=was;}}
+function tqHostTick(now){const d=S.st.d;if(!d||d.win!=null)return;const nd=tqHost(d,now);if(!nd||nd===d)return;
+  // only what others can see is sent: the host's own clock (ht) alone is not worth a message
+  if(nd.ph===d.ph&&nd.wp===d.wp&&nd.dp===d.dp&&nd.lk===d.lk&&nd.ch===d.ch&&nd.lr===d.lr)return;tqPush(nd);}
+
+/* ---------- real sounds, made here with Web Audio (silent when muted) ---------- */
+const TQA={ctx:null,nb:null,rec:null,recOk:false,tried:false};
+function tqAC(){if(S.mute)return null;try{const c=(typeof actx!=='undefined'&&actx)||TQA.ctx||(TQA.ctx=new (window.AudioContext||window.webkitAudioContext)());if(c.state==='suspended')c.resume();return c;}catch(e){return null;}}
+function tqNoise(c){if(!TQA.nb||TQA.nb.sampleRate!==c.sampleRate){const n=c.sampleRate,b=c.createBuffer(1,n,c.sampleRate),x=b.getChannelData(0);for(let i=0;i<n;i++)x[i]=Math.random()*2-1;TQA.nb=b;}return TQA.nb;}
+function tqOut(c,pan,vol){const g=c.createGain();g.gain.value=vol;if(c.createStereoPanner){const p=c.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan||0));g.connect(p).connect(c.destination);}else g.connect(c.destination);return g;}
+function tqEnv(c,g,t,a,v,d){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,v),t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d);}
+function tqBurst(c,o,t,{f=900,q=1,type='bandpass',v=.5,a=.005,d=.1,off}={}){const s=c.createBufferSource();s.buffer=tqNoise(c);const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();tqEnv(c,g,t,a,v,d);s.connect(fl).connect(g).connect(o);s.start(t,off??Math.random()*.8,a+d+.05);}
+function tqTone(c,o,t,f,{f2,type='sine',v=.4,a=.008,d=.12}={}){const k=c.createOscillator(),g=c.createGain();k.type=type;k.frequency.setValueAtTime(f,t);if(f2)k.frequency.exponentialRampToValueAtTime(f2,t+a+d);tqEnv(c,g,t,a,v,d);k.connect(g).connect(o);k.start(t);k.stop(t+a+d+.05);}
+const TQS={
+  // a step on dirt: a short crunch and a soft knock; louder and panned by where the walker is
+  step(vol=.5,pan=0,run=0){const c=tqAC();if(!c)return;const t=c.currentTime,o=tqOut(c,pan,vol);tqBurst(c,o,t,{f:run?1500:800+Math.random()*500,q:.8,v:.9,d:run?.06:.1});tqBurst(c,o,t+.012,{f:3200,q:1.2,v:.25,d:.04});tqTone(c,o,t,run?130:105,{f2:52,v:.45,d:.09});},
+  thud(){const c=tqAC();if(!c)return;const t=c.currentTime,o=tqOut(c,0,.7);tqBurst(c,o,t,{type:'lowpass',f:500,q:.5,v:.9,a:.004,d:.16});tqTone(c,o,t,90,{f2:45,v:.6,d:.18});},
+  whoosh(){const c=tqAC();if(!c)return;const t=c.currentTime,o=tqOut(c,0,.5),s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=tqNoise(c);fl.type='bandpass';fl.Q.value=1.4;fl.frequency.setValueAtTime(400,t);fl.frequency.exponentialRampToValueAtTime(2600,t+.3);tqEnv(c,g,t,.08,.8,.3);s.connect(fl).connect(g).connect(o);s.start(t,0,.5);},
+  heart(vol=.6){const c=tqAC();if(!c)return;const t=c.currentTime,o=tqOut(c,0,vol);tqTone(c,o,t,62,{f2:48,v:.9,a:.01,d:.13});tqTone(c,o,t+.2,56,{f2:44,v:.7,a:.01,d:.15});},
+  clap(vol=.5,pan=0){const c=tqAC();if(!c)return;const t=c.currentTime,o=tqOut(c,pan,vol);for(let i=0;i<3;i++)tqBurst(c,o,t+i*.009,{type:'highpass',f:1100,q:.7,v:.8,a:.002,d:.05});},
+  // a crowd of kids: bands of noise swelling, a few high voices, and claps
+  cheer(){const c=tqAC();if(!c)return;const t=c.currentTime,o=tqOut(c,0,.35);for(const f of [700,1100,1700])tqBurst(c,o,t,{f,q:2.5,v:.5,a:.18,d:.9});
+    for(let i=0;i<4;i++){const k=c.createOscillator(),g=c.createGain(),lf=c.createOscillator(),lg=c.createGain();k.type='triangle';const f0=520+rnd(380);k.frequency.value=f0;lf.frequency.value=5+Math.random()*3;lg.gain.value=f0*.03;lf.connect(lg).connect(k.frequency);tqEnv(c,g,t+i*.05,.15,.1,.8);k.connect(g).connect(o);k.start(t);lf.start(t);k.stop(t+1.2);lf.stop(t+1.2);}
+    for(let i=0;i<8;i++)setTimeout(()=>TQS.clap(.35,Math.random()*1.4-.7),120+i*130+rnd(60));},
+  // the chant: a clap and a sung syllable (a soft voice with vibrato and a vowel formant)
+  word(i){const c=tqAC();if(!c)return;const t=c.currentTime,o=tqOut(c,0,.32),N=[659,659,784,880,784,659,587,587,659,784,659,587],f0=N[i%N.length];
+    tqBurst(c,o,t,{type:'highpass',f:1300,q:.7,v:.6,a:.002,d:.05});if(TQA.recOk)return;
+    const k=c.createOscillator(),k2=c.createOscillator(),fl=c.createBiquadFilter(),g=c.createGain(),lf=c.createOscillator(),lg=c.createGain();
+    k.type='triangle';k2.type='sine';k.frequency.value=f0;k2.frequency.value=f0*2;lf.frequency.value=5.6;lg.gain.value=f0*.012;lf.connect(lg);lg.connect(k.frequency);lg.connect(k2.frequency);
+    fl.type='bandpass';fl.frequency.value=1000;fl.Q.value=1.1;tqEnv(c,g,t,.03,.5,.24);k.connect(fl);k2.connect(fl);fl.connect(g).connect(o);for(const x of [k,k2,lf]){x.start(t);x.stop(t+.32);}}};
+// a real recording dropped in later (public/audio/, named in audio/taqiya.json) plays during the walk; else the synth
+// the hook: audio/taqiya.json names the file ({"chant":"taqiya-chant.mp3"}); null (as shipped) asks for nothing, so no 404
+function tqRec(on,rate){try{if(!TQA.tried){TQA.tried=true;fetch('audio/taqiya.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{const f=j&&typeof j.chant==='string'&&/^[\w.-]+\.(mp3|ogg|m4a)$/.test(j.chant)?j.chant:null;if(!f)return;
+    const a=new Audio();a.loop=true;a.preload='auto';a.addEventListener('canplaythrough',()=>{TQA.recOk=true;},{once:true});a.addEventListener('error',()=>{TQA.recOk=false;},{once:true});a.src='audio/'+f;TQA.rec=a;}).catch(()=>{});}
+  const a=TQA.rec;if(!a||!TQA.recOk)return;if(on&&!S.mute){a.playbackRate=Math.max(.7,Math.min(1.4,rate||1));if(a.paused)a.play().catch(()=>{});}else if(!a.paused)a.pause();}catch(e){}}
+
+/* ---------- drawing: the courtyard from above (the walker, the chase, the watchers) ---------- */
+const TQW=360,TQH=440,TQCX=180,TQCY=262,TQRX=118,TQRY=84,TQOUT=40,TQKY=.6,TQ_SKY=40,TQ_TOP=88,TQ_WIN=[52,96,264,308],TQ_GATE=TQH-62;
+const tqXY=(m,out=0)=>{const a=2*Math.PI*m/1000;return [TQCX-(TQRX+out)*Math.sin(a),TQCY+(TQRY+out*TQKY)*Math.cos(a)];};
+function tqStars(w,h,n,seed){let a='',b='',r=seed||7;const R=()=>(r=(r*9301+49297)%233280)/233280;for(let i=0;i<n;i++){const x=KH.f(R()*w),y=KH.f(R()*h),k=R();if(k>.5)a+=`M${x} ${y}h0`;else b+=`M${x} ${y}h0`;}
   return `<path d="${a}" stroke="#FFF4D6" stroke-width="2.2" stroke-linecap="round" opacity=".8"/><path d="${b}" stroke="#FFF4D6" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>`;}
+// the far house: crenellated parapet, lit windows, the green door
+function tqFacade(W,top,h,wins,door,OL){let s='',cr='';for(let x=4;x<W;x+=13)cr+=`M${x} ${top}l4.5-7 4.5 7z`;
+  s+=`<path d="${cr}" fill="#C9A577" stroke="${OL}" stroke-width="1.2"/><rect x="-2" y="${top}" width="${W+4}" height="12" fill="#D6B588" stroke="${OL}" stroke-width="1.6"/><path d="M0 ${top+6}H${W}" stroke="#EED7AE" stroke-width="2.4" stroke-dasharray="5 3.5"/>`;
+  s+=`<rect x="-2" y="${top+12}" width="${W+4}" height="${h-12}" fill="#A9835B" stroke="${OL}" stroke-width="1.6"/><path d="M0 ${top+h-3}H${W}" stroke="#8E6B48" stroke-width="5"/>`;
+  const fh=h-22;for(const wx of wins)s+=KH.art.pool(wx,top+24+fh/2,24)+`<rect x="${wx-6}" y="${top+22}" width="12" height="${fh-2}" rx="5" fill="#FFD27A" stroke="${OL}" stroke-width="1.3"/><path d="M${wx} ${top+23}v${fh-4}M${wx-6} ${top+22+fh/2}h12" stroke="#C98F1A" stroke-width="1.2"/>`;
+  if(door)s+=`<rect x="${door-11}" y="${top+18}" width="22" height="${h-18}" rx="3" fill="#2E8B6A" stroke="${OL}" stroke-width="1.5"/><path d="M${door} ${top+20}v${h-22}" stroke="#000" stroke-opacity=".25"/><circle cx="${door-4}" cy="${top+h/2+6}" r="1.3" fill="#F0B429"/><circle cx="${door+4}" cy="${top+h/2+6}" r="1.3" fill="#F0B429"/>`;
+  return s;}
 function tqArt(){const A=KH.art,OL=KH.OL,W=TQW,H=TQH,sky=TQ_SKY,top=TQ_TOP;
   let s=A.defs()+A.defs2()+`<defs><linearGradient id="tqs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1222"/><stop offset="1" stop-color="#1D2C4A"/></linearGradient></defs><rect width="${W}" height="${H}" fill="#594634"/>`;
   let tl='';for(let y=top+18;y<H;y+=30)tl+=`M0 ${y}H${W}`;for(let x=15;x<W;x+=34)tl+=`M${x} ${top}V${H}`;s+=`<path d="${tl}" stroke="#46362A" stroke-width="1.4"/>`;
-  s+=`<rect width="${W}" height="${sky+6}" fill="url(#tqs)"/>`+tqStars()+A.moon(300,22);
-  let cr='';for(let x=4;x<W;x+=13)cr+=`M${x} ${sky}l4.5-7 4.5 7z`;
-  s+=`<path d="${cr}" fill="#C9A577" stroke="${OL}" stroke-width="1.2"/><rect x="-2" y="${sky}" width="${W+4}" height="12" fill="#D6B588" stroke="${OL}" stroke-width="1.6"/><path d="M0 ${sky+6}H${W}" stroke="#EED7AE" stroke-width="2.4" stroke-dasharray="5 3.5"/>`;
-  s+=`<rect x="-2" y="${sky+12}" width="${W+4}" height="${top-sky-12}" fill="#A9835B" stroke="${OL}" stroke-width="1.6"/><path d="M0 ${top-3}H${W}" stroke="#8E6B48" stroke-width="5"/>`;
-  let tri='';for(let x=10;x<W-6;x+=10)tri+=`M${x} ${sky+19}l3-4 3 4z`;s+=`<path d="${tri}" fill="#4A3424" opacity=".6"/>`;
-  const fh=top-sky-22;for(const wx of TQ_WIN)s+=A.pool(wx,sky+24+fh/2,22)+`<rect x="${wx-6}" y="${sky+22}" width="12" height="${fh-2}" rx="5" fill="#FFD27A" stroke="${OL}" stroke-width="1.3"/><path d="M${wx} ${sky+23}v${fh-4}M${wx-6} ${sky+22+fh/2}h12" stroke="#C98F1A" stroke-width="1.2"/>`;
-  const dx=TQ_DOOR;s+=`<rect x="${dx-11}" y="${sky+18}" width="22" height="${top-sky-18}" rx="3" fill="#2E8B6A" stroke="${OL}" stroke-width="1.5"/><path d="M${dx} ${sky+20}v${top-sky-22}" stroke="#000" stroke-opacity=".25"/><circle cx="${dx-4}" cy="${(sky+top)/2+6}" r="1.3" fill="#F0B429"/><circle cx="${dx+4}" cy="${(sky+top)/2+6}" r="1.3" fill="#F0B429"/><path d="M${dx-13} ${sky+17}h26" stroke="${OL}" stroke-width="3" stroke-linecap="round"/>`;
-  s+=A.stairs(12,sky+8,44,top-sky-6);
+  s+=`<rect width="${W}" height="${sky+6}" fill="url(#tqs)"/>`+tqStars(W,sky-4,22)+A.moon(300,22)+tqFacade(W,sky,top-sky,TQ_WIN,180,OL)+A.stairs(12,sky+8,44,top-sky-6);
   s+=`<rect x="-4" y="${top}" width="14" height="${H-top+4}" fill="#D6B588" stroke="${OL}" stroke-width="1.6"/><rect x="${W-10}" y="${top}" width="14" height="${H-top+4}" fill="#D6B588" stroke="${OL}" stroke-width="1.6"/><path d="M3 ${top}V${H}M${W-3} ${top}V${H}" stroke="#EED7AE" stroke-width="2.4" stroke-dasharray="5 3.5"/>`;
-  s+=A.pool(W-18,TQ_GATE,30)+`<rect x="${W-12}" y="${TQ_GATE-20}" width="10" height="40" rx="2" fill="#2E8B6A" stroke="${OL}" stroke-width="1.4"/><circle cx="${W-7}" cy="${TQ_GATE}" r="1.4" fill="#F0B429"/>`;
+  s+=A.pool(W-18,TQ_GATE,30)+`<rect x="${W-12}" y="${TQ_GATE-20}" width="10" height="40" rx="2" fill="#2E8B6A" stroke="${OL}" stroke-width="1.4"/>`;
   s+=`<ellipse cx="${W-34}" cy="${top+34}" rx="16" ry="6" fill="#000" opacity=".3"/><path d="M${W-46} ${top+20}h24l-3 15h-18z" fill="#B5652A" stroke="${OL}" stroke-width="1.4"/>`+A.palm(W-34,top+14,.8).replace(/<ellipse[^>]*\/>/,'')+A.jar(32,top+22);
-  s+=A.rug(TQCX,TQCY,TQRX+30,TQRY+22);
-  s+=`<rect width="${W}" height="${H}" fill="url(#v)" opacity=".45"/>`;
-  s+=A.lights(-2,sky+10,W*.52,sky+14,54,9,0)+A.lights(W*.52,sky+14,W+2,sky+8,48,8,2);
+  s+=A.rug(TQCX,TQCY,TQRX+30,TQRY+22)+`<rect width="${W}" height="${H}" fill="url(#v)" opacity=".45"/>`+A.lights(-2,sky+10,W*.52,sky+14,54,9,0)+A.lights(W*.52,sky+14,W+2,sky+8,48,8,2);
   return s;}
-let TQ_BG='';const tqBg=()=>TQ_BG||(TQ_BG=KH.bg('taqiya',TQW,TQH,tqArt()));
-/* the chase map: the house and its roof, the courtyard, the street outside */
-const TQMW=360,TQMH=420,TQM={cx:143,cy:250,rx:74,ry:50},TQM_GY=300;
-function tqMapArt(){const A=KH.art,OL=KH.OL,W=TQMW,H=TQMH,B=410,GY=TQM_GY;
-  let s=A.defs()+`<rect width="${W}" height="${H}" fill="#2B3852"/><rect x="286" y="0" width="${W-286}" height="${H}" fill="#1B2537"/><path d="M324 0V${H}" stroke="#F4F6FA" stroke-opacity=".35" stroke-width="2.4" stroke-dasharray="12 10"/><path d="M286 0V${H}" stroke="#45567A" stroke-width="5"/>`;
-  s+=`<g transform="rotate(90 338 372)">${A.car(338,372,'#4AB1E8',.8)}</g>`+A.pool(298,170,46)+A.lamp(296,170);
-  s+=A.roof(12,10,264,58,{face:20,wins:[36,76,192,236],doors:[[143,'#2E8B6A']]});
-  let tl='';for(let y=118;y<B;y+=32)tl+=`M12 ${y}H276`;for(let x=44;x<276;x+=34)tl+=`M${x} 88V${B}`;
-  s+=`<rect x="12" y="88" width="264" height="${B-88}" fill="#5E4A38"/><path d="${tl}" stroke="#4C3C2E" stroke-width="1.2"/><path d="M6 88V${B+6}H282V88" fill="none" stroke="#D6B588" stroke-width="10"/><path d="M6 88V${B+6}H282V88" fill="none" stroke="#EED7AE" stroke-width="2.4" stroke-dasharray="5 3.5"/>`;
-  s+=`<rect x="277" y="${GY-19}" width="10" height="38" rx="2" fill="#2E8B6A" stroke="${OL}" stroke-width="1.4"/>`+A.pool(264,GY,30)+`<rect x="277" y="22" width="10" height="30" rx="2" fill="#7A4A2A" stroke="${OL}" stroke-width="1.4"/>`;
-  s+=A.stairs(16,90,40,36)+`<path d="M246 70v40M260 70v40M246 78h14M246 88h14M246 98h14" stroke="#C98F58" stroke-width="3"/>`;
-  s+=`<ellipse cx="${TQM.cx}" cy="${TQM.cy}" rx="${TQM.rx+18}" ry="${TQM.ry+14}" fill="#7E2A33" stroke="${OL}" stroke-width="1.6"/><ellipse cx="${TQM.cx}" cy="${TQM.cy}" rx="${TQM.rx+12}" ry="${TQM.ry+9}" fill="none" stroke="#E2B65A" stroke-width="1.6" stroke-dasharray="2 4"/>`;
+/* ---------- drawing: a sitter's own eyes. The others across the rug; the house beyond; my knees at the bottom ---------- */
+const TQFW=360,TQFH=500,TQFY=296;
+const tqFP=(phi)=>{const a=2*Math.PI*phi;return [180-158*Math.sin(a),TQFY+96*Math.cos(a),.74+.52*(1+Math.cos(a))/2];};
+const tqFPout=(phi)=>{const a=2*Math.PI*phi;return [180-215*Math.sin(a),TQFY-8+140*Math.cos(a),.68+.5*(1+Math.cos(a))/2];};
+function tqFpArt(){const A=KH.art,OL=KH.OL,W=TQFW,H=TQFH;
+  let s=A.defs()+A.defs2()+`<defs><linearGradient id="tqs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1222"/><stop offset="1" stop-color="#22325A"/></linearGradient><linearGradient id="tqf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46372A"/><stop offset="1" stop-color="#6E5640"/></linearGradient><radialGradient id="tql" cx=".5" cy="1.1" r=".9"><stop offset="0" stop-color="#FFD873" stop-opacity=".32"/><stop offset="1" stop-color="#FFD873" stop-opacity="0"/></radialGradient></defs>`;
+  s+=`<rect width="${W}" height="${H}" fill="url(#tqf)"/><rect width="${W}" height="120" fill="url(#tqs)"/>`+tqStars(W,90,24,5)+A.moon(62,58)+tqFacade(W,104,76,[40,92,268,320],180,OL);
+  let tl='';for(let i=-8;i<=8;i++)tl+=`M${180+i*28} 180L${180+i*110} ${H}`;for(const y of [192,210,234,264,302,350,412,490])tl+=`M0 ${y}H${W}`;s+=`<path d="${tl}" stroke="#3A2D22" stroke-width="1.3" opacity=".8"/>`;
+  s+=A.lights(-4,98,W*.55,106,64,10,0)+A.lights(W*.55,106,W+4,96,56,8,2);
+  s+=`<ellipse cx="180" cy="${TQFY+8}" rx="236" ry="120" fill="url(#khrug)" stroke="${OL}" stroke-width="2"/><ellipse cx="180" cy="${TQFY+8}" rx="218" ry="108" fill="none" stroke="#E2B65A" stroke-width="2.4" stroke-dasharray="3 6"/><ellipse cx="180" cy="${TQFY-14}" rx="112" ry="42" fill="#2D3E66" opacity=".5"/><ellipse cx="180" cy="${TQFY-14}" rx="122" ry="48" fill="none" stroke="#E2B65A" stroke-opacity=".6" stroke-width="1.6"/>`;
+  s+=`<rect width="${W}" height="${H}" fill="url(#tql)"/>`;return s;}
+// what is behind me when I turn: the courtyard's other wall with the gate, the lamp, the floor where a cap could be
+function tqBkArt(){const A=KH.art,OL=KH.OL,W=TQFW,H=TQFH;
+  let s=A.defs()+A.defs2()+`<defs><linearGradient id="tqs2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1222"/><stop offset="1" stop-color="#22325A"/></linearGradient><linearGradient id="tqf2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4E3D2E"/><stop offset="1" stop-color="#7A6047"/></linearGradient></defs>`;
+  s+=`<rect width="${W}" height="${H}" fill="url(#tqf2)"/><rect width="${W}" height="150" fill="url(#tqs2)"/>`+tqStars(W,110,20,11)+tqFacade(W,132,84,[60,300],0,OL);
+  s+=`<rect x="150" y="150" width="60" height="66" rx="4" fill="#2E8B6A" stroke="${OL}" stroke-width="2"/><path d="M180 152v62" stroke="#000" stroke-opacity=".25"/>`+A.pool(180,250,90)+A.lamp(180,140);
+  let tl='';for(let i=-8;i<=8;i++)tl+=`M${180+i*28} 216L${180+i*110} ${H}`;for(const y of [228,250,280,320,372,440])tl+=`M0 ${y}H${W}`;s+=`<path d="${tl}" stroke="#3A2D22" stroke-width="1.3" opacity=".8"/>`;
   return s;}
-let TQ_MBG='';const tqMbg=()=>TQ_MBG||(TQ_MBG=KH.bg('tqmap',TQMW,TQMH,tqMapArt()));
-const tqMXY=(d,s)=>{const m=d.cr.length,i=d.cr.indexOf(s),a=i<0?0:i/m*2*Math.PI+tqOff(m);return [TQM.cx-TQM.rx*Math.sin(a),TQM.cy+TQM.ry*Math.cos(a)];};
-// the three routes, each from the target's empty place S and back to it
-function tqRoutes(S0){const [x,y]=S0.map(KH.f);return [`M${x} ${y}L256 ${TQM_GY}H306V40H256L245 52Q157 58 143 76V100Q206 120 240 180T${x} ${y}`,
-  (()=>{const a=Math.atan2(-(x-TQM.cx)/112,(y-TQM.cy)/88),P=b=>[KH.f(TQM.cx-112*Math.sin(b)),KH.f(TQM.cy+88*Math.cos(b))],p1=P(a),p2=P(a-.12);return `M${x} ${y}L${p1[0]} ${p1[1]}A112 88 0 1 1 ${p2[0]} ${p2[1]}L${x} ${y}`;})(),
-  `M${x} ${y}Q118 390 39 340V140L35 96V40Q137 22 252 40V108Q256 200 ${x} ${y}`];}
-
-/* ---------- drawing: pills, kids, the scene as seat `me` may see it ---------- */
-function tqPill(x,y,t,o={}){const fs=o.fs||12.5,w=o.w||KH.tw(t,fs)+(o.pad??14),h=o.h||fs+9;x=Math.max(w/2+3,Math.min((o.W||TQW)-3-w/2,x));
+let TQ_BG='',TQ_FBG='',TQ_KBG='';
+const tqBg=()=>TQ_BG||(TQ_BG=KH.bg('taqiya',TQW,TQH,tqArt())),tqFbg=()=>TQ_FBG||(TQ_FBG=KH.bg('tqfp',TQFW,TQFH,tqFpArt())),tqKbg=()=>TQ_KBG||(TQ_KBG=KH.bg('tqbk',TQFW,TQFH,tqBkArt()));
+function tqPill(x,y,t,o={}){const fs=o.fs||12.5,w=o.w||KH.tw(t,fs)+(o.pad??14),h=o.h||fs+9;if(!o.free)x=Math.max(w/2+3,Math.min((o.W||TQW)-3-w/2,x));
   return `<g class="tq-pl ${o.cls||''}" transform="translate(${KH.f(x)} ${KH.f(y)})"><rect x="${KH.f(-w/2)}" y="${KH.f(-h/2)}" width="${KH.f(w)}" height="${h}" rx="${KH.f(h/2)}"/><text y="${KH.f(fs*.36)}" font-size="${fs}">${t}</text></g>`;}
-const tqNm=(d,s)=>escH(pnameText(d.pl[s]));
-// footprints on the ring behind a sitter
-const tqSteps=(x,y,c='#7FD3FF')=>`<path d="M${KH.f(x-5)} ${KH.f(y+5)}h0M${KH.f(x+3)} ${KH.f(y+1)}h0M${KH.f(x-3)} ${KH.f(y-4)}h0M${KH.f(x+5)} ${KH.f(y-8)}h0" stroke="${c}" stroke-width="5.5" stroke-linecap="round" opacity=".8"/>`;
-// the walker: its place on the ring comes from the clock (tqTickDom moves it); rendered at its last place
-function tqWalker(d,inner,label){const a=S.tqWa&&S.tqWa.gid===d.gid?S.tqWa.a:TQA0,[x,y]=tqXY(a,TQOUT);
-  return `<g class="tq-w ${Math.cos(a)>0?'fl':''}" data-k="walker" style="transform:translate(${KH.f(x)}px,${KH.f(y)}px)"><g class="tq-wi">${inner}</g>${label}</g>`;}
-function tqScene(d,me,ctx,o){const fin=d.win!=null,ph=d.ph,n=d.pl.length,sit=tqAlive(d),isL=me===d.lf,items=[];let s='',top='',wk='';
-  const aOf=x=>tqAng(d,x);
-  s+=`<ellipse class="tq-ring" cx="${TQCX}" cy="${TQCY}" rx="${TQRX+TQOUT}" ry="${KH.f(TQRY+TQOUT*TQKY)}"/>`;
-  // the round's event on the map
-  const ev=d.ev;
-  if(ev&&ev.k==='light'&&!fin&&ph!=='res')s+=TQ_WIN.map(x=>`<rect x="${x-7}" y="${TQ_SKY+21}" width="14" height="${TQ_TOP-TQ_SKY-23}" rx="5" fill="#141C2E"/>`).join('')+`<rect y="${TQ_SKY}" width="${TQW}" height="${TQH-TQ_SKY}" fill="#050A14" opacity=".28"/>`;
-  if(ev&&ev.k==='cat'&&ev.v>=0&&d.cr.includes(ev.v)&&!fin&&ph!=='res'){const [x,y]=tqXY(aOf(ev.v)-.34,TQOUT+14);items.push({y:y-1,s:KH.sprite('cat',x,y+6,{s:.8,flip:x>TQCX})+tqPill(x,y+18,'🐈 قطو',{fs:10.5,h:17,cls:'ev'})});}
-  // traces: the newest one named on pills, the older ones as faint footprints
-  if((ph==='walk'||ph==='alert')&&!fin)d.tr.forEach((t,i)=>{const last=i===d.tr.length-1;for(const x of t.s){const a=aOf(x),[px,py]=tqXY(a,TQOUT);s+=tqSteps(px,py,last?'#7FD3FF':'#9FB3C8');if(last)top+=tqPill(px,py+(Math.cos(a)<-.3?-18:18),'👣 بطّأ',{fs:10.5,h:18,cls:'tr'});}});
-  // my secret guess / shout while he walks
-  const myP=me>=0&&ctx.priv&&ctx.priv[d.pl[me]]&&ctx.priv[d.pl[me]].k===d.rk?ctx.priv[d.pl[me]]:null;
-  const myG=ph==='walk'&&myP&&tqCanGuess(d,me,myP.g)?myP.g:ph==='alert'||ph==='route'||ph==='race'?(d.gs[me]??-1):-1,myS=ph==='walk'&&myP&&tqCanGuess(d,me,myP.s)?myP.s:ph==='alert'?(d.sh[me]??-1):-1;
-  // the plan, on the لفّاف's own screen: where the cap goes and how many laps
-  const plan=ph==='plan'&&isL&&ctx.my&&!fin,selT=plan&&Number.isInteger(S.tqT)&&sit.includes(S.tqT)&&S.tqT!==d.lf?S.tqT:-1;
-  if(plan){const L=d.one?1:Number.isInteger(S.tqL)?S.tqL:1;for(let k=0;k<L;k++)s+=`<ellipse class="tq-lane" cx="${TQCX}" cy="${TQCY}" rx="${TQRX+TQOUT+8-k*8}" ry="${KH.f(TQRY+(TQOUT+8-k*8)*TQKY)}"/>`;
-    if(selT>=0){const [x,y]=tqXY(aOf(selT),TQOUT+10);items.push({y:y-2,s:`<circle cx="${KH.f(x)}" cy="${KH.f(y-2)}" r="24" fill="url(#kh-glow)" opacity=".8"/>`+KH.cap(x,y-3,S.tqF?'fake':S.tqG?'gold':'cap',1.05)});}}
-  // the cap on the ground: behind the target (the لفّاف sees it; the target sees it glow)
-  const iTg=ph==='alert'&&me===d.tg&&me>=0;
-  if(ph==='alert'&&d.tg>=0&&(isL||iTg)){const [x,y]=tqXY(aOf(d.tg),TQOUT+10);
-    if(iTg)items.push({y:y-1,s:`<circle cx="${KH.f(x)}" cy="${KH.f(y-3)}" r="46" fill="url(#kh-glow)"/>`+[30,44].map((r,i)=>`<ellipse class="kh-beat" cx="${KH.f(x)}" cy="${KH.f(y)}" rx="${r}" ry="${KH.f(r*.55)}" fill="none" stroke="#FFD84D" stroke-width="${3-i}"/>`).join('')+KH.cap(x,y-3,'cap',1.5)});
-    else items.push({y:y-1,s:KH.cap(x,y-3,d.pt&&d.pt.f?'fake':d.pt&&d.pt.g?'gold':'cap',1.1)});}
-  // the sitters
-  const rr=ph==='res'||fin?d.rr:null;
-  for(const x of sit){const [px,py]=tqXY(aOf(x),0);let pose='sit',mood,t='';
-    if(plan&&x===selT){pose='sitlook';mood='s';}
-    if(iTg&&x===me){pose='sitlook';mood='o';}
-    if(rr&&!fin){const dp=rr.dp[x]||0;if(x===rr.lf&&(rr.o==='miss'||rr.o==='esc')){pose='sitcheer';}else if(dp>0){pose='situp';mood='g';}else if(dp<0)mood='sad';}
-    if(fin&&(d.wins||[d.win]).includes(x)){pose='sitcheer';}
-    if(plan)t+=`<ellipse cx="${KH.f(px)}" cy="${KH.f(py-1)}" rx="26" ry="11" class="tq-sel ${x===selT?'on':''}"/>`;
-    if(x===myG)t+=`<ellipse cx="${KH.f(px)}" cy="${KH.f(py-1)}" rx="29" ry="13" class="tq-gs"/>`;
-    if(iTg&&x===me)t+=`<ellipse cx="${KH.f(px)}" cy="${KH.f(py-2)}" rx="34" ry="14" class="tq-pulse"/>`;
-    t+=KH.sit({who:d.pl[x],c:col(d,x),pose,mood,x:px,y:py,s:.9});
-    const nmT=tqNm(d,x);t+=tqPill(px,py+13,x===me?nmT+' · أنا':nmT,{fs:11.5,h:19,cls:(x===me?'me ':'')+(plan&&x===selT?'gold':'')});
-    if(x===myG)t+=tqPill(px,py-56,'🎯'+(x===myS?' 📣':''),{fs:11,h:19,cls:'gs'});
-    if(rr&&!fin&&rr.dp[x])top+=tqPill(px,py-58,(rr.dp[x]>0?'+':'−')+Math.abs(rr.dp[x]),{fs:14,h:24,w:46,cls:'dp '+(rr.dp[x]>0?'up':'dn')});
-    if(plan||(ph==='walk'&&me>=0&&me!==d.lf&&x!==me&&ctx.sit))t+=`<rect class="tq-tap" x="${KH.f(px-26)}" y="${KH.f(py-46)}" width="52" height="66" rx="10" data-ga="sel" data-i="${x}"/>`;
-    items.push({y:py,s:t});}
-  // the لفّاف: standing at the back while planning, walking the ring, the next one standing at the end of a round
-  if(!fin&&d.out[d.lf]!=='1'){const L=d.lf,who=d.pl[L],c=col(d,L);
-    if(ph==='plan'){const [x,y]=tqXY(TQA0,TQOUT+30);items.push({y,s:KH.kid({who,c,pose:isL?'think':'stand',mood:'k',x,y,s:.92})+KH.cap(x+(isL?-15:15),y-24,'cap',.82)+tqPill(x,y+13,isL?'أنا · اللفّاف':tqNm(d,L),{fs:11,h:18,cls:isL?'me':'lf'})});}
-    else if(ph==='walk'||ph==='alert'){const run=ph==='alert';
-      wk=(tqWalker(d,KH.kid({who,c,pose:'walk',mood:run?'g':'k',s:.94})+(run?'':KH.cap(15,-24,isL&&d.pt?(d.pt.f?'fake':d.pt.g?'gold':'cap'):'cap',.82))+`<path d="M-30 -40h-12M-28 -30h-16M-30 -20h-10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".5"/>`,tqPill(0,13,isL?'أنا':tqNm(d,L),{fs:11,h:18,cls:isL?'me':'lf',W:1e4})));}
-    else if(ph==='res'&&rr){const nl=rr.nl,[x,y]=tqXY(TQA0,TQOUT+30);items.push({y,s:KH.kid({who:d.pl[nl],c:col(d,nl),pose:'stand',mood:nl===rr.lf?'k':'sad',x,y,s:.92})+KH.cap(x+15,y-24,'cap',.82)+tqPill(x,y-58,(nl===me?'أنا':tqNm(d,nl))+' · يلف الحين',{fs:11,h:18,cls:'lf'})});}}
-  const wBack=Math.cos(S.tqWa&&S.tqWa.gid===d.gid?S.tqWa.a:TQA0)<0;
-  s+=`<g class="tq-wb">${wk&&wBack?wk:''}</g>`+items.sort((a,b)=>a.y-b.y).map(i=>i.s).join('')+`<g class="tq-wf">${wk&&!wBack?wk:''}</g>`;
-  s+=KH.sprite('sleepcat',TQCX,TQCY)+`<text class="tq-z" x="${TQCX+14}" y="${TQCY-14}">z</text>`;
-  // the events' pieces drawn last: the ice-cream cart at the gate, the light-out sign
-  if(ev&&ev.k==='ice'&&(ph==='res'||ph==='plan'||ph==='walk')&&!fin)top+=KH.art.icecart(TQW-40,TQ_GATE+34)+KH.sprite('grocer',TQW-74,TQ_GATE+14,{s:.6})+(ph==='res'?KH.say(TQW-78,TQ_GATE-4,'آيس كريم! 🍦',{fs:12,dx:-24}):'');
-  // the target's timer arc round their kid (tqTickDom shortens it)
-  let zs='',zg='';
-  if(iTg){const [x,y]=tqXY(aOf(me),0),[cx,cy]=tqXY(aOf(me),TQOUT+10),R=40,C=2*Math.PI*R,ax=(x+cx)/2,ay=(y+cy)/2-22;
-    top+=`<circle cx="${KH.f(ax)}" cy="${KH.f(ay)}" r="${R}" class="tq-arcb"/><circle cx="${KH.f(ax)}" cy="${KH.f(ay)}" r="${R}" class="tq-arc" stroke-dasharray="${KH.f(C)} ${KH.f(C)}" data-c="${KH.f(C)}" transform="rotate(-90 ${KH.f(ax)} ${KH.f(ay)})"/>`+
-      (d.az&&d.az.wr?KH.say(ax,ay-R-2,'📣 صرخوا باسمك!',{fs:9,fill:'#FFD84D'}):KH.say(ax,ay-R-2,'وراك!',{fs:10,fill:'#FFD84D'}));
-    // the camera comes close: the SVG and its background zoom on my place and the cap
-    const Z=1.85,vw=TQW/Z,vh=TQH/Z,vx=Math.max(0,Math.min(TQW-vw,ax-vw/2)),vy=Math.max(0,Math.min(TQH-vh,ay-vh*.2));
-    zg=`transform="scale(${Z}) translate(${KH.f(-vx)} ${KH.f(-vy)})"`;zs=` style="background-size:${KH.f(Z*100)}% ${KH.f(Z*100)}%;background-position:${KH.f(vx/(TQW-vw)*100)}% ${KH.f(vy/(TQH-vh)*100)}%"`;}
-  s+=top;
-  return `<div class="tq-map ${tqBg()} ${iTg?'zoom':''}" data-k="map"${zs}><svg viewBox="0 0 ${TQW} ${TQH}" aria-label="حوش الحارة"><g ${zg}>${s}</g></svg></div>`;}
-// the chase on the map: the routes (the closed one crossed out), the two kids at the target's empty place
-function tqChase(d,me){const S0=tqMXY(d,d.tg),P=tqRoutes(S0),cl=tqClosed(d),C=['#7FD3FF','#7BEA9C','#FFB37A'];let s='';
-  const mine=Number.isInteger(S.tqRt)?S.tqRt:-1,race=d.ph==='race';
-  P.forEach((p,r)=>{const on=race?r===d.rt[0]:mine===r;s+=`<path class="tq-rt ${r===cl?'off':''} ${on?'on':''}" d="${p}" style="--c:${C[r]}"/>`;});
-  if(cl===2)s+=`<rect x="12" y="10" width="264" height="78" rx="4" fill="#050A14" opacity=".62"/>`+KH.T(80,40,`<circle r="12" fill="#0E1626" stroke="#EC6158" stroke-width="2.4"/><path d="M-4.5 -4.5l9 9M4.5 -4.5l-9 9" stroke="#EC6158" stroke-width="3" stroke-linecap="round"/>`);
-  for(const x of tqAlive(d)){if(x===d.lf)continue;if(x===d.tg){const [px,py]=S0;s+=`<ellipse cx="${KH.f(px)}" cy="${KH.f(py)}" rx="14" ry="10" fill="#FFD84D" fill-opacity=".2" stroke="#FFD84D" stroke-width="2" stroke-dasharray="4 3"/>`;continue;}
-    const [px,py]=tqMXY(d,x),K=KH.CAST[d.pl[x]];s+=`<g transform="translate(${KH.f(px)} ${KH.f(py)}) scale(.66)">${KH.face({who:d.pl[x],ring:1,size:34,mood:'o'}).replace(/^<svg[^>]*>/,'<g transform="translate(0 1)">').replace(/<\/svg>$/,'</g>')}</g>`;}
-  s+=KH.sprite('sleepcat',TQM.cx,TQM.cy,{s:.75});
-  const [x,y]=S0;s+=KH.kid({who:d.pl[d.lf],c:col(d,d.lf),pose:'walk',s:.72,mood:'g',x:x+36,y:y+44})+KH.kid({who:d.pl[d.tg],c:col(d,d.tg),pose:'walk',s:.72,mood:'k',flip:true,x:x+4,y:y+42})+KH.cap(x+18,y+16,'cap',.8);
-  s+=tqPill(x+38,y+56,me===d.lf?'أنا':tqNm(d,d.lf),{fs:10.5,h:17,cls:'lf',W:TQMW})+tqPill(x-2,y+56,me===d.tg?'أنا':tqNm(d,d.tg),{fs:10.5,h:17,cls:me===d.tg?'me':'tg',W:TQMW});
-  s+=tqPill(78,382,TQ_RT[1],{fs:11.5,h:20,cls:'rt1',W:TQMW})+tqPill(323,120,TQ_RT[0],{fs:11.5,h:20,cls:'rt0',W:TQMW})+tqPill(168,40,TQ_RT[2]+(cl===2?' · مسكّر':''),{fs:11.5,h:20,cls:'rt2 '+(cl===2?'off':''),W:TQMW})+tqPill(66,132,'درج',{fs:10,h:16,W:TQMW});
-  if(race)s+=KH.burst(180,200,'سباق!',{c:'#F0B429',s:.8});
-  return `<div class="tq-map tq-cmap ${tqMbg()}" data-k="cmap"><svg viewBox="0 0 ${TQMW} ${TQMH}" aria-label="خريطة المطاردة">${s}</svg></div>`;}
+const tqDust=(x,y,s=1)=>`<g class="tq-dust" opacity=".8">${[[14,4,9],[26,0,7],[36,6,5]].map(([dx,dy,r])=>`<circle cx="${KH.f(x+dx*s)}" cy="${KH.f(y+dy*s)}" r="${KH.f(r*s)}" fill="#D9C4A0"/>`).join('')}</g>`;
 
-/* ---------- the HUD, the dock, what just happened ---------- */
-const tqCapI=(k,sz=24)=>`<svg viewBox="-13 -12 26 20" width="${sz}" height="${KH.f(sz*20/26)}" aria-hidden="true">${KH.cap(0,0,k)}</svg>`;
-const tqProp='<i class="tq-prop">✦ مقترح</i>';
-function tqHud(d,me){const fin=d.win!=null,ph=d.ph;let h=`<span class="tq-c">الجولة <b>${Math.min(d.rn+1,d.RN)}</b> <small>من ${d.RN}</small></span>`;
-  if(d.end>0&&!fin){const l=Math.max(0,d.end-Date.now());h+=`<span class="tq-c tq-clk ${l<45000?'low':''}" dir="ltr">⏱ <b>${tqFmt(l)}</b></span>`;}
-  if(ph==='walk')h+=`<span class="tq-c tq-lapc"><small>اللفّة</small><b>${d.lp}</b><i>${[1,2,3].map(k=>`<u class="${k<=d.lp?'on':''}">${k>d.lp?'؟':''}</u>`).join('')}</i></span>`;
-  if(!fin&&d.lf>=0&&ph!=='end')h+=`<span class="tq-c tq-fk" title="المزيّفات الباقية لـ${tqNm(d,d.lf)}">${tqCapI('fake',18)}<b>${d.fk[d.lf]}</b></span>`;
-  const ev=d.ev;if(ev&&!fin)h+=`<span class="tq-c tq-ev">${ev.k==='cat'?'🐈':ev.k==='light'?'🌑':'🍦'}</span>`;
-  if(d.fin&&!fin)h+=`<span class="tq-c tq-last">آخر الأدوار</span>`;
-  return `<div class="tq-hud">${h}</div>`;}
-const tqEvTxt=(d,ev)=>!ev?'':ev.k==='cat'?`🐈 قطو يعدّي ورا ${ev.v>=0?tqNm(d,ev.v):'واحد'}: انتباهه أقصر بثانية`:ev.k==='light'?'🌑 انطفى النور: طريق السطح مسكّر والآثار أغمض':'🍦 بيّاع الآيس كريم: الجولة الجاية لفّة وحدة';
-function tqOutTxt(d,r){const N=s=>tqNm(d,s);
-  return ({miss:{i:'🧢',t:`${N(r.lf)} قعد مكان ${N(r.tg)}!`,x:`ما انتبه للطاقية · ${r.V} نقطة`},esc:{i:'🏃',t:`${N(r.lf)} فلت وقعد مكان ${N(r.tg)}!`,x:r.rc[0]>=0?`سباق الضغط ${r.rc[0]} مقابل ${r.rc[1]}`:`${TQ_RS[r.rt[0]]} مقابل ${TQ_RS[r.rt[1]]}`},
-    catch:{i:'✋',t:`${N(r.tg)} مسك ${N(r.lf)}!`,x:`${TQ_RS[r.rt[0]]}: سباق الضغط ${r.rc[1]} مقابل ${r.rc[0]}`},fs:{i:'🎭',t:`مزيّفة! ${N(r.tg)} طاح بالفخ`,x:'−5 عليه، واللفّاف يلف مرة ثانية'},
-    fi:{i:'🎭',t:`${N(r.tg)} طنّش… وكانت مزيّفة`,x:'ولا شي صار، واللفّاف يلف مرة ثانية'}})[r.o]||{i:'🧢',t:'',x:''};}
-function tqEvent(d,me){const N=s=>tqNm(d,s),isL=me===d.lf;
-  if(d.win!=null)return {i:'🏆',t:'خلصت اللعبة',x:d.why||'',c:'qgo'};
-  if(d.ph==='plan')return {i:'🤫',t:isL?'أنت اللفّاف! خطّط بالسر':`${N(d.lf)} يخطط بالسر…`,x:tqEvTxt(d,d.ev),c:'qpl'};
-  if(d.ph==='walk')return {i:'🧢',t:isL?`تلف… ورا ${N(d.tg)} 🤫`:`${N(d.lf)} يلف وبيده الطاقية`,x:d.tr.length?`أثر اللفّة ${d.tr[d.tr.length-1].l}: حسّيت إنه بطّأ ورا ${d.tr[d.tr.length-1].s.map(N).join(' و')}`:'طاق طاق طاقية… ورا مين بيحطها؟',c:'qwk'};
-  if(d.ph==='alert')return me===d.tg?{i:'💓',t:'حسّيت بشي وراك؟',x:d.az&&d.az.wr?'📣 أحد صرخ باسمك: معك ثانيتين زيادة':'اضغط «شفتها!» قبل ما يخلص الوقت',c:'qal'}:{i:'🧢',t:isL?`نزّلتها ورا ${N(d.tg)}!`:'نزّل الطاقية!',x:'مين بينتبه؟',c:'qwk'};
-  if(d.ph==='route')return {i:'🏃',t:`${N(d.tg)} شافها! مطاردة`,x:`كل واحد يختار طريقه بالسر · ${d.rt[0]<0?'':''}الرهان ${tqV(d.pt)} نقطة`,c:'qch'};
-  if(d.ph==='race')return {i:'⚡',t:`نفس الطريق: ${TQ_RT[d.rt[0]]}!`,x:'سباق ضغط 3 ثواني: الأسرع يكسب',c:'qch'};
-  if(d.ph==='res'&&d.rr){const o=tqOutTxt(d,d.rr);return {i:o.i,t:o.t,x:o.x,c:'qrs q'+d.rr.o};}
-  return {i:'🧢',t:'',x:'',c:''};}
-// the round's result: the secrets told, who got what
-function tqResRows(d){const r=d.rr;if(!r)return '';const N=s=>tqNm(d,s);
-  const line=s=>{const x=[];if(s===r.lf)x.push('اللفّاف');if(s===r.tg)x.push('الطاقية وراه');if(r.gs[s]>=0)x.push(`خمّن ${N(r.gs[s])} ${r.gs[s]===r.tg?'✓':'✗'}`);if(r.sh[s]>=0)x.push(`📣 صرخ ${N(r.sh[s])} ${r.sh[s]===r.tg?'✓':'✗'}`);if(s===r.rb)x.push('⚡ أسرع بالضغط');return x.join(' · ');};
-  const rows=d.pl.map((_,s)=>s).filter(s=>d.out[s]!=='1').sort((a,b)=>Math.abs(r.dp[b])-Math.abs(r.dp[a])||(b===r.lf)-(a===r.lf));
-  const tell=`<div class="tq-tell">${tqCapI(r.f?'fake':r.g?'gold':'cap',26)}<span><b>${r.f?'طاقية مزيّفة':r.g?'الطاقية الذهبية ✨':'طاقية حقيقية'} · ${r.l===1?'لفّة وحدة':r.l===2?'لفّتين':'ثلاث لفّات'}</b><small>${[r.V?`الرهان ${r.V} نقطة`:'',r.b?'😵 غفلة':'',r.fz?'🖐 تحسّس':'',r.wr?'📣 انصرخ باسمه':'',r.ms>=0&&r.o!=='fi'&&r.o!=='miss'?`انتبه بعد ${(r.ms/1000).toFixed(1)} ث`:''].filter(Boolean).join(' · ')}</small></span></div>`;
-  return tell+`<div class="tq-rows">${rows.map(s=>{const x=r.dp[s];return `<div class="tq-row" style="--c:${col(d,s)}">${KH.face({who:d.pl[s],ring:1,size:28,mood:x>0?'g':x<0?'sad':undefined})}<span><b>${N(s)}</b><small>${line(s)}</small></span><em class="${x>0?'up':x<0?'dn':''}" dir="ltr">${x>0?'+'+x:x<0?'−'+(-x):'0'}</em><i>${d.pd[s]}</i></div>`;}).join('')}</div>`;}
-function tqSum(d){const al=d.pl.map((_,s)=>s).sort((a,b)=>d.pd[b]-d.pd[a]);
-  return `<div class="tq-rows tq-final">${al.map((s,i)=>`<div class="tq-row ${(d.wins||[d.win]).includes(s)?'won':''}" style="--c:${col(d,s)}">${KH.face({who:d.pl[s],ring:1,size:30,mood:i===0?'g':undefined})}<span><b>${tqNm(d,s)}</b><small>لفّ ${d.bl[s]} · خمّن صح ${d.gr[s]}</small></span><i>${d.pd[s]}</i></div>`).join('')}</div>`;}
-
+/* ---------- the views ---------- */
 const tqAK=d=>d.gid+':'+d.rk;
-const tqMyPriv=(d,me,priv)=>{const p=me>=0&&priv?priv[d.pl[me]]:null;return p&&p.k===d.rk?p:null;};
-GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:4,teams:'none',noTimer:true,
-  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1D2C4A"/><rect y="64" width="100" height="36" fill="#594634"/><path d="M0 64h100" stroke="#8E6B48" stroke-width="3"/><circle cx="80" cy="16" r="9" fill="#FFF1C1"/><circle cx="16" cy="12" r="1.3" fill="#fff"/><circle cx="44" cy="8" r="1.1" fill="#fff"/><path d="M-2 26Q50 52 102 24" fill="none" stroke="#0A101C" stroke-width="1.4"/><circle cx="14" cy="34" r="3" fill="#FFD873"/><circle cx="32" cy="40" r="3" fill="#EC6158"/><circle cx="50" cy="42" r="3" fill="#7FD3FF"/><circle cx="68" cy="40" r="3" fill="#7BEA9C"/><circle cx="86" cy="34" r="3" fill="#FFB37A"/><ellipse cx="50" cy="86" rx="46" ry="12" fill="#7E2A33" stroke="#17233A" stroke-width="2"/><ellipse cx="50" cy="86" rx="40" ry="9" fill="none" stroke="#E2B65A" stroke-width="1.6" stroke-dasharray="2 4"/>`+
-    `<path d="M24 100V82c0-7 5-11 11-11s11 4 11 11v18z" fill="#4AB1E8" stroke="#17233A" stroke-width="2"/><circle cx="35" cy="62" r="11" fill="#E0A577" stroke="#17233A" stroke-width="2"/><path d="M24 62a11 11 0 0 1 22 0q-5-3-11-3t-11 3z" fill="#3A2A22"/><circle cx="31" cy="63" r="1.6" fill="#17233A"/><circle cx="39" cy="63" r="1.6" fill="#17233A"/><ellipse cx="35" cy="68" rx="2" ry="2.4" fill="#17233A"/>`+
-    `<path d="M58 100V80c0-8 6-13 13-13s13 5 13 13v20z" fill="#EC6158" stroke="#17233A" stroke-width="2"/><circle cx="71" cy="54" r="12" fill="#F2C29B" stroke="#17233A" stroke-width="2"/><path d="M58.5 52a12.5 12.5 0 0 1 25 0z" fill="#EC6158" stroke="#17233A" stroke-width="2"/><circle cx="67" cy="56" r="1.7" fill="#17233A"/><circle cx="75" cy="56" r="1.7" fill="#17233A"/><path d="M67 60q4 3 8 0" fill="none" stroke="#17233A" stroke-width="1.8" stroke-linecap="round"/>`+
-    `<path d="M84 74l8-6" stroke="#EC6158" stroke-width="5" stroke-linecap="round"/><circle cx="92" cy="66" r="5" fill="#FFD873" opacity=".55"/><path d="M84 64a9 8 0 0 1 18 0q-9 3.5-18 0z" fill="#FAFBFD" stroke="#17233A" stroke-width="1.8"/><path d="M86 61q7 2.5 14 0" fill="none" stroke="#B9C6D6" stroke-width="1.4" stroke-dasharray="1.6 1.6"/></svg>`,
-  init:n=>({ph:'plan',lf:0,cr:[],pd:Array(n).fill(0),gr:Array(n).fill(0),rn:0,RN:2*n,rk:0,rd:0,tg:-1,pt:null,w0:0,we:0,lp:0,tr:[],gs:Array(n).fill(-1),sh:Array(n).fill(-1),az:null,a0:0,
-    ev:null,one:0,nx1:0,fin:0,fk:Array(n).fill(2),gu:Array(n).fill(0),gh:Array(n).fill(0),su:Array(n).fill(0),fu:Array(n).fill(0),bl:Array(n).fill(0),hb:Array.from({length:n},()=>[0,0,0]),
-    rt:[-1,-1],rc:[-1,-1],ms:-1,rr:null,dl:0,dv:-2,T:0,end:0,why:''}),
-  // the first لفّاف is the round's starter; the others sit round the rug in seat order after him
-  start(d){const n=d.pl.length,lf=(d.st||0)%n,cr=[];for(let k=1;k<n;k++)cr.push((lf+k)%n);return tqRound({...d,cr,end:tqLocal()?0:Date.now()+TQ_T.game},lf);},
-  simulNow:d=>d.win==null&&tqSimul(d),
-  mask(d,seat){if(d.win!=null)return d;const ph=d.ph,isL=seat>=0&&seat===d.lf,pub=ph==='route'||ph==='race'||ph==='res',v={...d};
-    if(!isL&&!pub){v.tg=ph==='alert'&&seat>=0&&seat===d.tg?d.tg:-1;v.pt=null;}
-    v.we=isL?d.we:0;
-    if(ph!=='res'){v.gs=d.gs.map((g,s)=>s===seat?g:-1);v.sh=d.sh.map((x,s)=>s===seat?x:-1);}
-    v.az=ph==='alert'&&seat>=0&&seat===d.tg?d.az:null;
-    return v;},
-  privInit:(d,r)=>{const s=d.pl.indexOf(r);return s>=0&&tqAuto(d,s)?{k:d.rk,rd:d.rd,pick:NOPICK}:{k:d.rk};},
-  privStale:(d,p,r)=>{const s=d.pl.indexOf(r);return p.k!==d.rk||(s>=0&&tqAuto(d,s)&&!(p.rd===d.rd&&p.pick===NOPICK));},
-  // nobody sees anybody's private part (who answered would tell who the target is) until the game ends
+// where the walker is shown now on this phone: the walker's own finger is ahead of the host; the others ease to it
+function tqDisp(d,me,now){if(d.ph==='chase')return null;const k=tqAK(d);
+  if(me===d.lf&&S.tqMy&&S.tqMy.k===k)return Math.max(S.tqMy.wp,d.wp);
+  let I=S.tqIP;if(!I||I.k!==k){I=S.tqIP={k,from:d.wp,to:d.wp,t0:now};}if(I.to!==d.wp){I.from=tqDispOf(I,now);I.to=d.wp;I.t0=now;}return tqDispOf(I,now);}
+const tqDispOf=(I,now)=>I.from+(I.to-I.from)*Math.min(1,(now-I.t0)/230);
+function tqRunDisp(d,now){const ch=d.ch;if(!ch)return null;const k=tqAK(d)+'c';let I=S.tqIPc;if(!I||I.k!==k)I=S.tqIPc={k,w:[ch.w,ch.w,now],c:[ch.cc,ch.cc,now]};
+  const step=(v,to)=>{if(v[1]!==to){v[0]=v[0]+(v[1]-v[0])*Math.min(1,(now-v[2])/230);v[1]=to;v[2]=now;}return v[0]+(v[1]-v[0])*Math.min(1,(now-v[2])/230);};return {w:step(I.w,ch.w),c:step(I.c,ch.cc)};}
+// a look that just happened, by anyone: 👀 over that kid for a moment
+const tqLooked=(d,s)=>{const r=d.lr;if(!r||r.s!==s)return false;const k=tqAK(d)+':'+r.k;if(!S.tqLrS||S.tqLrS.k!==k)S.tqLrS={k,t:performance.now()};return performance.now()-S.tqLrS.t<1800;};
+function tqTop(d,me,mode){const fin=d.win!=null,ph=d.ph,isL=me===d.lf;let s='',top='',items=[];const now=Date.now();
+  s+=`<ellipse class="tq-ring" cx="${TQCX}" cy="${TQCY}" rx="${TQRX+TQOUT}" ry="${KH.f(TQRY+TQOUT*TQKY)}"/>`;
+  // the walker's own walked arc and footprints
+  if(ph==='walk'&&isL){const wp=tqDisp(d,me,now),a=Math.max(d.w0,wp-700);let p='';for(let i=0;i<=24;i++){const [x,y]=tqXY(a+(wp-a)*i/24,TQOUT);p+=(i?'L':'M')+KH.f(x)+' '+KH.f(y);}
+    s+=`<path class="tq-arc1" d="${p}"/><path class="tq-arc2" d="${p}"/>`;}
+  // the cap on the ground: the walker sees where he dropped it; everyone once it is found
+  const cap=d.dp&&ph!=='res'&&!fin&&(isL||ph!=='walk');if(cap){const [x,y]=tqXY(d.dp.p,24);items.push({y:y-1,s:(ph==='chase'?'':KH.cap(x,y-2,'cap',1.25))+(ph==='walk'?tqPill(x,y+16,'🧢 هنا',{fs:11,h:18,cls:'gold'}):'')});}
+  const empty=ph==='chase'?d.ch.c:-1;
+  d.cr.forEach((x,i)=>{if(d.out[x]==='1')return;const [px,py]=tqXY(tqSlot(d,i));
+    if(x===empty){top+=`<ellipse cx="${KH.f(px)}" cy="${KH.f(py-2)}" rx="25" ry="10" class="tq-empty"/>`+tqPill(px,py+12,'المكان الفاضي',{fs:11,h:19,cls:'grn'});return;}
+    let pose='sit',mood;if(ph==='chase'){pose=i%2?'sitcheer':'situp';mood='g';}
+    if(ph==='res'&&d.rs){const v=d.rs.dp[x];if(v>0){pose='sitcheer';}else if(v<0)mood='sad';}
+    if(fin&&(d.wins||[d.win]).includes(x))pose='sitcheer';
+    let t=KH.sit({who:d.pl[x],pose,mood,x:px,y:py,s:.9})+tqPill(px,py+13,x===me?'أنا':tqNm(d,x),{fs:11.5,h:19,cls:x===me?'me':''});
+    if(tqLooked(d,x))t+=tqPill(px,py-56,d.lr.hit?'🧢!':'👀',{fs:14,h:24,cls:'gold'});
+    if(ph==='res'&&d.rs&&d.rs.dp[x])top+=tqPill(px,py-58,(d.rs.dp[x]>0?'+':'−')+Math.abs(d.rs.dp[x]),{fs:15,h:25,w:42,cls:'dp '+(d.rs.dp[x]>0?'up':'dn')});
+    items.push({y:py,s:t});});
+  // the walker, moved every tick by tqDom along the ring (behind the circle at the back, in front of it at the front)
+  let wk='',wkc='';
+  if(!fin&&(ph==='walk'||ph==='chase')&&d.out[d.lf]!=='1'){const held=ph==='walk'&&!(isL&&(d.dp||(S.tqMy&&S.tqMy.k===tqAK(d)&&S.tqMy.dr!=null)));
+    const inner=KH.kid({who:d.pl[d.lf],pose:'walk',mood:ph==='chase'?'g':'k',s:.98})+(held&&isL?KH.cap(15,-24,'cap',.85):'')+(ph==='chase'?tqDust(0,-2):'');
+    wk=`<g class="tq-w" data-k="wk"><g class="tq-wi">${inner}</g>${tqPill(0,14,isL?'أنا':tqNm(d,d.lf),{fs:11,h:18,cls:isL?'me':'lf',free:1})}</g>`;
+    if(ph==='chase'){const C=d.ch.c;wkc=`<g class="tq-w tq-cz" data-k="wc"><g class="tq-wi">${KH.kid({who:d.pl[C],pose:'walk',mood:'o',s:.98})+KH.cap(15,-24,'cap',.85)+tqDust(0,-2)}</g>${tqPill(0,14,C===me?'أنا':tqNm(d,C),{fs:11,h:18,cls:C===me?'me':'tg',free:1})}</g>`;}}
+  if(ph==='res'&&d.rs&&!fin){const r=d.rs,[x,y]=tqXY(r.th+75,TQOUT+8),v=r.dp[r.nl];items.push({y,s:KH.kid({who:d.pl[r.nl],pose:'stand',mood:r.nl===r.w?'k':'sad',x,y,s:.95})+KH.cap(x+15,y-24,'cap',.85)+tqPill(x,y+14,(r.nl===me?'أنا':tqNm(d,r.nl))+' · يلف',{fs:11,h:18,cls:'lf'})});
+    if(v)top+=tqPill(x,y-60,(v>0?'+':'−')+Math.abs(v),{fs:15,h:25,w:42,cls:'dp '+(v>0?'up':'dn')});}
+  s+=`<g class="tq-wb">${wk}${wkc}</g>`+items.sort((a,b)=>a.y-b.y).map(i=>i.s).join('')+`<g class="tq-wf"></g>`;
+  s+=KH.sprite('sleepcat',TQCX,TQCY)+`<text class="tq-z" x="${TQCX+14}" y="${TQCY-14}">z</text>`+top;
+  if(ph==='chase')s+=tqCheers(d);
+  if(ph==='res'&&d.rs){const r=d.rs,[x,y]=r.o==='tag'?tqXY(d.ch?d.ch.w:d.wp,TQOUT):tqXY(r.th);s+=KH.burst(x,Math.max(70,y-96),r.o==='nap'?'شرب! 😵':r.o==='esc'?'قعد!':'مسكه!',{c:r.o==='nap'?'#9C7BD6':r.o==='esc'?'#EC6158':'#3FAE5C',s:.78});}
+  return `<div class="tq-map ${tqBg()} ${mode||''}" data-k="map"><svg viewBox="0 0 ${TQW} ${TQH}" aria-label="حوش الحارة">${s}</svg></div>`;}
+function tqCheers(d){const L=['يلااا!','اركض!','👏👏','الحقه!','قرّب!'],k=d.rk;let s='';d.cr.filter(x=>x!==d.ch.c&&d.out[x]!=='1').slice(0,3).forEach((x,j)=>{const [px,py]=tqXY(tqTh(d,x));s+=KH.say(px,py-48,L[(k+j)%L.length],{fs:11,dx:j%2?10:-10});});return s;}
+// the sitter's own eyes
+function tqFirst(d,me){const th=tqTh(d,me),K=KH.CAST[d.pl[me]],OL=KH.OL;let s='',items=[];
+  // the walker across the circle (moved by tqDom) and his shadow when he is behind me
+  s+=`<g class="tq-fw" data-k="fw" style="opacity:0"><g>${KH.kid({who:d.pl[d.lf],pose:'walk',mood:'k',s:1})}</g></g>`;
+  for(const x of d.cr){if(x===me||d.out[x]==='1')continue;const phi=tqMod(tqTh(d,x)-th)/1000,[px,py,sc]=tqFP(phi);
+    let t=KH.sit({who:d.pl[x],x:px,y:py,s:sc*1.05,mood:tqLooked(d,x)?'o':undefined})+tqPill(px,py+15*sc,tqNm(d,x),{fs:12,h:20,W:TQFW});
+    if(tqLooked(d,x))t+=tqPill(px,py-58*sc,'👀',{fs:15,h:25,cls:'gold',W:TQFW});items.push({y:py,s:t});}
+  s+=`<g class="tq-sh" data-k="sh" style="opacity:0"><g transform="skewX(-12)"><path d="M-34 0q-8-120 4-220q20-20 44 0q14 110 8 220z" fill="url(#tqsh)"/><path d="M-30 -40l-18 40M26 -40l14 40" stroke="#05080F" stroke-opacity=".45" stroke-width="16" stroke-linecap="round"/><ellipse cx="0" cy="-252" rx="30" ry="36" fill="#05080F" opacity=".45"/><path d="M-30 -270q30-34 60 0q-30 6-60 0z" fill="#05080F" opacity=".45"/><path d="M22 -150q40-30 56-60" stroke="#05080F" stroke-opacity=".4" stroke-width="18" stroke-linecap="round" fill="none"/></g></g>`;
+  s+=KH.sprite('sleepcat',180,TQFY-14,{s:1.35})+items.sort((a,b)=>a.y-b.y).map(i=>i.s).join('');
+  // my knees and hands
+  const H=TQFH;s+=`<path d="M-30 ${H}q40-112 150-104q48 6 60 50q12-44 60-50q110-8 150 104z" fill="#2D4763" stroke="${OL}" stroke-width="2.4"/><path d="M120 ${H-56}q40 16 60 44M240 ${H-56}q-40 16-60 44" fill="none" stroke="#22374F" stroke-width="3"/>`+
+    `<path d="M64 ${H}q8-64 52-80" fill="none" stroke="${K.c}" stroke-width="28" stroke-linecap="round"/><path d="M296 ${H}q-8-64-52-80" fill="none" stroke="${K.c}" stroke-width="28" stroke-linecap="round"/>`+
+    `<ellipse cx="120" cy="${H-86}" rx="22" ry="17" fill="${K.skin}" stroke="${OL}" stroke-width="2.4"/><ellipse cx="240" cy="${H-86}" rx="22" ry="17" fill="${K.skin}" stroke="${OL}" stroke-width="2.4"/>`;
+  s+=`<rect class="tq-hb" width="${TQFW}" height="${TQFH}" fill="url(#tqhb)" style="opacity:0"/>`;
+  const ear=(x,dir)=>`<g class="tq-ear ${dir}" transform="translate(${x} ${H-128})">${[0,1,2].map(i=>`<path d="M${dir==='l'?-14-i*8:14+i*8} -11q${dir==='l'?-7:7} 11 0 22" fill="none" stroke="#FFD84D" stroke-width="3" stroke-linecap="round" class="w${i}"/>`).join('')}<text y="6" font-size="17">👂</text></g>`;
+  s+=ear(52,'l')+ear(308,'r');
+  const defs=`<defs><linearGradient id="tqsh" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#05080F" stop-opacity=".75"/><stop offset="1" stop-color="#05080F" stop-opacity=".25"/></linearGradient><radialGradient id="tqhb" cx=".5" cy=".55" r=".7"><stop offset=".7" stop-color="#EC6158" stop-opacity="0"/><stop offset="1" stop-color="#EC6158" stop-opacity=".5"/></radialGradient></defs>`;
+  return `<div class="tq-fp ${tqFbg()}" data-k="fp"><svg viewBox="0 0 ${TQFW} ${TQFH}" aria-label="الدائرة من مكانك">${defs}${s}</svg><div class="tq-pull" data-ga="look">⌄ اسحب لتحت: ترى وراك ⌄</div></div>`;}
+// what I see behind me: the floor, and whoever is there
+function tqBehind(d,me,res){const th=tqTh(d,me),phi=tqW(d.wp-th)/1000;let s='';
+  if(Math.abs(phi)<.18){const x=180-phi/.18*190;s+=KH.kid({who:d.pl[d.lf],pose:'walk',x,y:380,s:2.1,mood:'k'})+KH.say(x,250,'😏',{fs:18});}
+  s+=res==null?'':res?KH.cap(180,420,'cap',3):tqPill(180,420,'ما فيه شي…',{fs:17,h:32,W:TQFW});
+  return `<div class="tq-fp tq-bk ${tqKbg()}" data-k="bk"><svg viewBox="0 0 ${TQFW} ${TQFH}">${s}</svg></div>`;}
+
+/* ---------- the HUD, the dock ---------- */
+const tqFmt=ms=>{const t=Math.ceil(Math.max(0,ms)/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
+const TQ_PHONE='<svg viewBox="0 0 52 52" width="40" height="40" aria-hidden="true"><rect x="17" y="8" width="18" height="34" rx="5" fill="#E7EEF6" stroke="#17233A" stroke-width="2" transform="rotate(-18 26 25)"/><path d="M8 34q-4-16 10-24M44 18q4 16-10 24" fill="none" stroke="#FFD84D" stroke-width="3" stroke-linecap="round"/><path d="M15 9l3 2-3 3M37 42l-3-2 3-3" fill="none" stroke="#FFD84D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function tqRole(d,me){if(me<0||d.out[me]==='1'||d.win!=null)return 'watch';if(d.ph==='walk')return me===d.lf?'laf':d.cr.includes(me)?'sit':'watch';if(d.ph==='chase')return me===d.lf||me===d.ch.c?'run':'watch';return 'watch';}
+function tqHud(d,me,role){let h='';if(d.end>0&&d.win==null){const l=d.end-Date.now();h+=`<span class="tq-c tq-clk ${l<30000?'low':''}" dir="ltr">⏱ <b>${tqFmt(l)}</b></span>`;}
+  if(me>=0)h+=`<span class="tq-c">نقاطك <b>${d.pd[me]}</b></span>`;
+  if(role==='sit'){const left=TQ.LOOKS-d.lk[me];h+=`<span class="tq-c tq-looks">نظرات ${[0,1,2].map(i=>`<u class="${i<left?'on':''}"></u>`).join('')}</span>`;}
+  if(d.ph==='walk'&&role!=='laf')h+=`<span class="tq-c tq-who">🧢 ${tqNm(d,d.lf)} يلف</span>`;
+  if(d.ph==='chase')h+=`<span class="tq-c tq-run">🏃 مطاردة!</span>`;
+  return `<div class="tq-hud">${h}</div>`;}
+const tqChant=d=>`<div class="tq-chant" data-k="chant"><em>🎵</em>${TQ_CHANT.slice(0,6).map((w,i)=>`<span data-i="${i}">${w}</span>`).join(' ')}</div>`;
+function tqMotBtn(){if(S.tqMot!=='need')return '';return `<button class="sm tq-mot" data-ga="mot">📱 فعّل الحركة: تلتفت بلفّة الجوال</button>`;}
+function tqDock(d,me,role){const N=s=>tqNm(d,s);
+  if(d.ph==='walk'&&role==='sit'){const left=TQ.LOOKS-d.lk[me];
+    return tqMotBtn()+`<div class="tq-two"><div class="tq-hint"><i>${TQ_PHONE}</i><span><b>${left?'لفّ جوالك بسرعة عشان تلتفت':'خلصت نظراتك هالجولة'}</b><small>${left?`أو اسحب الشاشة لتحت · باقي ${left} من ${TQ.LOOKS}`:'اسمع الخطوات… وانتظر'}</small></span></div><button class="big tq-look" data-ga="look" ${left?'':'disabled'}><i>👀</i><small>التفت</small></button></div>`;}
+  if(d.ph==='walk'&&role==='laf'){const dropped=d.dp||(S.tqMy&&S.tqMy.k===tqAK(d)&&S.tqMy.dr!=null);
+    if(!dropped)return `<div class="tq-two"><div class="tq-hint"><i>👆</i><span><b>مرّر إصبعك على الدائرة تمشي</b><small>واسحب لتحت بسرعة: ترمي الطاقية ورا اللي تمرّ وراه</small></span></div><button class="big tq-drop" data-ga="drop"><i>🧢</i><small>ارمها</small></button></div>`;
+    return `<div class="tq-prog"><b>كمّل لين ترجع لها… قبل لا يلتفت ${d.dp?N(d.dp.s):''}!</b><div class="tq-bar"><i></i></div><small>كمّل المشي بإصبعك · تقدر تبطّئ ورا غيره تخدعهم</small></div>`;}
+  if(d.ph==='chase'&&role==='run'){const W=me===d.lf;
+    return `<div class="tq-runw"><div class="tq-pad" data-k="pad"><svg viewBox="-100 -100 200 200" aria-label="دوّر إصبعك"><circle r="94" class="tq-pr"/><circle r="58" class="tq-pi"/><path class="tq-ptr" d="M74 0"/><circle class="tq-pf" r="13" cx="74" cy="0"/><text y="0" class="tq-pt">⟲</text><text y="26" class="tq-ps">دوّر إصبعك!</text></svg></div>`+
+      `<div class="tq-side"><b>${W?'اركض للمكان الفاضي!':`المسه قبل لا يقعد!`}</b><span class="tq-spd">سرعتك <em>0٪</em></span><span class="tq-gap"></span><small>كل ما دوّرت أسرع ركضت أسرع (فيه حد أعلى للكل)</small></div></div>`;}
+  if(d.ph==='chase')return `<button class="big tq-cheer" data-ga="cheer">👏 شجّع</button>`;
+  if(d.ph==='res'&&d.rs){const r=d.rs;return `<p class="tq-wait">${r.o==='nap'?`😵 ${N(r.t)} شرب! ما انتبه للطاقية`:r.o==='esc'?`🏃 ${N(r.w)} قعد مكان ${N(r.t)}`:`✋ ${N(r.t)} مسك ${N(r.w)}!`} · الجولة الجاية…</p>`;}
+  return '';}
+function tqSum(d){const al=d.pl.map((_,s)=>s).sort((a,b)=>d.pd[b]-d.pd[a]);
+  return `<div class="tq-rows">${al.map(s=>`<div class="tq-row ${(d.wins||[d.win]).includes(s)?'won':''}" style="--c:${col(d,s)}">${KH.face({who:d.pl[s],ring:1,size:30})}<span><b>${tqNm(d,s)}</b></span><i>${d.pd[s]}</i></div>`).join('')}</div>`;}
+// a game action from a gesture (a twist, a swipe): the same road as a tap on a button
+function tqAct(a,i){const G=GAMES.taqiya;if(typeof netDown==='function'&&netDown())return;if(S.mode==='online'&&!amHost())netClick(G,a,i);else G.click(a,i,S.st.d,S.mode==='online'?mkCtx(S.st.d,S.priv):mkCtx());}
+
+GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:3,teams:'none',noTimer:true,
+  icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1D2C4A"/><rect y="62" width="100" height="38" fill="#594634"/><path d="M0 62h100" stroke="#8E6B48" stroke-width="3"/><circle cx="82" cy="16" r="9" fill="#FFF1C1"/><circle cx="16" cy="12" r="1.3" fill="#fff"/><circle cx="44" cy="8" r="1.1" fill="#fff"/><path d="M-2 24Q50 50 102 22" fill="none" stroke="#0A101C" stroke-width="1.4"/><circle cx="14" cy="32" r="3" fill="#FFD873"/><circle cx="32" cy="38" r="3" fill="#EC6158"/><circle cx="50" cy="40" r="3" fill="#7FD3FF"/><circle cx="68" cy="38" r="3" fill="#7BEA9C"/><circle cx="86" cy="32" r="3" fill="#FFB37A"/>`+
+    `<path d="M10 100q8-30 30-28t26 28z" fill="#05080F" opacity=".35"/><ellipse cx="50" cy="88" rx="46" ry="11" fill="#7E2A33" stroke="#17233A" stroke-width="2"/>`+
+    `<path d="M22 100V84c0-6 5-10 10-10s10 4 10 10v16z" fill="#4AB1E8" stroke="#17233A" stroke-width="2"/><circle cx="32" cy="64" r="10" fill="#E0A577" stroke="#17233A" stroke-width="2"/><path d="M22 64a10 10 0 0 1 20 0q-5-3-10-3t-10 3z" fill="#3A2A22"/><ellipse cx="29" cy="65" rx="1.8" ry="2.2" fill="#17233A"/><ellipse cx="35" cy="65" rx="1.8" ry="2.2" fill="#17233A"/><ellipse cx="32" cy="70" rx="1.8" ry="2" fill="#17233A"/>`+
+    `<path d="M60 100l4-22c1-6 6-9 11-8s9 5 8 11l-4 19z" fill="#EC6158" stroke="#17233A" stroke-width="2"/><circle cx="74" cy="56" r="11" fill="#F2C29B" stroke="#17233A" stroke-width="2"/><path d="M62.5 54a11.5 11.5 0 0 1 23 0z" fill="#EC6158" stroke="#17233A" stroke-width="2"/><circle cx="70" cy="58" r="1.6" fill="#17233A"/><circle cx="78" cy="58" r="1.6" fill="#17233A"/><path d="M70 62q4 3 8 0" fill="none" stroke="#17233A" stroke-width="1.8" stroke-linecap="round"/>`+
+    `<path d="M48 82a8 7 0 0 1 16 0q-8 3-16 0z" fill="#FAFBFD" stroke="#17233A" stroke-width="1.8"/><path d="M50 79q6 2 12 0" fill="none" stroke="#B9C6D6" stroke-width="1.3" stroke-dasharray="1.6 1.6"/><path d="M56 72v-6M50 74l-3-4M62 74l3-4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`,
+  init:n=>({ph:'walk',lf:0,cr:[],pd:Array(n).fill(0),rk:0,rn:0,wp:0,w0:0,t0:0,ht:0,mv:0,dp:null,lk:Array(n).fill(0),lr:null,ch:null,rs:null,dl:0,end:0,why:''}),
+  // the first walker is the round's starter; the others sit round the rug in seat order after them
+  start(d){const n=d.pl.length,L=(d.st||0)%n,cr=[];for(let k=1;k<n;k++)cr.push((L+k)%n);const now=Date.now();return tqRound({...d,cr,end:now+TQ.GAME},L,tqMod(tqSlot({cr},0)-Math.round(500/(n-1))),now);},
+  // where the cap lies is the walker's until it is found or the lap comes round
+  mask(d,seat){if(d.win!=null||d.ph!=='walk'||seat===d.lf)return d;return d.dp?{...d,dp:null}:d;},
+  privInit:d=>({k:d.rk}),
+  privStale:(d,p)=>p.k!==d.rk,
   privShow:(d,seat,role,p,own)=>own||(d&&d.win!=null)?p:{gid:p.gid},
   privOk:(d,r,o,p)=>{const s=d.pl.indexOf(r);if(s<0||!p||typeof p!=='object')return false;if(p.k!==d.rk)return true;
-    const okX=x=>x==null||x===-1||tqCanGuess(d,s,x);
-    if(p.g!=null||p.s!=null){const same=o&&o.k===p.k&&o.g===p.g&&o.s===p.s;if(!same&&(d.ph!=='walk'||s===d.lf||d.out[s]==='1'))return false;if(!okX(p.g)||!okX(p.s))return false;if(!same&&p.s!=null&&p.s!==-1&&d.su[s])return false;}
-    if(p.ans!=null){const a=p.ans,same=o&&o.k===p.k&&JSON.stringify(o.ans)===JSON.stringify(a);if(!same&&(d.ph!=='alert'||s!==d.tg||!a||typeof a!=='object'||!(a.s===0||a.s===1)||!Number.isInteger(a.ms)||a.ms<0||a.ms>30000))return false;
-      if(!same&&o&&o.k===p.k&&o.ans)return false;}
-    if(p.pick==null||p.pick===NOPICK||p.rd!==d.rd)return true;if(!tqNeed(d,s))return false;const x=p.pick;
-    if(d.ph==='route')return [0,1,2].includes(x)&&x!==tqClosed(d);
-    if(d.ph==='race')return !!x&&typeof x==='object'&&Number.isInteger(x.n)&&x.n>=0&&x.n<=60;
-    return false;},
-  net:{local:['sel','lap','cap','gold','gfl','tap'],host:['go','feel','next'],ui:['tqT','tqL','tqF','tqG','tqB']},
-  viewer:d=>d.win!=null?null:d.ph==='plan'?d.lf:d.ph==='alert'?d.tg:d.ph==='route'||d.ph==='race'?simulViewer(d):null,
-  coverMsg:d=>d.ph==='plan'?'أنت اللفّاف: خطّط بالسر 🤫':d.ph==='alert'?'💓 حسّيت بشي وراك؟ خذ الجوال بسرعة':d.ph==='route'?'مطاردة! اختر طريقك بالسر 🏃':d.ph==='race'?'سباق ضغط! 3 ثواني ⚡':'',
+    const int=(x,a,b)=>Number.isInteger(x)&&x>=a&&x<=b;
+    if(p.wp!=null&&!(s===d.lf&&int(p.wp,0,1e7)))return false;
+    if(p.dr!=null&&!(s===d.lf&&p.dr&&typeof p.dr==='object'&&int(p.dr.s,0,d.pl.length-1)))return false;
+    if(p.rn!=null&&!(int(p.rn,0,1e6)&&(s===d.lf||(d.ch&&s===d.ch.c))))return false;
+    return true;},
+  net:{local:['drop','cheer','mot'],host:['look'],ui:[]},
+  viewer:()=>null,
   points:d=>d.pl.map((_,s)=>(s===d.lf&&d.win==null?'🧢 ':'')+d.pd[s]),
-  winText:d=>{const w=d.wins||[d.win];return `${w.map(s=>nm(d,s)).join(' و')} ${w.length>1?'فازوا':'فاز'} بأكثر نقاط! 🧢`;},
+  winText:d=>{const w=d.wins||[d.win];return `${w.map(s=>nm(d,s)).join(' و')} ${w.length>1?'فازوا':'فاز'}! 🧢`;},
   winExtra:d=>`${d.why?d.why+' • ':''}`+d.pl.map((_,s)=>`${nm(d,s)} ${d.pd[s]}`).join('، '),
-  status(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1;d=this.mask(d,me);const e=tqEvent(d,me);let todo='';
-    if(d.win==null){const isL=me===d.lf,sitMe=me>=0&&!isL&&d.cr.includes(me);
-      if(d.ph==='plan')todo=isL&&ctx.my?'اختر ورا مين، كم لفّة، وحقيقية ولا مزيّفة':'';
-      
-      else if(d.ph==='route')todo=(isL||me===d.tg)&&ctx.my?'اختر طريقك بالسر!':'';
-      else if(d.ph==='race')todo=(isL||me===d.tg)&&ctx.my?'اضغط بأسرع ما تقدر!':'';}
-    return `<div class="tq-st ${e.c}"><i>${e.i}</i><span><b>${e.t}</b>${e.x?`<small>${e.x}</small>`:''}</span></div>`+(todo?`<p class="tq-todo">${todo}</p>`:'');},
-  render(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1;d=this.mask(d,me);const fin=d.win!=null,ph=d.ph,isL=me===d.lf,N=s=>tqNm(d,s);
-    const key=tqAK(d)+':'+ph+':'+me;if(S.tqKey!==key){S.tqKey=key;if(ph==='plan'){S.tqT=-1;S.tqL=d.one?1:2;S.tqF=0;S.tqG=0;S.tqB=0;}S.tqRt=-1;}
-    this.sounds(d,me);
-    const sitMe=me>=0&&!isL&&d.cr.includes(me)&&d.out[me]!=='1',my=tqMyPriv(d,me,ctx.priv);
-    // the target's own clock starts when the cap first shows on this phone (as the speed games time a tap)
-    const myAns=my&&my.ans?my.ans:null,iTg=!fin&&ph==='alert'&&me>=0&&me===d.tg&&!myAns;
-    if(iTg&&(!S.tqA||S.tqA.k!==tqAK(d))){const t0=performance.now();S.tqA={k:tqAK(d),t0,bu:d.az&&d.az.bz?t0+2000:0,sent:0};try{KH.snd('heart');buzz();}catch(e){}}
-    const racer=!fin&&ph==='race'&&(me===d.lf||me===d.tg)&&ctx.my;
-    if(racer&&(!S.tqR||S.tqR.k!==tqAK(d)+':'+d.rd+':'+me))S.tqR={k:tqAK(d)+':'+d.rd+':'+me,t0:performance.now(),n:0,sent:0};
-    const blur=iTg&&S.tqA&&S.tqA.bu>performance.now();
-    let h=`<div class="tq kh ph-${ph}">`+tqHud(d,me)+`<div class="tq-stage ${blur?'gf':''}">`;
-    h+=(ph==='route'||ph==='race')&&!fin?tqChase(d,me):tqScene(d,me,{...ctx,sit:sitMe},{});
-    h+='</div>';
+  status(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1;d=this.mask(d,me);const role=tqRole(d,me),N=s=>tqNm(d,s);let i='🧢',t='',x='';
+    if(d.win!=null){i='🏆';t='خلصت اللعبة';x=d.why||'';}
+    else if(d.ph==='walk'){if(role==='laf'){i='🚶';t='أنت اللفّاف!';x=d.dp?`نزّلتها ورا ${N(d.dp.s)}: كمّل اللفّة وارجع لها`:'امشِ حول الدائرة وارمِ الطاقية ورا أحد';}
+      else if(role==='sit'){i='👂';t='اسمع الخطوات وراك…';x='لا يشربك! لو الطاقية وراك التفت والحقه';}else{t=`${N(d.lf)} يلف بالطاقية`;x='طاق طاق طاقية…';}}
+    else if(d.ph==='chase'){i='🏃';t=`${N(d.ch.c)} لقاها! يلحق ${N(d.lf)}`;x=role==='run'?'دوّر إصبعك بسرعة!':'مين بيوصل أول؟';}
+    else if(d.ph==='res'&&d.rs){const r=d.rs;i=r.o==='nap'?'😵':r.o==='esc'?'🏃':'✋';t=r.o==='nap'?`${N(r.t)} شرب!`:r.o==='esc'?`${N(r.w)} قعد مكان ${N(r.t)}`:`${N(r.t)} مسك ${N(r.w)}!`;x=r.o==='nap'?`${N(r.t)} −1 · ${N(r.w)} +1`:r.o==='esc'?`${N(r.w)} +1`:`${N(r.t)} +1`;}
+    return `<div class="tq-st"><i>${i}</i><span><b>${t}</b>${x?`<small>${x}</small>`:''}</span></div>`;},
+  render(d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1;d=this.mask(d,me);const fin=d.win!=null,role=tqRole(d,me),now=Date.now(),k=tqAK(d);
+    if(role==='laf'&&(!S.tqMy||S.tqMy.k!==k))S.tqMy={k,wp:d.wp,dr:null,ts:0,sent:d.wp};
+    if(role==='run'&&(!S.tqRn||S.tqRn.k!==k))S.tqRn={k,rn:0,ts:0,sent:0,sp:0};
+    // my own look: the camera swings round for a moment, then the host's answer
+    let lk=S.tqLk&&S.tqLk.k===k&&role==='sit'?S.tqLk:null,res=null;
+    if(lk&&d.lr&&d.lr.s===me&&d.lr.k>lk.k0){res=d.lr.hit;if(!lk.got){lk.got=performance.now();lk.until=lk.got+1300;}}
+    let view;
+    if(fin||d.ph==='res')view=tqTop(d,me,'');
+    else if(role==='sit')view=lk?tqBehind(d,me,res):tqFirst(d,me);
+    else if(role==='laf')view=tqTop(d,me,'drag');
+    else if(role==='run')view=tqTop(d,me,'short');
+    else view=tqTop(d,me,d.ph==='chase'?'short':'');
+    let h=`<div class="tq kh ph-${d.ph} r-${role}">`+tqHud(d,me,role)+`<div class="tq-stage ${lk?'turn':''}">${view}${d.ph==='walk'&&!fin?tqChant(d):''}</div>`;
     if(fin)return h+tqSum(d)+'</div>';
-    let a='',flow='';
-    if(ph==='plan'){
-      if(isL&&ctx.my){const t=S.tqT,ok=Number.isInteger(t)&&t>=0&&tqAlive(d).includes(t)&&t!==d.lf,L=d.one?1:[1,2,3].includes(S.tqL)?S.tqL:1,F=S.tqF&&d.fk[me]>0?1:0,G=!F&&S.tqG&&!d.gu[me]?1:0,B=S.tqB&&!d.gh[me]?1:0;
-        a=`<div class="tq-seg tq-laps">${[1,2,3].map(k=>`<button class="tq-o ${L===k?'on':''}" data-ga="lap" data-i="${k}" ${d.one&&k>1?'disabled':''}><b>${k}</b><span>${['','لفّة','لفّتين','لفّات'][k]}</span><em dir="ltr">+${TQ_LAPV[k]*(G?2:1)}</em></button>`).join('')}</div>`+
-          `<div class="tq-seg tq-caps"><button class="tq-o ${F?'':'on'}" data-ga="cap" data-i="0">${tqCapI('cap')}<span><b>حقيقية</b><small>بالجد</small></span></button>`+
-          `<button class="tq-o ${F?'on':''}" data-ga="cap" data-i="1" ${d.fk[me]>0?'':'disabled'}>${tqCapI('fake')}<span><b>مزيّفة</b><small>باقي ${d.fk[me]}</small></span></button>`+
-          `<button class="tq-o tq-gold ${G?'on':''}" data-ga="gold" ${d.gu[me]||F?'disabled':''}>${tqCapI('gold')}<span><b>ذهبية</b><small>${d.gu[me]?'انستخدمت':'النقاط ×٢'}</small></span></button>`+
-          `<button class="tq-o tq-gfl ${B?'on':''}" data-ga="gfl" ${d.gh[me]?'disabled':''}><i>😵</i><span><b>غفلة</b><small>${d.gh[me]?'انستخدمت':'تغبّش شاشته'}</small></span></button></div>`+
-          `<button class="big tq-go" data-ga="go" data-i="${ok?t:-1}" ${ok?'':'disabled'}>${ok?`ابدأ اللف ورا ${N(t)}`:'اختر ورا مين من الدائرة'}<small>${[L===1?'لفّة وحدة':L===2?'لفّتين':'ثلاث لفّات',F?'مزيّفة 🎭':G?'ذهبية ✨':'حقيقية',B?'غفلة 😵':'',d.one?'🍦 لفّة وحدة بس':''].filter(Boolean).join(' · ')}</small></button>`;}
-      else a=`<p class="tq-wait">${nameTag(d,d.lf)} يخطط بالسر… 🤫</p>`;}
-    else if(ph==='walk'){
-      if(sitMe){const g=my&&tqCanGuess(d,me,my.g)?my.g:-1,sh=my&&tqCanGuess(d,me,my.s)?my.s:-1,last=d.tr[d.tr.length-1];
-        a=(last?`<div class="tq-hint"><i>👣</i><span><b>أثر اللفّة ${last.l}</b><small>«حسّيت إنه بطّأ ورا ${last.s.map(N).join(' و')}»</small></span>${tqProp}</div>`:'')+
-          `<div class="tq-two"><div class="big tq-gs ${g>=0?'on':''}">${g>=0?KH.face({who:d.pl[g],ring:1,size:34}):'<i>🎯</i>'}<span>${g>=0?`تخمينك: ${N(g)}`:'خمّن ورا مين'}<small>${g>=0?'+5 لو صح · تقدر تغيّر':'اضغط على واحد بالدائرة'}</small></span></div>`+
-          `<button class="big tq-sc ${sh>=0?'on':''}" data-ga="shout" ${d.su[me]||g<0?'disabled':''}><i>📣</i><span>${sh>=0?'صرخت!':'صرخة'}<small>${d.su[me]?'انستخدمت':sh>=0?`على ${N(sh)} · اضغط تلغي`:g>=0?`على ${N(g)} · مرة باللعبة`:'مرة باللعبة'}</small></span></button></div>`;}
-      else if(isL)a=`<p class="tq-wait">تلف ورا ${N(d.tg)}… ${d.pt?['','لفّة وحدة','لفّتين','ثلاث لفّات'][d.pt.l]:''} 🤫</p>`;
-      else a=`<p class="tq-wait">${nameTag(d,d.lf)} يلف… والكل يخمّن بالسر</p>`;}
-    else if(ph==='alert'){
-      if(iTg){const fz=d.az&&d.az.fz,fr=d.az?d.az.fr:0;
-        a=`<button class="big tq-saw" data-ga="see"><svg class="tq-cd" viewBox="0 0 64 64" width="60" height="60" aria-hidden="true"><circle cx="32" cy="32" r="27" class="tq-cdb"/><circle cx="32" cy="32" r="27" class="tq-cdf" stroke-dasharray="169.6 169.6" transform="rotate(-90 32 32)"/><text x="32" y="39" class="tq-cdt">${(tqLim(d)/1000).toFixed(1)}</text></svg><span>شفتها!<small>اضغط قبل ما يخلص الوقت</small></span></button>`+
-          `<div class="tq-two"><button class="big tq-feel ${fz?'on':''}" data-ga="feel" ${d.fu[me]||fz?'disabled':''}><i>🖐</i><span>تحسّس<small>${fz?(fr===2?'مزيّفة! لا تضغط 🎭':'حقيقية! اضغط بسرعة'):d.fu[me]?'انستخدم':'حقيقية ولا مزيّفة؟ · −2ث'}</small></span>${tqProp}</button><div class="tq-risk"><b>مزيّفة وضغطت؟</b><small>تخسر 5</small></div></div>`;}
-      else if(me===d.tg)a=`<p class="tq-wait">${myAns&&myAns.s?'ضغطت «شفتها!» ✓':'فاتتك… 😬'}</p>`;
-      else a=`<p class="tq-wait">${isL?`نزّلتها ورا ${N(d.tg)}… هل بينتبه؟`:'نزّل الطاقية… مين بينتبه؟ 👀'}</p>`;}
-    else if(ph==='route'){const iR=(isL||me===d.tg)&&me>=0,op=isL?d.tg:d.lf,cl=tqClosed(d);
-      if(iR&&ctx.my){const hb=d.hb[op],tot=hb.reduce((x,y)=>x+y,0);
-        a=`<p class="tq-lbl2">اختر طريقك بالسر · <span>عادات ${N(op)} ${tqProp}</span></p><div class="tq-routes">${[0,1,2].map(r=>`<button class="tq-rb rt${r} ${S.tqRt===r?'on':''}" data-ga="route" data-i="${r}" ${r===cl?'disabled':''}><b>${TQ_RS[r]}</b><small>${r===cl?'🌑 مسكّر':`${N(op)} <i class="tq-hbp">${[0,1,2].map(k=>`<u class="${k<hb[r]?'on':''}"></u>`).join('')}</i>`}</small>${r!==cl&&tot&&hb[r]===Math.max(...hb)&&hb[r]>0?'<em>عادته!</em>':''}</button>`).join('')}</div>`+
-          `<p class="tq-tip">${isL?'لو اختار نفس طريقك: سباق ضغط. غيره: تفلت':'لو اخترت نفس طريقه: سباق ضغط. غيره: يفلت'}</p>`;}
-      else if(iR)a=`<p class="tq-wait">اخترت ${Number.isInteger(my&&my.pick)?TQ_RT[my.pick]:''}… ننتظر ${N(op)}</p>`;
-      else a=`<p class="tq-wait">مطاردة! ${nameTag(d,d.tg)} و${nameTag(d,d.lf)} يختارون طريقهم بالسر</p>`;}
-    else if(ph==='race'){const iR=(isL||me===d.tg)&&me>=0;
-      if(racer)a=`<div class="tq-race"><div class="tq-rbar"><i></i></div><button class="big tq-tap" data-ga="tap"><b class="tq-tapn">${S.tqR?S.tqR.n:0}</b><span>اضغط! اضغط!</span></button></div>`;
-      else if(iR)a=`<p class="tq-wait">خلصت! ضغطت ${my&&my.pick&&my.pick.n!=null?my.pick.n:'…'} مرة</p>`;
-      else a=`<p class="tq-wait">⚡ سباق ضغط بين ${nameTag(d,d.tg)} و${nameTag(d,d.lf)}</p>`;}
-    else if(ph==='res'&&d.rr){flow=tqResRows(d);const nl=d.rr.nl;
-      a=`<button class="big tq-next" data-ga="next">الجولة الجاية · ${nl===me?'أنت تلف':N(nl)+' يلف'}<small>${tqEvTxt(d,d.ev)&&d.nx1?'🍦 الجولة الجاية لفّة وحدة بس':'تبدأ لحالها بعد ثواني'}</small></button>`;}
-    return h+flow+`<div class="tq-dock">${a}</div></div>`;},
-  sounds(d,me){try{const k=tqAK(d)+':'+d.ph+':'+d.lp;if(S.tqSnd===k)return;S.tqSnd=k;
-    if(d.ph==='walk')KH.snd('step');else if(d.ph==='alert'&&me!==d.tg)KH.snd('whoosh');else if(d.ph==='route')KH.snd('call');
-    else if(d.ph==='res'&&d.rr){const o=d.rr.o;KH.snd(o==='catch'?'found':o==='esc'||o==='miss'?'safe':'meow');}}catch(e){}},
-  click(a,i,d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1;if(d.win!=null)return;
-    if(a==='sel'){if(d.ph==='plan'){if(me!==d.lf||!ctx.my||!tqAlive(d).includes(i)||i===d.lf)return;S.tqT=i;render();return;}
-      if(d.ph==='walk'){if(me<0||me===d.lf||!d.cr.includes(me)||!tqCanGuess(d,me,i))return;const r=d.pl[me],p=tqMyPriv(d,me,S.priv)||{};const np={...p,gid:d.gid,k:d.rk,g:i};if(Number.isInteger(p.s)&&p.s>=0)np.s=i;setPriv(r,np);}return;}
-    if(a==='lap'){if(d.ph!=='plan'||!(i>=1&&i<=3)||d.one&&i>1)return;S.tqL=i;render();return;}
-    if(a==='cap'){if(d.ph!=='plan')return;S.tqF=i===1&&me>=0&&d.fk[me]>0?1:0;if(S.tqF)S.tqG=0;render();return;}
-    if(a==='gold'){if(d.ph!=='plan'||me<0||d.gu[me]||S.tqF)return;S.tqG=S.tqG?0:1;render();return;}
-    if(a==='gfl'){if(d.ph!=='plan'||me<0||d.gh[me])return;S.tqB=S.tqB?0:1;render();return;}
-    if(a==='go'){if(d.ph!=='plan'||me!==d.lf||!ctx.my||!tqAlive(d).includes(i)||i===d.lf)return;act(tqGo(d,{t:i,l:S.tqL,f:S.tqF,g:S.tqG,b:S.tqB}));return;}
-    if(a==='shout'){if(d.ph!=='walk'||me<0||me===d.lf||!d.cr.includes(me)||d.su[me])return;const r=d.pl[me],p=tqMyPriv(d,me,S.priv);if(!p||!tqCanGuess(d,me,p.g))return;
-      setPriv(r,{...p,gid:d.gid,k:d.rk,s:Number.isInteger(p.s)&&p.s>=0?-1:p.g});return;}
-    if(a==='see'){if(d.ph!=='alert'||me<0||me!==d.tg)return;const A=S.tqA&&S.tqA.k===tqAK(d)?S.tqA:null;if(A&&A.sent)return;const ms=A?Math.round(performance.now()-A.t0):0;if(A)A.sent=1;tqAnswer(d,me,1,ms);return;}
-    if(a==='feel'){if(d.ph!=='alert'||me<0||me!==d.tg||!d.pt||!d.az||d.az.fz||d.fu[me])return;act(tqFeel(d));return;}
-    if(a==='route'){if(d.ph!=='route'||(me!==d.lf&&me!==d.tg)||me<0||!ctx.my||![0,1,2].includes(i)||i===tqClosed(d))return;S.tqRt=i;simulPick(d,me,i);return;}
-    if(a==='tap'){if(d.ph!=='race'||!S.tqR||S.tqR.sent||performance.now()-S.tqR.t0>TQ_T.race)return;S.tqR.n=Math.min(60,S.tqR.n+1);const el=document.querySelector('.tq-tapn');if(el)el.textContent=S.tqR.n;try{KH.snd('tick');}catch(e){}return;}
-    if(a==='next'){if(d.ph!=='res'||(me>=0&&d.out[me]==='1'))return;act(tqNext(d));}},
-  resolve(d,picks){if(d.ph==='route')return tqRouteEnd(d,picks);if(d.ph==='race')return tqRaceEnd(d,picks);return d;},
-  // a player who left: out of the circle; the round starts over when it was the لفّاف or the target
-  onSkip(nd,d){let x={...nd,win:null,turn:d.lf};delete x.wins;const al=aliveSeats(x);
-    if(al.length<3)return tqEnd(x,'ما بقى لاعبين كفاية');
-    x.cr=x.cr.filter(s=>x.out[s]!=='1');
-    const lfGone=x.out[d.lf]==='1',tgGone=d.tg>=0&&x.out[d.tg]==='1'&&['walk','alert','route','race'].includes(d.ph);
-    if(lfGone){const nl=x.cr[0];x.cr=x.cr.slice(1);return tqRound(x,nl);}
-    if(tgGone)return tqRound(x,d.lf);
+    return h+`<div class="tq-dock">${tqDock(d,me,role)}</div></div>`;},
+  click(a,i,d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1;if(d.win!=null)return;const mine=!S.inIntent;
+    if(a==='look'){if(d.ph!=='walk'||me<0||me===d.lf||!d.cr.includes(me)||d.lk[me]>=TQ.LOOKS)return;
+      if(mine){S.tqLk={k:tqAK(d),t:performance.now(),k0:d.lr?d.lr.k:0,until:performance.now()+2500};TQS.whoosh();try{navigator.vibrate&&navigator.vibrate(25);}catch(e){}}
+      act(tqLook(d,me,Date.now()));return;}
+    if(a==='drop'){if(d.ph!=='walk'||me!==d.lf||d.dp)return;const My=S.tqMy;if(!My||My.k!==tqAK(d)||My.dr!=null)return;const wp=Math.max(My.wp,d.wp);if(wp-d.w0<60){toast('امشِ شوي أول');return;}
+      My.dr=d.cr[tqNearest(d,wp)];My.ts=0;TQS.thud();try{navigator.vibrate&&navigator.vibrate(40);}catch(e){}tqStream(d,me,Date.now(),true);render();return;}
+    if(a==='cheer'){TQS.cheer();return;}
+    if(a==='mot'){tqAskMotion();}},
+  onSkip(nd,d){let x={...nd,win:null,turn:d.lf};delete x.wins;const al=aliveSeats(x),now=Date.now();if(al.length<3)return tqEnd(x,'ما بقى لاعبين كفاية');
+    x.cr=x.cr.filter(s=>x.out[s]!=='1');if(x.out[d.lf]==='1'){const L=x.cr[0];x.cr=x.cr.slice(1);return tqRound(x,L,tqMod(d.wp),now);}
+    if((d.ph==='walk'&&d.dp&&x.out[d.dp.s]==='1')||(d.ph==='chase'&&x.out[d.ch.c]==='1'))return tqRound(x,d.lf,tqMod(d.wp),now);
     return x;},
-  bot(d,s,lv){if(d.win!=null||d.ph!=='plan'||s!==d.lf)return d;return tqBotPlan(d,lv);},
-  botPick(d,s,lv){if(!tqNeed(d,s))return NOPICK;if(d.ph==='route')return tqBotRoute(d,s,lv);if(d.ph==='race')return {n:tqBotTaps(lv)};return NOPICK;},
-  botDelay:(d,s,lv)=>d.ph==='plan'?1400+rnd(1600):d.ph==='route'?1500+rnd(2500):d.ph==='race'?TQ_T.race+rnd(400):BOTMS[lv]+rnd(800),
-  // what every phone learns at a round's result: who misses real caps, who chases fakes
-  botSee(nd){try{if(nd.ph!=='res'||!nd.rr)return;const M=tqMem(),k=nd.gid+':'+nd.rr.k;if(M.seen[k])return;M.seen[k]=1;if(++M.n>400){M.seen={};M.n=0;}
-    const r=nd.rr,x=M.r[nd.pl[r.tg]]||(M.r[nd.pl[r.tg]]={sp:0,mi:0,fc:0,fi:0});if(r.o==='miss')x.mi++;else if(r.o==='esc'||r.o==='catch')x.sp++;else if(r.o==='fs')x.fc++;else if(r.o==='fi')x.fi++;}catch(e){}}};
+  // the host moves the bots (and the absent players) itself, in tqHost
+  bot:d=>d};
 
-// the target answers on its own phone; the host reads it from its private part
-function tqAnswer(d,me,s,ms){const r=d.pl[me],p=tqMyPriv(d,me,S.priv)||{};setPriv(r,{...p,gid:d.gid,k:d.rk,ans:{s,ms:Math.max(0,Math.min(30000,Math.round(ms)))}});}
-/* ---------- the clocks and the moving parts: only the enforcer (this phone, or the room's host) moves the game on ---------- */
-function tqSetD(nd){S.st={...S.st,d:nd};save();render();}
-function tqTick(d,now){const local=tqLocal();
-  if(local&&(S.browse||S.modal||app.querySelector('.cover')))return;
-  if(local){if(d.ph==='walk'){if(!d.w0){tqSetD({...d,w0:now,we:now+d.pt.wd});return;}}
-    else{const who=mkCtx().v;const w=who==null?-1:who;if(d.dl===0||w!==d.dv){tqSetD({...d,dl:now+(d.T||5000),dv:w,...(d.ph==='alert'&&!d.a0?{a0:now}:{})});return;}}}
-  const res=()=>act(GAMES.taqiya.resolve(d,simulPicks(d).map(x=>x===undefined?null:x)));
-  switch(d.ph){
-    case 'plan':if(d.dl>0&&now>=d.dl)act(tqGo(d,{}));return;
-    case 'walk':if(now>=d.we){act(tqDrop(d));return;}{const k=Math.floor((now-d.w0)/TQ_T.lap)+1;if(k>d.lp)act(tqLap(d,k));}return;
-    case 'alert':{const key=tqAK(d),ans=tqAns(d);if(ans){act(tqAlertEnd(d,ans));return;}
-      if(isBot(d,d.tg)&&d.az){const lv=botLv(d,d.tg);if(!d.az.fz&&S.tqBF!==key){S.tqBF=key;if(tqBotFeels(d,lv)){act(tqFeel(d));return;}}
-        const R=Math.min(tqReact(GAMES.taqiya.mask(d,d.tg),d.tg,lv),tqLim(d));if(d.a0>0&&now-d.a0>=R){act(tqAlertEnd(d,tqBotAlert(d,d.tg,lv)));return;}}
-      if(d.dl>0&&now>=d.dl)act(tqAlertEnd(d,null));return;}
-    case 'route':case 'race':if(d.dl>0&&now>=d.dl)res();return;
-    case 'res':if(d.dl>0&&now>=d.dl)act(tqNext(d));return;}}
-// this phone's own view: the walker on the ring, the target's arc and its own timeout, the blur, the race's 3 seconds
-function tqDom(d,now){const ctx=mkCtx(),me=ctx.v!=null&&ctx.v>=0?ctx.v:-1,v=GAMES.taqiya.mask(d,me),t=performance.now();
-  const ck=document.querySelector('.tq-clk b');if(ck&&v.end>0){const x=tqFmt(v.end-now);if(ck.textContent!==x)ck.textContent=x;}
-  const w=document.querySelector('.tq-w');
-  if(w&&(v.ph==='walk'||v.ph==='alert')){let a;
-    if(v.ph==='walk'){const k=tqAK(v)+':'+v.lp;if(!S.tqWs||S.tqWs.k!==k)S.tqWs={k,t:now};a=TQA0+2*Math.PI*(v.lp-1)+2*Math.PI*Math.min(.97,(now-S.tqWs.t)/TQ_T.lap);
-      if(me===v.lf&&v.pt&&v.pt.wd)a=Math.min(a,TQA0+2*Math.PI*v.pt.wd/TQ_T.lap);}
-    else{const k=tqAK(v);if(!S.tqWal||S.tqWal.k!==k)S.tqWal={k,t:now,a:v.tg>=0?tqAng(v,v.tg)+.55:(S.tqWa&&S.tqWa.gid===v.gid?S.tqWa.a:TQA0)};a=S.tqWal.a+2*Math.PI*1.4*(now-S.tqWal.t)/TQ_T.lap;}
-    S.tqWa={gid:v.gid,a};const [x,y]=tqXY(a,TQOUT);w.style.transform=`translate(${KH.f(x)}px,${KH.f(y)}px)`;w.classList.toggle('fl',Math.cos(a)>0);
-    const L=document.querySelector(Math.cos(a)<0?'.tq-wb':'.tq-wf');if(L&&w.parentNode!==L)L.appendChild(w);}
-  // the target: the arc, the seconds, «فاتتك» when the time is up on this phone
-  if(v.ph==='alert'&&me>=0&&me===v.tg&&S.tqA&&S.tqA.k===tqAK(v)){const lim=tqLim(v),el=t-S.tqA.t0,fr=Math.max(0,Math.min(1,1-el/lim));
-    for(const c of document.querySelectorAll('.tq-arc,.tq-cdf')){const C=c.classList.contains('tq-cdf')?169.6:+c.getAttribute('data-c');c.setAttribute('stroke-dasharray',`${KH.f(C*fr)} ${KH.f(C)}`);}
-    const tx=document.querySelector('.tq-cdt');if(tx)tx.textContent=(Math.max(0,lim-el)/1000).toFixed(1);
-    const st=document.querySelector('.tq-stage');if(st){st.classList.toggle('gf',S.tqA.bu>t);
-      // a short phone: the stage comes up above the buttons, once
-      if(!S.tqA.sc){S.tqA.sc=1;const r=st.getBoundingClientRect(),dk=document.querySelector('.tq-dock'),lim=dk?dk.getBoundingClientRect().top:innerHeight;if(r.bottom>lim)try{scrollBy({top:Math.min(r.top,r.bottom-lim+6),behavior:'instant'});}catch(e){}}}
-    if(el>=lim&&!S.tqA.sent){S.tqA.sent=1;tqAnswer(d,me,0,Math.round(lim));}}
-  if(v.ph==='race'&&me>=0&&(me===v.lf||me===v.tg)&&ctx.my&&S.tqR&&S.tqR.k===tqAK(v)+':'+v.rd+':'+me&&!S.tqR.sent){const el=t-S.tqR.t0,b=document.querySelector('.tq-rbar i');if(b)b.style.transform=`scaleX(${Math.max(0,1-el/TQ_T.race).toFixed(3)})`;
-    if(el>=TQ_T.race){S.tqR.sent=1;simulPick(d,me,{n:S.tqR.n});}}}
+/* ---------- this phone: the walker on the ring, the shadow, the steps and the chant, gestures, sending my moves ---------- */
+function tqStream(d,me,now,force){const r=d.pl[me],k=tqAK(d),base=S.priv[r]&&S.priv[r].k===d.rk?S.priv[r]:{};
+  const My=S.tqMy,Rn=S.tqRn;
+  if(me===d.lf&&d.ph==='walk'&&My&&My.k===k&&(force||now-My.ts>=150)&&(Math.round(My.wp)>My.sent+1||(My.dr!=null&&!My.drs))){My.ts=now;My.sent=Math.round(My.wp);const p={...base,gid:d.gid,k:d.rk,wp:My.sent};if(My.dr!=null){p.dr={s:My.dr};My.drs=1;}setPriv(r,p);}
+  if(d.ph==='chase'&&(me===d.lf||me===d.ch.c)&&Rn&&Rn.k===k&&now-Rn.ts>=140&&Math.round(Rn.rn)>Rn.sent){Rn.ts=now;Rn.sent=Math.round(Rn.rn);setPriv(r,{...base,gid:d.gid,k:d.rk,rn:Rn.sent});}}
+function tqDom(d,now){const ctx=mkCtx(),me=ctx.v!=null&&ctx.v>=0&&ctx.v<d.pl.length?ctx.v:-1,v=GAMES.taqiya.mask(d,me),role=tqRole(v,me),pn=performance.now(),q=s=>document.querySelector(s);
+  const ck=q('.tq-clk b');if(ck&&v.end>0){const x=tqFmt(v.end-now);if(ck.textContent!==x)ck.textContent=x;}
+  if(S.tqLk&&S.tqLk.k===tqAK(v)&&pn>S.tqLk.until){S.tqLk=null;render();return;}
+  if(v.ph==='walk'){const wp=tqDisp(v,me,now),a=2*Math.PI*wp/1000,w=q('.tq-map .tq-w');
+    if(w){const [x,y]=tqXY(wp,TQOUT);w.style.transform=`translate(${KH.f(x)}px,${KH.f(y)}px)`;w.classList.toggle('fl',Math.cos(a)>0);const L=q(Math.cos(a)<0?'.tq-wb':'.tq-wf');if(L&&w.parentNode!==L)L.appendChild(w);}
+    let pan=0,vol=role==='laf'?.42:.28;
+    if(role==='sit'){const th=tqTh(v,me),phi=tqW(wp-th)/1000,c=(1+Math.cos(2*Math.PI*phi))/2;pan=-Math.sin(2*Math.PI*phi)*.9;vol=.05+.75*c*c*c;
+      const fw=q('.tq-fw');if(fw){if(Math.abs(phi)>.12){const [x,y,sc]=tqFPout(tqMod(wp-th)/1000);fw.style.opacity=1;fw.style.transform=`translate(${KH.f(x)}px,${KH.f(y)}px) scale(${KH.f(sc*(Math.cos(2*Math.PI*phi)>0?-1:1))},${KH.f(sc)})`;}else fw.style.opacity=0;}
+      const sh=q('.tq-sh');if(sh){const o=Math.abs(phi)<.16?(1-Math.abs(phi)/.16)*.9:0;sh.style.opacity=KH.f(o);if(o>0)sh.style.transform=`translate(${KH.f(180-phi/.16*190)}px,${TQFH}px)`;}
+      const hb=q('.tq-hb');const near=Math.abs(phi)<.07;if(hb)hb.style.opacity=near?.95:Math.abs(phi)<.13?.4:0;
+      if(near&&pn-(S.tqHb||0)>680){S.tqHb=pn;TQS.heart(.55);try{navigator.vibrate&&navigator.vibrate(18);}catch(e){}}
+      const L=q('.tq-ear.l'),R=q('.tq-ear.r');if(L&&R){const lv=c*(1+pan)/2,rv=c*(1-pan)/2;[[L,rv],[R,lv]].forEach(([el,x])=>{el.style.opacity=KH.f(.25+.75*Math.min(1,x*1.6));});}}
+    // a step: footsteps, and the chant a word every second step, on every phone
+    const st=Math.floor((wp-v.w0)/TQ_STEP),K=tqAK(v);if(!S.tqStp||S.tqStp.k!==K)S.tqStp={k:K,i:st};
+    if(st>S.tqStp.i){S.tqStp.i=st;TQS.step(vol,pan);if(st%2===0){const wi=(st/2)%TQ_CHANT.length;TQS.word(wi);const ch=q('.tq-chant');if(ch){const sp=ch.querySelectorAll('span'),six=wi%6,base=wi-six;sp.forEach((e,j)=>{e.textContent=TQ_CHANT[base+j];e.className=j<six?'done':j===six?'on':'';});}}}
+    tqRec(true,Math.max(.7,Math.min(1.4,(wp-(S.tqRw||wp))*12/TQ.VW+.8)));S.tqRw=wp;
+    const bar=q('.tq-bar i');if(bar&&v.dp)bar.style.transform=`scaleX(${Math.max(0,Math.min(1,(wp-v.dp.p)/1000)).toFixed(3)})`;}
+  else tqRec(false);
+  if(v.ph==='chase'&&v.ch){const r=tqRunDisp(v,now);for(const [sel,pos] of [['.tq-map .tq-w:not(.tq-cz)',r.w],['.tq-map .tq-cz',r.c]]){const e=q(sel);if(!e)continue;const [x,y]=tqXY(pos,TQOUT),a=2*Math.PI*pos/1000;e.style.transform=`translate(${KH.f(x)}px,${KH.f(y)}px)`;e.classList.toggle('fl',Math.cos(a)>0);const L=q(Math.cos(a)<0?'.tq-wb':'.tq-wf');if(L&&e.parentNode!==L)L.appendChild(e);}
+    const K=tqAK(v)+'r',sw=Math.floor(r.w/70)+Math.floor(r.c/70);if(!S.tqRs||S.tqRs.k!==K)S.tqRs={k:K,i:sw};if(sw>S.tqRs.i){S.tqRs.i=sw;TQS.step(.4,0,1);}
+    const gp=q('.tq-gap');if(gp){const gap=Math.max(0,(r.w-r.c)/1000),left=Math.max(0,(v.ch.goal-r.w)/1000);const x=me===v.lf?`باقي لك ${Math.round(left*100)}٪ من اللفّة`:`بينك وبينه ${Math.round(gap*100)}٪`;if(gp.textContent!==x)gp.textContent=x;}
+    const Rn=S.tqRn;if(Rn&&Rn.k===tqAK(v)){Rn.sp*=.86;const e=q('.tq-spd em');if(e)e.textContent=Math.round(Math.min(1,Rn.sp)*100)+'٪';}}
+  if(me>=0)tqStream(v,me,now);}
+// the walker's finger on the ring, the runners' circles on the pad, a swipe down to look back
+const tqAngOf=(x,y)=>{const a=Math.atan2(-(x-TQCX)/(TQRX+TQOUT),(y-TQCY)/(TQRY+TQOUT*TQKY));return tqMod(a/(2*Math.PI)*1000);};
+function tqPt(el,e,W,H){const r=el.getBoundingClientRect();return [(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H];}
+function tqDown(e){if(S.st.g!=='taqiya'||!S.st.d||S.st.d.win!=null)return;const t=e.target;if(!t||!t.closest)return;const pn=performance.now();
+  const map=t.closest('.tq-map.drag');if(map&&S.tqMy){const [x,y]=tqPt(map,e,TQW,TQH);S.tqDr={id:e.pointerId,m:tqAngOf(x,y),t:pn,t0:pn,x0:e.clientX,y0:e.clientY,el:map,mv:0};try{map.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();return;}
+  const pad=t.closest('.tq-pad');if(pad&&S.tqRn){const r=pad.getBoundingClientRect();S.tqPd={id:e.pointerId,a:Math.atan2(e.clientY-r.top-r.height/2,e.clientX-r.left-r.width/2),t:pn,el:pad};try{pad.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();return;}
+  if(t.closest('.tq-fp:not(.tq-bk)'))S.tqSw={id:e.pointerId,y0:e.clientY,x0:e.clientX,t0:pn};}
+function tqMove(e){const pn=performance.now(),d=S.st.d;if(!d||S.st.g!=='taqiya')return;
+  const D=S.tqDr;if(D&&D.id===e.pointerId&&S.tqMy){const [x,y]=tqPt(D.el,e,TQW,TQH),m=tqAngOf(x,y),dm=tqW(m-D.m),dt=Math.max(1,pn-D.t);D.m=m;D.t=pn;
+    if(dm>0&&dm<250){const My=S.tqMy,step=Math.min(dm,TQ.VW*dt/1000*1.15+3);My.wp=Math.max(My.wp,d.wp)+step;D.mv+=step;}e.preventDefault();return;}
+  const P=S.tqPd;if(P&&P.id===e.pointerId&&S.tqRn){const r=P.el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,a=Math.atan2(e.clientY-cy,e.clientX-cx),dt=Math.max(1,pn-P.t);let da=a-P.a;if(da>Math.PI)da-=2*Math.PI;if(da<-Math.PI)da+=2*Math.PI;P.a=a;P.t=pn;
+    // 2.6 finger turns a second is the top speed; faster counts the same
+    const add=Math.min(Math.abs(da)/(2*Math.PI)*TQ.VR/2.6,TQ.VR*dt/1000*1.02);S.tqRn.rn+=add;S.tqRn.sp=S.tqRn.sp*.7+.3*Math.min(1,add/(TQ.VR*dt/1000));
+    const f=P.el.querySelector('.tq-pf');if(f){f.setAttribute('cx',KH.f(74*Math.cos(a)));f.setAttribute('cy',KH.f(74*Math.sin(a)));}
+    const tr=P.el.querySelector('.tq-ptr');if(tr){const a0=a-Math.sign(da||1)*Math.min(2.6,.6+S.tqRn.sp*2.2);tr.setAttribute('d',`M${KH.f(74*Math.cos(a0))} ${KH.f(74*Math.sin(a0))}A74 74 0 0 ${da>=0?1:0} ${KH.f(74*Math.cos(a))} ${KH.f(74*Math.sin(a))}`);}
+    e.preventDefault();}}
+function tqUp(e){const pn=performance.now(),D=S.tqDr;
+  // a quick flick down while walking drops the cap
+  if(D&&D.id===e.pointerId){S.tqDr=null;const dy=e.clientY-D.y0,dx=e.clientX-D.x0,dt=pn-D.t0;if(dy>45&&dy>Math.abs(dx)*1.2&&dt<380&&D.mv<45)tqAct('drop');return;}
+  if(S.tqPd&&S.tqPd.id===e.pointerId){S.tqPd=null;return;}
+  const W=S.tqSw;if(W&&W.id===e.pointerId){S.tqSw=null;const dy=e.clientY-W.y0;if(dy>70&&Math.abs(e.clientX-W.x0)<dy&&pn-W.t0<700)tqAct('look');}}
+// turning round with the phone: a quick twist; iPhones ask once («فعّل الحركة»)
+function tqMotion(e){const r=e&&e.rotationRate;if(!r||S.st.g!=='taqiya')return;const x=Math.abs(r.alpha||0)+Math.abs(r.beta||0)+Math.abs(r.gamma||0);if(x>0)S.tqMotSeen=1;
+  const pn=performance.now();if(x<420||pn-(S.tqMotT||0)<1600)return;S.tqMotT=pn;const d=S.st.d;if(!d||d.win!=null||d.ph!=='walk')return;const ctx=mkCtx();if(tqRole(d,ctx.v)!=='sit')return;tqAct('look');}
+function tqAskMotion(){try{DeviceMotionEvent.requestPermission().then(r=>{S.tqMot=r==='granted'?'on':'no';try{lsSet('tq.mot',S.tqMot);}catch(e){}render();}).catch(()=>{S.tqMot='no';render();});}catch(e){S.tqMot='no';render();}}
+(()=>{try{let saved=null;try{saved=lsGet('tq.mot');}catch(e){}S.tqMot=typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'?(saved==='on'?'on':saved==='no'?'no':'need'):'on';}catch(e){S.tqMot='no';}
+  document.addEventListener('pointerdown',tqDown,{passive:false});document.addEventListener('pointermove',tqMove,{passive:false});document.addEventListener('pointerup',tqUp);document.addEventListener('pointercancel',tqUp);
+  window.addEventListener('devicemotion',tqMotion);})();
+// on one phone, the clocks wait while the menu is open
+function tqPause(d,ms){const sh=x=>x>0?x+ms:x;return {...d,end:sh(d.end),t0:sh(d.t0),ht:sh(d.ht),mv:sh(d.mv),dl:sh(d.dl),ch:d.ch?{...d.ch,t0:sh(d.ch.t0)}:null};}
 setInterval(()=>{if(S.st.g!=='taqiya'||!GAMES.taqiya)return;const d=S.st.d;if(!d||d.win!=null)return;const now=Date.now();
-  if(S.mode==='local'&&(S.browse||app.querySelector('.cover')))return;
+  if(S.mode==='local'&&S.browse){if(!S.tqPz)S.tqPz=now;return;}
+  if(S.tqPz){const ms=now-S.tqPz;S.tqPz=0;if(S.mode==='local'&&ms>500){S.st={...S.st,d:tqPause(d,ms)};save();return;}}
   try{tqDom(d,now);}catch(e){console.error('taqiya dom',e);}
   if(!isEnforcer()||S.holdRender||(S.mode!=='local'&&S.mode!=='online'))return;
-  if(now-(S.tqTk||0)<380)return;S.tqTk=now;
-  try{tqTick(d,now);}catch(e){console.error('taqiya tick',e);}},150);
+  if(now-(S.tqTk||0)<TQ.TICK)return;S.tqTk=now;
+  try{tqHostTick(now);}catch(e){console.error('taqiya tick',e);}},90);
 
-HELP.taqiya='طاق طاق طاقية بالليل في الحوش: الكل قاعدين بدائرة، وواحد «اللفّاف» يلف حولهم وبيده الطاقية. 1) الخطة بالسر: يختار ورا مين بيحطها، وكم لفّة يلف (لفّة +10، لفّتين +15، ثلاث +20)، وحقيقية ولا مزيّفة (لكل واحد طاقيتين مزيّفة باللعبة، وعدّادها ظاهر للكل). ومرة باللعبة يقدر يخليها «ذهبية» (النقاط ضعف)، ومرة يسوي «غفلة» (شاشة اللي وراه تتغبّش ثانيتين). 2) اللف: كل لفّة بعد الأولى تترك أثر للكل: «حسّيت إنه بطّأ ورا فلان وفلان»، واحد منهم هو المقصود. الجالسين يخمّنون بالسر ورا مين (+5 للي يصيب)، وكل واحد عنده «صرخة» وحدة باللعبة: لو صرخ باسم اللي وراه صح ياخذ ثانيتين زيادة وينتبه، ولو غلط −5 على اللي صرخ. 3) الانتباه: اللي وراه الطاقية بس يشوفها تلمع، وعنده 4 ثواني يضغط «شفتها!». «تحسّس» مرة باللعبة: ياكل ثانيتين ويقولك حقيقية ولا مزيّفة. لو ما انتبه للحقيقية: اللفّاف يقعد مكانه وياخذ نقاط اللفّات منه، وهو يصير اللفّاف. لو ضغط على مزيّفة −5، ولو طنّشها ما صار شي واللفّاف يلف مرة ثانية. 4) المطاردة لو شاف الحقيقية: كل واحد يختار بالسر «طريق الشارع» أو «الحوش» أو «السطح» (وعادات كل واحد ظاهرة). لو اختلفوا: اللفّاف يفلت وياخذ النقاط والثاني يصير اللفّاف. لو نفس الطريق: سباق ضغط 3 ثواني، الأسرع ياخذ +5: لو اللي وراه ضغط أكثر (أو تعادلوا) يمسك اللفّاف وياخذ النقاط منه واللفّاف يلف مرة ثانية، ولو اللفّاف أسرع يفلت. كل جولة فيها حدث: 🐈 قطو يعدّي ورا واحد (انتباهه أقصر بثانية)، 🌑 النور ينطفي (السطح مسكّر والآثار أغمض: ثلاث أسماء)، 🍦 بيّاع الآيس كريم (الجولة الجاية لفّة وحدة). اللعبة 5 دقايق أو جولتين لكل لاعب، واللي ما لفّ ياخذ دوره قبل النهاية. النقاط ما تنزل تحت الصفر، والأكثر نقاط يفوز.';
+HELP.taqiya='طاق طاق طاقية بالليل في الحوش. الهدف واحد: لا تنغفل! لو صارت الطاقية وراك، الحق اللي حطها. واحد «اللفّاف» يمشي حول الدائرة: يمرّر إصبعه على الدائرة ويمشي خطوة خطوة، والكل يغنّي «طاق طاق طاقية… شبّاك ورا شبّاك». يرمي الطاقية ورا أي واحد يمرّ وراه (يسحب لتحت بسرعة، أو زر «ارمها»)، ويكمل يمشي عشان يخدعهم. الجالسين يشوفون الدائرة من مكانهم بس، وما يشوفون ورا ظهورهم: يسمعون الخطوات وراهم (يمين ويسار، تقرب وتبعد)، ويشوفون ظله يمر على الأرض قدامهم، والقلب يدق لو صار وراهم تمامًا. تلتفت بلفّة سريعة للجوال (أو اسحب الشاشة لتحت، أو زر «التفت»)، وعندك 3 نظرات بالجولة بس. لو الطاقية وراك: تاخذها وتبدأ المطاردة! وكل واحد يركض بإنه يدوّر إصبعه دوائر على الشاشة: كل ما دوّر أسرع ركض أسرع (فيه حد أعلى للكل). اللفّاف يركض لمكانك الفاضي، وأنت تحاول تلمسه قبل لا يقعد. لو اللفّاف كمّل لفّة كاملة ورجع لمكان الطاقية وأنت ما انتبهت: «شربت»، وتصير أنت اللفّاف. النقاط: اللفّاف اللي يقعد بالمكان +1، اللي يلمس اللفّاف +1، اللي يشرب −1 (ما تنزل تحت الصفر). اللعب 5 دقايق، والأكثر نقاط يفوز. تلعب أونلاين أو ضد البوت، كل واحد بجواله.';
