@@ -506,7 +506,11 @@ function fitSync(){
   if(de.classList.contains('fit')!==on)de.classList.toggle('fit',on);
   const zn=on?app.querySelector('.bzone'):null,b=zn&&zn.querySelector('.board'),dk=b&&b.querySelector('.hd-dock,.tq-dock');
   if(b===FIT.b&&zn===FIT.zn&&dk===FIT.dk)return;
-  if(!FIT.ro){if(typeof ResizeObserver!=='function'){FIT.on=false;de.classList.remove('fit');return;}FIT.ro=new ResizeObserver(fitMeasure);}
+  if(!FIT.ro){if(typeof ResizeObserver!=='function'){FIT.on=false;de.classList.remove('fit');return;}FIT.ro=new ResizeObserver(fitMeasure);
+    // a browser older than the standard zoom (Chrome/WebView before 128) gives sizes inside a zoomed box unscaled: taps and the
+    // measure would be off, so there the board keeps its size and only its zone scrolls
+    try{const t=document.createElement('div');t.style.cssText='position:absolute;visibility:hidden;width:100px;height:4px;zoom:.5';document.body.appendChild(t);
+      if(Math.abs(t.getBoundingClientRect().width-50)>2)FIT.min=1;t.remove();}catch(e){FIT.min=1;}}
   FIT.ro.disconnect();FIT.b=b;FIT.zn=zn;FIT.dk=dk;
   if(!b){app.style.removeProperty('--bz');app.style.removeProperty('--dockh');delete app.dataset.fo;FIT.z=1;de.classList.remove('fitkb');return;}
   FIT.ro.observe(zn);FIT.ro.observe(b);if(dk)FIT.ro.observe(dk);else app.style.setProperty('--dockh','0px');
@@ -523,7 +527,7 @@ function fitMeasure(){
   // what sticks out under the board (a badge, a shadow) counts too, so the zone never scrolls by a few pixels
   const z=FIT.z,avail=zn.clientHeight,r=b.getBoundingClientRect(),bot=r.bottom-zn.getBoundingClientRect().top+zn.scrollTop,extra=Math.max(0,zn.scrollHeight-Math.max(avail,bot)),natH=(r.height+extra)/z,sw=b.scrollWidth,cw=b.clientWidth;
   let nz=Math.min(1,natH>avail?(avail-4)/natH:1,sw>cw+2?cw/sw:1);
-  const over=nz<FIT_MIN;nz=Math.max(FIT_MIN,Math.floor(nz*100)/100);
+  const mn=Math.max(FIT_MIN,FIT.min||0),over=nz<mn;nz=Math.max(mn,Math.floor(nz*100)/100);
   if(over)app.dataset.fo='1';else delete app.dataset.fo;
   if(Math.abs(nz-z)>.004){FIT.z=nz;app.style.setProperty('--bz',nz);}
 }
