@@ -102,7 +102,7 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',noTim
     s+=CATF.map((c,k)=>`<div class="ccat ${k===d.gd?'gold':''}"><h4>${CATI[k]} ${c}${k===d.gd?' <em class="cgold">⭐ ×2</em>':''}</h4><div class="cans">${d.pl.map((_,x)=>{const w=d.ans[x][k];const st=d.sa[x][k];const key=x+'_'+k;
         const rej=sc?d.rejF[x][k]:cRejected(d,x,k);const mine=myOb&&myOb.includes(key);const pts=sc?d.rs[x][k]:null;
         const icon=!w?'—':st===0?'✗':rej?'👎':st===2?'✓':'؟';const tap=canVote&&st===1&&x!==v;
-        return `<${tap?'button':'span'} class="ca s${st} ${w?'':'none'} ${rej?'rej':''} ${mine?'mine':''}" style="--c:${col(d,x)}" ${tap?`data-ga="ob" data-i="${x*5+k}"`:''}><small>${nm(d,x)}</small><b>${w?escH(w):'ما كتب'}</b><i>${icon}${pts!=null?` ${pts?'+'+pts:'0'}`:''}</i></${tap?'button':'span'}>`;}).join('')}</div></div>`).join('');
+        return `<${tap?'button':'span'} class="ca cs${st} ${w?'':'none'} ${rej?'rej':''} ${mine?'mine':''}" style="--c:${col(d,x)}" ${tap?`data-ga="ob" data-i="${x*5+k}"`:''}><small>${nm(d,x)}</small><b>${w?escH(w):'ما كتب'}</b><i>${icon}${pts!=null?` ${pts?'+'+pts:'0'}`:''}</i></${tap?'button':'span'}>`;}).join('')}</div></div>`).join('');
     if(!sc){const done=d.seq||S.mode==='local'?false:(()=>{const p=v>=0?S.priv[d.pl[v]]:null;return !!(p&&p.ob&&p.ob.k===cKey(d)&&p.ob.ok);})();
       s+=d.seq||S.mode==='local'?`<button class="btn red wide" data-ga="calc">احسب النقاط ✓</button>`:v>=0?`<button class="btn red wide" data-ga="ok" ${done?'disabled':''}>${done?'✓ ننتظر الباقين':'تمام، احسبوا ✓'}</button>`:'';}
     else if(d.win==null){const tot=d.pl.map((_,x)=>[x,d.rs[x].reduce((a,b)=>a+b,0)]).sort((a,b)=>b[1]-a[1]);

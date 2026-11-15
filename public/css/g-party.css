@@ -413,8 +413,8 @@ button.pv.can:active{transform:scale(.94)}
 .catsb .ca small{font-size:12px;font-weight:700;color:var(--c)}
 .catsb .ca b{font-size:16px;line-height:1.3;overflow-wrap:anywhere}
 .catsb .ca i{font-style:normal;font-weight:800;font-size:13px}
-.catsb .ca.s2 i{color:var(--ok)}.catsb .ca.s1 i{color:#B8860B}
-.catsb .ca.s0,.catsb .ca.rej{opacity:.55}.catsb .ca.s0 b,.catsb .ca.rej b{text-decoration:line-through}.catsb .ca.rej i{color:var(--bad)}
+.catsb .ca.cs2 i{color:var(--ok)}.catsb .ca.cs1 i{color:#B8860B}
+.catsb .ca.cs0,.catsb .ca.rej{opacity:.55}.catsb .ca.cs0 b,.catsb .ca.rej b{text-decoration:line-through}.catsb .ca.rej i{color:var(--bad)}
 .catsb .ca.none{opacity:.45}.catsb .ca.none b{font-weight:600;font-size:14px;text-decoration:none}
 .catsb button.ca{box-shadow:inset 3px 0 0 var(--c),0 0 0 2px rgba(240,180,41,.65)}
 .catsb button.ca:active{transform:scale(.95)}
@@ -427,7 +427,7 @@ button.pv.can:active{transform:scale(.94)}
  .catsb .cform label span{color:var(--mut)}
  .catsb .cform .field{background:#26323f;color:var(--ink);box-shadow:inset 0 0 0 1.5px #33465A}
  .catsb .cform .field::placeholder{color:#6F8296}
- .catsb .ca.s1 i{color:#F5D27A}
+ .catsb .ca.cs1 i{color:#F5D27A}
  .catsb button.ca.mine{background:rgba(229,83,75,.22)}
 }
 
