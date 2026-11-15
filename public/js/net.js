@@ -59,7 +59,10 @@ const freshFp=fp=>fp===SEAL.fp||!!(S.peersByFp[fp]&&fresh(S.peersByFp[fp].peer))
 /* host messages count only once verified: the view sealed to this phone opens with the sender's key and exactly the public
    fields next to it (hostAad), and its hb is newer than the last verified one from that key. S.vh[fp] = the newest such message.
    A copied key cannot make one, and an old one played again is not newer. A key is awake as a host while new verified ones come */
-const vhLive=fp=>{const x=fp&&S.vh[fp];return !!x&&Date.now()-x.at<(x.pr.aw?AW_DEAD:HB_DEAD)&&lastPeers.some(p=>!p.sameTab&&String(p.peer)===x.peer);};
+// (away: said in its last verified message, or since then by the same connection: a phone going to sleep says it at once,
+// before it can seal a new message; it only shortens how long the others wait for it)
+const awOf=(fp,x)=>x.pr.aw===1||!!(S.peersByFp[fp]&&String(S.peersByFp[fp].peer)===x.peer&&S.peersByFp[fp].pr.aw===1);
+const vhLive=fp=>{const x=fp&&S.vh[fp];return !!x&&Date.now()-x.at<(awOf(fp,x)?AW_DEAD:HB_DEAD)&&lastPeers.some(p=>!p.sameTab&&String(p.peer)===x.peer);};
 const hostLive=()=>!!S.hostFp&&vhLive(S.hostFp);
 /* what the host's sealed views vouch for: every public field of its presence, in a canonical form (keys sorted), used as
    the AES-GCM additional data of each view. A copied key cannot publish other host fields: no view would open with them */
@@ -138,7 +141,7 @@ function onPeers(ch){
     const fp=SEAL.fpOf(pr.k);if(!fp||pr.id!==fp||fp===SEAL.fp)continue;
     // a key that is not a real P-256 point can never be sealed to: that peer is not in the room (checked once per key)
     if(SEAL.keyOk(pr.k,recheckPeers)!==true)continue;
-    const pk=String(p.peer);live.add(pk);const sn=S.hbSeen[pk];if(!sn||sn.hb!==pr.hb||sn.fp!==fp){S.hbSeen[pk]={hb:pr.hb,fp,at:now,aw:pr.aw===1};S.rxAt=now;}
+    const pk=String(p.peer);live.add(pk);const sn=S.hbSeen[pk];if(!sn||sn.hb!==pr.hb||sn.fp!==fp){S.hbSeen[pk]={hb:pr.hb,fp,at:now,aw:pr.aw===1};S.rxAt=now;}else sn.aw=pr.aw===1;
     // since when this key's phone is away (screen off, another app)
     if(pr.aw===1){if(!S.awSince[fp])S.awSince[fp]=now;}else delete S.awSince[fp];
     // a copied key may show up twice: the moves of both are tried, only the real device's ones open
@@ -496,7 +499,7 @@ async function doPublish(){
   // this tab was asleep and the same browser opened the room in a newer tab meanwhile: give way before saying anything
   {const x=otherTab(S.code);if(x&&(x.since||0)>(S.tabSince||0)){tabMark(null);leaveRoom(TAB_MSG);return;}}
   const hb=Math.max(Date.now(),(S.lastHb||0)+1);S.lastHb=hb;
-  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-CHAT_N),hb};if(S.away)o.aw=1;const av=myAv();if(av>=0)o.av=av;
+  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-CHAT_N),hb};o.aw=S.away?1:null;const av=myAv();if(av>=0)o.av=av;
   if(S.pubRx){o.rx=S.pubRx;S.pubRx=null;}
   if(amHost()){const G=GAMES[S.st.g],d=S.st.d,me=SEAL.fp,small=(nr.max||3800)<8000;
     const pubD=d?viewOf(G,d,-1):null;const pp={},pubX={};
@@ -551,7 +554,10 @@ setInterval(()=>{if(S.mode!=='online')return;tickGap();if(S.mode!=='online')retu
   if(S.nr&&!deaf&&Date.now()-(S.lastPubAt||0)>=(S.away?1500:HB_MS))schedulePublish();
   tabTick();},2000);
 // away: said at once (the phone may sleep in a moment), and again when it is back
-const setAway=a=>{if(!!S.away===a)return;S.away=a;S.awayAt=a?Date.now():0;if(S.mode==='online'&&S.nr){clearTimeout(S.pubT);S.pubT=null;dSeq();runPublish();}};
+const setAway=a=>{if(!!S.away===a)return;S.away=a;S.awayAt=a?Date.now():0;if(S.mode==='online'&&S.nr){
+  // the last message again with the mark, sent now (a new one needs sealing, which a phone going to sleep may not finish)
+  if(a)try{S.nr.presence({aw:1}).catch(()=>{});}catch(e){}
+  clearTimeout(S.pubT);S.pubT=null;dSeq();runPublish();}};
 try{document.addEventListener('visibilitychange',()=>{NETLOG('vis',document.hidden?'h':'v');setAway(!!document.hidden);if(S.mode==='online'&&!document.hidden){tickGap();tabTick();}});
   addEventListener('pagehide',()=>setAway(true));addEventListener('pageshow',()=>{if(!document.hidden)setAway(false);});document.addEventListener('resume',()=>{if(S.mode==='online')tickGap();});}catch(e){}
 // is the room's host here (this phone, or a peer publishing the game)?
