@@ -223,7 +223,8 @@ function tqTop(d,me,mode){const fin=d.win!=null,ph=d.ph,isL=me===d.lf;let s='',t
     const inner=KH.kid({who:d.pl[d.lf],pose:'walk',mood:ph==='chase'?'g':'k',s:.98})+(held&&isL?KH.cap(15,-24,'cap',.85):'')+(ph==='chase'?tqDust(0,-2):'');
     wk=`<g class="tq-w" data-k="wk"><g class="tq-wi">${inner}</g>${tqPill(0,14,isL?'أنا':tqNm(d,d.lf),{fs:11,h:18,cls:isL?'me':'lf',free:1})}</g>`;
     if(ph==='chase'){const C=d.ch.c;wkc=`<g class="tq-w tq-cz" data-k="wc"><g class="tq-wi">${KH.kid({who:d.pl[C],pose:'walk',mood:'o',s:.98})+KH.cap(15,-24,'cap',.85)+tqDust(0,-2)}</g>${tqPill(0,14,C===me?'أنا':tqNm(d,C),{fs:11,h:18,cls:C===me?'me':'tg',free:1})}</g>`;}}
-  if(ph==='res'&&d.rs&&!fin){const r=d.rs,[x,y]=tqXY(r.th,TQOUT+6);items.push({y,s:KH.kid({who:d.pl[r.nl],pose:'stand',mood:r.nl===r.w?'k':'sad',x,y,s:.95})+KH.cap(x+15,y-24,'cap',.85)+tqPill(x,y+14,(r.nl===me?'أنا':tqNm(d,r.nl))+' · يلف',{fs:11,h:18,cls:'lf'})});}
+  if(ph==='res'&&d.rs&&!fin){const r=d.rs,[x,y]=tqXY(r.th+75,TQOUT+8),v=r.dp[r.nl];items.push({y,s:KH.kid({who:d.pl[r.nl],pose:'stand',mood:r.nl===r.w?'k':'sad',x,y,s:.95})+KH.cap(x+15,y-24,'cap',.85)+tqPill(x,y+14,(r.nl===me?'أنا':tqNm(d,r.nl))+' · يلف',{fs:11,h:18,cls:'lf'})});
+    if(v)top+=tqPill(x,y-60,(v>0?'+':'−')+Math.abs(v),{fs:15,h:25,w:42,cls:'dp '+(v>0?'up':'dn')});}
   s+=`<g class="tq-wb">${wk}${wkc}</g>`+items.sort((a,b)=>a.y-b.y).map(i=>i.s).join('')+`<g class="tq-wf"></g>`;
   s+=KH.sprite('sleepcat',TQCX,TQCY)+`<text class="tq-z" x="${TQCX+14}" y="${TQCY-14}">z</text>`+top;
   if(ph==='chase')s+=tqCheers(d);
