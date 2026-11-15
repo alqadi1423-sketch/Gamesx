@@ -13,7 +13,7 @@ const bdStill=()=>{try{return document.documentElement.classList.contains('lite'
 /* look only: a piece already drawn on its new square slides there from the earlier squares `via` (elements, first = where it
    started), moving by transform only. Its square is lifted above the others while it flies. Nothing waits for it */
 function bdFly(el,via,ms){if(!el||!el.animate||!via.length||bdStill())return;const b=el.getBoundingClientRect();if(!b.width)return;
-  const fr=via.map(v=>{const a=v.getBoundingClientRect();return `translate(${(a.left+a.width/2-b.left-b.width/2).toFixed(1)}px,${(a.top+a.height/2-b.top-b.height/2).toFixed(1)}px) scale(1.1)`;});
+  const k=typeof fitZ==='function'?fitZ():1,fr=via.map(v=>{const a=v.getBoundingClientRect();return `translate(${((a.left+a.width/2-b.left-b.width/2)/k).toFixed(1)}px,${((a.top+a.height/2-b.top-b.height/2)/k).toFixed(1)}px) scale(1.1)`;});
   const host=el.parentElement;if(host&&host.classList){host.classList.add('bd-fly');setTimeout(()=>host.classList.remove('bd-fly'),ms+60);}
   try{el.animate([...fr.map(transform=>({transform})),{transform:'none'}],{duration:ms,easing:'cubic-bezier(.3,.75,.35,1)'});}catch(e){}}
 GAMES.ttt={name:'إكس أو',cat:'board',lbc:'#B9483F',

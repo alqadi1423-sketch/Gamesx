@@ -458,7 +458,7 @@ GAMES.w_cross=w2Race({name:'كلمات متقاطعة',lbc:'#2D5B8C',rounds:2,T:
       return `<button class="w2xc ${i===st.sel?'sel':''} ${on.has(i)?'on':''} ${f&&f===c&&st.chk?'ok':''}" data-ga="c" data-i="${i}">${n&&X.words.some(w=>w.cs[0]===i)?`<small>${n}</small>`:''}${f?escH(f):''}</button>`;}).join('')}</div>`;
     const list=dn=>X.words.filter(w=>w.dn===dn).map(w=>`<button class="w2xl ${cw===w?'on':''} ${w.cs.every(i=>st.f[i]===X.g[i])?'done':''}" data-ga="cl" data-i="${X.words.indexOf(w)}"><b>${w.n}</b>${escH(w.clue)}<small>(${w.cs.length})</small></button>`).join('');
     return `<div class="w2xclue">${cw?`<b>${cw.n} ${cw.dn?'عمودي':'أفقي'}</b> ${escH(cw.clue)}`:''}</div>${grid}${w2Kb({ga:'kk',ok:'hint',okTxt:'اكشف حرف (+10 ث)',okCls:'soft',noEnter:true,dis:c=>'ءئؤى'.includes(c)})}
-      <div class="w2xls"><div><h4>أفقي</h4>${list(0)}</div><div><h4>عمودي</h4>${list(1)}</div></div><p class="note">كشف الحرف يزيد وقتك 10 ثواني${st.pen?` (كشفت ${st.pen})`:''}</p><button class="btn soft w2quit" data-ga="quit">استسلم</button>`;},
+      ${(h=>typeof fitFold==='function'?fitFold('wx','📋 كل التلميحات',h):h)(`<div class="w2xls"><div><h4>أفقي</h4>${list(0)}</div><div><h4>عمودي</h4>${list(1)}</div></div>`)}<p class="note">كشف الحرف يزيد وقتك 10 ثواني${st.pen?` (كشفت ${st.pen})`:''}</p><button class="btn soft w2quit" data-ga="quit">استسلم</button>`;},
   click(a,i,d,ctx,st){const X=w2Xw(w2XId(d,d.rd));
     const step=k=>{const w=w2XWord(X,st.sel,st.dn);if(!w)return;const j=w.cs.indexOf(st.sel)+k;if(j>=0&&j<w.cs.length)st.sel=w.cs[j];};
     const done=()=>{if(X.g.every((c,j)=>!c||st.f[j]===c)){try{sfx('win');}catch(e){}w2RSend(d,ctx.v,{ok:1,f:1,ms:Math.round(Date.now()-st.t0+st.pen*10000)});}};

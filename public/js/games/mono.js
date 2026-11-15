@@ -221,7 +221,7 @@ GAMES.mono={name:'عقارات الحارة',cat:'board',lbc:'#C0392B',noTimer:f
   after(d){const m=d.mv;if(!m||!once('mo'+d.gid+'_'+m.sid))return;if(liteFx())return;const bd=document.getElementById('mboard'),tok=document.getElementById('mt'+m.s);if(!bd||!tok)return;
     S.holdRender=true;const br=bd.getBoundingClientRect();const cell=i=>bd.querySelector(`[data-c="${i}"]`).getBoundingClientRect();
     tok.style.visibility='hidden';const f=document.createElement('div');f.className='mfly';f.style.setProperty('--c',col(d,m.s));bd.appendChild(f);
-    const place=(i,ms)=>{const r=cell(i);f.style.transition=ms?`transform ${ms}ms cubic-bezier(.3,.7,.4,1)`:'none';f.style.transform=`translate(${r.left-br.left+r.width/2-9}px,${r.top-br.top+r.height/2-9}px)`;};
+    const place=(i,ms)=>{const r=cell(i);f.style.transition=ms?`transform ${ms}ms cubic-bezier(.3,.7,.4,1)`:'none';const k=typeof fitZ==='function'?fitZ():1;f.style.transform=`translate(${(r.left-br.left+r.width/2)/k-9}px,${(r.top-br.top+r.height/2)/k-9}px)`;};
     const jumps=m.path.slice(1).filter((x,k)=>(x-m.path[k]+40)%40>1).length,walk=m.path.length-1-jumps;
     const st=Math.max(45,Math.min(110,Math.round((760-jumps*300)/Math.max(1,walk))));place(m.path[0],0);void f.offsetWidth;let k=1;
     const end=()=>{f.remove();tok.style.visibility='';sfx('pop');S.holdRender=false;if(S.renderPending)render();};

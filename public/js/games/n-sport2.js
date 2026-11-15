@@ -321,7 +321,7 @@ GAMES.r_bowl={name:'البولينج',cat:'sport',lbc:'#5B3FA0',
         ${r2Seg('bs',BW_SP,sp,true)}
         ${r2Meter(key,m,[[0,1000,'z0'],[300,700,'z1'],[410,590,'z2']],sv==null,sv,'الإطلاق: وقّف المؤشر في النص')}
         ${r2Stop(key,'roll','🎳 ارمِ الكرة',sv==null)}`;}
-    return s+sh+'</div>';},
+    return s+(typeof fitFold==='function'?fitFold('bw','🎳 ورقة النقاط',sh):sh)+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
     if(a==='ba'){if(Number.isInteger(i)&&i>=0&&i<=16){S.draft.ba=String(i);render();}return;}
     if(a==='bs'){if(Number.isInteger(i)&&i>=0&&i<3){S.draft.bs=String(i);render();}return;}
