@@ -22,7 +22,7 @@
                                  mood s | g | o | sad | k | hm; outfit apron | sport | dealer | thobe; acc glove | ball | cards | chefhat
      KH.face({who,size,ring,mood}) a standalone round avatar <svg> (player strip, lobby, results)
      KH.sprite(pose,x,y,o)       the same kids by pose, plus the other figures: sil | mom | cat | dog | grocer
-     Templates are injected once into the page (KH.ensureDefs); a game adds a theme by adding an OUTFIT/ACC entry
+     Templates are injected once into the page (KH.ensureDefs); a game adds a theme with KH.extend({outfit,acc}) (namespaced keys)
      KH.beam(x,y,ang,len)        the seeker's torch light
      KH.say(x,y,text,o)          a speech bubble (SVG), tail at x,y; o.fill/o.col/o.fs/o.dx
      KH.burst(x,y,text,o)        a star burst («لقيتك!»)
@@ -185,6 +185,13 @@ const KH=(()=>{
     const head=`<use href="#kh-h${w}"/><use href="#kh-m-${mood}"/>`;
     if(pose==='peek')return `<g transform="${tr}" style="${st}">${head}<use href="#kh-peekhands"/></g>`;
     return `<g transform="${tr}" style="${st}"><use href="#kh-b-${BODY[pose]?pose:'stand'}"/>${o.outfit&&OUTFIT[o.outfit]?`<use href="#kh-o-${o.outfit}"/>`:''}<g transform="translate(0 -45)">${head}</g>${pose==='count'?'<use href="#kh-eyeshands"/>':''}${o.acc&&ACC[o.acc]?`<use href="#kh-a-${o.acc}"/>`:''}</g>`;}
+  /* KH.extend({outfit:{key:svg},acc:{key:svg}}): a game adds its own outfits and accessories (namespaced keys, e.g. 'job-chef');
+     added after the templates are on the page, the new ones are injected next to them. Existing keys are never replaced */
+  function extend(o={}){const nw=[];for(const k in o.outfit||{})if(!OUTFIT[k]){OUTFIT[k]=o.outfit[k];nw.push(['o-'+k,o.outfit[k]]);}
+    for(const k in o.acc||{})if(!ACC[k]){ACC[k]=o.acc[k];nw.push(['a-'+k,o.acc[k]]);}
+    if(!defsDone||!nw.length||typeof document==='undefined'||!document.body)return;
+    try{const d=document.createElement('div');d.setAttribute('aria-hidden','true');d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';
+      d.innerHTML=`<svg width="0" height="0"><defs>${nw.map(([id,c])=>`<g id="kh-${id}">${c}</g>`).join('')}</defs></svg>`;document.body.appendChild(d);}catch(e){}}
   // a round face for avatars (player strip, lobby, results): a standalone small <svg>
   const face1=(o={})=>{const w=castOf(o);ensureDefs();return `<svg class="kh-face" viewBox="-17 -18 34 34" width="${o.size||32}" height="${o.size||32}" aria-hidden="true">${o.ring?`<circle cy="-1" r="16.5" fill="${o.bg||CAST[w].c}"/>`:''}<g style="--kc:${o.c||CAST[w].c};--ks:${CAST[w].skin}"><use href="#kh-h${w}"/><use href="#kh-m-${o.mood||CAST[w].m}"/></g></svg>`;};
   // the old single entry point: kid poses go to kid(), the other figures are plain templates
@@ -245,5 +252,5 @@ const KH=(()=>{
       case 'whoosh':noise(.25,{f:1600,v:.08});break;
       case 'tick':tone(1200,.03,{type:'square',v:.04});break;}}
 
-  return {OL,f,T,st,lite,C,art:{roof,facade,court,door,car,trailer,barrel,crate,palm,tree,lamp,pool,tank,shed,tent,field,shop,ruin,defs},bg,CAST,kid,face:face1,sprite,beam,say,burst,tw,graph,walk,banner,card,snd,ensureDefs};
+  return {OL,f,T,st,lite,C,art:{roof,facade,court,door,car,trailer,barrel,crate,palm,tree,lamp,pool,tank,shed,tent,field,shop,ruin,defs},bg,CAST,kid,face:face1,sprite,beam,say,burst,tw,graph,walk,banner,card,snd,ensureDefs,extend};
 })();
