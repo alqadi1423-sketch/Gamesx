@@ -154,6 +154,7 @@ function onPeers(ch){
     P[fp]=cs.length===1?cs[0]:cs.slice().sort((a,b)=>{const x=sc(a),y=sc(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return y[i]-x[i];return String(a.peer)<String(b.peer)?-1:1;})[0];
     S.fpPeer[fp]=P[fp].peer;}
   for(const fp in S.fpPeer)if(!C[fp])delete S.fpPeer[fp];
+  for(const fp in S.awSince)if(!C[fp])delete S.awSince[fp];
   S.peersByFp=P;S.qByFp=Q;
   // the host is the awake key with a verified host message of the highest epoch; at the same epoch the lower role, then the lower key
   // (the role is the one in this phone's seat table when it has one, so a peer cannot move itself up by its own table)
@@ -546,7 +547,8 @@ setInterval(()=>{if(S.mode!=='online')return;tickGap();if(S.mode!=='online')retu
   // connection is stuck one way) stays quiet, so the others go on without it; it counts as cut off when it hears them again
   const deaf=Object.keys(S.peersByFp).length&&Date.now()-(S.rxAt||0)>HB_DEAD;if(deaf)S.lostAt=Date.now();if(!!deaf!==!!S.deafW){S.deafW=!!deaf;NETLOG('deaf',deaf?1:0);}
   {const hl=amHost()?2:hostLive()?1:0;if(hl!==S.hlW){S.hlW=hl;NETLOG('hlive',hl);}}
-  if(S.nr&&!deaf&&Date.now()-(S.lastPubAt||0)>=HB_MS)schedulePublish();
+  // (an away phone that still runs says so more often: the others give it only AW_DEAD)
+  if(S.nr&&!deaf&&Date.now()-(S.lastPubAt||0)>=(S.away?1500:HB_MS))schedulePublish();
   tabTick();},2000);
 // away: said at once (the phone may sleep in a moment), and again when it is back
 const setAway=a=>{if(!!S.away===a)return;S.away=a;S.awayAt=a?Date.now():0;if(S.mode==='online'&&S.nr){clearTimeout(S.pubT);S.pubT=null;dSeq();runPublish();}};
