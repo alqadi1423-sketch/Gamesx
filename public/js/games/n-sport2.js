@@ -163,7 +163,7 @@ GAMES.r_pen.after=function(d){r2Spin();const el=app.querySelector('.pn-svg');if(
   r2Anim(b,[{transform:'translate(160px,176px) scale(1.25)'},{transform:b.style.transform}],420);
   r2Anim(kp,[{transform:'translateY(0)'},{transform:kp.style.transform}],360,90);
   if(t)r2Anim(t,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],300,420);};
-HELP.r_pen='ركلات ترجيح للكل مع بعض: كل جولة كل لاعب يسدد ركلة على حارس، ويكون حارس قدام ركلة لاعب ثاني (الأزواج تتبدل كل جولة). اختر الزاوية من المرمى (فوق أو تحت، يسار أو وسط أو يمين) وقوة الركلة، واختر وين ترمي نفسك وأنت حارس، وثبّت. الكل يختار بالسر، وبعدين تنكشف الركلات. الركلة القوية صعب تنصد بس ممكن تطلع برّا، والهادية مضمونة على المرمى بس الحارس يمسكها لو عرف مكانها، والزوايا الفوق أصعب على الحارس وأسهل تطلع. تحت كل اسم تشوف وين يسدد ووين يرمي نفسه، استغلها. كل لاعب يسدد 5 ركلات، واللي يسجل أكثر يفوز، ولو تعادل المتصدرين يكملون ركلات موت مفاجئ لين يتقدم واحد.'+R2TM;
+HELP.r_pen='ركلات ترجيح للكل مع بعض: كل جولة كل لاعب يسدد ركلة على حارس، ويكون حارس قدام ركلة لاعب ثاني (الأزواج تتبدل كل جولة). اختر الزاوية من المرمى (فوق أو تحت، يسار أو وسط أو يمين) وقوة الركلة، واختر وين ترمي نفسك وأنت حارس، وثبّت. الكل يختار بالسر، وبعدين تنكشف الركلات. الركلة القوية صعب تنصد بس ممكن تطلع برّا، والهادية مضمونة على المرمى بس الحارس يمسكها لو عرف مكانها، والزوايا الفوق أصعب على الحارس وأسهل تطلع. تحت كل اسم تشوف وين يسدد ووين يرمي نفسه، استغلها. كل لاعب يسدد 5 ركلات، واللي يسجل أكثر يفوز، ولو تعادل المتصدرين يكملون ركلات موت مفاجئ لين يتقدم واحد، وإذا بعد 10 جولات موت مفاجئ ما تقدم أحد تنتهي تعادل.'+R2TM;
 
 /* =================================================================
    السهام: 301 with a double out. Three darts a turn: tap where to aim on the board, then stop the steadiness meter;
@@ -506,7 +506,7 @@ HELP.r_hoops='تحدي السلة على كلمة «عصفور». اللي مع�
 /* =================================================================
    الرماية بالقوس: 4 ends of 3 arrows, one arrow each in turn. The wind is shown before the shot (it drifts the arrow);
    aim off the middle to make up for it, then stop the steadiness meter. A gust and the scatter are drawn on the host.
-   10-ring scoring (the inner 10 is X); a tie goes to more X, then more 10s.
+   10-ring scoring (the inner 10 is X); a tie goes to more 10s (X counts as 10), then more X (World Archery).
    ================================================================= */
 const AR_N=12;
 const arPts=(x,y)=>{const r=Math.hypot(x,y);return r>100?0:Math.min(10,11-Math.ceil(r/10||1));};
@@ -517,7 +517,7 @@ function arShoot(d,t,ax,v,miss){const w=d.w+r2N()*.8,sg=arSig(v),x=miss?200:ax+w
   const x2={...d,ar,sid,w:nw,last:miss?`${nm(d,t)} ما أطلق`:`${nm(d,t)}: ${p===0?'برّا الهدف':X?'X 🎯':p}`};
   if(rn>=AR_N)return {...x2,turn:nx.turn,rn,win:r2Best(x2,ar.map((q,s)=>x2.out[s]==='1'?null:arKey(q)))};
   return {...x2,turn:nx.turn,rn};}
-const arTot=q=>q.reduce((a,b)=>a+b[2],0),arX=q=>q.filter(b=>b[3]).length,arKey=q=>arTot(q)*10000+arX(q)*100+q.filter(b=>b[2]===10).length;
+const arTot=q=>q.reduce((a,b)=>a+b[2],0),arX=q=>q.filter(b=>b[3]).length,arKey=q=>arTot(q)*10000+q.filter(b=>b[2]===10).length*100+arX(q);// World Archery: ties go to more 10s (X counts as 10), then more X
 GAMES.r_arch={name:'الرماية بالقوس',cat:'sport',lbc:'#B23A48',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8FCB72"/><rect width="100" height="46" fill="#9BD3F0"/>${[['#fff',40],['#1E2328',32],['#3B8FD9',24],['#E5534B',16],['#F2C230',8]].map(([c,r])=>`<circle cx="50" cy="50" r="${r}" fill="${c}"/>`).join('')}<path d="M50 50L86 18" stroke="#6B3E1F" stroke-width="3"/><path d="M84 13l9 1-6 8zM80 17l8 2-6 6z" fill="#EC6158"/><circle cx="50" cy="50" r="2.4" fill="#1E2328"/></svg>`,
   init:n=>({ar:Array(n).fill(0).map(()=>[]),rn:0,w:0,sid:0,last:''}),
@@ -549,7 +549,7 @@ GAMES.r_arch={name:'الرماية بالقوس',cat:'sport',lbc:'#B23A48',
   onTimeout:d=>({...arShoot(d,d.turn,0,500,true),lxS:d.turn}),
   after(d){r2Spin();const g=app.querySelector('.ar-hit.last');if(g&&once('ar'+d.gid+(d.sid||0)))r2Anim(g,[{opacity:0,transform:g.style.transform+' scale(3)'},{opacity:1,transform:g.style.transform}],320);}
 };
-HELP.r_arch='رماية بالقوس: 4 جولات، في كل جولة كل لاعب يطلق 3 أسهم، سهم سهم بالدور. الهدف 10 حلقات: الأصفر 10 و9، الأحمر 8 و7، الأزرق 6 و5، الأسود 4 و3، والأبيض 2 و1، والدائرة الصغيرة في النص X (تنحسب 10 وتفيد بالتعادل). فوق تشوف الريح واتجاهها وقوتها: الريح تدفع السهم، فحرّك التصويب بالأسهم عكسها، وبعدين وقّف مؤشر ثبات القوس في النص. الريح تتغير بعد كل سهم، وفيها هبّات ما تنعرف. الأعلى مجموع يفوز، ولو تعادلوا يفوز اللي عنده X أكثر ثم 10 أكثر.'+R2TM;
+HELP.r_arch='رماية بالقوس: 4 جولات، في كل جولة كل لاعب يطلق 3 أسهم، سهم سهم بالدور. الهدف 10 حلقات: الأصفر 10 و9، الأحمر 8 و7، الأزرق 6 و5، الأسود 4 و3، والأبيض 2 و1، والدائرة الصغيرة في النص X (تنحسب 10 وتفيد بالتعادل). فوق تشوف الريح واتجاهها وقوتها: الريح تدفع السهم، فحرّك التصويب بالأسهم عكسها، وبعدين وقّف مؤشر ثبات القوس في النص. الريح تتغير بعد كل سهم، وفيها هبّات ما تنعرف. الأعلى مجموع يفوز، ولو تعادلوا يفوز اللي عنده 10 أكثر (والـX تنحسب 10)، وبعدها اللي عنده X أكثر.'+R2TM;
 
 /* =================================================================
    البلياردو الصغير: rotation with nine balls. You must hit the lowest ball on the table first; every ball you pot then

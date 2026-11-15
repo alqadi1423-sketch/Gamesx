@@ -276,7 +276,12 @@ GAMES.mono.bot=(d,s,lv)=>{const res=mReserve(d,s,lv);
   if(d.ph==='roll'||d.ph==='end'){
     if(lv===3&&!d.offer){const o=mOfferFor(d,s);if(o){const nd={...d,offer:o,last:`${nm(d,s)} أرسل عرض صفقة لـ${nm(d,o.to)}`};return isBot(d,o.to)?mBotTrade(nd):nd;}}
     if(lv>1){const b=mBuildPick(d,s,lv);if(b>=0)return botDo(d,s,'bld',b);
-      for(let i=0;i<40;i++)if(mCanUnm(d,s,i)&&d.cash[s]-mUnmCost(i)>=res*2+100)return botDo(d,s,'unm',i);}
+      // hard: a full colour with no cash to build on it: a lone place is mortgaged to pay for the houses (they earn far more)
+      // (and while it has such a colour it never pays a mortgage back, so the two never undo each other)
+      const bl=lv===3?[...Array(40).keys()].find(i=>mCanBuild({...d,cash:d.cash.map(()=>99999)},s,i)):null;
+      if(bl!=null&&d.cash[s]<MP[bl][5]+res+(+d.hs[bl]>=3?300:0)){const lone=[...Array(40).keys()].filter(j=>mCanMort(d,s,j)&&(MP[j][0]!=='p'||!MGRP[MP[j][3]].every(k=>d.own[k]===String(s)))).sort((a,b)=>mPrice(a)-mPrice(b))[0];
+        if(lone!=null)return botDo(d,s,'mrt',lone);}
+      if(bl==null)for(let i=0;i<40;i++)if(mCanUnm(d,s,i)&&d.cash[s]-mUnmCost(i)>=res*2+100)return botDo(d,s,'unm',i);}
     else if(Math.random()<.3){for(let i=0;i<40;i++)if(mCanBuild(d,s,i)&&d.cash[s]>=MP[i][5]+50)return botDo(d,s,'bld',i);}
     if(d.ph==='end')return mEnd(d);
     if(d.jail[s]){const unowned=[...Array(40).keys()].filter(i=>isProp(i)&&d.own[i]==='.').length;

@@ -272,20 +272,23 @@ function w2Sy(){if(W2SY)return W2SY;W2SY=W2SYN.trim().split('\n').map(l=>{const 
 const w2SyTiers=k=>{const T={1:[],2:[],3:[]};w2Sy().forEach((e,i)=>{if(k==='s'?e.A.length>=2:e.B.length>=1)T[e.t].push(i);});
   // antonyms have few hard lines: the medium ones fill in
   if(T[3].length<4)T[3]=T[3].concat(T[2]);return T;};
-// words from other lines: never the question's own line
-const w2Other=(R,skip,n)=>{const L=w2Sy();const out=[];for(let g=0;out.length<n*3&&g<200;g++){const i=Math.floor(R()*L.length);if(skip.includes(i))continue;const e=L[i];const all=[...e.A,...e.B];out.push(all[Math.floor(R()*all.length)]);}return out;};
+// words that mean nearly the same though they sit on different lines: one of them is never a wrong option for another
+const W2NEAR=[['وقت','زمن','زمان','حين','أوان','دهر','عصر'],['عاقل','لبيب','حكيم','رشيد','فطن'],['سكينة','طمأنينة','هدوء','أمان','أمن','سلام','سلم'],['أمنية','رجاء','أمل','مراد','رغبة'],['شرف','كرامة','عزة','مجد','سؤدد'],['سعادة','سرور','فرح','بهجة','هناء','غبطة'],['حزن','غم','كآبة','شقاء','تعاسة','أسى','شجن'],['عطاء','جود','سخاء','كرم','هبة','منحة'],['كره','بغض','كراهية','عداوة'],['بيت','منزل','مسكن','دار','موطن','وطن'],['خوف','فزع','رعب','هلع','وجل'],['تعب','إرهاق','إعياء','جهد','كد','مشقة'],['جمال','حسن','بهاء','وسامة'],['فقر','عوز','فاقة'],['هزيمة','خيبة','فشل','إخفاق'],['جميل','حسن','بديع'],['مريض','عليل','سقيم'],['مرض','سقم','علة'],['شوق','حنين','لهفة','حب','ود'],['غضب','سخط','غيظ'],['عسير','صعب','شاق'],['شدة','عسر','ضنك'],['يسر','رخاء']];
+const w2Near=(x,ban)=>ban.includes(x)||W2NEAR.some(G=>G.includes(x)&&ban.some(b=>G.includes(b)));
+// words from other lines: never the question's own line, nor a word near in meaning to one in ban
+const w2Other=(R,skip,n,ban)=>{const L=w2Sy();const out=[];ban=ban||[];for(let g=0;out.length<n*3&&g<200;g++){const i=Math.floor(R()*L.length);if(skip.includes(i))continue;const e=L[i];const all=[...e.A,...e.B];const x=all[Math.floor(R()*all.length)];if(!w2Near(x,ban))out.push(x);}return out;};
 GAMES.w_syn=w2Quiz({name:'المترادفات',key:'sy',lbc:'#2F7F86',tiers:()=>w2SyTiers('s'),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3AA0A8"/><rect x="8" y="22" width="38" height="30" rx="9" fill="#fff"/><path d="M18 52l-4 12 13-12z" fill="#fff"/><rect x="54" y="40" width="38" height="30" rx="9" fill="#FFE08A"/><path d="M82 70l4 12-13-12z" fill="#FFE08A"/><text x="27" y="44" font-size="17" font-weight="800" fill="#2F7F86" text-anchor="middle">كبير</text><text x="73" y="62" font-size="17" font-weight="800" fill="#8A5A00" text-anchor="middle">ضخم</text><text x="50" y="92" font-size="20" font-weight="900" fill="#fff" text-anchor="middle">=</text></svg>`,
   gen(d,rd){const L=w2Sy();let i=d.qs&&d.qs[rd];if(!(i>=0&&L[i]&&L[i].A.length>=2)){const T=w2SyTiers('s')[qTier(rd)];i=T[Math.floor(srng(d,'syf'+rd)()*T.length)];}
     const e=L[i],R=srng(d,'sy'+rd);const A=w2Shuf(e.A,R);const q=A[0],a=A[1];
-    const c=[...(e.B.length?[e.B[Math.floor(R()*e.B.length)]]:[]),...w2Other(R,[i],3)];
+    const c=[...(e.B.length?[e.B[Math.floor(R()*e.B.length)]]:[]),...w2Other(R,[i],3,e.A)];
     return {q:w2Q('وش مرادف كلمة',q),...w2Opts(R,a,c,3),t:e.t};}});
 GAMES.w_ant=w2Quiz({name:'الأضداد',key:'an',lbc:'#3B3F58',tiers:()=>w2SyTiers('a'),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#2E3350"/><path d="M50 0h50v100H50z" fill="#F4E9D2"/><circle cx="50" cy="50" r="26" fill="#F4E9D2"/><path d="M50 24a26 26 0 0 1 0 52z" fill="#2E3350"/><text x="26" y="88" font-size="15" font-weight="800" fill="#F4E9D2" text-anchor="middle">ليل</text><text x="75" y="88" font-size="15" font-weight="800" fill="#2E3350" text-anchor="middle">نهار</text><circle cx="40" cy="44" r="4" fill="#2E3350"/><circle cx="60" cy="56" r="4" fill="#F4E9D2"/></svg>`,
   gen(d,rd){const L=w2Sy();let i=d.qs&&d.qs[rd];if(!(i>=0&&L[i]&&L[i].B.length)){const T=w2SyTiers('a')[qTier(rd)];i=T[Math.floor(srng(d,'anf'+rd)()*T.length)];}
     const e=L[i],R=srng(d,'an'+rd);const flip=R()<.35;const S1=flip?e.B:e.A,S2=flip?e.A:e.B;const q=w2Pick(S1,R),a=w2Pick(S2,R);
     // the trap: a word that means the same as the question
-    const same=S1.filter(x=>x!==q);const c=[...(same.length?[w2Pick(same,R)]:[]),...w2Other(R,[i],3)];
+    const same=S1.filter(x=>x!==q);const c=[...(same.length?[w2Pick(same,R)]:[]),...w2Other(R,[i],3,S2)];
     return {q:w2Q('وش عكس كلمة',q),...w2Opts(R,a,c,3),t:e.t};}});
 
 /* ---------- plurals: one line holds words that look alike (often from one root), singular:plural ---------- */

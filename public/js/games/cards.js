@@ -251,7 +251,9 @@ GAMES.uno={name:'ألوان وأرقام',cat:'cards',lbc:'#C2362F',points:d=>d.
   hide:{seat:['hands'],all:['draw']},
   mask:(d,seat)=>{const v=viewOf({hide:GAMES.uno.hide},d,seat);return v!==d&&typeof d.drew==='string'&&seat!==d.turn?{...v,drew:maskVal(d.drew)}:v;},
   // a 'said UNO' on this phone belongs to the player whose turn just ended, never to the next one
-  onTimeout:d=>{S.unoSaid=null;return {...d,drew:false,uno:-1,turn:uStep(d,d.turn,1,d.dir)};},
+  // a player whose time runs out draws a card (unless he already drew this turn) and the turn moves on
+  onTimeout:d=>{S.unoSaid=null;const t=d.turn;let x=d,g='';if(!d.drew){[g,x]=uDraw(d,1);x={...x,hands:[...x.hands]};x.hands[t]+=g;}
+    return {...x,drew:false,uno:-1,turn:uStep(x,t,1,x.dir),last:`${nm(d,t)} خلص وقته${g?' وسحب ورقة':''}`};},
   // a player who leaves mid-turn takes a drawn card's turn with them, and the turn goes on in the game's direction
   onSkip(nd,d){if(nd.win!=null)return nd;const uno=nd.uno>=0&&nd.out[nd.uno]==='1'?-1:nd.uno;
     return nd.out[d.turn]==='1'?{...nd,uno,drew:false,turn:uStep(d,d.turn,1,d.dir,nd.out)}:{...nd,uno};},
@@ -325,12 +327,49 @@ GAMES.uno.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);
     else{sc=4+(C[c[0]]-1)*.6+(lack[c[0]]?2.5:0)+(c[0]!==d.color?(C[c[0]]>C[d.color]?1:-.5):0);
       if('SRD'.includes(v))sc+=danger?5+(v==='D'?1:0):two?2.5:left<=3?1:-.5;else sc+=+v/10;}
     return sc+Math.random()*(lv===3?.3:1);};
+  // hard: tries each move against many guesses of the other hands (drawn only from the cards it has not seen) and plays the best
+  if(lv===3&&!lvRand(lv)){const m=uLook(d,s,H,ok);if(m.c==='pass')return botDo(d,s,'pass',0);if(m.col){S.wild=m.i;return uno(botDo(d,s,'wc','rgby'.indexOf(m.col)));}return uno(botDo(d,s,'play',m.i));}
   let i;if(lvRand(lv))i=pickR(ok);else{ok.sort((a,b)=>score(b)-score(a));i=ok[0];
     // a drawn colour card is kept for later when the hand is still long
     if(d.drew&&lv>1&&H[i][0]==='k'&&H.length>4&&!danger)return botDo(d,s,'pass',0);}
   if(H[i][0]==='k'){const cs='rgby'.split('').sort((a,b)=>(C[b]+(lack[b]?1.5:0))-(C[a]+(lack[a]?1.5:0)));
     const pick=C[cs[0]]||lack[cs[0]]?cs[0]:'rgby'[rnd(4)];S.wild=i;return uno(botDo(d,s,'wc','rgby'.indexOf(pick)));}
   return uno(botDo(d,s,'play',i));};
+
+/* the hard bot's look-ahead: it plays each move it may make to the end of the round many times, each time with the other
+   hands dealt at random from the cards it cannot see (the deck minus its own hand and the pile), every player then playing a
+   plain greedy game, and keeps the move that wins most often. It knows only what a player at the table knows */
+function uLook(d,s,H,ok){const al=aliveSeats(d),n=d.pl.length,dir0=d.dir,top0=d.disc.slice(-2);
+  const seen={};for(const c of [...H,...cardsOf(d.disc)])seen[c]=(seen[c]||0)+1;const pool=[];for(const c of cardsOf(unoDeckAll())){if(seen[c])seen[c]--;else pool.push(c);}
+  const sizes=d.hands.map(h=>h.length/2);
+  const cands=[];for(const i of ok){const c=H[i];if(c[0]==='k'){for(const col of 'rgby')cands.push({i,c,col});}else cands.push({i,c});}
+  if(d.drew)cands.push({c:'pass'});
+  if(cands.length===1)return cands[0];
+  const R=Math.max(16,Math.min(80,Math.floor(480/cands.length)));
+  const play=(st,t,c,col)=>{const h=st.h[t];h.splice(h.indexOf(c),1);st.top=c;st.col=c[0]==='k'?col:c[0];if(!h.length)return t;
+    const nx=k=>{let x=t;for(let m=0;m<k;m++){do{x=((x+st.dir)%n+n)%n;}while(st.out[x]);}return x;};
+    if(c[1]==='S')st.t=nx(2);else if(c[1]==='R'){st.dir=-st.dir;st.t=st.al===2?t:nx(1);}
+    else if(c[1]==='D'||c[1]==='F'){const tg=nx(1);for(let m=0;m<(c[1]==='D'?2:4);m++){const x=uLkDraw(st);if(x)st.h[tg].push(x);}st.t=nx(2);}else st.t=nx(1);return -1;};
+  const canP=(st,c,h)=>c[0]==='k'?(c[1]!=='F'||!h.some(x=>x[0]===st.col)):c[0]===st.col||c[1]===st.top[1];
+  const greedy=(st,t)=>{const h=st.h[t];let b=-1,bs=-1e9;const C={r:0,g:0,b:0,y:0};h.forEach(x=>{if(x[0]!=='k')C[x[0]]++;});
+    for(let k=0;k<h.length;k++){const c=h[k];if(!canP(st,c,h))continue;const sc=c[0]==='k'?-3+(h.length<=2?10:0):C[c[0]]+('SRD'.includes(c[1])?1.5:0)+Math.random()*.5;if(sc>bs){bs=sc;b=k;}}
+    if(b<0)return null;const c=h[b];return [c,c[0]==='k'?'rgby'.split('').sort((a,b2)=>C[b2]-C[a])[0]:null];};
+  const roll=(cd,p)=>{
+    const st={h:[],dr:null,top:top0,col:d.color,dir:dir0,t:s,al:al.length,out:d.pl.map((_,x)=>d.out[x]==='1')};let at=0;
+    for(let x=0;x<n;x++){if(x===s){st.h.push([...H]);continue;}st.h.push(st.out[x]?[]:p.slice(at,at+sizes[x]));if(!st.out[x])at+=sizes[x];}st.dr=p.slice(at);
+    let w=-1;if(cd.c==='pass'){st.t=uStep(d,s,1,d.dir);}else w=play(st,s,cd.c,cd.col);
+    for(let ply=0;w<0&&ply<200;ply++){const t=st.t;let mv=greedy(st,t);
+      if(!mv){const x=uLkDraw(st);if(x){st.h[t].push(x);if(canP(st,x,st.h[t])&&(x[0]!=='k'||st.h[t].length<=4)){const C={r:0,g:0,b:0,y:0};st.h[t].forEach(y=>{if(y[0]!=='k')C[y[0]]++;});mv=[x,x[0]==='k'?'rgby'.split('').sort((a,b2)=>C[b2]-C[a])[0]:null];}}
+        if(!mv){let x2=t;do{x2=((x2+st.dir)%n+n)%n;}while(st.out[x2]);st.t=x2;continue;}}
+      w=play(st,t,mv[0],mv[1]);}
+    if(w>=0)return w===s?1:0;// unfinished: the fewer cards left against the best other hand, the better
+    let best=99;st.h.forEach((h,x)=>{if(x!==s&&!st.out[x])best=Math.min(best,h.length);});return st.h[s].length<best?.6:st.h[s].length===best?.4:.2;};
+  // every move is tried on the same guesses, so the comparison is fair
+  const v=cands.map(()=>0);for(let r=0;r<R;r++){const p=[...pool];for(let k=p.length-1;k>0;k--){const j=rnd(k+1);[p[k],p[j]]=[p[j],p[k]];}cands.forEach((cd,k)=>{v[k]+=roll(cd,p);});}
+  let bi=0;v.forEach((x,k)=>{if(x>v[bi])bi=k;});return cands[bi];}
+// the whole pack once (the pile sees no repeats beyond it), and a card taken from the look-ahead's own pile
+const unoDeckAll=()=>{let a='';for(const c of 'rgby'){a+=c+'0';for(const v of '123456789SRD')a+=c+v+c+v;}for(let k=0;k<4;k++)a+='kWkF';return a;};
+function uLkDraw(st){if(!st.dr.length)return null;return st.dr.pop();}
 
 /* ---------- dominoes ---------- */
 const DOMH={2:7,3:6,4:6,5:4,6:4,7:3,8:3};

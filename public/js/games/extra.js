@@ -77,8 +77,18 @@ GAMES.oldmaid={outDone:true,name:'الشايب',cat:'cards',lbc:'#7B3F61',noTime
   // whoever is dealt only pairs has finished before the first draw
   start:d=>{let out=d.out;const fin=[];d.hands.forEach((h,s)=>{if(!h){out=setAt(out,s,'1');fin.push(s);}});if(!fin.length)return d;
     return {...d,out,fin,turn:out[d.turn]==='1'?nextSeat(d,d.turn,out):d.turn,last:`${fin.map(s=>nm(d,s)).join(' و')} طلع ورقه كله أزواج وخلّص`};},
-  // a player who leaves while arranging: the next one draws
-  onSkip:(nd,d)=>nd.turn!==d.turn?{...nd,ph:'take'}:nd,
+  // a player who leaves while arranging: the next one draws. The cards of a player who left go to the next one still in
+  // (the pairs they make leave his hand), so every pair can still be made and the game ends; a player who left never wins
+  onSkip(nd,d){let x=nd.turn!==d.turn?{...nd,ph:'take'}:nd;if(d.win!=null)return x;
+    let out=x.out;const hands=[...x.hands],fin=[...(x.fin||[])],up=[...(x.up||x.pl.map(()=>-1))];let moved=false;
+    x.pl.forEach((_,s)=>{if(out[s]!=='1'||!hands[s]||fin.includes(s))return;const r=nextSeat(x,s,out);if(r===s)return;
+      hands[r]=omKeep([...cardsOf(hands[r]),...cardsOf(hands[s])]).join('');hands[s]='';up[s]=-1;up[r]=-1;moved=true;
+      if(!hands[r]){out=setAt(out,r,'1');fin.push(r);}});
+    if(!moved&&x.win==null)return x;
+    const al=aliveSeats(x,out),turn=out[x.turn]==='1'?nextSeat(x,x.turn,out):x.turn,ph=turn!==x.turn?'take':x.ph;
+    x={...x,hands,out,fin,up,turn,ph};
+    if(al.length<=1)return {...x,win:fin.length?fin[0]:al.length?al[0]:'d',loser:fin.length?al[0]??null:null};
+    return {...x,win:null};},
   viewer:d=>d.win!=null?null:d.turn,
   coverMsg:d=>d.last||'',
   winText:d=>d.win!=null&&d.loser!=null?`${nm(d,d.win)} خلّص أول، و${nm(d,d.loser)} علق معه الشايب`:null,
