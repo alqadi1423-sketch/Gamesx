@@ -222,7 +222,7 @@ function demote(){NETLOG('demote',S.epoch);S.hostFp=null;S.hostK=null;S.hostKeyC
 function followHost(fp){
   const V=S.vh[fp],pr=V.pr,ids=validIds(pr.ids),v=V.v;if(!ids)return;
   const newHost=S.hostFp!==fp||S.hostK!==pr.k;
-  if(newHost)NETLOG('host',ids.indexOf(fp),pr.h);S.seenHost=true;S.hostAw=pr.aw===1;S.hostFp=fp;S.hostK=pr.k;S.hostGoneAt=null;S.epoch=pr.h;clearTimeout(S.takeT);S.restore=null;
+  if(newHost)NETLOG('host',ids.indexOf(fp),pr.h);S.seenHost=true;S.hostFp=fp;S.hostK=pr.k;S.hostGoneAt=null;S.epoch=pr.h;clearTimeout(S.takeT);S.restore=null;
   S.ids=ids;const me=ids.indexOf(SEAL.fp);S.me=me<0?null:me;if(S.me!=null||Date.now()-(S.joinT||0)>JOIN_WAIT)S.pending=false;
   const c=cleanCfg(pr.cfg);
   if((c.kick||[]).includes(SEAL.fp)){try{localStorage.removeItem(LSK.room);}catch(e){}leaveRoom('صاحب الغرفة طلّعك منها');return;}
@@ -300,8 +300,11 @@ function maybeTakeOver(){
   const order=bound.length?bound.sort((a,b)=>roleOfFp(a)-roleOfFp(b)):pres.length===1||now-S.hostGoneAt>2*TAKE_SLOW?pres.sort():[];
   const sv=S.restore,resume=!!(sv&&sv.host&&sv.st&&(sv.ep||0)>=S.epoch);
   const G=GAMES[S.st.g],d=S.hst?S.hst.d:S.st.d,secret=!resume&&isSecretG(G)&&!!d&&d.win==null;
+  // a host that said it was going to sleep and is still connected (asleep, not reloading: a reload leaves the room and comes
+  // back within a few seconds, so it gets the usual wait)
+  const hv=S.hostFp&&S.vh[S.hostFp],asleep=!!(hv&&awOf(S.hostFp,hv)&&lastPeers.some(p=>!p.sameTab&&String(p.peer)===hv.peer));
   const bkOk=!!(S.bk&&S.hst&&S.bk.s===S.hst.s&&S.bk.ep===S.epoch);
-  const i=order.indexOf(SEAL.fp),wait=(resume?RESUME_WAIT:(!secret||bkOk)?(S.hostAw?TAKE_AW:TAKE_FAST):TAKE_SLOW)+Math.max(0,i)*TAKE_NEXT,left=wait-(now-S.hostGoneAt);
+  const i=order.indexOf(SEAL.fp),wait=(resume?RESUME_WAIT:(!secret||bkOk)?(asleep?TAKE_AW:TAKE_FAST):TAKE_SLOW)+Math.max(0,i)*TAKE_NEXT,left=wait-(now-S.hostGoneAt);
   if(i<0||left>0){clearTimeout(S.takeT);S.takeT=setTimeout(()=>{if(S.mode==='online'&&!amHost())maybeTakeOver();},i<0?2000:Math.max(left,500)+60);if(i!==0)render();return;}
   takeOver(resume?'resume':bkOk?'bk':secret?'redeal':'public');
 }
