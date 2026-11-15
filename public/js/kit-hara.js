@@ -17,12 +17,22 @@
    The cast (app-wide characters, one kid per player colour, core.js COLS order):
      KH.CAST[i]                  {n name, g 'b'|'g', c colour, skin, m default mouth, t personality}: 0 حمود (cap), 1 سعود (ghutra),
                                  2 نورة (hijab), 3 سارة (glasses, braid), 4 ريم (pigtails), 5 بدر (taqiyah), 6 لولوة (hijab, flower), 7 ناصر (shemagh)
-     KH.kid({who|seat|c,pose,mood,outfit,acc,s,flip,x,y})  one kid, a <g> of 3–6 <use>s (~300 bytes) for inside an <svg>:
-                                 pose stand | walk | peek | cheer | caught | sad | think | count | torch;
-                                 mood s | g | o | sad | k | hm; outfit apron | sport | dealer | thobe; acc glove | ball | cards | chefhat
-     KH.face({who,size,ring,mood}) a standalone round avatar <svg> (player strip, lobby, results)
+     KH.kid({who|seat|c,pose,mood,outfit,acc,hat,s,flip,x,y})  one kid, a <g> of 3–7 <use>s (~300 bytes) for inside an <svg>:
+                                 pose stand | walk | peek | cheer | caught | sad | think | count | torch | wave;
+                                 mood s | g | o | sad | k | hm; outfit apron | sport | dealer | thobe | host | coat | gi | lab | smock | sailor;
+                                 acc (held) mic | pawn | crownp | dice | rod | pencil | brush | book | lens | sword | watch | gavel | flag |
+                                 balloon | bow | dart | cue | club | bball | bowl | oar | tile | piece | trophy | letter | coin | dallah | spoon |
+                                 buzzer | cards, (on the body) glove | ball; hat chefhat | crown | fedora | bulb | helmet
+     KH.face({who,size,ring,mood,hat}) a standalone round avatar <svg> (player strip, lobby, results)
+     KH.fig(inner,{vb,cls,w,h})  kids as a standalone <svg> for HTML (the default box holds one standing kid with a hat)
+     KH.faceImg(o) KH.kidImg(o,{vb,cls,style})  the same face / kid as one element (<kh-p class="khi">) showing a picture made once
+                                 per look and kept as a CSS rule: what the app's shell uses, no SVG nodes in the page
      KH.sprite(pose,x,y,o)       the same kids by pose, plus the other figures: sil | mom | cat | dog | grocer
-     Templates are injected once into the page (KH.ensureDefs); a game adds a theme with KH.extend({outfit,acc}) (namespaced keys)
+     Templates go into one hidden <svg><defs> on the page, each the first time it is used (KH.need); a game dresses the cast
+     with OUTFIT/ACC entries (js/cast-themes.js picks them per game) or adds its own with KH.extend({outfit,acc}) (namespaced keys)
+   The cast in the shell (core.js): KH.kidOf(role) the player's kid (picked avatar, else their colour's kid), KH.pface(role,o),
+     KH.pkid(role,o,{vb,cls}) (pictures, in the player's colour), KH.lkSet(seat,kid) (one phone), KH.homeScene()
+   Effects:
      KH.beam(x,y,ang,len)        the seeker's torch light
      KH.say(x,y,text,o)          a speech bubble (SVG), tail at x,y; o.fill/o.col/o.fs/o.dx
      KH.burst(x,y,text,o)        a star burst («لقيتك!»)
@@ -147,20 +157,77 @@ const KH=(()=>{
     sad:shadowK+legsStand+arm('M-8 -30l-2 12M8 -30l2 12')+hand(-10,-17)+hand(10,-17)+torso,
     think:shadowK+legsStand+arm('M-8 -31l-4 11')+hand(-12.5,-19)+torso+arm('M8 -31q6 4 0 -4')+hand(4,-37),
     count:shadowK+legsStand+torso,
+    wave:shadowK+legsStand+arm('M-8 -31l-4 11')+hand(-12.5,-19)+torso+arm('M8 -31l8 -11')+hand(16.5,-43),
     torch:shadowK+legsWalk+arm('M-8 -31q-6 6-4 12')+arm('M7 -31l12 2')+`<g transform="translate(20 -29)"><rect x="-1" y="-3" width="12" height="6" rx="2" fill="#5D6E86"${s2(1.3)}/><rect x="10" y="-4.5" width="4" height="9" rx="1.5" fill="#F0B429"${s2(1.3)}/></g>`+hand(19,-29)+torso};
-  const POSE_MOOD={cheer:'g',caught:'o',sad:'sad',think:'hm',count:'s'};
+  const POSE_MOOD={cheer:'g',caught:'o',sad:'sad',think:'hm',count:'s',wave:'g'};
   const POSE_LOOK={torch:1,walk:1};
-  // outfits (over the shirt) and accessories, so every game can dress the cast its own way
+  // outfits (over the shirt) and accessories, so every game can dress the cast its own way (js/cast-themes.js picks them per game)
   const OUTFIT={
     apron:`<path d="M-7 -33h14v19h-14z" fill="#fff"${s2(1.3)}/><path d="M-3 -24h6v4h-6z" fill="none" stroke="#C8D3E0" stroke-width="1.2"/><path d="M-7 -30l-3-4M7 -30l3-4" stroke="#fff" stroke-width="1.6"/>`,
     sport:`<path d="M-10 -26h20" stroke="#fff" stroke-width="2.4"/><text y="-28" font-size="7" font-weight="800" fill="#fff" text-anchor="middle">10</text>`,
     dealer:`<path d="M-9 -22q0-10 4-13l5 8 5-8q4 3 4 13z" fill="#1F2A40"${s2(1.2)}/><path d="M-3.4 -33l3.4 2 3.4-2v4l-3.4-2-3.4 2z" fill="#B23A3A"${s2(1)}/>`,
-    thobe:`<path d="M-10 -22q-1-14 10-14t10 14l1 19h-22z" fill="#FAFBFD"${s2(1.5)}/><path d="M0 -33v10" stroke="#C8D3E0" stroke-width="1.2"/>`};
+    thobe:`<path d="M-10 -22q-1-14 10-14t10 14l1 19h-22z" fill="#FAFBFD"${s2(1.5)}/><path d="M0 -33v10" stroke="#C8D3E0" stroke-width="1.2"/>`,
+    // a quiz host's jacket and bow tie
+    host:`<path d="M-10 -22q-1-14 10-14t10 14z" fill="#2D3A5C"${s2(1.5)}/><path d="M-3.8 -35.6l3.8 10 3.8-10z" fill="#fff"/><path d="M-3.2 -33.2l3.2 1.8 3.2-1.8v3.6l-3.2-1.8-3.2 1.8z" fill="#EC6158"${s2(.9)}/>`,
+    // a detective's trench coat (المافيا)
+    coat:`<path d="M-10 -22q-1-14 10-14t10 14l1 12h-22z" fill="#C9A16E"${s2(1.4)}/><path d="M0 -35v24M-10.4 -20h20.8" stroke="#8A6A4A" stroke-width="1.5"/><path d="M-4 -35.4l4 5 4-5" fill="none" stroke="#8A6A4A" stroke-width="1.3"/>`,
+    // a karate gi with a black belt (fights)
+    gi:`<path d="M-10 -22q-1-14 10-14t10 14z" fill="#FAFBFD"${s2(1.5)}/><path d="M-5 -35.4l7 11M5 -35.4l-5.6 8.6" stroke="#C8D3E0" stroke-width="1.4"/><path d="M-10.2 -22.4h20.4" stroke="#2A2F45" stroke-width="3"/><path d="M3 -22l2 5M3 -22l-1 5" stroke="#2A2F45" stroke-width="1.6" stroke-linecap="round"/>`,
+    // an open lab coat (science)
+    lab:`<path d="M-10 -22q-1-14 10-14t10 14l1 9h-22z" fill="#FAFBFD"${s2(1.4)}/><path d="M-3.6 -35.5l3.6 8 3.6-8v22h-7.2z" fill="${kc}"/><path d="M4.4 -30h3.4v4h-3.4z" fill="none" stroke="#9FB3C8" stroke-width="1"/><path d="M5.6 -31.6v3" stroke="#2F80ED" stroke-width="1.2"/>`,
+    // a painter's smock with paint drops (drawing games)
+    smock:`<path d="M-8 -34h16v20h-16z" fill="#F4F6FA"${s2(1.3)}/><circle cx="-4" cy="-27" r="1.7" fill="#EC6158"/><circle cx="3" cy="-23" r="1.7" fill="#4AB1E8"/><circle cx="-1.6" cy="-19" r="1.7" fill="#F0B429"/>`,
+    // a sailor collar (ships)
+    sailor:`<path d="M-8 -35.5l8 9 8-9q3 3 2 6l-10 8-10-8q-1-3 2-6z" fill="#2F80ED"${s2(1.2)}/><path d="M-6.4 -32.4l6.4 7 6.4-7" fill="none" stroke="#fff" stroke-width="1.2"/><path d="M-2 -25l2 3 2-3z" fill="#EC6158"/>`};
+  /* accessories. Where one sits (ACC_AT): h held in the right hand (drawn around the hand at 0,0, which is drawn over its handle;
+     KH.kid moves it with the pose), H on the head (head coordinates, also on KH.face), b on the body */
+  const hnd=`<circle r="3.3" fill="${sk}"${s2(1.3)}/>`;
+  const HELD={
+    mic:`<path d="M0 1l-3.4-10" stroke="#2A2F45" stroke-width="3.6" stroke-linecap="round"/><circle cx="-4.4" cy="-12.8" r="4.5" fill="#C9D3DE"${s2(1.3)}/><path d="M-7.6 -13.8l6.4 2M-6.6 -16.4l5 1.8" stroke="#8A99AA" stroke-width="1"/><path d="M-5.4 -7.8l3.6-1.2" stroke="#EC6158" stroke-width="2"/>`,
+    pawn:`<path d="M-5 -3h10l-2-4h-1.6l-.4-4.2a3.4 3.4 0 1 0-2 0l-.4 4.2H-3z" fill="#FAFBFD"${s2(1.3)}/>`,
+    crownp:`<path d="M-5 -3h10l-1.4-4.6h-7.2zM-4.6 -7.6l-.8-6 2.8 2.4L0 -15.4l2.6 4.2 2.8-2.4-.8 6z" fill="#F0B429"${s2(1.2)}/>`,
+    dice:`<g transform="rotate(-12 0 -8)"><rect x="-5.5" y="-13.5" width="11" height="11" rx="2.6" fill="#fff"${s2(1.3)}/><circle cx="-2.5" cy="-10.5" r="1.25" fill="#EC6158"/><circle cy="-8" r="1.25" fill="#EC6158"/><circle cx="2.5" cy="-5.5" r="1.25" fill="#EC6158"/></g>`,
+    rod:`<path d="M-1 2L14 -30" stroke="#8A5A2B" stroke-width="2.4" stroke-linecap="round"/><path d="M14 -30q5 12 3.4 25" fill="none" stroke="#5F7590" stroke-width=".9"/><path d="M13.6 -2.6q4-4 8 0q-4 4-8 0zM21.6 -2.6l3-3v6z" fill="#4AB1E8"${s2(1)}/>`,
+    pencil:`<g transform="rotate(22)"><rect x="-2.2" y="-15" width="4.4" height="16" fill="#F0B429"${s2(1.1)}/><path d="M-2.2 -15l2.2-4.6 2.2 4.6z" fill="#F2C29B"${s2(1.1)}/><path d="M-.6 -18.2l.6-1.4.6 1.4z" fill="${OL}"/><rect x="-2.2" y="1" width="4.4" height="3" rx="1" fill="#EC6158"${s2(1.1)}/></g>`,
+    brush:`<g transform="rotate(20)"><path d="M0 3V-12" stroke="#C98F58" stroke-width="2.8" stroke-linecap="round"/><path d="M-2 -12h4l-.4 2.6h-3.2z" fill="#9FB3C8"/><path d="M-2 -12q.4-6 2-8.4q1.6 2.4 2 8.4z" fill="#EC6158"${s2(1)}/></g>`,
+    book:`<rect x="-7" y="-14" width="13" height="16" rx="1.6" fill="#2F80ED"${s2(1.3)}/><path d="M-4 -14v16" stroke="#fff" stroke-width="1.2" opacity=".6"/><path d="M-1 -9h5M-1 -6h5" stroke="#fff" stroke-width="1.1"/>`,
+    lens:`<path d="M-1 1l5-8.6" stroke="#8A5A2B" stroke-width="3" stroke-linecap="round"/><circle cx="6.4" cy="-13" r="6" fill="#CDEAFA" fill-opacity=".75" stroke="#5D6E86" stroke-width="2"/><circle cx="6.4" cy="-13" r="7" fill="none"${s2(1)}/><path d="M3.4 -15.4q2-2.2 4.6-1.6" fill="none" stroke="#fff" stroke-width="1.3"/>`,
+    sword:`<path d="M.4 -3L2.4 -27" stroke="${OL}" stroke-width="5.6" stroke-linecap="round"/><path d="M.4 -3L2.4 -27" stroke="#CFE8F7" stroke-width="3.4" stroke-linecap="round"/><path d="M-4.4 -3.6h9" stroke="${OL}" stroke-width="4.4" stroke-linecap="round"/><path d="M-4.4 -3.6h9" stroke="#F0B429" stroke-width="2.4" stroke-linecap="round"/>`,
+    watch:`<circle cx="1" cy="-10.4" r="6.4" fill="#fff"${s2(1.4)}/><path d="M1 -10.4V-14.4M1 -10.4l2.8 1.6" stroke="${OL}" stroke-width="1.3" stroke-linecap="round"/><rect x="-.5" y="-19.6" width="3" height="2.8" rx=".8" fill="#EC6158"${s2(1)}/>`,
+    gavel:`<path d="M-1 1l7-12" stroke="#8A5A2B" stroke-width="2.6" stroke-linecap="round"/><rect x="1" y="-19" width="12" height="6" rx="1.6" fill="#B07750"${s2(1.3)} transform="rotate(30 7 -16)"/>`,
+    flag:`<path d="M0 3V-26" stroke="#5D6E86" stroke-width="1.8" stroke-linecap="round"/><path d="M0 -26h13l-3 5 3 5H0z" fill="#2E9E5B"${s2(1.2)}/><path d="M3 -21h6" stroke="#fff" stroke-width="1.2"/>`,
+    balloon:`<path d="M0 0q-3-8 1.4-15.6" fill="none" stroke="#5F7590" stroke-width=".9"/><ellipse cx="2" cy="-24" rx="7" ry="8.4" fill="${kc}"${s2(1.4)}/><path d="M.4 -15.4l1.6-1.4 1.6 1.4z" fill="${kc}"${s2(1)}/><path d="M-1.6 -27q1-3 3.6-3.6" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.4" stroke-linecap="round"/>`,
+    bow:`<path d="M3 -18q10 13 0 26" fill="none" stroke="#8A5A2B" stroke-width="2.6" stroke-linecap="round"/><path d="M3 -18V8" stroke="#C8D3E0" stroke-width=".9"/><path d="M-8 -5h16" stroke="#5D6E86" stroke-width="1.3"/><path d="M8 -5l-3-2v4z" fill="#5D6E86"/><path d="M-8 -5l-2-2.4M-8 -5l-2 2.4" stroke="#EC6158" stroke-width="1.4"/>`,
+    dart:`<g transform="rotate(-30)"><path d="M0 -1V-14" stroke="#5D6E86" stroke-width="1.8"/><path d="M0 -14l-1.4-5h2.8z" fill="#5D6E86"/><path d="M0 1l-3.4 4h6.8z" fill="#EC6158"${s2(1)}/></g>`,
+    cue:`<path d="M-5 9L15 -30" stroke="${OL}" stroke-width="3.8" stroke-linecap="round"/><path d="M-5 9L15 -30" stroke="#C98F58" stroke-width="2.2" stroke-linecap="round"/><path d="M13.4 -26.8L15 -30" stroke="#F4F6FA" stroke-width="2.2" stroke-linecap="round"/>`,
+    club:`<path d="M-1 -2L4 15" stroke="#9FB3C8" stroke-width="2.2" stroke-linecap="round"/><path d="M2.6 14l7 1.6-1 3.2-7-1.4z" fill="#5D6E86"${s2(1)}/>`,
+    bball:`<circle cx="3" cy="-9" r="7" fill="#F2874B"${s2(1.4)}/><path d="M-4 -9h14M3 -16v14M-1.6 -14.4q4.6 5.4 0 10.8M7.6 -14.4q-4.6 5.4 0 10.8" fill="none" stroke="${OL}" stroke-width=".9"/>`,
+    bowl:`<circle cx="3" cy="-6" r="7" fill="#2F3D5C"${s2(1.4)}/><circle cx="1" cy="-9.4" r="1.1" fill="#9FB3C8"/><circle cx="4.2" cy="-10" r="1.1" fill="#9FB3C8"/><circle cx="2.8" cy="-7" r="1.1" fill="#9FB3C8"/>`,
+    oar:`<path d="M-6 -22L6 10" stroke="#C98F58" stroke-width="2.4" stroke-linecap="round"/><path d="M4 6l5 12-3.6 1.4-4.4-12z" fill="#C98F58"${s2(1.2)}/>`,
+    tile:`<g transform="rotate(-10)"><rect x="-5" y="-21" width="10" height="19" rx="2" fill="#FAFBFD"${s2(1.3)}/><path d="M-3.4 -11.5h6.8" stroke="${OL}" stroke-width="1"/><circle cy="-16.4" r="1.25" fill="${OL}"/><circle cx="-2" cy="-8.2" r="1.15" fill="${OL}"/><circle cx="2" cy="-5" r="1.15" fill="${OL}"/></g>`,
+    piece:`<path d="M-6 -17h4a2.6 2.6 0 1 1 4 0h4v4.4a2.6 2.6 0 1 1 0 4V-4h-12z" fill="#F0B429"${s2(1.3)}/>`,
+    trophy:`<path d="M-5 -21h10v4q0 6-5 6t-5-6z" fill="#F0B429"${s2(1.2)}/><path d="M-5 -19q-4 0-3 3t3 2M5 -19q4 0 3 3t-3 2" fill="none" stroke="#E5A81F" stroke-width="1.4"/><path d="M-1.4 -11h2.8v4h-2.8zM-4 -7h8v2.6h-8z" fill="#E5A81F"${s2(1)}/>`,
+    letter:`<rect x="-6.4" y="-19" width="12.8" height="13.4" rx="2.6" fill="#FFF4D6"${s2(1.3)}/><text y="-9.6" font-size="10" font-weight="800" fill="${OL}" text-anchor="middle">ب</text>`,
+    coin:`<path d="M-3 -17l-2.4-3h10.8l-2.4 3q7 4 6 10.4q-1 5-8 5t-8-5q-1-6.4 6-10.4z" fill="#E3B486"${s2(1.3)}/><circle cy="-8" r="3.6" fill="#F0B429"${s2(1)}/><path d="M-3 -17h6" stroke="#8A5A2B" stroke-width="1.4"/>`,
+    dallah:`<path d="M2 -13q5-1 8-8" fill="none" stroke="${OL}" stroke-width="3.6" stroke-linecap="round"/><path d="M2 -13q5-1 8-8" fill="none" stroke="#F0B429" stroke-width="1.8" stroke-linecap="round"/><path d="M-5 -2q-2-9 3.4-12v-3h3.2v3q5.4 3 3.4 12z" fill="#F0B429"${s2(1.3)}/><path d="M-3.6 -8h7.2" stroke="#C98F0E" stroke-width="1.2"/><circle cy="-19" r="1.7" fill="#F0B429"${s2(1)}/>`,
+    spoon:`<path d="M-1 2L4 -11" stroke="#C98F58" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="5.6" cy="-15.4" rx="3.2" ry="4.6" fill="#C98F58"${s2(1.2)} transform="rotate(20 5.6 -15.4)"/>`,
+    buzzer:`<rect x="-6.4" y="-8" width="12.8" height="7" rx="2" fill="#2D4763"${s2(1.3)}/><path d="M-4.6 -8.4a4.6 3.4 0 0 1 9.2 0z" fill="#EC6158"${s2(1.2)}/>`};
+  const HEAD={
+    chefhat:`<path d="M-8 -9v-4q-5-1-4-6t6-3q2-5 6-5t6 5q5-2 6 3t-4 6v4z" fill="#fff"${s2(1.3)}/>`,
+    crown:`<path d="M-8.6 -10l-1.6-9 5 4.4L0 -21.4l5.2 6.8 5-4.4-1.6 9z" fill="#F0B429"${s2(1.3)}/><circle cy="-13.4" r="1.5" fill="#EC6158"/><path d="M-8 -11.6h16" stroke="#C98F0E" stroke-width="1.2"/>`,
+    fedora:`<path d="M-15 -7.6q15-4.4 30 0q-2 2.6-15 2.6t-15-2.6z" fill="#3A3446"${s2(1.2)}/><path d="M-9 -8.4q-1-9.6 9-10.2q10 .6 9 10.2q-9-2.4-18 0z" fill="#3A3446"${s2(1.3)}/><path d="M-9 -10.6q9-2.6 18 0" stroke="#B23A3A" stroke-width="2"/>`,
+    bulb:`<g transform="translate(14 -19)"><path d="M-7 -5l-2-1.6M7 -5l2-1.6M0 -7.6v-2.6" stroke="#F0B429" stroke-width="1.4" stroke-linecap="round"/><circle r="4.8" fill="#FFE38A"${s2(1.2)}/><rect x="-2" y="4" width="4" height="3" rx=".8" fill="#9FB3C8"${s2(1)}/></g>`,
+    helmet:`<path d="M-12.6 -1q0-13 12.6-13t12.6 13z" fill="${kc}"${s2(1.4)}/><path d="M-12.6 -1H6l8 2.4" fill="none"${s2(1.4)}/><path d="M0 -14v13" stroke="#fff" stroke-opacity=".6" stroke-width="2"/>`};
   const ACC={
     glove:`<path d="M10 -31l8 -6" stroke="#8A5A2B" stroke-width="6" stroke-linecap="round"/><path d="M15 -40q4-6 9-2l-2 6z" fill="#8A6A4A"${s2(1.2)}/><circle cx="21" cy="-40" r="1" fill="${OL}"/>`,
     ball:`<circle cx="14" cy="-6" r="6" fill="#fff"${s2(1.3)}/><path d="M11 -9l3 3 3-3M14 -6v5" fill="none" stroke="${OL}" stroke-width="1"/>`,
-    cards:`<rect x="10" y="-26" width="8" height="11" rx="1.5" fill="#fff"${s2(1.2)} transform="rotate(12 14 -20)"/><rect x="13" y="-26" width="8" height="11" rx="1.5" fill="#fff"${s2(1.2)} transform="rotate(26 17 -20)"/><path d="M17 -21l1.2 2 2-.8z" fill="#EC6158"/>`,
-    chefhat:`<path d="M-8 -54v-4q-5-1-4-6t6-3q2-5 6-5t6 5q5-2 6 3t-4 6v4z" fill="#fff"${s2(1.3)}/>`};
+    cards:`<rect x="10" y="-26" width="8" height="11" rx="1.5" fill="#fff"${s2(1.2)} transform="rotate(12 14 -20)"/><rect x="13" y="-26" width="8" height="11" rx="1.5" fill="#fff"${s2(1.2)} transform="rotate(26 17 -20)"/><path d="M17 -21l1.2 2 2-.8z" fill="#EC6158"/>`};
+  const ACC_AT={glove:'b',ball:'b',cards:'h'};
+  for(const k in HELD){ACC[k]=`<g transform="translate(12.5 -19)">${HELD[k]}${hnd}</g>`;ACC_AT[k]='h';}
+  for(const k in HEAD){ACC[k]=HEAD[k];ACC_AT[k]='H';}
+  // the hand that holds an accessory in each pose (drawn for the standing right hand and moved by the difference; a thinker
+  // has the right hand on the chin, so the thing goes to the left one)
+  const HAND={stand:[12.5,-19],walk:[14,-21],cheer:[15.5,-45],caught:[12,-50],sad:[10,-17],think:[-12.5,-19],torch:[19,-29],wave:[16.5,-43],count:[12.5,-19]};
   const OTHERS={
     peekhands:hand(-11,6.5)+hand(11,6.5),
     eyeshands:`<rect x="-12" y="-49" width="11" height="7" rx="3.5" fill="${sk}"${s2(1.3)}/><rect x="1" y="-49" width="11" height="7" rx="3.5" fill="${sk}"${s2(1.3)}/>`,
@@ -169,35 +236,90 @@ const KH=(()=>{
     cat:`<path d="M6 -2q12 0 10-14" fill="none" stroke="#3A3446" stroke-width="3.4" stroke-linecap="round"/><path d="M-8 0q-2-14 5-16h6q7 2 5 16z" fill="#3A3446"${s2(1.2)}/><path d="M-7 -14l-1-8 5 4h6l5-4-1 8q0 6-7 6t-7-6z" fill="#3A3446"${s2(1.2)}/><ellipse cx="-3" cy="-14" rx="1.6" ry="2" fill="#F7D046"/><ellipse cx="3" cy="-14" rx="1.6" ry="2" fill="#F7D046"/>`,
     dog:`<path d="M-14 -10q-6-6-4-12" fill="none" stroke="#B9814D" stroke-width="3.4" stroke-linecap="round"/><rect x="-16" y="-17" width="26" height="12" rx="6" fill="#C98F58"${s2(1.4)}/><path d="M-12 -6v6M-4 -6v6M2 -6v6M7 -6v6" stroke="#C98F58" stroke-width="3.4" stroke-linecap="round"/><circle cx="11" cy="-20" r="7.5" fill="#C98F58"${s2(1.4)}/><path d="M7 -26q-5 2-4 10" fill="#8A5A2B"${s2(1.2)}/><ellipse cx="17.5" cy="-18" rx="3.6" ry="2.6" fill="#E3B486"${s2(1.2)}/><circle cx="20" cy="-19" r="1.4" fill="${OL}"/><circle cx="12" cy="-22" r="1.3" fill="${OL}"/>`,
     grocer:`<path d="M-14 22q0-14 14-14t14 14z" fill="#F4F6FA"${s2(1.4)}/><path d="M-12 8q-2-20 12-20t12 20l-4 6v-14h-16v14z" fill="#fff"${s2(1.4)}/><path d="M-12 -4h24" stroke="#E2535A" stroke-width="1.5" stroke-dasharray="2 2"/><ellipse cy="2" rx="8" ry="9" fill="#C98A5E"/><path d="M-10 -8q10-6 20 0" stroke="#111" stroke-width="3" fill="none"/><circle cx="-3" cy="1" r="1.4" fill="${OL}"/><circle cx="3" cy="1" r="1.4" fill="${OL}"/><path d="M-5 5q5 6 10 0" fill="#3a2a22"/>`};
-  let defsDone=false;
-  function ensureDefs(){if(typeof document==='undefined'||!document.body||(defsDone&&document.getElementById('kh-h0')))return;defsDone=true;try{const d=document.createElement('div');d.setAttribute('aria-hidden','true');d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';
-    const g=(id,c)=>`<g id="kh-${id}">${c}</g>`;
-    d.innerHTML=`<svg width="0" height="0"><defs><linearGradient id="kh-beam"><stop offset="0" stop-color="#FFF1B8" stop-opacity=".85"/><stop offset="1" stop-color="#FFE38A" stop-opacity="0"/></linearGradient><radialGradient id="kh-glow"><stop offset="0" stop-color="#FFE7A0" stop-opacity=".75"/><stop offset="1" stop-color="#FFC24A" stop-opacity="0"/></radialGradient>`+
-      HEADS.map((h,i)=>g('h'+i,h)).join('')+Object.keys(MOUTH).map(k=>g('m-'+k,MOUTH[k])).join('')+Object.keys(BODY).map(k=>g('b-'+k,BODY[k])).join('')+
-      Object.keys(OUTFIT).map(k=>g('o-'+k,OUTFIT[k])).join('')+Object.keys(ACC).map(k=>g('a-'+k,ACC[k])).join('')+Object.keys(OTHERS).map(k=>g(k,OTHERS[k])).join('')+`</defs></svg>`;document.body.appendChild(d);}catch(e){}}
-  const castOf=o=>{const w=o.who!=null?o.who:o.seat!=null?o.seat:o.c?Math.max(0,CAST.findIndex(x=>x.c.toLowerCase()===String(o.c).toLowerCase())):0;return ((w%8)+8)%8;};
-  /* KH.kid({who|seat|c, pose, mood, outfit, acc, s, flip, x, y}): one kid as SVG (a <g> to put inside an <svg>).
-     who: the cast member (0..7, the player's colour index); c overrides the shirt colour; pose: stand | walk | peek | cheer |
-     caught | sad | think | count | torch; mood: s | g | o | sad | k | hm (mouth); outfit: apron | sport | dealer | thobe;
-     acc: glove | ball | cards | chefhat */
-  function kid(o={}){ensureDefs();const w=castOf(o),K=CAST[w],pose=o.pose||'stand',mood=o.mood||POSE_MOOD[pose]||K.m,s=o.s||1;
-    const st=`--kc:${o.c||K.c};--ks:${K.skin}`;const tr=`translate(${f(o.x||0)} ${f(o.y||0)}) scale(${f((o.flip?-s:s)*100)/100} ${f(s*100)/100})`;
-    const head=`<use href="#kh-h${w}"/><use href="#kh-m-${mood}"/>`;
-    if(pose==='peek')return `<g transform="${tr}" style="${st}">${head}<use href="#kh-peekhands"/></g>`;
-    return `<g transform="${tr}" style="${st}"><use href="#kh-b-${BODY[pose]?pose:'stand'}"/>${o.outfit&&OUTFIT[o.outfit]?`<use href="#kh-o-${o.outfit}"/>`:''}<g transform="translate(0 -45)">${head}</g>${pose==='count'?'<use href="#kh-eyeshands"/>':''}${o.acc&&ACC[o.acc]?`<use href="#kh-a-${o.acc}"/>`:''}</g>`;}
-  /* KH.extend({outfit:{key:svg},acc:{key:svg}}): a game adds its own outfits and accessories (namespaced keys, e.g. 'job-chef');
-     added after the templates are on the page, the new ones are injected next to them. Existing keys are never replaced */
-  function extend(o={}){const nw=[];for(const k in o.outfit||{})if(!OUTFIT[k]){OUTFIT[k]=o.outfit[k];nw.push(['o-'+k,o.outfit[k]]);}
-    for(const k in o.acc||{})if(!ACC[k]){ACC[k]=o.acc[k];nw.push(['a-'+k,o.acc[k]]);}
-    if(!defsDone||!nw.length||typeof document==='undefined'||!document.body)return;
+  /* every template, by id. The page gets one hidden <svg><defs>, and a template goes into it the first time something uses it
+     (KH.need): the home screen pays for the five heads it shows, not for the whole wardrobe */
+  const PART={};HEADS.forEach((h,i)=>PART['h'+i]=h);
+  for(const [p,o] of [['m-',MOUTH],['b-',BODY],['o-',OUTFIT],['a-',ACC],['',OTHERS]])for(const k in o)PART[p+k]=o[k];
+  let DEF=null;const HAVE=new Set();
+  function ensureDefs(){if(typeof document==='undefined'||!document.body)return null;if(DEF&&DEF.isConnected)return DEF;HAVE.clear();DEF=null;
     try{const d=document.createElement('div');d.setAttribute('aria-hidden','true');d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';
-      d.innerHTML=`<svg width="0" height="0"><defs>${nw.map(([id,c])=>`<g id="kh-${id}">${c}</g>`).join('')}</defs></svg>`;document.body.appendChild(d);}catch(e){}}
-  // a round face for avatars (player strip, lobby, results): a standalone small <svg>
-  const face1=(o={})=>{const w=castOf(o);ensureDefs();return `<svg class="kh-face" viewBox="-17 -18 34 34" width="${o.size||32}" height="${o.size||32}" aria-hidden="true">${o.ring?`<circle cy="-1" r="16.5" fill="${o.bg||CAST[w].c}"/>`:''}<g style="--kc:${o.c||CAST[w].c};--ks:${CAST[w].skin}"><use href="#kh-h${w}"/><use href="#kh-m-${o.mood||CAST[w].m}"/></g></svg>`;};
+      d.innerHTML=`<svg width="0" height="0"><defs><linearGradient id="kh-beam"><stop offset="0" stop-color="#FFF1B8" stop-opacity=".85"/><stop offset="1" stop-color="#FFE38A" stop-opacity="0"/></linearGradient><radialGradient id="kh-glow"><stop offset="0" stop-color="#FFE7A0" stop-opacity=".75"/><stop offset="1" stop-color="#FFC24A" stop-opacity="0"/></radialGradient></defs></svg>`;
+      document.body.appendChild(d);DEF=d.querySelector('defs');}catch(e){DEF=null;}return DEF;}
+  function need(id){if(HAVE.has(id)&&DEF&&DEF.isConnected)return;const el=ensureDefs();if(!el||!PART[id])return;HAVE.add(id);
+    try{el.insertAdjacentHTML('beforeend',`<g id="kh-${id}">${PART[id]}</g>`);}catch(e){}}
+  const U=(id,tr)=>{need(id);return `<use href="#kh-${id}"${tr?` transform="${tr}"`:''}/>`;};
+  const castOf=o=>{const w=o.who!=null?o.who:o.seat!=null?o.seat:o.c?Math.max(0,CAST.findIndex(x=>x.c.toLowerCase()===String(o.c).toLowerCase())):0;return ((w%8)+8)%8;};
+  const hatOf=o=>o.hat&&ACC_AT[o.hat]==='H'?o.hat:o.acc&&ACC_AT[o.acc]==='H'?o.acc:null;
+  /* KH.kid({who|seat|c, pose, mood, outfit, acc, hat, s, flip, x, y}): one kid as SVG (a <g> to put inside an <svg>), 3 to 7 <use>s.
+     who: the cast member (0..7, the player's colour index); c overrides the shirt colour; pose: stand | walk | peek | cheer |
+     caught | sad | think | count | torch | wave; mood: s | g | o | sad | k | hm (mouth); outfit: a key of OUTFIT;
+     acc: a key of ACC (held in the hand, or on the body); hat: a head accessory (crown, chefhat, fedora, bulb, helmet) */
+  // o.inline: the parts written out in place, the kid's colours written in (for an image, KH.pic), instead of <use>s
+  const SKV='var(--ks,#F2C29B)',KCV='var(--kc,#EC6158)';
+  const inl=(kc1,ks1)=>(id,tr)=>PART[id]?`<g${tr?` transform="${tr}"`:''}>${PART[id].split(KCV).join(kc1).split(SKV).join(ks1)}</g>`:'';
+  function kid(o={}){const w=castOf(o),K=CAST[w],pose=o.pose||'stand',mood=o.mood||POSE_MOOD[pose]||K.m,s=o.s||1,u=o.inline?inl(o.c||K.c,K.skin):U;
+    const st=o.inline?'':` style="--kc:${o.c||K.c};--ks:${K.skin}"`;const tr=`translate(${f(o.x||0)} ${f(o.y||0)}) scale(${f((o.flip?-s:s)*100)/100} ${f(s*100)/100})${o.r?` rotate(${f(o.r)})`:''}`;
+    const hat=hatOf(o),head=u('h'+w)+u('m-'+(MOUTH[mood]?mood:'s'))+(hat?u('a-'+hat):'');
+    if(pose==='peek')return `<g transform="${tr}"${st}>${head}${u('peekhands')}</g>`;
+    const b=BODY[pose]?pose:'stand',acc=o.acc&&ACC[o.acc]&&ACC_AT[o.acc]!=='H'?o.acc:null;
+    let ac='';if(acc){const hp=HAND[b]||HAND.stand,dx=f(hp[0]-12.5),dy=f(hp[1]+19);ac=u('a-'+acc,ACC_AT[acc]==='h'&&(dx||dy)?`translate(${dx} ${dy})`:'');}
+    return `<g transform="${tr}"${st}>${u('b-'+b)}${o.outfit&&OUTFIT[o.outfit]?u('o-'+o.outfit):''}<g transform="translate(0 -45)">${head}</g>${pose==='count'?u('eyeshands'):''}${ac}</g>`;}
+  /* KH.extend({outfit:{key:svg},acc:{key:svg}}): a game adds its own outfits and accessories (namespaced keys, e.g. 'job-chef',
+     drawn in body coordinates like glove/ball); they go into the page the first time they are used, like every template.
+     Existing keys are never replaced */
+  function extend(o={}){for(const k in o.outfit||{})if(!OUTFIT[k]){OUTFIT[k]=o.outfit[k];PART['o-'+k]=o.outfit[k];}
+    for(const k in o.acc||{})if(!ACC[k]){ACC[k]=o.acc[k];ACC_AT[k]='b';PART['a-'+k]=o.acc[k];}}
+  // a round face for avatars inside a game's own markup: a standalone small <svg>; o.hat adds a head accessory
+  const faceVB=o=>hatOf(o)?'-20 -24 40 40':'-17 -18 34 34';
+  const faceIn=(o,u)=>{const w=castOf(o),hat=hatOf(o);return `${o.ring?`<circle cy="-1" r="16.5" fill="${o.bg||o.c||CAST[w].c}"/>`:''}${u('h'+w)}${u('m-'+(MOUTH[o.mood]?o.mood:CAST[w].m))}${hat?u('a-'+hat):''}`;};
+  const face1=(o={})=>{const w=castOf(o);
+    return `<svg class="kh-face${o.cls?' '+o.cls:''}" viewBox="${faceVB(o)}" width="${o.size||32}" height="${o.size||32}" aria-hidden="true"><g style="--kc:${o.c||CAST[w].c};--ks:${CAST[w].skin}">${faceIn(o,U)}</g></svg>`;};
   // the old single entry point: kid poses go to kid(), the other figures are plain templates
-  function sprite(pose,x,y,o={}){if(BODY[pose]||pose==='peek')return kid({...o,pose,x,y});ensureDefs();const sc=(o.s||1)*(o.flip?-1:1),s=o.s||1;
+  function sprite(pose,x,y,o={}){if(BODY[pose]||pose==='peek')return kid({...o,pose,x,y});const sc=(o.s||1)*(o.flip?-1:1),s=o.s||1;need(pose);
     return `<use href="#kh-${pose}" transform="translate(${f(x)} ${f(y)}) scale(${f(sc*100)/100} ${f(s*100)/100})"${o.cls?` class="${o.cls}"`:''}/>`;}
-  const beam=(x,y,ang,len=110,spread=34)=>`<path transform="translate(${f(x)} ${f(y)}) rotate(${f(ang)})" d="M0 -3L${len} ${-spread}Q${len+16} 0 ${len} ${spread}L0 3Z" fill="url(#kh-beam)"/>`;
+  // a kid (or a few) as a standalone <svg> for a game's own HTML; the default box holds a standing kid with a hat, o.vb crops it
+  const BOX='-27 -78 54 82';
+  const fig=(inner,o={})=>`<svg class="kh-fig${o.cls?' '+o.cls:''}" viewBox="${o.vb||BOX}"${o.w?` width="${o.w}" height="${o.h||o.w}"`:''} aria-hidden="true">${inner}</svg>`;
+  /* pictures for the app's shell: a face or a kid drawn once into an SVG image and kept as a CSS class (one rule a look, added
+     the first time the look is needed), so a player strip, a status card or a result sheet adds one plain element and no
+     <use> or SVG nodes to the page: nothing for a re-render to compare and nothing for the browser to lay out inside it */
+  const PIC=new Map();let PSH=null,PN=0;
+  function pic(key,mk,vb){let c=PIC.get(key);if(c)return c;c='khi-'+(++PN);
+    try{if(!PSH){const el=document.createElement('style');el.id='kh-pics';document.head.appendChild(el);PSH=el.sheet;}
+      const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" font-family="Tahoma,Arial,sans-serif">${mk()}</svg>`;
+      PSH.insertRule(`.${c}{background-image:url("data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g,'%27').replace(/\(/g,'%28').replace(/\)/g,'%29')}")}`,PSH.cssRules.length);}catch(e){}
+    PIC.set(key,c);return c;}
+  const kk=(o,ks)=>ks.map(k=>o[k]==null?'':o[k]).join('|');
+  const KEYS=['who','c','pose','mood','outfit','acc','hat','r','flip'];
+  // KH.faceImg(o) / KH.kidImg(o,{vb,cls}): the same face and kid as an element with the picture (class "khi")
+  const faceImg=(o={})=>`<kh-p class="khi${o.cls?' '+o.cls:''} ${pic('f|'+kk(o,['who','c','mood','hat','ring','bg']),()=>faceIn(o,inl(o.c||CAST[castOf(o)].c,CAST[castOf(o)].skin)),faceVB(o))}" aria-hidden="true"></kh-p>`;
+  const kidImg=(o={},b={})=>`<kh-p class="khi${b.cls?' '+b.cls:''} ${pic('k|'+kk(o,KEYS)+'|'+(b.vb||BOX),()=>kid({...o,x:0,y:0,s:1,inline:true}),b.vb||BOX)}"${b.style?` style="${b.style}"`:''} aria-hidden="true"></kh-p>`;
+
+  /* ---------------- the cast in the app's shell (core.js): every player is a kid ----------------
+     A player's kid: online, the avatar they picked (presence av KID_AV+k, accepted by emoji.js EMJ_AV), else the kid of their colour;
+     on one phone, the kid picked on the setup row (localStorage alaabna.lkid), else the kid of the seat's colour. The shirt (and a
+     hijab) always takes the player's colour: the colour stays the player's identity */
+  const KID_AV=100;let LK=null;
+  const lkGet=()=>{if(LK)return LK;try{const a=JSON.parse(localStorage.getItem('alaabna.lkid')||'[]');LK=Array.isArray(a)?a.slice(0,8):[];}catch(e){LK=[];}return LK;};
+  function lkSet(r,k){const a=lkGet().slice();while(a.length<8)a.push(-1);a[r]=k===r?-1:k;LK=a;try{localStorage.setItem('alaabna.lkid',JSON.stringify(a));}catch(e){}}
+  const avKid=a=>Number.isInteger(a)&&a>=KID_AV&&a<KID_AV+8?a-KID_AV:-1;
+  function kidOf(r){if(!(Number.isInteger(r)&&r>=0&&r<8))return 0;
+    try{if(S.mode==='local'){const v=lkGet()[r];if(Number.isInteger(v)&&v>=0&&v<8)return v;}
+      else if(S.mode==='online'){const k=avKid(r===S.me?myAv():S.avs[r]);if(k>=0)return k;}}catch(e){}return r;}
+  const colOf=r=>typeof COLS!=='undefined'&&COLS[r]?COLS[r]:CAST[kidOf(r)].c;
+  // a player's face and kid (pictures), in the player's colour
+  const pface=(r,o={})=>faceImg({...o,who:kidOf(r),c:colOf(r)});
+  const pkid=(r,o={},b)=>kidImg({...o,who:kidOf(r),c:colOf(r)},b);
+  // the home screen: four kids peek over the top of the four ways to play (a different four each time the app opens; a finite
+  // pop-up once, none in lite mode). The strip ends at the tiles' top edge: the kids' chins hide behind it, their hands hold it
+  const HOME=(()=>{const a=[0,1,2,3,4,5,6,7];for(let i=7;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,4);})();
+  // The first screen paints without them; they come in on the next frame (so the home shows as fast as before)
+  let homeOn=false;
+  function homeScene(){if(!homeOn){if(homeOn===false){homeOn=null;const go=()=>{homeOn=true;try{if(S.mode===null)render();}catch(e){}};
+      try{requestAnimationFrame(()=>setTimeout(go,0));}catch(e){setTimeout(go,30);}}return '<div class="kh-home" aria-hidden="true"></div>';}
+    const at=[[56,1,-7],[120,3,4],[244,2,-4],[306,0,7]];
+    return `<div class="kh-home" aria-hidden="true">${at.map(([x,dy,r],i)=>kidImg({who:HOME[i],pose:'peek',mood:i===1?'g':null,r},{cls:'kp',vb:'-24 -24 48 34',style:`--i:${i};left:${f((x-24*1.55)/3.6)}%;bottom:${f(-(0.5+dy)/0.46)}%`})).join('')}</div>`;}
+  const beam=(x,y,ang,len=110,spread=34)=>(ensureDefs(),`<path transform="translate(${f(x)} ${f(y)}) rotate(${f(ang)})" d="M0 -3L${len} ${-spread}Q${len+16} 0 ${len} ${spread}L0 3Z" fill="url(#kh-beam)"/>`);
   // text width: measured with the game font once it is loaded (cached), estimated before that
   const TW={};let twc=null;
   const tw=(t,fs)=>{t=String(t);const k=fs+'|'+t;if(TW[k])return TW[k];const est=[...t].length*fs*.5+4;
@@ -252,7 +374,8 @@ const KH=(()=>{
       case 'whoosh':noise(.25,{f:1600,v:.08});break;
       case 'tick':tone(1200,.03,{type:'square',v:.04});break;}}
 
-  return {OL,f,T,st,lite,C,art:{roof,facade,court,door,car,trailer,barrel,crate,palm,tree,lamp,pool,tank,shed,tent,field,shop,ruin,defs},bg,CAST,kid,face:face1,sprite,beam,say,burst,tw,graph,walk,banner,card,snd,ensureDefs,extend};
+  return {OL,f,T,st,lite,C,art:{roof,facade,court,door,car,trailer,barrel,crate,palm,tree,lamp,pool,tank,shed,tent,field,shop,ruin,defs},bg,CAST,kid,face:face1,sprite,fig,beam,say,burst,tw,graph,walk,banner,card,snd,ensureDefs,need,extend,
+    OUTFIT:Object.keys(OUTFIT),ACC:Object.keys(ACC),faceImg,kidImg,KID_AV,kidOf,lkSet,pface,pkid,homeScene};
 })();
 
 /* =====================================================================================================
@@ -293,7 +416,7 @@ Object.assign(KH,(()=>{
       d.innerHTML=`<svg width="0" height="0"><defs>${Object.keys(SIT).map(k=>g('sit-'+k,SIT[k])).join('')}${Object.keys(CAPS).map(k=>g('cap-'+k,CAPS[k])).join('')}${g('sleepcat',SLEEPCAT)}</defs></svg>`;document.body.appendChild(d);}catch(e){}}
   const castOf=o=>{const w=o.who!=null?o.who:o.c?Math.max(0,KH.CAST.findIndex(x=>x.c.toLowerCase()===String(o.c).toLowerCase())):0;return ((w%8)+8)%8;};
   function sit(o={}){ensure();const w=castOf(o),K=KH.CAST[w],pose=SIT[o.pose]?o.pose:'sit',mood=o.mood||SIT_MOOD[pose]||K.m,s=o.s||1;
-    return `<g transform="translate(${f(o.x||0)} ${f(o.y||0)}) scale(${f((o.flip?-s:s)*100)/100} ${f(s*100)/100})" style="--kc:${o.c||K.c};--ks:${K.skin}"><use href="#kh-sit-${pose}"/><g transform="translate(0 -33)"><use href="#kh-h${w}"/><use href="#kh-m-${mood}"/></g></g>`;}
+    return `<g transform="translate(${f(o.x||0)} ${f(o.y||0)}) scale(${f((o.flip?-s:s)*100)/100} ${f(s*100)/100})" style="--kc:${o.c||K.c};--ks:${K.skin}"><use href="#kh-sit-${pose}"/><g transform="translate(0 -33)">${(KH.need('h'+w),KH.need('m-'+mood),'')}<use href="#kh-h${w}"/><use href="#kh-m-${mood}"/></g></g>`;}
   const cap=(x,y,kind='cap',s=1)=>{ensure();return `<use href="#kh-cap-${CAPS[kind]?kind:'cap'}" transform="translate(${f(x)} ${f(y)})${s!==1?` scale(${s})`:''}"/>`;};
   const sprite0=KH.sprite;const sprite=(pose,x,y,o={})=>{if(pose==='sleepcat')ensure();return sprite0(pose,x,y,o);};
   // courtyard pieces (plain SVG strings)

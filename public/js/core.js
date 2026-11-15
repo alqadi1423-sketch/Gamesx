@@ -523,7 +523,7 @@ function renderHome(){
   OUT=`<div class="hx-hero">${LOGO}<div class="hx-tt"><h1>ألعابنا</h1><p>${n?`${n} لعبة • `:''}من 2 إلى ${MAXP} لاعبين</p></div></div>
   ${S.update?`<a class="upd" href="${S.update.apk}" target="_blank" rel="noopener"><i>⬇️</i><span>فيه تحديث للتطبيق<small>اضغط وحمّله</small></span></a>`:''}
   ${l?`<button class="hx-cont" data-a="lresume"><span class="gi">${gInfo(l.st.g).icon}</span><span class="mode-tx"><small>كمّل اللعبة</small><b>${gInfo(l.st.g).name}</b></span><i class="hx-play">${ICO_PLAY}</i></button>`:''}
-  <div class="hx-tiles">${modeTile('local','red','على نفس الجهاز','جوال واحد للكل')}${modeTile('lobby','blue','أونلاين','كل واحد بجواله')}${modeTile('vsbot','navy','ضد البوت','العب لحالك')}${modeTile('near','green','قريب بدون نت',near?'بلوتوث':'متوفر في التطبيق',!near)}</div>
+  ${typeof KH!=='undefined'?KH.homeScene():''}<div class="hx-tiles">${modeTile('local','red','على نفس الجهاز','جوال واحد للكل')}${modeTile('lobby','blue','أونلاين','كل واحد بجواله')}${modeTile('vsbot','navy','ضد البوت','العب لحالك')}${modeTile('near','green','قريب بدون نت',near?'بلوتوث':'متوفر في التطبيق',!near)}</div>
   ${rec.length||st.n?`<div class="hx-foot">${rec.length?`<div class="hx-rec" role="group" aria-label="لعبت مؤخرًا">${rec.map(g=>{const G=gInfo(g);return `<button class="hr" data-a="quick" data-v="${g}" aria-label="${G.name}"><span class="gi">${G.icon}</span></button>`;}).join('')}</div>`:''}${st.n?`<button class="hx-st" data-a="stats" aria-label="إحصائياتي"><b>${st.w}</b><small>فوز</small></button>`:''}</div>`:''}`;
 }
 function renderNear(){
@@ -582,14 +582,14 @@ function renderLobby(){
 function roomBar(full){try{
   if(S.mode!=='online')return '';
   const pl=players(),h=actingHost(),near=S.via==='near';
-  const av=pl.map(r=>`<span class="av ${r===S.me?'me':''}" data-r="${r}" style="--c:${COLS[r]}">${avOf(r)||shapeW(r)}${r===h?'<em>👑</em>':''}</span>`).join('');
+  const av=pl.map(r=>`<span class="av ${r===S.me?'me':''}" data-r="${r}" style="--c:${COLS[r]}">${avOf(r)||kface(r)}${r===h?'<em>👑</em>':''}</span>`).join('');
   let s=`<div class="roombar"><div class="rb-code"><small>${near?'📶 غرفة قريبة':'رمز الغرفة'}${cfg().lock?' 🔒':''}</small><b class="code">${escH(S.code)}</b></div>${near?'':'<button class="rbb" data-a="copy" aria-label="نسخ الرمز">نسخ</button>'}<div class="rb-av">${av}</div><button class="rbb" data-a="m-settings" aria-label="الإعدادات">⚙️</button></div>`;
   // the connection is down, or nobody else is in this room (most likely a mistyped code): say it where everyone looks
   if(S.needUpd)s+='<p class="updb" role="status">حدّث التطبيق عشان تلعب في هالغرفة</p>';
   if(S.offline)s+=`<p class="err" role="status">${S.offline==='full'?'الغرفة مليانة، نحاول ندخل مرة ثانية…':'انقطع الاتصال، نحاول نرجع…'}</p>`;
   else if(S.roomEmpty&&pl.length<2)s+=`<div class="panel"><p class="err">ما لقينا أحد في هذي الغرفة، تأكد من الرمز</p><div class="acts"><button class="btn" data-a="recode">عدّل الرمز</button><button class="btn navy" data-a="leave">اطلع</button></div></div>`;
   if(full){const me=S.pending?'<p class="note">جاري اختيار لونك…</p>':S.me==null?'<p class="note">تتفرج الحين</p>':'';
-    s+=`<div class="panel members"><div class="mh"><b>اللاعبين</b><small>${pl.length} من ${MAXP}</small></div>${me}<div class="mlist">${pl.map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${avOf(r)||shapeW(r)}</i>${r===S.me?'أنت':pname(r)}${r===h?' 👑':''}</span>`).join('')}</div></div>`;}
+    s+=`<div class="panel members"><div class="mh"><b>اللاعبين</b><small>${pl.length} من ${MAXP}</small></div>${me}<div class="mlist">${pl.map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${avOf(r)||kface(r)}</i>${r===S.me?'أنت':pname(r)}${r===h?' 👑':''}</span>`).join('')}</div></div>`;}
   return s;}catch(e){console.error(e);return '';}
 }
 // tile ribbons («جديد» / «مطوّرة»): none for now, nearly every game is new or upgraded and the ribbons only cluttered the list
@@ -612,7 +612,7 @@ const iconE=(bg,e)=>{const id='ie'+bg.replace(/[^0-9a-f]/gi,'')+[...e].length;co
 function standings(){
   const rs=S.mode==='local'?players():[...new Set([...players(),...S.st.sc.map((x,r)=>x>0?r:-1).filter(r=>r>=0)])];
   if(!rs.some(r=>S.st.sc[r]>0))return '';const t=cfg().target;
-  return `<div class="panel standings"><div class="ph"><b>نقاط الجلسة</b>${t?`<small>الفوز بالمباراة عند ${escH(t)}</small>`:''}</div><div class="mlist">${rs.sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} <b>${escH(S.st.sc[r])}</b></span>`).join('')}</div></div>`;
+  return `<div class="panel standings"><div class="ph"><b>نقاط الجلسة</b>${t?`<small>الفوز بالمباراة عند ${escH(t)}</small>`:''}</div><div class="mlist">${rs.sort((a,b)=>S.st.sc[b]-S.st.sc[a]).map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${kface(r)}</i>${r===S.me?'أنت':pname(r)} <b>${escH(S.st.sc[r])}</b></span>`).join('')}</div></div>`;
 }
 const liveCard=(g,a,t,btn)=>`<div class="panel live"><span class="gi">${GAMES[g].icon}</span><span class="lv-tx"><small>${t}</small><b>${GAMES[g].name}</b></span><button class="sm go" data-a="${a}">${btn}</button></div>`;
 // local: the game left with back stays open here, and a game the app closed on can go on
@@ -627,7 +627,7 @@ function teamSegs(){const n=players().length;if(n<4)return '';const k=teamK(),h=
   return `<div class="tmset"><label class="lab">طريقة اللعب</label><div class="segs">${[0,2,3,4].filter(x=>!x||n>=x*2).map(x=>`<button class="seg ${k===x?'on':''}" data-a="teams" data-i="${x}" ${h?'':'disabled'}>${x?(x===2?'فريقين':x+' فرق'):'كل واحد لحاله'}</button>`).join('')}</div>${k?`<div class="tmleg">${TEAMS.slice(0,k).map((t,i)=>`<span style="--c:${t.c}">${t.e} ${t.n} <b>${players().filter(r=>roleTeam(r,k)===i).length}</b></span>`).join('')}</div><p class="note">اضغط الشعار لتغيير الفريق</p>`:''}</div>`;}
 function localSetup(){const n=S.localN,nb=[...Array(n).keys()].filter(r=>S.bots[r]).length;
   return `<div class="panel lsetup"><div class="ls-head"><span class="ph"><b>اللاعبين</b>${nb?`<small>${n-nb} ${n-nb>1?'أشخاص':'شخص'} و${nb} ${nb>1?'بوتات':'بوت'}</small>`:''}</span><div class="stepper"><button data-a="dec" aria-label="أقل" class="${n<=2?'dim':''}">−</button><b>${n}</b><button data-a="inc" aria-label="أكثر" class="${n>=MAXP?'dim':''}">+</button></div></div>
-    <div class="names">${[...Array(n).keys()].map(r=>{const b=S.bots[r];return `<div class="lrow ${b?'bot':''}" style="--c:${COLS[r]}"><i class="lav">${shapeW(r)}</i>${b?`<div class="lvl">${[1,2,3].map(l=>`<button class="${b===l?'on':''}" data-a="botL" data-i="${r}" data-v="${l}">${BOTL[l]}</button>`).join('')}</div>`:`<input class="field nm" data-draft="ln${r}" value="${escH(S.localNames[r]||'')}" placeholder="${b?BOTN[r]:NAMES[r]}" maxlength="14">`}${teamChip(r)}<button class="lbt ${b?'on':''}" data-a="botT" data-i="${r}" aria-label="لاعب أو بوت"><span>👤</span><span>🤖</span></button></div>`;}).join('')}</div>${teamSegs()}</div>`;}
+    <div class="names">${[...Array(n).keys()].map(r=>{const b=S.bots[r];return `<div class="lrow ${b?'bot':''}" style="--c:${COLS[r]}"><button class="lav" data-a="lkid" data-i="${r}" aria-label="غيّر الشخصية">${kface(r)}</button>${b?`<div class="lvl">${[1,2,3].map(l=>`<button class="${b===l?'on':''}" data-a="botL" data-i="${r}" data-v="${l}">${BOTL[l]}</button>`).join('')}</div>`:`<input class="field nm" data-draft="ln${r}" value="${escH(S.localNames[r]||'')}" placeholder="${b?BOTN[r]:NAMES[r]}" maxlength="14">`}${teamChip(r)}<button class="lbt ${b?'on':''}" data-a="botT" data-i="${r}" aria-label="لاعب أو بوت"><span>👤</span><span>🤖</span></button></div>`;}).join('')}</div>${teamSegs()}</div>`;}
 // how many play now: a game that needs more players (or fewer, G.maxP) is dimmed in the list
 const hereN=()=>S.mode==='local'?S.localN:players().length;
 const fitN=(k,n)=>{const G=GAMES[k];return !(G.minP&&n<G.minP)&&!(G.maxP&&n>G.maxP);};
@@ -655,11 +655,11 @@ function tileHTML(k,fav,n){const G=GAMES[k],dim=!fitN(k,n);
 function gridBody(q,cat,n){
   const fv=favGames().filter(modeOk),key=[q,cat,n,fv.join(),Object.keys(GAMES).length,modeKey()].join('|');if(S.gridC&&S.gridC.k===key)return S.gridC.h;
   const all=modeGames(),fav=new Set(fv),up=k=>NEWG.includes(k)||UPG.includes(k)?1:0;
-  const sec=(t,ks)=>`<section class="gsec" style="contain-intrinsic-size:auto ${Math.ceil(ks.length/3)*172}px"><h2 class="cat">${t} <small>${ks.length}</small></h2><div class="grid">${ks.map(k=>tileHTML(k,fav.has(k),n)).join('')}</div></section>`;
+  const sec=(t,ks,c)=>`<section class="gsec" style="contain-intrinsic-size:auto ${Math.ceil(ks.length/3)*172}px"><h2 class="cat">${c&&typeof CASTX!=='undefined'?CASTX.cat(c):''}${t} <small>${ks.length}</small></h2><div class="grid">${ks.map(k=>tileHTML(k,fav.has(k),n)).join('')}</div></section>`;
   let h;
   if(q){const ks=all.filter(k=>gMatch(k,q));const st=k=>normQ(GAMES[k].name).startsWith(q)?0:1;ks.sort((a,b)=>st(a)-st(b));
     h=ks.length?sec('نتائج البحث',ks):`<div class="gempty"><p>ما لقينا لعبة بهالاسم 🤔</p><button class="btn soft" data-a="qclear">امسح البحث</button></div>`;}
-  else h=CATS.filter(([c])=>!cat||c===cat).map(([c,t])=>{const ks=all.filter(k=>catOf(k)===c).sort((a,b)=>up(b)-up(a));return ks.length?sec(t,ks):'';}).join('');
+  else h=CATS.filter(([c])=>!cat||c===cat).map(([c,t])=>{const ks=all.filter(k=>catOf(k)===c).sort((a,b)=>up(b)-up(a));return ks.length?sec(t,ks,c):'';}).join('');
   S.gridC={k:key,h};return h;}
 function renderGrid(){
   let mid='';
@@ -695,14 +695,14 @@ function scoreBar(sc,d){try{
   return `<div class="players ${n>4?'many':n>3?'four':''} ${tm?'teams':''}" style="--n:${Math.min(n,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&!(typeof G.noTurn==='function'?G.noTurn(d):G.noTurn)&&d.turn===s;
     const pk=(simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u class="pk ok">✓</u>':'<u class="pk">…</u>'):'')+(d.win==null&&abOn(r)?'<u class="pk ab" title="يلعب عنه البوت" aria-label="يلعب عنه البوت">🤖</u>':'');
     const won=typeof d.win==='number'&&(d.win===s||(Array.isArray(d.wins)&&d.wins.includes(s)));
-    return `<div class="pt ${on?'on':''} ${me?'me':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}${tm?`;--tc:${TEAMS[tm[s]].c}`:''}"><i>${shapeW(r)}${sc[r]?`<b>${escH(sc[r])}</b>`:''}${tm?`<s class="tmb">${TEAMS[tm[s]].e}</s>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${escH(pts[s])}</em>`:''}</div>${pk}</div>`;}).join('')}</div>${tm?teamStrip(d,pts):''}`;}catch(e){console.error(e);return '';}
+    return `<div class="pt ${on?'on':''} ${me?'me':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}${tm?`;--tc:${TEAMS[tm[s]].c}`:''}"><i>${kface(r,{mood:won?'g':d.out[s]==='1'&&!G.outDone?'sad':on?'g':null})}${sc[r]?`<b>${escH(sc[r])}</b>`:''}${tm?`<s class="tmb">${TEAMS[tm[s]].e}</s>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${escH(pts[s])}</em>`:''}</div>${pk}</div>`;}).join('')}</div>${tm?teamStrip(d,pts):''}`;}catch(e){console.error(e);return '';}
 }
 // with teams: one chip per team under the players, with the team's total when the game counts points
 function teamStrip(d,pts){const ts=[...new Set(d.tm)];const num=pts&&pts.every(x=>typeof x==='number'||/^-?\d+$/.test(String(x)));
   return `<div class="tstrip">${ts.map(t=>{const ss=teamSeats(d,t);const tot=num?ss.reduce((a,s)=>a+Math.max(0,+pts[s]||0),0):null;const won=d.win!=null&&d.wt===t;
     return `<span class="${won?'won':''}" style="--c:${TEAMS[t].c}"><i>${TEAMS[t].e}</i>${TEAMS[t].n}${tot!=null?` <b>${tot}</b>`:''}</span>`;}).join('')}</div>`;}
-// pass the phone: the next player's colour, shape and name, and nothing of the game under it
-const coverHTML=(d,v,m)=>`<div class="cover" style="--c:${col(d,v)}"><svg class="cv-bg" viewBox="0 0 40 40" aria-hidden="true">${SHP[d.pl[v]]('#fff')}</svg>${m?`<div class="msg">${m}</div>`:''}<i class="cv-av">${shapeW(d.pl[v])}</i><p>الجهاز الحين لـ</p><h2>${nm(d,v)}</h2>${d.tm&&TEAMS[d.tm[v]]?`<p class="cv-tm" style="--tc:${TEAMS[d.tm[v]].c}">${teamName(d.tm[v])}</p>`:''}<p class="cv-hint">خل الباقين ما يشوفون الشاشة 🙈</p><button class="big" data-a="reveal" data-i="${v}">أنا ${nm(d,v)}، ورّني</button></div>`;
+// pass the phone: the next player's colour, kid and name, and nothing of the game under it
+const coverHTML=(d,v,m)=>`<div class="cover" style="--c:${col(d,v)}">${typeof CASTX!=='undefined'?CASTX.cover(d,v):`<svg class="cv-bg" viewBox="0 0 40 40" aria-hidden="true">${SHP[d.pl[v]]('#fff')}</svg>`}${m?`<div class="msg">${m}</div>`:''}<i class="cv-av">${kface(d.pl[v])}</i><p>الجهاز الحين لـ</p><h2>${nm(d,v)}</h2>${d.tm&&TEAMS[d.tm[v]]?`<p class="cv-tm" style="--tc:${TEAMS[d.tm[v]].c}">${teamName(d.tm[v])}</p>`:''}<p class="cv-hint">خل الباقين ما يشوفون الشاشة 🙈</p><button class="big" data-a="reveal" data-i="${v}">أنا ${nm(d,v)}، ورّني</button></div>`;
 function renderGame(){
   const {g,sc}=S.st,G=GAMES[g],d=dView();const ctx=mkCtx(d);let body=null,cover=false;
   if(S.mode==='local'&&G.viewer&&hasBots()){const hs=humanSeats(d);const v=d.win==null&&hs.length>1&&ctx.v>=0?ctx.v:null;
@@ -714,7 +714,7 @@ function renderGame(){
   if(!body){try{body=G.render(d,ctx);}catch(e){console.error(e);body='<p class="err">صار خطأ في عرض اللعبة.</p><button class="sm go" data-a="again">جولة جديدة</button>';}}
   // alerts: your turn, results
   const myNow=!cover&&S.mode==='online'&&ctx.my;
-  if(myNow&&!S.wasMy){sfx('turn');buzz();if(!isSimul(G,d)&&d.win==null){const b=document.createElement('div');b.className='ytb';b.style.setProperty('--c',col(d,ctx.v));b.textContent='دورك! 🎯';document.body.appendChild(b);setTimeout(()=>b.remove(),1700);}}S.wasMy=myNow;
+  if(myNow&&!S.wasMy){sfx('turn');buzz();if(!isSimul(G,d)&&d.win==null){const b=document.createElement('div');b.className='ytb';b.style.setProperty('--c',col(d,ctx.v));b.innerHTML=(typeof CASTX!=='undefined'?CASTX.turn(g,d,ctx.v):'')+'<span>دورك! 🎯</span>';document.body.appendChild(b);setTimeout(()=>b.remove(),1700);}}S.wasMy=myNow;
   const enter=S.enterKey!==g+d.gid;S.enterKey=g+d.gid;
   if(d.win!=null&&S.winKey!==d.gid){S.winKey=d.gid;S.showResult=true;const mine=S.mode==='local'||d.win===ctx.v||(Array.isArray(d.wins)&&d.wins.includes(ctx.v));sfx(mine||d.win==='d'?'win':'lose');if(mine&&d.win!=='d')setTimeout(confetti,50);
     // this phone's stats: a win counts against bots (a person won) and online (this player won)
@@ -724,7 +724,7 @@ function renderGame(){
   const acc=cover?null:d.win==null?(isSimul(G,d)?null:col(d,d.turn)):typeof d.win==='number'?col(d,d.win):null;
   const fv=favGames().includes(g);
   OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button><button class="ib" data-a="m-settings" aria-label="إعدادات اللعبة">⚙️</button>`,true)}${roomBar()}${scoreBar(sc,d)}
-  <div class="status ${cover?'nil':''} ${acc?'acc':''} ${d.win!=null?'over':''} ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}"${acc?` style="--c:${acc}"`:''}>${cover?'':statusBox(statusHTML(d,G,ctx))}<div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div></div><div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>
+  <div class="status ${cover?'nil':''} ${acc?'acc':''} ${d.win!=null?'over':''} ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}"${acc?` style="--c:${acc}"`:''}>${cover||typeof CASTX==='undefined'?'':CASTX.status(g,d,ctx)}${cover?'':statusBox(statusHTML(d,G,ctx))}<div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div></div><div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>
   ${S.mode==='online'?fabs():''}
   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
 }
@@ -739,10 +739,10 @@ function resultHTML(d,G,ctx){
   const mine=won&&(S.mode==='local'||d.win===ctx.v||(Array.isArray(d.wins)&&d.wins.includes(ctx.v)));
   const sc=S.st.sc,rs=[...d.pl].sort((a,b)=>sc[b]-sc[a]),rank=r=>1+rs.filter(x=>sc[x]>sc[r]).length,who=r=>r===S.me?'أنت':pname(r);
   const ng=(S.mode==='local'||canPick())&&!matchOver()?suggestNext():null;
-  const pod=rs.length>=3?`<div class="rs-pod">${[rs[1],rs[0],rs[2]].map((r,k)=>`<div class="rs-col p${k===1?1:k===0?2:3}" style="--c:${COLS[r]}"><i class="rs-av">${shapeW(r)}</i><span class="rs-nm">${who(r)}</span><div class="rs-blk"><b>${escH(sc[r])}</b></div></div>`).join('')}</div>`:'';
-  const rows=(rs.length>=3?rs.slice(3):rs).map(r=>`<div class="rs-row ${rank(r)===1?'top':''}" style="--c:${COLS[r]}"><small>${rank(r)}</small><i class="rs-av">${shapeW(r)}</i><span>${who(r)}</span><b>${escH(sc[r])}</b></div>`).join('');
+  const pod=rs.length>=3?`<div class="rs-pod">${[rs[1],rs[0],rs[2]].map((r,k)=>`<div class="rs-col p${k===1?1:k===0?2:3}" style="--c:${COLS[r]}">${typeof CASTX!=='undefined'?CASTX.pod(S.st.g,d,r,k===1):`<i class="rs-av">${kface(r)}</i>`}<span class="rs-nm">${who(r)}</span><div class="rs-blk"><b>${escH(sc[r])}</b></div></div>`).join('')}</div>`:'';
+  const rows=(rs.length>=3?rs.slice(3):rs).map(r=>`<div class="rs-row ${rank(r)===1?'top':''}" style="--c:${COLS[r]}"><small>${rank(r)}</small><i class="rs-av">${kface(r,{mood:typeof d.win==='number'&&d.pl[d.win]===r?'g':null})}</i><span>${who(r)}</span><b>${escH(sc[r])}</b></div>`).join('');
   return `<div class="sheet-bg" data-a="closeres"><div class="sheet result ${d.win==='d'?'draw':mine?'mine':'lost'}" style="--c:${c}">
-    <div class="rs-top"><i class="rs-rays"></i><div class="trophy">${d.win==='d'?'<span class="rs-emo">🤝</span>':mine?TROPHY:MEDAL}</div></div>
+    <div class="rs-top"><i class="rs-rays"></i>${typeof CASTX!=='undefined'?CASTX.top(S.st.g,d,ctx,mine):''}<div class="trophy">${d.win==='d'?'<span class="rs-emo">🤝</span>':mine?TROPHY:MEDAL}</div></div>
     <div class="rs-ban"><h2>${winTitle(d,G,ctx)}</h2></div>${G.winExtra?`<p class="note">${G.winExtra(d,ctx)}</p>`:''}
     ${ml!=null?`<p class="hint rs-match">🏅 ${d.tm&&d.pl.includes(ml)&&TEAMS[d.tm[d.pl.indexOf(ml)]]?`فريق ${teamName(d.tm[d.pl.indexOf(ml)])} فاز`:ml===S.me?'أنت فزت':pname(ml)+' فاز'} بالمباراة! (${S.st.sc[ml]} نقاط)</p>`:matchTie()?'<p class="hint rs-match">🤝 تعادل على الصدارة، نكمل لين يتقدم واحد</p>':''}
     <div class="rs-st"><p class="lbl">نقاط الجلسة</p>${pod}${rows?`<div class="rs-list ${rs.length>4?'two':''}">${rows}</div>`:''}</div>
@@ -756,14 +756,16 @@ const CHAT_MAX=160,CHAT_N=8;
 const CHAT_QP=['دورك!','يلا بسرعة','حظ أوفر','كفو!','ههههه','صبر صبر','لعبة حلوة','مرة ثانية؟','وش هالحظ!','أنا جاهز'];
 const ICO_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12L4 4l3 8-3 8z" fill="currentColor"/></svg>';
 const myAv=()=>{const v=lsGet(LSK.av);const i=v==null||v===''?-1:+v;return EMJ_AV.includes(i)?i:-1;};
-// a player's emoji face (the avatar they picked), or '' when they have none
-function avOf(r){const a=r===S.me&&r!=null?myAv():S.avs[r];return EMJ_AV.includes(a)?`<span class="eav">${EMJ[a].svg}</span>`:'';}
-const chatFace=r=>avOf(r)||(isRole(r)?shapeW(r):PIC.me);
+// a player's emoji face (the emoji avatar they picked), or '' when they have none (then their kid shows, kface)
+function avOf(r){const a=r===S.me&&r!=null?myAv():S.avs[r];return EMJ_AV.includes(a)&&EMJ[a]?`<span class="eav">${EMJ[a].svg}</span>`:'';}
+const chatFace=r=>avOf(r)||(isRole(r)?kface(r):PIC.me);
 // the players whose messages this phone hides (their device keys)
 function hideSet(){if(!S.hideSet){try{const a=JSON.parse(lsGet(LSK.hide)||'[]');S.hideSet=new Set(Array.isArray(a)?a.filter(isFpStr).slice(-32):[]);}catch(e){S.hideSet=new Set();}}return S.hideSet;}
 const isFpStr=x=>typeof x==='string'&&/^[\w-]{12}$/.test(x);
 const chatOn=()=>cfg().chat!==false;
-function avPicker(){const a=myAv();return `<div class="avp" role="group" aria-label="صورتك">${[-1,...EMJ_AV].map(i=>`<button class="${a===i?'on':''}" data-a="setav" data-i="${i}" aria-label="${i<0?'بدون صورة':EMJ[i].n}" aria-pressed="${a===i}">${i<0?(S.me!=null?shapeW(S.me):PIC.me):EMJ[i].svg}</button>`).join('')}</div>`;}
+// the kids of the cast first (in this player's colour once they have one), then our emoji; the first button is "the kid of my colour"
+function avPicker(){const a=myAv(),K=typeof KH!=='undefined',c=S.me!=null?COLS[S.me]:null,ks=K?EMJ_AV.filter(i=>!EMJ[i]):[];
+  return `<div class="avp" role="group" aria-label="صورتك">${[-1,...ks,...EMJ_AV.filter(i=>EMJ[i])].map(i=>`<button class="${a===i?'on':''}${!EMJ[i]&&i>=0?' kid':''}" data-a="setav" data-i="${i}" aria-label="${i<0?'شخصية لونك':EMJ[i]?EMJ[i].n:KH.CAST[i-KH.KID_AV].n}" aria-pressed="${a===i}">${i<0?(S.me!=null?kface(S.me):PIC.me):EMJ[i]?EMJ[i].svg:KH.faceImg({who:i-KH.KID_AV,c})}</button>`).join('')}</div>`;}
 function modalHTML(){
   const m=S.modal,c=cfg(),h=isHost();
   let inner='',title='';
@@ -788,7 +790,7 @@ function modalHTML(){
     ${S.mode==='online'?`<label class="lab">اسمك</label><input class="field" data-draft="myname" value="${escH(S.draft.myname??S.myName)}" maxlength="14" placeholder="${S.me!=null?NAMES[S.me]:''}"><label class="lab">صورتك</label>${avPicker()}`:''}
     ${S.mode==='online'&&!h?'<p class="note">القواعد يحددها صاحب الغرفة 👑</p>':''}
     ${S.mode==='online'?`<label class="lab">مين يختار اللعبة</label><div class="segs">${opt('pick','host','صاحب الغرفة')}${opt('pick','all','الكل')}</div>`:''}
-    ${S.mode==='online'&&players().length>=4?`${teamSegs()}${teamK()?`<div class="tlist">${players().map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${shapeW(r)}</i>${r===S.me?'أنت':pname(r)} ${teamChip(r)}</span>`).join('')}</div>`:''}`:''}
+    ${S.mode==='online'&&players().length>=4?`${teamSegs()}${teamK()?`<div class="tlist">${players().map(r=>`<span class="mem" style="--c:${COLS[r]}"><i>${kface(r)}</i>${r===S.me?'أنت':pname(r)} ${teamChip(r)}</span>`).join('')}</div>`:''}`:''}
     <label class="lab">وقت كل دور</label><div class="segs">${opt('timer',0,'بدون')}${opt('timer',15,'15 ث')}${opt('timer',30,'30 ث')}${opt('timer',60,'دقيقة')}</div>
     <label class="lab">المباراة تنتهي عند</label><div class="segs">${opt('target',0,'مفتوحة')}${opt('target',3,'3 انتصارات')}${opt('target',5,'5')}${opt('target',10,'10')}</div>
     ${S.mode==='online'?`<label class="lab">المحادثة</label><div class="segs">${opt('chat',true,'مفتوحة')}${opt('chat',false,'مقفلة للكل')}</div>
@@ -844,7 +846,7 @@ function noteStats(g,d,won){const o=statsGet();if(!d||o.ids.includes(d.gid))retu
 function statsAll(){const o=statsGet();let n=0,w=0,k=0;for(const g in o.g){const e=o.g[g];if(!Array.isArray(e))continue;n+=+e[0]||0;w+=+e[1]||0;k++;}return {n,w,k};}
 function renderStats(){const o=statsGet(),fav=new Set(favGames()),t=statsAll();
   const ks=Object.keys(o.g).filter(g=>Object.prototype.hasOwnProperty.call(GAMES,g)&&Array.isArray(o.g[g])).sort((a,b)=>o.g[b][0]-o.g[a][0]);
-  OUT=`${topBar('إحصائياتي','home')}<div class="stt"><span><b>${t.n}</b><small>لعبة خلصت</small></span><span><b>${t.w}</b><small>فوز</small></span><span><b>${t.n?Math.round(t.w/t.n*100):0}٪</b><small>نسبة الفوز</small></span></div>
+  OUT=`${topBar('إحصائياتي','home')}${typeof CASTX!=='undefined'?CASTX.stats(t):''}<div class="stt"><span><b>${t.n}</b><small>لعبة خلصت</small></span><span><b>${t.w}</b><small>فوز</small></span><span><b>${t.n?Math.round(t.w/t.n*100):0}٪</b><small>نسبة الفوز</small></span></div>
 
   ${ks.length?`<div class="stl">${ks.map(g=>{const p=+o.g[g][0]||0,w=+o.g[g][1]||0;return `<button class="str" data-a="quick" data-v="${g}"><span class="gi">${GAMES[g].icon}</span><span class="lv-tx"><b>${fav.has(g)?'⭐ ':''}${GAMES[g].name}</b><small>${p} مرة • ${w} فوز</small></span><i class="stb" aria-hidden="true"><i style="width:${p?Math.round(w/p*100):0}%"></i></i></button>`;}).join('')}</div><button class="link" data-a="statsreset">تصفير الإحصائيات</button>`:'<p class="gempty">ما خلصت ولا لعبة للحين</p>'}`;}
 /* ================= back: the phone's back button and the browser's ================= */
@@ -943,6 +945,7 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
     case 'chatppl':S.chatPpl=!S.chatPpl;render();break;
     case 'chatjump':{S.chatJump=false;render();const b=app.querySelector('.msgs');if(b)b.scrollTop=b.scrollHeight;break;}
     case 'chathide':{const fp=S.ids&&S.ids[i];if(!isFpStr(fp))break;const h=hideSet();if(h.has(fp)){h.delete(fp);toast('رجعت رسائل '+pnameText(i));}else{h.add(fp);toast('ما راح تشوف رسائل '+pnameText(i));}lsSet(LSK.hide,JSON.stringify([...h].slice(-32)));render();break;}
+    case 'lkid':if(typeof KH!=='undefined'&&isRole(i)){KH.lkSet(i,(KH.kidOf(i)+1)%8);render();}break;
     case 'setav':{const v=EMJ_AV.includes(i)?i:-1;lsSet(LSK.av,v<0?'':String(v));render();publish();break;}
     case 'closemodal':S.modal=null;S.chatPpl=false;render();break;
     case 'rx':{S.modal=null;if(!emoOk(i))break;if(!rxRateOk()){toast('شوي شوي على الردود ✋');render();break;}const rx={e:i,t:Date.now()};S.rxSeen[S.me]=rx.t;render();floatRx(S.me,i);publish(rx);break;}
@@ -1000,6 +1003,8 @@ const SHP=[
  c=>`<path d="M20 5L33 12.5V27.5L20 35L7 27.5V12.5Z" fill="${c}"/>`];
 const shape=r=>`<svg viewBox="0 0 40 40">${SHP[r](COLS[r])}</svg>`;
 const shapeW=r=>`<svg viewBox="0 0 40 40">${SHP[r]('#fff')}</svg>`;
+// a player's kid (kit-hara.js): the kid they picked, else the kid of their colour, always in their colour (KH.pface; o.mood, o.hat)
+const kface=(r,o)=>typeof KH!=='undefined'&&isRole(r)?KH.pface(r,o):shapeW(r);
 
 const SERVER='https://gamesx.alqadi1423.workers.dev';
 const isApp=()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());

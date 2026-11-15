@@ -44,7 +44,8 @@ const EMJ=(()=>{
    ['حظ أوفر',word('حظ أوفر','#6C7A89','#4C5866',14)]];
   return L.map(([n,s])=>({n,svg:`<svg viewBox="0 0 64 64" aria-hidden="true">${s}</svg>`}));
 })();
-// the faces and characters (not the word stickers) can be an avatar
-const EMJ_AV=EMJ.map((_,i)=>i).filter(i=>i<20);
+// the faces and characters (not the word stickers) can be an avatar, and so can the kids of the cast: 100+k is KH.CAST[k]
+// (kit-hara.js KID_AV; drawn in the player's colour). An avatar travels as this number only (presence av), checked against this list
+const EMJ_AV=[...EMJ.map((_,i)=>i).filter(i=>i<20),100,101,102,103,104,105,106,107];
 const emoOk=i=>Number.isInteger(i)&&i>=0&&i<EMJ.length;
 const emoSVG=i=>emoOk(i)?EMJ[i].svg:'';
