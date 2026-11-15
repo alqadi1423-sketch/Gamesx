@@ -42,8 +42,8 @@ const gsQ=(D,i)=>D.Q[i]||['؟',()=>false,0];
 // the question in a sentence: «شخصيتك لابس نظارة؟»
 const gsSay=(D,i)=>`${D.pre} ${gsQ(D,i)[0]}`;
 // a legacy «خمّن الشخص» game (before the engine) carries on as a fresh board, same seats and secrets (secrets are board places)
-function gsNorm(id,d){if(!d||d.gv===2)return d;const D=GSD[id],n=d.pl.length;const R=srng(d,'gsx');
-  return {...d,gv:2,md:0,bd:D.deal(R),el:Array(n).fill('0'.repeat(GSN*n)),lg:Array(n).fill([]),sv:Array(n).fill('0'.repeat(n)),pt:Array(n).fill(0),qn:Array(n).fill(0),ph:0,lq:null,lqa:'',vt:Array(n).fill(-1),last:d.last||''};}
+function gsNorm(id,d){if(!d||d.gv===2)return d;const D=GSD[id],n=d.pl.length;const R=srng(d,'gsx');const {dk,qa,...o}=d;
+  return {...o,gv:2,md:0,bd:D.deal(R),el:Array(n).fill('0'.repeat(GSN*n)),lg:Array(n).fill([]),sv:Array(n).fill('0'.repeat(n)),pt:Array(n).fill(0),qn:Array(n).fill(0),ph:0,lq:null,lqa:'',vt:Array(n).fill(-1),last:d.last||''};}
 function gsInit(D,n){return {gv:2,md:0,bd:D.deal(),el:Array(n).fill('0'.repeat(GSN*n)),lg:Array(n).fill([]),sv:Array(n).fill('0'.repeat(n)),pt:Array(n).fill(0),qn:Array(n).fill(0),ph:0,lq:null,lqa:'',vt:Array(n).fill(-1),last:''};}
 const gsSecret=(d,priv,t)=>{const p=priv&&priv[d.pl[t]];return p&&p.gid===d.gid&&p.sec>=0&&p.sec<GSN?p.sec:null;};
 // whose turn comes next: «الكل ضد واحد» skips the keeper and whoever sat out the round (back to s when nobody else is left)
@@ -68,7 +68,7 @@ function gsGuess(D,d,s,t,k,priv){const sec=gsSecret(d,priv,t);if(sec==null)retur
     pt[s]+=g;const nd={...d,el,sv,pt,ph:1,last:`${nm(d,s)} عرف ${D.ttl} ${nm(d,t)} 🎉 +${g}`};
     return gsOpen(nd,s).length?nd:gsFinish({...nd,last:nd.last+` وكشف الكل!`},s);}
   for(const m of ms)el[m]=setAt(el[m],t*GSN+k,'1');pt[s]=Math.max(0,pt[s]-1);
-  return {...d,el,pt,ph:0,turn:gsNext(d,s)??s,last:`${nm(d,s)} خمّن «${it}» لـ${nm(d,t)} وطلع غلط ✗`};}
+  return {...d,el,pt,ph:0,turn:gsNext(d,s)??s,last:`${nm(d,s)} خمّن إن ${D.ttl} ${nm(d,t)} «${it}» وطلع غلط ✗`};}
 /* ---------- «الكل ضد واحد» ---------- */
 function gsRound(D,d,r){const n=d.pl.length;while(r<n&&d.out[(d.st+r)%n]==='1')r++;
   if(r>=n||aliveSeats(d).length<2)return gsFinish(d,null);
@@ -89,8 +89,8 @@ const gsNoteKey=(d,v,t)=>d.gid+'|'+v+'|'+t+'|'+(d.md===1?d.rd:'');
 function gsNote(d,v,t){S.gxN=S.gxN||{};return S.gxN[gsNoteKey(d,v,t)]||'0'.repeat(GSN);}
 const gsFace=(d,s,sz)=>KH.face({who:d.pl[s],size:sz||26,ring:1});
 // one card: front (picture and name) and back; flipped cards turn over, the newly flipped ones one after another
-function gsCard(D,d,k,cls,attrs,st){const it=gsItem(D,d,k),tag=attrs?'button':'div';
-  return `<${tag} class="gsx-c ${cls}" data-k="c${k}" ${attrs||''}${st?` style="${st}"`:''}><span class="gsx-f">${D.art(d.bd[k])}<i>${it.name}</i></span><span class="gsx-b"><u>؟</u><i>${it.name}</i></span></${tag}>`;}
+function gsCard(D,d,k,cls,attrs,st){const it=gsItem(D,d,k),tag=attrs?'button':'div',n=[...it.name].length,L=n>12?' class="x2"':n>9?' class="x1"':'';
+  return `<${tag} class="gsx-c ${cls}" data-k="c${k}" ${attrs||''}${st?` style="${st}"`:''}><span class="gsx-f">${D.art(d.bd[k])}<i${L}>${it.name}</i></span><span class="gsx-b"><u>؟</u><i${L}>${it.name}</i></span></${tag}>`;}
 function gsGrid(D,d,e,o){const prev=o.prev||e;let n=0;
   return `<div class="gsx-grid">${[...Array(GSN).keys()].map(k=>{const dn=e[k]==='1',nw=dn&&prev[k]!=='1';
     if(o.pick&&!dn)return gsCard(D,d,k,'pk','data-ga="gpick" data-i="'+k+'" aria-label="'+gsItem(D,d,k).name+'"');
@@ -105,7 +105,7 @@ function gsScene(D,d,v,ctx){if(!d.lq)return '';const [a,i]=d.lq,n=d.pl.length,ke
   else if(v>=0&&sameTeam(d,a,v)){const lg=d.lg[v],r=lg&&lg[lg.length-1];if(r&&r[0]===i&&typeof r[1]==='string')ans=[...r[1]].map((c,t)=>c==='-'?null:[t,c==='y']).filter(Boolean);}
   const q=gsQ(D,i)[0];
   if(ans&&ans.length===1){const [t,y]=ans[0],ra=d.pl[a],rt=d.pl[t];
-    return `<div class="gsx-scene" data-k="${key}"><svg viewBox="0 0 360 132" aria-hidden="true"><path d="M0 112H360V132H0z" fill="#22304C"/><path d="M0 112H360" stroke="#45567A" stroke-width="2"/>${KH.kid({who:ra,pose:'think',x:96,y:120,s:1.08})}${KH.kid({who:rt,pose:y?'cheer':'sad',x:262,y:120,s:1.08,mood:y?'g':'sad'})}<g class="gsx-bq">${KH.say(96,48,q.length>14?q.slice(0,13)+'…':q,{fs:12.5})}</g><g class="gsx-ba">${KH.say(262,42,y?'إيه!':'لا!',{fs:20,fill:y?'#D9F5E1':'#FFE1DE'})}</g></svg><p><small>${nm(d,a)} يسأل ${nm(d,t)}</small>«${gsSay(D,i)}»</p></div>`;}
+    return `<div class="gsx-scene" data-k="${key}"><svg viewBox="0 0 360 132" aria-hidden="true"><path d="M0 112H360V132H0z" fill="#22304C"/><path d="M0 112H360" stroke="#45567A" stroke-width="2"/>${KH.kid({who:ra,pose:'think',x:62,y:120,s:1.08})}${KH.kid({who:rt,pose:y?'cheer':'sad',x:298,y:120,s:1.08,mood:y?'g':'sad'})}<g class="gsx-ba">${KH.say(298,46,y?'إيه!':'لا!',{fs:19,fill:y?'#D9F5E1':'#FFE1DE'})}</g></svg><p><small>${nm(d,a)} يسأل ${nm(d,t)}</small>«${gsSay(D,i)}»</p></div>`;}
   const row=ans?`<div class="gsx-ans">${ans.map(([t,y],k)=>`<span style="--dl:${120+k*70}ms">${gsFace(d,t,34)}<em>${nm(d,t)}</em><b class="${y?'y':'n'}">${y?'إيه!':'لا!'}</b></span>`).join('')}</div>`:'';
   return `<div class="gsx-scene gsx-sc2" data-k="${key}"><p>${gsFace(d,a,30)}<span><small>${nm(d,a)} سأل ${d.md===1?nm(d,d.kp):'الكل'}</small>«${gsSay(D,i)}»</span></p>${row}</div>`;}
 // the questions, by theme tab: a picture and a sentence each; asked ones show their answer (no hints before the answer)
@@ -160,7 +160,7 @@ function gsRender(id,D,d,ctx){
     S.gxPrev=S.gxPrev||{};const prev=S.gxPrev[key]||shown;S.gxPrev[key]=shown;const gm=myTurn&&S.gw&&(B1||d.sv[v][t]!=='1');
     const left=[...shown].filter(c=>c==='0').length;
     s+=`<div class="gsx-pan ${gm?'gm':''}"><div class="gsx-ph"><span>${gsFace(d,t,22)}${D.ttl} ${nm(d,t)}</span><b>${!B1&&d.sv[v][t]==='1'?'عرفته ✔':`باقي ${left} من ${GSN}`}</b></div>`;
-    if(gm)s+=`<p class="gsx-gh">🎯 اضغط ${D.one} اللي تتوقعه لـ${nm(d,t)}</p>`;else if(man&&myTurn)s+=`<p class="gsx-gh soft">اقلب بنفسك: اضغط البطاقة اللي ما تنطبق</p>`;
+    if(gm)s+=`<p class="gsx-gh">🎯 اضغط ${D.one} اللي تتوقعه حق ${nm(d,t)}</p>`;else if(man&&myTurn)s+=`<p class="gsx-gh soft">اقلب بنفسك: اضغط البطاقة اللي ما تنطبق</p>`;
     s+=gsGrid(D,d,shown,{prev,pick:gm,note:man&&!spect,me:B1&&d.kp===v?mine:null})+gsHist(D,rows)+`</div>`;}
   // the controls: ask (by theme), guess, end the turn; teammates vote while a mate has the turn (online)
   if(myTurn){
@@ -200,7 +200,9 @@ function gsBot(D,d,s,lv){const end=()=>{const t=gsNext(d,s);return {...d,ph:0,tu
   const small=boards.slice().sort((a,b)=>a[1].length-b[1].length)[0];
   if(small){const L=small[1].length;
     if(lv===1&&L<=3&&Math.random()<.35)return guess(small[0],pickR(small[1]));
-    if(B1&&L===2&&(lv===3||(lv===2&&Math.random()<.5)))return guess(small[0],pickR(small[1]));}
+    // «الكل ضد واحد»: after its own question (same turn) the next player would get the answer too, so a close board is worth a guess;
+    // at the start of a turn the hard bot asks first (a question that splits two or three cards, then the guess)
+    if(B1&&d.ph===1&&(lv===3?L<=3:lv===2&&L===2&&Math.random()<.6))return guess(small[0],pickR(small[1]));}
   if(d.ph===1)return end();
   const asked=new Set(B1?d.hs.map(h=>h[0]):(d.lg[s]||[]).map(r=>r[0]));
   const H=p=>p<=0||p>=1?0:-(p*Math.log2(p)+(1-p)*Math.log2(1-p));
@@ -208,6 +210,9 @@ function gsBot(D,d,s,lv){const end=()=>{const t=gsNext(d,s);return {...d,ph:0,tu
   const qs=D.Q.map((_,i)=>i).filter(i=>!asked.has(i)).map(i=>[i,val(i)]);const useful=qs.filter(x=>x[1]>0);
   if(!useful.length)return small?guess(small[0],pickR(small[1])):end();
   if(lv===1&&Math.random()<.6)return (B1?gsAsk1:gsAsk)(D,d,s,pickR(qs)[0],priv)||end();
+  // «الكل ضد واحد», hard: the answers help everyone, so it asks what most likely leaves one or two cards for its own guess right after
+  if(B1&&lv===3){const L=boards[0][1],w=x=>x===1?1:x===2?.5:0;let bi=useful[0][0],bw=-1;for(const [i,v] of useful){const y=L.filter(k=>!!D.Q[i][1](gsItem(D,d,k))).length;const x=(y/L.length)*w(y)+((L.length-y)/L.length)*w(L.length-y)+v*.01;if(x>bw){bw=x;bi=i;}}
+    return gsAsk1(D,d,s,bi,priv)||end();}
   const noise=[0,1.2,.5,0][lv];let best=useful[0][0],bv=-1;for(const [i,v] of useful){const x=v*(1+noise*(Math.random()-.3));if(x>bv){bv=x;best=i;}}
   return (B1?gsAsk1:gsAsk)(D,d,s,best,priv)||end();}
 GSX.icon=(bg,arts)=>{GSX.defs();return `<svg viewBox="0 0 100 100"><defs><linearGradient id="gsi${bg.slice(1)}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${shade(bg,.2)}"/><stop offset="1" stop-color="${shade(bg,-.15)}"/></linearGradient></defs><rect width="100" height="100" fill="url(#gsi${bg.slice(1)})"/><circle cx="84" cy="14" r="30" fill="#fff" opacity=".1"/>`+
@@ -417,8 +422,8 @@ const GSL=(()=>{
     ['برج المملكة','SA AR as T H L',city+P('M-11 23L-5 -28L-1.4 -6Q0 -4.4 1.4 -6L5 -28L11 23z',glass)+L('M-3.4 -14.6h6.8',O,2.4)+L('M-6.8 4h13.6M-7.8 12h15.6M-5.4 -6h3M2.4 -6h3',O,.9)],
     ['برج الفيصلية','SA AR as T L',city+P('M-10 23L-2.4 -17h4.8L10 23z',glass)+C(0,-14,4.4,'#F0B429')+L('M0 -18.4V-30',O,1.4)+L('M-7 10h14M-5 0h10M-3.6 -8h7.2',O,.9)],
     ['قصر المصمك','SA AR as F U',sand+R(-20,-2,40,25,mud)+P('M-26 23v-25q3-3 6 0v25zM20 23v-25q3-3 6 0v25z',mud)+L('M-17 -2l2-4 2 4 2-4 2 4 2-4 2 4 2-4 2 4 2-4 2 4 2-4 2 4 2-4 2 4 2-4 2 4',O,1.1)+L('M-26 -2l1.5-3 1.5 3 1.5-3 1.5 3M20 -2l1.5-3 1.5 3 1.5-3 1.5 3',O,1)+P('M-5 23v-12q5-4 10 0v12z','#8A5A2B',1.3)+L('M-14 6h3M11 6h3M-23 4v3M23 4v3',O,1.6)],
-    ['الحجر (مدائن صالح)','SA AR as A E R',sand+P('M-24 23q-4-30 6-42q10-6 18 0q10 10 4 42z','#D9A066')+P('M-11 23V-2h22V23z','#E7B985',1.3)+L('M-11 -2l2.6-3 2.6 3 2.6-3 2.6 3 2.6-3 2.6 3 2.6-3 2.6 3',O,1.1)+L('M-11 3h22',O,1.1)+P('M-4 23v-11h8v11z','#7A4A2A',1.2)+L('M-8 6v17M8 6v17',O,1)],
-    ['الطريف بالدرعية','SA AR as F U E',sand+R(-26,4,18,19,mud)+R(-10,-8,22,31,'#E3C08C')+R(12,-2,14,25,mud)+L('M-10 -8l2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3',O,1)+L('M-26 4l2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3',O,1)+P('M-3 -2l3-3 3 3v6h-6z','#fff',1)+L('M-21 12v3M-15 12v3M17 6v3M21 6v3M-4 10v4M4 10v4',O,1.6)],
+    ['مدائن صالح','SA AR as A E R',sand+P('M-24 23q-4-30 6-42q10-6 18 0q10 10 4 42z','#D9A066')+P('M-11 23V-2h22V23z','#E7B985',1.3)+L('M-11 -2l2.6-3 2.6 3 2.6-3 2.6 3 2.6-3 2.6 3 2.6-3 2.6 3',O,1.1)+L('M-11 3h22',O,1.1)+P('M-4 23v-11h8v11z','#7A4A2A',1.2)+L('M-8 6v17M8 6v17',O,1)],
+    ['الدرعية','SA AR as F U E',sand+R(-26,4,18,19,mud)+R(-10,-8,22,31,'#E3C08C')+R(12,-2,14,25,mud)+L('M-10 -8l2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3',O,1)+L('M-26 4l2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3',O,1)+P('M-3 -2l3-3 3 3v6h-6z','#fff',1)+L('M-21 12v3M-15 12v3M17 6v3M21 6v3M-4 10v4M4 10v4',O,1.6)],
     ['مرايا','SA AR as Y L',P('M-30 23q4-18 10-20t4 20zM30 23q-4-20-10-22t-4 22z','#C98A4E')+R(-17,-6,34,29,'#CFE6F5')+P('M-17 12l8-6 6 4 7-8 7 6 6-3v18h-34z','#E8B985',0)+L('M-17 -6h34M-17 23h34',O,1.2)+L('M-17 -6v29M17 -6v29',O,1.4)+sand.replace('M-30 22','M-30 24')],
     ['صخرة الفيل','SA AR as N',sand+P('M-22 23q-4-22 6-32q14-8 22 4q4 8 2 16l-2 12h-6l-1-8q-4-2-6 0v8z','#C98A4E')+P('M-1 23v-7q3-3 6 0v7z','#E8C98E',1.2)+L('M-14 -2q4 4 8 2',O,1)],
     ['برج خليفة','AR as T H L',city+P('M-9 23L-6.6 2L-4.4 -8L-2.4 -18L-1 -26L0 -31L1 -26L2.4 -18L4.4 -8L6.6 2L9 23z',glass)+L('M-6.6 2h13.2M-4.4 -8h8.8M-2.4 -18h4.8M0 23V-28',O,.9)],
@@ -455,7 +460,7 @@ const GSL=(()=>{
   const g=(i,c)=>GSX.ic('#DDEFFC',`<circle r="8.5" fill="#4FA3D8"${s(1.3)}/><path d="${c}" fill="#3FAE5C"${s(1)}/>`);
   const Q=[['في السعودية؟','SA',0,mini(N('قصر المصمك'))],['في دولة عربية؟','AR',0,mini(N('الأهرامات'))],['في آسيا؟','as',0,g(0,'M-2 -8q6 0 9 3t-1 6q-3 0-4 3q-2-3-5-2t-2-5q1-4 3-5z')],['في أفريقيا؟','af',0,g(0,'M-4 -7h6q4 2 3 6t-3 8q-2-2-2-5t-4-4q-2-3 0-5z')],['في أوروبا؟','eu',0,g(0,'M-6 -7q4-1 6 1t4 0 2 3q-3 2-6 1t-5 2q-3-2-1-7z')],['في قارة أمريكا؟','am',0,g(0,'M-6 -8q4 0 4 4t-1 4q2 2 2 5t-2 3q-2-4-2-7t-3-5z')],
     ['برج أو ناطحة سحاب؟','T',1,mini(N('برج خليفة'))],['أطول من 300 متر؟','H',1,mini(N('برج سي إن'))],['فيه قبة؟','D',1,mini(N('تاج محل'))],['جسر؟','B',1,mini(N('جسر البوابة الذهبية'))],['تمثال؟','S',1,mini(N('تمثال الحرية'))],['قصر أو قلعة أو سور؟','F',1,mini(N('قلعة نويشفانشتاين'))],['شكله هرم؟','P',1,mini(N('الأهرامات'))],['فيه ساعة؟','K',1,mini(N('ساعة بيغ بن'))],
-    ['منحوت في الصخر؟','R',2,mini(N('البتراء'))],['مبني بالطين؟','U',2,mini(N('الطريف بالدرعية'))],['مسرح أو ملعب؟','Y',2,mini(N('الكولوسيوم'))],['في البحر أو على جزيرة؟','I',2,mini(N('برج العرب'))],['من صنع الطبيعة؟','N',2,mini(N('جبل فوجي'))],
+    ['منحوت في الصخر؟','R',2,mini(N('البتراء'))],['مبني بالطين؟','U',2,mini(N('الدرعية'))],['مسرح أو ملعب؟','Y',2,mini(N('الكولوسيوم'))],['في البحر أو على جزيرة؟','I',2,mini(N('برج العرب'))],['من صنع الطبيعة؟','N',2,mini(N('جبل فوجي'))],
     ['عمره أكثر من ألف سنة؟','A',3,mini(N('ستونهنج'))],['انبنى قبل سنة 1800؟','E',3,mini(N('برج بيزا المائل'))],['انبنى بعد سنة 1950؟','L',3,mini(N('برج المملكة'))]].map(([t,k,c,ic])=>[t,x=>x.t.has(k),c,ic]);
   const deal=R=>{R=R||Math.random;const a=[],o=[];it.forEach((x,k)=>(x.t.has('AR')?a:o).push(k));return shuffleR(R,[...shuffleR(R,a).slice(0,10),...shuffleR(R,o).slice(0,14)]);};
   return {it,Q,art,deal};
@@ -589,7 +594,7 @@ const GSJ=(()=>{
     'job-lab':R(-11,-49,22,7,'rgba(150,210,240,.55)',1.5,3)+P('M12 -30h4v6l4 8q1 3-2 3h-8q-3 0-2-3l4-8z','#DFF3F1',1.2)+P('M11.4 -18h9.2l1 2.6q.4 1.4-1.4 1.4h-8.4q-1.8 0-1.4-1.4z','#7DD38A',0),
     'job-mail':cap('#C9372F')+R(10,-27,10,7,'#fff',1.1)+L('M10 -27l5 4 5-4',O,.9),
     'job-scis':L('M13 -19l7-8M13 -27l7 8',O,1.6)+C(11.6,-17.6,1.8,'none',1.2)+C(11.6,-28.4,1.8,'none',1.2),
-    'job-ball':C(16,-22,6,'#fff',1.3)+P('M13 -25l3 2 3-2-1 4h-4z',O,0)+L('M16 -23v-5M13 -21l-3 2M19 -21l3 2',O,.8),
+    'job-ball':C(16,-22,6.2,'#fff',1.3)+P('M16 -24.6l2.4 1.8-.9 2.8h-3l-.9-2.8z',O,0)+L('M16 -24.6v-3M18.4 -22.8l2.8-1M17.5 -20l1.8 2.4M14.5 -20l-1.8 2.4M13.6 -22.8l-2.8-1',O,.7),
     'job-mic':L('M12 -19l5-9',O,2)+C(18,-30,3.6,'#5F7590',1.3)+R(-20,-30,8,6,'#C9372F',1,1)+L('M-18 -27h4','#fff',1)};
   KH.extend({outfit:OUT,acc:ACC});
   const J=`طبيب|1|#F4F6FA|job-coat|job-steth|W m

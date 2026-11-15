@@ -26,7 +26,7 @@
 /* the answer moment */
 .gsx-scene{position:relative;margin:0 0 8px;border-radius:18px;overflow:hidden;background:radial-gradient(ellipse at 50% 130%,#3B4C70 0,var(--gn3) 55%,#1B2537 100%);color:var(--gink);box-shadow:0 3px 0 #0B1222}
 .gsx-scene svg{display:block;width:100%;height:auto;max-height:132px}
-.gsx-scene>p{position:absolute;top:6px;left:0;right:0;margin:0 auto;width:46%;text-align:center;font-size:13.5px;line-height:1.35;font-weight:800}
+.gsx-scene>p{position:absolute;top:8px;left:0;right:0;margin:0 auto;width:52%;text-align:center;font-size:13.5px;line-height:1.35;font-weight:800}
 .gsx-scene>p small{display:block;color:var(--gmut);font-size:11.5px;font-weight:700}
 .gsx-bq{animation:gsx-in .3s var(--ease,ease) both}
 .gsx-ba{transform-box:fill-box;transform-origin:50% 100%;animation:gsx-pop .34s .22s var(--spring,ease) both}
@@ -66,6 +66,7 @@
   background:radial-gradient(circle at 50% 40%,rgba(240,180,41,.25) 0 22%,transparent 23%),repeating-linear-gradient(45deg,#24324F 0 5px,#2C3C5E 5px 10px);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12),inset 0 0 0 4px #1A2640,inset 0 0 0 5px rgba(240,180,41,.3)}
 .gsx-b u{text-decoration:none;font-size:20px;font-weight:900;color:rgba(255,226,140,.7);line-height:1}
 .gsx-b i{flex:none;color:rgba(255,255,255,.5);font-size:9px}
+.gsx-f i.x1{font-size:9px;letter-spacing:-.2px}.gsx-f i.x2{font-size:8px;letter-spacing:-.3px}.gsx-b i.x1,.gsx-b i.x2{font-size:8px}
 .gsx-c.dn .gsx-f{transform:rotateY(180deg)}.gsx-c.dn .gsx-b{transform:rotateY(0)}
 .gsx-c.nw .gsx-f{animation:gsx-fo .42s var(--dl,0s) cubic-bezier(.4,.1,.3,1) both}.gsx-c.nw .gsx-b{animation:gsx-bi .42s var(--dl,0s) cubic-bezier(.4,.1,.3,1) both}
 .gsx-c.pk{cursor:pointer}
