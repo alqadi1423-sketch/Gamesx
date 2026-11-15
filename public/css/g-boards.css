@@ -112,23 +112,8 @@ svg.bd-dots{background:radial-gradient(circle at 30% 20%,#FFFFFF,#F3F6FA);border
 .sbar .btn{margin:0}
 @media (prefers-reduced-motion:reduce){.bd-sea .sc .fire,.bd-sea .sc .smk::before,.bd-sea .sc .smk::after{animation:none!important}}
 
-/* ========== guess who ========== */
-.gw .pc{transition:transform var(--t2) var(--ease)}
-.gw .pc .fr{background:linear-gradient(#FFFFFF,#F6F2FB);box-shadow:0 0 0 1.5px #E4D8F2 inset,0 2px 0 rgba(30,10,50,.35),0 3px 6px rgba(30,10,50,.18);border-radius:9px}
-.gw .pc .fr svg{border-radius:8px 8px 3px 3px;margin:2px 2px 0;width:calc(100% - 4px)}
-.pc .fr img.fimg{display:block;flex:none;width:calc(100% - 4px);aspect-ratio:60/66;margin:2px 2px 0;border-radius:8px 8px 3px 3px;pointer-events:none;-webkit-user-drag:none}
-.gw .pc .fr b{font-size:10.5px}
-.gw .pc .bk{background:radial-gradient(circle at 50% 42%,rgba(240,180,41,.28) 0 22%,transparent 23%),repeating-linear-gradient(45deg,#4a2d66 0 5px,#56377A 5px 10px);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14),inset 0 0 0 4px rgba(74,45,102,.9),inset 0 0 0 5px rgba(240,180,41,.35)}
-.gw .pc .bk span{color:rgba(255,226,140,.75);text-shadow:0 1px 0 rgba(0,0,0,.3)}
-.gw .pc.pick{cursor:pointer}
-/* guess mode: g-mind.css has a .gm column for the mind games; the guess board stays a grid */
-.gw.gm{display:grid;align-items:stretch}
-.qcat .q{min-height:36px}.tabs .tab[data-ga=tgt]{min-height:36px}
-.gw.gm .pc.pick{animation:none}
-.gw.gm .pc.pick .fr{box-shadow:0 0 0 2.5px var(--sel),0 2px 0 rgba(30,10,50,.35),0 4px 10px rgba(30,10,50,.25)}
-.gw.gm .pc.pick:hover,.gw.gm .pc.pick:focus-visible{transform:translateY(-3px)}
-.gw.gm .pc.pick:active{transform:scale(.94)}
-.secret .pc .fr{box-shadow:0 0 0 2px #E4D8F2 inset,0 2px 0 rgba(30,10,50,.25)}
+/* sea battle: the rival tabs */
+.tabs .tab[data-ga=tgt]{min-height:36px}
 
 /* ========== connect four ========== */
 .cellgrid.bd-c4{background:linear-gradient(170deg,#3E8BDA,#2C69B1 60%,#245C9E);padding:8px;border-radius:var(--r-l);overflow:hidden;box-shadow:inset 0 2px 0 rgba(255,255,255,.28),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 0 #1C4C86,var(--e2)}

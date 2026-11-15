@@ -332,21 +332,6 @@ GAMES.jakaro.bot=(d,s,lv)=>{const cs=jkCtl(d,s),cards=cardsOf(d.hd[s]),n=d.pl.le
     return v-(JKCOST[cards[i][0]]||0)*(lv===3?1.5:.5)+Math.random();};
   const b=opts.sort((x,y)=>val(y)-val(x))[0];return jkPlay(d,b[0],b[1]);};
 
-/* ---------- guess the person (people or animals) ---------- */
-// medium and hard ask the question that splits the board most evenly, and they guess at once when a rival is one step from naming
-// their own secret (a wrong guess costs no more than waiting); easy asks what it notices first and guesses early now and then
-GAMES.guess.bot=(d,s,lv)=>{const ts=targets(d,s);if(!ts.length)return;const D=gDeck(d);
-  const left=(a,o)=>[...elSeg(d,a,o)].map((c,k)=>c==='0'?k:-1).filter(k=>k>=0);
-  const o=lv===1?pickR(ts):[...ts].sort((a,b)=>left(s,a).length-left(s,b).length)[0];S.tgt=o;const L=left(s,o);
-  const threat=Math.min(99,...d.pl.map((_,a)=>a!==s&&d.out[a]!=='1'&&!sameTeam(d,a,s)?left(a,s).length:99));
-  let go=L.length===1||(lv===1&&L.length<=3&&Math.random()<.35)||(lv>1&&threat===1);
-  const yes=i=>L.filter(k=>!!D.Q[i][1](gItem(d,k))).length;
-  const useful=D.Q.map((q,i)=>i).filter(i=>{const y=yes(i);return y>0&&y<L.length;});
-  if(go||!useful.length){S.gw=true;return botDo(d,s,'guess',pickR(L));}
-  if(lv===1&&Math.random()<.6)return botDo(d,s,'ask',pickR(useful));
-  let best=useful[0],bv=1e9;for(const i of useful){const v=Math.abs(L.length/2-yes(i))+Math.random()*[0,4,1.5,.1][lv];if(v<bv){bv=v;best=i;}}
-  return botDo(d,s,'ask',best);};
-
 /* ---------- minefield ---------- */
 GAMES.mines.bot=(d,s,lv)=>{const z=d.z,N=z*z;const unk=[];for(let i=0;i<N;i++)if(d.rv[i]==='.')unk.push(i);
   if(lvRand(lv))return botDo(d,s,'m',pickR(unk));
