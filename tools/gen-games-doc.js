@@ -11,6 +11,7 @@
      node tools/gen-games-doc.js --check      exits 1 when docs/games.md is out of date (nothing is written)
      node tools/gen-games-doc.js --out=x.md   writes somewhere else
    Env: PUB=<folder with index.html> (default: public/ next to this tools folder).
+   tools/gen-game-logs.js requires this file for collect() and the wording helpers (the per-game logs in docs/games/).
    Needs: Node 18+ and Playwright with Chromium (npm i -D playwright && npx playwright install chromium). */
 const http = require('http');
 const fs = require('fs');
@@ -128,6 +129,7 @@ function write(D) {
   L.push('# كتالوج الألعاب', '');
   L.push('> **هذا الملف يتولّد آليًا، لا تعدّله باليد.** يتحدّث بالأمر `node tools/gen-games-doc.js` من جذر المستودع (يحتاج Playwright مع Chromium).',
     '> السكربت يفتح التطبيق نفسه بمتصفح بدون شاشة، ويقرأ `GAMES` و`HELP` و`CATS` و`NOLOCAL`/`NOBOT` من الكود، فالأرقام والقوانين هنا هي اللي في التطبيق بالضبط.', '');
+  L.push('**لكل لعبة سجلها** في [games/](games/README.md): تاريخ تعديلاتها، وقرارات صاحب المشروع، والاقتراحات بحالاتها، وصور التصاميم. وكل الاقتراحات مجموعة في [proposals.md](proposals.md).', '');
   L.push('## الملخص', '');
   L.push('| | العدد |', '|---|---|');
   L.push(`| كل الألعاب | **${n}** |`);
@@ -171,6 +173,7 @@ function write(D) {
       if (g.noTimer) extra.push('لها ساعتها الخاصة (ما تستخدم وقت الدور العام)');
       if (extra.length) L.push(`- **طريقة اللعب:** ${extra.join('، ')}`);
       L.push(`- **معلومات مخفية أونلاين:** ${sec.length ? sec.join('؛ ') : 'لا، كل شي فيها مكشوف للكل'}`);
+      L.push(`- **السجل:** [games/${g.id}.md](games/${g.id}.md)`);
       L.push('', '**القوانين** (من زر ؟ في اللعبة):', '');
       const sentences = g.help ? g.help.replace(/([.؟!])\s+/g, '$1\n').split('\n').map(s => s.trim()).filter(Boolean) : [];
       if (sentences.length) for (const s of sentences) L.push(`- ${md(s)}`);
@@ -181,7 +184,9 @@ function write(D) {
   return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 
-(async () => {
+module.exports = { collect, PUB, REPO, md, MODES, playersTxt, botTxt, secretList, hasSecret, teamsTxt };
+
+if (require.main === module) (async () => {
   if (!fs.existsSync(path.join(PUB, 'index.html'))) { console.error('no index.html in ' + PUB + ' (set PUB)'); process.exit(2); }
   const D = await collect();
   const text = write(D);
