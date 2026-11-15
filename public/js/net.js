@@ -5,10 +5,40 @@
    Seats belong to device keys (ids[role] = fp), so a seat, its score and a kick follow the person, not the colour. */
 // 2: teams, and the rebuilt draw and guess, categories, sea battle, bomb, lucky boxes, camel race and higher or lower
 // 4: acks name each move turned down and why (x: [[n, code]]), the host says which seats a bot plays (ab), forfeit ('out')
-const NETV=4,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=6000,PUB_MS=40,QMAX=6;
+const NETV=4,HOLD=180000,TAKE_FAST=4000,TAKE_SLOW=15000,JOIN_WAIT=4000,RESUME_WAIT=1500,PEND_MS=8000,PUB_MS=40,QMAX=6;
 // every phone publishes at least every HB_MS (hb = its clock); a peer whose presence has not changed for HB_DEAD is taken as asleep
 const HB_MS=4000,HB_DEAD=12000,TAKE_NEXT=6000;
+/* a phone whose screen is off or that is in another app says so (aw) in what it publishes. It is taken as asleep after AW_DEAD
+   without a new message instead of HB_DEAD (a phone that sleeps stops at once; one still running keeps its heartbeat), and the
+   bot plays its seat once it has been away GRACE_AW on its turn */
+const AW_DEAD=6500,GRACE_AW=8000,TAKE_AW=1500;
+const TAKE_HEARD=10000;
 const HOSTK=['h','g','s','d','sc','cfg','ids','pp','vw','bk','ack','ab'];
+/* ---------- a log of this phone's connection, for a freeze report ----------
+   The last NLOG_N events: what happened (a short name), when, and a number or a short code. Never a name, a chat line, a key
+   or a game's content. A long press on the room code copies it, so a player can paste it to us after a real freeze */
+const NLOG_N=300,NLOG=[];
+function NETLOG(ev,a,b){const x=v=>v==null?null:typeof v==='number'?(isFinite(v)?Math.round(v):null):String(v).slice(0,16);
+  NLOG.push([Date.now(),String(ev).slice(0,10),x(a),x(b)]);if(NLOG.length>NLOG_N)NLOG.shift();}
+window.NETLOG=NETLOG;
+// kept for this tab across a reload (the phone may have dropped the page while it was in the background)
+try{const o=JSON.parse(sessionStorage.getItem('alaabna.nlog')||'null');if(Array.isArray(o))NLOG.push(...o.filter(e=>Array.isArray(e)&&e.length===4).slice(-NLOG_N));NETLOG('load',performance.navigation?performance.navigation.type:null);}catch(e){}
+const nlogKeep=()=>{try{sessionStorage.setItem('alaabna.nlog',JSON.stringify(NLOG));}catch(e){}};
+try{addEventListener('pagehide',nlogKeep);document.addEventListener('visibilitychange',()=>{if(document.hidden)nlogKeep();});setInterval(nlogKeep,15000);}catch(e){}
+function netlogText(){const t0=NLOG.length?NLOG[0][0]:Date.now(),ua=navigator.userAgent||'';
+  const os=(ua.match(/Android [\d.]+|iPhone OS [\d_]+|CPU OS [\d_]+|Windows NT [\d.]+|Mac OS X [\d_.]+/)||[''])[0],br=(ua.match(/(?:CriOS|Chrome|Firefox|Version)\/\d+/)||[''])[0];
+  let a=null;try{a={v:NETV,ver:((document.querySelector('script[src*="net.js"]')||{}).src||'').split('v=')[1]||null,os,br,app:!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()),
+    t0:new Date(t0).toISOString(),now:Date.now()-t0,mode:S.mode,me:S.me,host:typeof actingHost==='function'?actingHost():null,amHost:amHost(),ep:S.epoch,g:S.st.g,s:S.st.s,
+    off:S.offline||false,q:S.outQ.length,ev:NLOG.map(e=>[e[0]-t0,e[1],e[2],e[3]])};}catch(e){a={err:String(e)};}
+  return 'alaabna-netlog '+JSON.stringify(a);}
+function copyNetlog(){const t=netlogText(),done=()=>toast('نسخنا سجل الاتصال، أرسله لنا 👍');
+  const old=()=>{const el=document.createElement('textarea');el.value=t;el.setAttribute('readonly','');el.style.cssText='position:fixed;top:-1000px;opacity:0';document.body.appendChild(el);el.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}el.remove();if(ok)done();else toast('ما قدرنا ننسخ السجل');};
+  try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,old);else old();}catch(e){old();}}
+// a long press (0.8 s) on the room code
+try{let lpT=null;const up=()=>{clearTimeout(lpT);lpT=null;};
+  document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest('.rb-code');if(!el)return;up();lpT=setTimeout(()=>{lpT=null;copyNetlog();},800);},true);
+  ['pointerup','pointercancel','scroll'].forEach(n=>document.addEventListener(n,up,true));
+  document.addEventListener('contextmenu',e=>{if(e.target&&e.target.closest&&e.target.closest('.rb-code'))e.preventDefault();},true);}catch(e){}
 const FPRE=/^[\w-]{12}$/;
 const isFp=x=>typeof x==='string'&&FPRE.test(x);
 function validIds(a){if(!Array.isArray(a)||a.length!==MAXP||!a.every(x=>x===null||isFp(x)))return null;const f=a.filter(Boolean);return new Set(f).size===f.length?a.slice():null;}
@@ -17,19 +47,22 @@ function netReset(){S.seenHost=false;clearTimeout(S.takeT);clearTimeout(S.pubT);
     needUpd:false,hostGoneAt:null,vgen:0,peersByFp:{},qByFp:{},lostAt:Date.now(),hostSince:0,badC:new Set(),oldSeen:false,ackN:0,sentN:0,hostKeyC:null,vwC:{},bkCache:null,seatGone:{},
     restore:null,takeT:null,pubT:null,pubBusy:false,pubAgain:false,pubRx:null,procBusy:false,procAgain:false,sendTimes:[],bigWarn:false,
     hbSeen:{},vh:{},vtry:{},fpPeer:{},vwSig:null,lastPubAt:0,tickAt:Date.now(),rxAt:Date.now(),myPv:null,resend:null,selfPubLast:undefined,dRef:null,dS:0,
-    hist:[],ab:{},abR:[],abQ:{},synced:false,clickSnap:null,prevHost:null,splitAt:null});}
+    hist:[],ab:{},abR:[],abQ:{},synced:false,clickSnap:null,prevHost:null,splitAt:null,awSince:{},expT:0});}
 netReset();
 const amHost=()=>S.mode==='online'&&!!S.hostFp&&S.hostFp===SEAL.fp;
 const roleOfFp=fp=>fp?S.ids.indexOf(fp):-1;
 const present=fp=>!!fp&&(fp===SEAL.fp||!!S.peersByFp[fp]);
 const kickedFp=fp=>(cfg().kick||[]).includes(fp);
 // a peer (relay connection) is awake while its presence keeps changing (heartbeat hb)
-const fresh=peer=>{const x=S.hbSeen[String(peer)];return !!x&&Date.now()-x.at<HB_DEAD;};
+const fresh=peer=>{const x=S.hbSeen[String(peer)];return !!x&&Date.now()-x.at<(x.aw?AW_DEAD:HB_DEAD);};
 const freshFp=fp=>fp===SEAL.fp||!!(S.peersByFp[fp]&&fresh(S.peersByFp[fp].peer));
 /* host messages count only once verified: the view sealed to this phone opens with the sender's key and exactly the public
    fields next to it (hostAad), and its hb is newer than the last verified one from that key. S.vh[fp] = the newest such message.
    A copied key cannot make one, and an old one played again is not newer. A key is awake as a host while new verified ones come */
-const vhLive=fp=>{const x=fp&&S.vh[fp];return !!x&&Date.now()-x.at<HB_DEAD&&lastPeers.some(p=>!p.sameTab&&String(p.peer)===x.peer);};
+// (away: said in its last verified message, or since then by the same connection: a phone going to sleep says it at once,
+// before it can seal a new message; it only shortens how long the others wait for it)
+const awOf=(fp,x)=>x.pr.aw===1||!!(S.peersByFp[fp]&&String(S.peersByFp[fp].peer)===x.peer&&S.peersByFp[fp].pr.aw===1);
+const vhLive=fp=>{const x=fp&&S.vh[fp];return !!x&&Date.now()-x.at<(awOf(fp,x)?AW_DEAD:HB_DEAD)&&lastPeers.some(p=>!p.sameTab&&String(p.peer)===x.peer);};
 const hostLive=()=>!!S.hostFp&&vhLive(S.hostFp);
 /* what the host's sealed views vouch for: every public field of its presence, in a canonical form (keys sorted), used as
    the AES-GCM additional data of each view. A copied key cannot publish other host fields: no view would open with them */
@@ -61,7 +94,7 @@ function queueIntent(m){
     if(!snap){const g=gone.find(x=>x.snap);if(g)snap=g.snap;}}
   if(S.outQ.length>=QMAX){toast('استنى شوي، حركاتك ما وصلت للحين');return false;}
   // what was typed when the move was made: put back if the host turns the move down (unsent words are never lost)
-  m.n=nextN();S.outQ.push({m,c:null,k:null,at:Date.now(),snap});if(m.t==='ck')S.pend=true;if(m.t==='pv')S.myPv=m.p;
+  m.n=nextN();S.outQ.push({m,c:null,k:null,at:Date.now(),snap});NETLOG('q',m.t,m.n%1e5);if(m.t==='ck')S.pend=true;if(m.t==='pv')S.myPv=m.p;
   reseal();return true;}
 // this phone's typing (not the chat, search or names) when a tap is made
 function draftSnap(){const o={};for(const k of Object.keys(S.draft||{}))if(!DRAFT_OWN.test(k)&&typeof S.draft[k]==='string'&&S.draft[k].trim())o[k]=S.draft[k];return Object.keys(o).length?o:null;}
@@ -86,8 +119,12 @@ function netClick(G,a,i){
   if(cap.pv&&cap.pv.role===S.me){S.priv[S.me]=cap.pv.p;queueIntent({t:'pv',p:cap.pv.p});}
   render();}
 // waiting moves the host never took: dropped after PEND_MS
-function expireIntents(){if(S.mode!=='online'||amHost()||!S.outQ.length)return;const now=Date.now(),old=S.outQ.filter(x=>now-x.at>PEND_MS);if(!old.length)return;
-  S.outQ=S.outQ.filter(x=>now-x.at<=PEND_MS);if(old.some(x=>x.m.t==='nd')){S.outQ=S.outQ.filter(x=>x.m.t!=='nd');if(S.hst)S.st={...S.hst};}
+function expireIntents(){const t=Date.now(),dt=t-(S.expT||t);S.expT=t;if(S.mode!=='online'||amHost()||!S.outQ.length)return;
+  // a move waits as long as this phone is reconnecting or the host is away: it is still in this phone's message, and the
+  // host (this one back, or the one that takes over) plays it then. Only a host that is here and does not take it lets it go
+  if(S.offline||!hostLive()){for(const x of S.outQ)x.at+=dt;return;}
+  const now=t,old=S.outQ.filter(x=>now-x.at>PEND_MS);if(!old.length)return;
+  NETLOG('expire',old.length,old[0].m.t);S.outQ=S.outQ.filter(x=>now-x.at<=PEND_MS);if(old.some(x=>x.m.t==='nd')){S.outQ=S.outQ.filter(x=>x.m.t!=='nd');if(S.hst)S.st={...S.hst};}
   S.pend=S.outQ.some(x=>x.m.t==='ck');toast(putBack(old)?'ما وصلت حركتك، كتابتك باقية جرّب مرة ثانية':'ما وصلت حركتك، جرّب مرة ثانية');publish();render();}
 
 // why a move did not count, as the player reads it ('' = say nothing: the round it was for is over and the screen shows it)
@@ -104,7 +141,9 @@ function onPeers(ch){
     const fp=SEAL.fpOf(pr.k);if(!fp||pr.id!==fp||fp===SEAL.fp)continue;
     // a key that is not a real P-256 point can never be sealed to: that peer is not in the room (checked once per key)
     if(SEAL.keyOk(pr.k,recheckPeers)!==true)continue;
-    const pk=String(p.peer);live.add(pk);const sn=S.hbSeen[pk];if(!sn||sn.hb!==pr.hb||sn.fp!==fp){S.hbSeen[pk]={hb:pr.hb,fp,at:now};S.rxAt=now;}
+    const pk=String(p.peer);live.add(pk);const sn=S.hbSeen[pk];if(!sn||sn.hb!==pr.hb||sn.fp!==fp){S.hbSeen[pk]={hb:pr.hb,fp,at:now,aw:pr.aw===1};S.rxAt=now;}else sn.aw=pr.aw===1;
+    // since when this key's phone is away (screen off, another app)
+    if(pr.aw===1){if(!S.awSince[fp])S.awSince[fp]=now;}else delete S.awSince[fp];
     // a copied key may show up twice: the moves of both are tried, only the real device's ones open
     (Q[fp]=Q[fp]||[]).push(pr);(C[fp]=C[fp]||[]).push({peer:p.peer,pr});}
   for(const pk in S.hbSeen)if(!live.has(pk)){delete S.hbSeen[pk];delete S.vtry[pk];}
@@ -118,6 +157,7 @@ function onPeers(ch){
     P[fp]=cs.length===1?cs[0]:cs.slice().sort((a,b)=>{const x=sc(a),y=sc(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return y[i]-x[i];return String(a.peer)<String(b.peer)?-1:1;})[0];
     S.fpPeer[fp]=P[fp].peer;}
   for(const fp in S.fpPeer)if(!C[fp])delete S.fpPeer[fp];
+  for(const fp in S.awSince)if(!C[fp])delete S.awSince[fp];
   S.peersByFp=P;S.qByFp=Q;
   // the host is the awake key with a verified host message of the highest epoch; at the same epoch the lower role, then the lower key
   // (the role is the one in this phone's seat table when it has one, so a peer cannot move itself up by its own table)
@@ -138,7 +178,7 @@ function onPeers(ch){
     const sup=fp=>Object.keys(P).filter(q=>q!==fp&&P[q].pr.hf===fp&&roleOfFp(q)>=0&&freshFp(q)).length,me=sup(SEAL.fp);
     for(const fp in P){const r=rank(fp);if(!r)continue;const o=sup(fp);
       if(o>me||o===me&&o>0&&(r[0]<S.epoch||r[0]===S.epoch&&better(r,mine))||o===me&&fp===S.prevHost&&r[0]<S.epoch)worse=fp;}
-    if(worse){S.splitAt=S.splitAt||now;if(now-S.splitAt>4000){S.splitAt=null;demote();}}else S.splitAt=null;}
+    if(worse){S.splitAt=S.splitAt||now;if(now-S.splitAt>4000){S.splitAt=null;NETLOG('split');demote();}}else S.splitAt=null;}
   if(H&&!amHost())followHost(H);
   else if(!H&&!amHost())maybeTakeOver();
   if(S.mode!=='online')return;
@@ -176,13 +216,13 @@ function verifyHost(peer,fp,pr){const v=pr.vw&&typeof pr.vw==='object'?pr.vw[SEA
     if(x&&!(h>x.pr.h||h===x.pr.h&&hb>x.hb))return;S.vh[fp]={hb,at:Date.now(),peer,pr,o,v};recheckPeers();});}
 // this page did not run for a while (frozen in the background, phone asleep): what it saw of the others is old, and if it was
 // the host, someone may have taken over meanwhile, so it may step down
-function tickGap(){const now=Date.now();if(now-(S.tickAt||now)>HB_DEAD){S.lostAt=now;for(const k in S.hbSeen)S.hbSeen[k].at=now;for(const k in S.vh)S.vh[k].at=now;S.tickAt=now;tabTick();}S.tickAt=now;}
-function demote(){S.hostFp=null;S.hostK=null;S.hostKeyC=null;S.vwC={};S.bkCache=null;S.outQ=[];S.pend=false;S.ab={};S.abQ={};S.hist=[];publish();}
+function tickGap(){const now=Date.now();if(now-(S.tickAt||now)>HB_DEAD){NETLOG('gap',now-S.tickAt);S.lostAt=now;for(const k in S.hbSeen)S.hbSeen[k].at=now;for(const k in S.vh)S.vh[k].at=now;S.tickAt=now;tabTick();}S.tickAt=now;}
+function demote(){NETLOG('demote',S.epoch);S.hostFp=null;S.hostK=null;S.hostKeyC=null;S.vwC={};S.bkCache=null;S.outQ=[];S.pend=false;S.ab={};S.abQ={};S.hist=[];publish();}
 // the newest verified message of the host: what it says, and the view sealed to this phone in it
 function followHost(fp){
   const V=S.vh[fp],pr=V.pr,ids=validIds(pr.ids),v=V.v;if(!ids)return;
   const newHost=S.hostFp!==fp||S.hostK!==pr.k;
-  S.seenHost=true;S.hostFp=fp;S.hostK=pr.k;S.hostGoneAt=null;S.epoch=pr.h;clearTimeout(S.takeT);S.restore=null;
+  if(newHost)NETLOG('host',ids.indexOf(fp),pr.h);S.seenHost=true;S.hostFp=fp;S.hostK=pr.k;S.hostGoneAt=null;S.epoch=pr.h;clearTimeout(S.takeT);S.restore=null;
   S.ids=ids;const me=ids.indexOf(SEAL.fp);S.me=me<0?null:me;if(S.me!=null||Date.now()-(S.joinT||0)>JOIN_WAIT)S.pending=false;
   const c=cleanCfg(pr.cfg);
   if((c.kick||[]).includes(SEAL.fp)){try{localStorage.removeItem(LSK.room);}catch(e){}leaveRoom('صاحب الغرفة طلّعك منها');return;}
@@ -210,7 +250,7 @@ function applyHost(pr,cf,view,P){
   if(a&&typeof a==='object'&&Number.isInteger(a.n)&&a.n>S.ackN){S.ackN=a.n;const done=S.outQ.filter(x=>x.m.n<=a.n);S.outQ=S.outQ.filter(x=>x.m.n>a.n);
     // the moves the host turned down, each with why (a.x = [[n, code]]); the rest of them counted
     const xs=new Map((Array.isArray(a.x)?a.x:[]).filter(e=>Array.isArray(e)&&Number.isInteger(e[0])&&typeof e[1]==='string').map(e=>[e[0],e[1].slice(0,8)]));
-    const bad=done.filter(x=>xs.has(x.m.n));
+    const bad=done.filter(x=>xs.has(x.m.n));NETLOG('ack',a.n%1e5,bad.map(x=>xs.get(x.m.n)).join('|')||null);
     if(bad.length){let back=bad;
       // a public move turned down: the ones made on top of it go too (the host turns them down as well), the board is the host's again
       if(bad.some(x=>x.m.t==='nd')){back=[...bad,...S.outQ.filter(x=>x.m.t==='nd')];S.outQ=S.outQ.filter(x=>x.m.t!=='nd');rej=true;}
@@ -248,7 +288,11 @@ function maybeTakeOver(){
   if(S.mode!=='online'||amHost()||S.offline||S.needUpd)return;
   // only a phone that has been in this room can carry it on: a code nobody opened (a typo, a random guess) never becomes a room
   if(!S.seenHost&&!S.hst&&!(S.restore&&S.restore.host))return;
-  const now=Date.now();if(!S.hostGoneAt)S.hostGoneAt=S.hostFp?now:(S.joinT||now);
+  const now=Date.now();
+  /* a phone that hears nobody may be the one cut off (its socket died and it does not know yet): it would take the room over on
+     its own, deal a new round, and split the room when it comes back. It takes over only while its socket answers (the room
+     transport pings a quiet room every few seconds); otherwise it waits to be reconnected */
+  if(S.nr&&typeof S.nr.heard==='function'&&now-S.nr.heard()>TAKE_HEARD){clearTimeout(S.takeT);S.takeT=setTimeout(()=>{if(S.mode==='online'&&!amHost())maybeTakeOver();},2000);return;}if(!S.hostGoneAt)S.hostGoneAt=S.hostFp?now:(S.joinT||now);
   // who takes over, in order: the seated phones by role, else (nobody seated here) any phone. Only phones that are awake count, and
   // never the key of the host that is gone (a copy of it, or the host's own page stuck, cannot take over). If the first one has
   // not taken over TAKE_NEXT after its turn came (asleep, or a copied key holding its place), the next one does
@@ -256,13 +300,16 @@ function maybeTakeOver(){
   const order=bound.length?bound.sort((a,b)=>roleOfFp(a)-roleOfFp(b)):pres.length===1||now-S.hostGoneAt>2*TAKE_SLOW?pres.sort():[];
   const sv=S.restore,resume=!!(sv&&sv.host&&sv.st&&(sv.ep||0)>=S.epoch);
   const G=GAMES[S.st.g],d=S.hst?S.hst.d:S.st.d,secret=!resume&&isSecretG(G)&&!!d&&d.win==null;
+  // a host that said it was going to sleep and is still connected (asleep, not reloading: a reload leaves the room and comes
+  // back within a few seconds, so it gets the usual wait)
+  const hv=S.hostFp&&S.vh[S.hostFp],asleep=!!(hv&&awOf(S.hostFp,hv)&&lastPeers.some(p=>!p.sameTab&&String(p.peer)===hv.peer));
   const bkOk=!!(S.bk&&S.hst&&S.bk.s===S.hst.s&&S.bk.ep===S.epoch);
-  const i=order.indexOf(SEAL.fp),wait=(resume?RESUME_WAIT:(!secret||bkOk)?TAKE_FAST:TAKE_SLOW)+Math.max(0,i)*TAKE_NEXT,left=wait-(now-S.hostGoneAt);
+  const i=order.indexOf(SEAL.fp),wait=(resume?RESUME_WAIT:(!secret||bkOk)?(asleep?TAKE_AW:TAKE_FAST):TAKE_SLOW)+Math.max(0,i)*TAKE_NEXT,left=wait-(now-S.hostGoneAt);
   if(i<0||left>0){clearTimeout(S.takeT);S.takeT=setTimeout(()=>{if(S.mode==='online'&&!amHost())maybeTakeOver();},i<0?2000:Math.max(left,500)+60);if(i!==0)render();return;}
   takeOver(resume?'resume':bkOk?'bk':secret?'redeal':'public');
 }
 function takeOver(mode){
-  clearTimeout(S.takeT);const sv=S.restore;S.restore=null;S.prevHost=S.hostFp!==SEAL.fp?S.hostFp:null;
+  NETLOG('take',mode,(S.epoch||0)+1);clearTimeout(S.takeT);const sv=S.restore;S.restore=null;S.prevHost=S.hostFp!==SEAL.fp?S.hostFp:null;
   const prevAck=S.lastAck||{};
   if(mode==='resume'){S.epoch=Math.max(1,sv.ep||1);S.st={...sv.st,cfg:cleanCfg(sv.st.cfg),sc:cleanSc(sv.st.sc)||Array(MAXP).fill(0)};
     S.priv=Array(MAXP).fill(null).map((x,r)=>(Array.isArray(sv.priv)?sv.priv[r]:null)??null);S.lastN={...(sv.lastN||{})};S.ids=validIds(sv.ids)||S.ids;}
@@ -306,7 +353,7 @@ async function processIntents(){
         S.lastN[fp]=it.n;let res;const r=roleOfFp(fp);
         {S.inIntent=true;try{res=handleIntent(fp,r,m)||{};}catch(e){console.error('intent',e);res={x:'err'};}finally{S.inIntent=false;}}
         // every move turned down is named in the ack with why (the last few, so one answer is never lost to the next)
-        if(res.x){const l=S.rejN[fp]||(S.rejN[fp]=[]);l.push([it.n,String(res.x)]);if(l.length>QMAX+2)l.shift();}
+        if(res.x){NETLOG('rej',String(res.x),r);const l=S.rejN[fp]||(S.rejN[fp]=[]);l.push([it.n,String(res.x)]);if(l.length>QMAX+2)l.shift();}
         // a player who plays again takes his seat back from the bot
         else if(S.ab[r]&&['nd','ck','pv','me'].includes(m.t)){delete S.ab[r];any=true;}
         const b=batch[fp]||(batch[fp]={t:[],u:{}});if(res.t)b.t.push(...res.t);if(res.u)Object.assign(b.u,res.u);
@@ -375,6 +422,8 @@ function handleIntent(fp,r,m){
    only what that seat sees (its view of the state and of the private parts); in a game with secrets its move is a tap that the
    host plays for the seat by the game's own rules, as it plays the player's own taps */
 const AB_LV=2,AB_FAIL=3;
+// a seat whose phone has said it is away (screen off, another app) for GRACE_AW
+const awayLong=r=>{const fp=S.ids[r],t=fp&&S.awSince[fp];return !!t&&Date.now()-t>=GRACE_AW;};
 // the seats a bot plays now, as the host publishes them (ab)
 function abList(){const d=S.st.d;if(!d||!amHost())return [];
   return Object.keys(S.ab).map(Number).filter(r=>isRole(r)&&(S.ab[r].fail||0)<AB_FAIL&&d.pl.includes(r)&&d.out[d.pl.indexOf(r)]!=='1').sort((a,b)=>a-b);}
@@ -389,7 +438,7 @@ function abTick(){if(!amHost()||S.offline)return;const d=S.st.d,G=GAMES[S.st.g];
     // not in this game any more, or back for a new round
     if(!d.pl.includes(r)||!S.ids[r]||S.roles.has(r)&&x.gid!==d.gid){delete S.ab[k];ch=true;continue;}
     if(x.gid!==d.gid){x.gid=d.gid;x.fail=0;}}
-  if(d.win==null)d.pl.forEach((r,s)=>{if(r===S.me||S.ab[r]||d.out[s]==='1'||!S.ids[r]||!goneLong(r))return;S.ab[r]={at:Date.now(),gid:d.gid,fail:0};ch=true;});
+  if(d.win==null)d.pl.forEach((r,s)=>{if(S.ab[r]||d.out[s]==='1'||!S.ids[r]||!(r===S.me?S.away&&Date.now()-S.awayAt>=GRACE_AW&&S.awayAt>0:goneLong(r)||awayLong(r)))return;S.ab[r]={at:Date.now(),gid:d.gid,fail:0};NETLOG('bot',r);ch=true;});
   if(ch){publish();render();}
   if(d.win!=null||!abList().length)return;
   const sim=isSimul(G,d),now=Date.now(),live=new Set(),on=s=>abList().includes(d.pl[s]);
@@ -453,7 +502,7 @@ async function doPublish(){
   // this tab was asleep and the same browser opened the room in a newer tab meanwhile: give way before saying anything
   {const x=otherTab(S.code);if(x&&(x.since||0)>(S.tabSince||0)){tabMark(null);leaveRoom(TAB_MSG);return;}}
   const hb=Math.max(Date.now(),(S.lastHb||0)+1);S.lastHb=hb;
-  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-CHAT_N),hb};const av=myAv();if(av>=0)o.av=av;
+  const o={v:NETV,id:SEAL.fp,k:SEAL.k,n:S.myName.slice(0,14),ch:S.myChat.slice(-CHAT_N),hb};o.aw=S.away?1:null;const av=myAv();if(av>=0)o.av=av;
   if(S.pubRx){o.rx=S.pubRx;S.pubRx=null;}
   if(amHost()){const G=GAMES[S.st.g],d=S.st.d,me=SEAL.fp,small=(nr.max||3800)<8000;
     const pubD=d?viewOf(G,d,-1):null;const pp={},pubX={};
@@ -488,10 +537,10 @@ async function doPublish(){
   if(sz>max&&o.bk){o.bk=null;sz=size();}
   while(sz>max&&o.ch.length){o.ch=o.ch.slice(1);sz=size();}
   if(sz>max&&o.pp&&!amHost()){o.pp=null;sz=size();}
-  if(sz>max&&!S.bigWarn){S.bigWarn=true;console.warn('presence over the room limit',sz,max);toast('اللعبة صارت أكبر من حد الغرفة، يمكن ما توصل للباقين');}
+  if(sz>20000)NETLOG('big',sz,!!o.bk);if(sz>max&&!S.bigWarn){S.bigWarn=true;console.warn('presence over the room limit',sz,max);toast('اللعبة صارت أكبر من حد الغرفة، يمكن ما توصل للباقين');}
   // stay under the room server's message rate (worker RATE_MAX): wait for the window instead of being cut off
   const now=Date.now();S.sendTimes=S.sendTimes.filter(t=>now-t<RATE_W);
-  if(S.sendTimes.length>=RATE_N){S.pubAgain=true;await new Promise(r=>setTimeout(r,RATE_W-(now-S.sendTimes[0])+20));if(S.nr!==nr)return;S.pubAgain=false;return doPublish();}
+  if(S.sendTimes.length>=RATE_N){NETLOG('rwait',RATE_W-(now-S.sendTimes[0]));S.pubAgain=true;await new Promise(r=>setTimeout(r,RATE_W-(now-S.sendTimes[0])+20));if(S.nr!==nr)return;S.pubAgain=false;return doPublish();}
   S.sendTimes.push(now);
   if(S.nr!==nr)return;S.lastPubAt=now;nr.presence(o).catch(e=>console.warn('presence',e));
 }
@@ -502,10 +551,18 @@ setInterval(()=>{if(S.mode!=='online')return;tickGap();if(S.mode!=='online')retu
   if(amHost())seatPeers();else if(!hostLive()){const was=S.hostGoneAt;maybeTakeOver();if(!was&&S.hostGoneAt)render();}
   // the heartbeat says this phone hears the room too: one that has heard nothing from anyone for HB_DEAD (its page or
   // connection is stuck one way) stays quiet, so the others go on without it; it counts as cut off when it hears them again
-  const deaf=Object.keys(S.peersByFp).length&&Date.now()-(S.rxAt||0)>HB_DEAD;if(deaf)S.lostAt=Date.now();
-  if(S.nr&&!deaf&&Date.now()-(S.lastPubAt||0)>=HB_MS)schedulePublish();
+  const deaf=Object.keys(S.peersByFp).length&&Date.now()-(S.rxAt||0)>HB_DEAD;if(deaf)S.lostAt=Date.now();if(!!deaf!==!!S.deafW){S.deafW=!!deaf;NETLOG('deaf',deaf?1:0);}
+  {const hl=amHost()?2:hostLive()?1:0;if(hl!==S.hlW){S.hlW=hl;NETLOG('hlive',hl);}}
+  // (an away phone that still runs says so more often: the others give it only AW_DEAD)
+  if(S.nr&&!deaf&&Date.now()-(S.lastPubAt||0)>=(S.away?1500:HB_MS))schedulePublish();
   tabTick();},2000);
-try{document.addEventListener('visibilitychange',()=>{if(S.mode==='online'&&!document.hidden){tickGap();tabTick();}});document.addEventListener('resume',()=>{if(S.mode==='online')tickGap();});}catch(e){}
+// away: said at once (the phone may sleep in a moment), and again when it is back
+const setAway=a=>{if(!!S.away===a)return;S.away=a;S.awayAt=a?Date.now():0;if(S.mode==='online'&&S.nr){
+  // the last message again with the mark, sent now (a new one needs sealing, which a phone going to sleep may not finish)
+  if(a)try{S.nr.presence({aw:1}).catch(()=>{});}catch(e){}
+  clearTimeout(S.pubT);S.pubT=null;dSeq();runPublish();}};
+try{document.addEventListener('visibilitychange',()=>{NETLOG('vis',document.hidden?'h':'v');setAway(!!document.hidden);if(S.mode==='online'&&!document.hidden){tickGap();tabTick();}});
+  addEventListener('pagehide',()=>setAway(true));addEventListener('pageshow',()=>{if(!document.hidden)setAway(false);});document.addEventListener('resume',()=>{if(S.mode==='online')tickGap();});}catch(e){}
 // is the room's host here (this phone, or a peer publishing the game)?
 const hostHere=()=>amHost()||hostLive()&&S.hostGoneAt==null;
 /* ---------- the same browser in two tabs ----------

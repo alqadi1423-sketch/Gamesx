@@ -274,12 +274,12 @@ async function enterRoom(code,host,restore,given){
   let nr;
   // a new room must get a free code, and joining someone's room needs a room that is open: both are checked before entering
   try{nr=await room.join('g-'+code.toLowerCase(),{create:!!(host&&!restore),need:!host&&!restore&&!given});}
-  catch(e){const why=e&&e.message;
+  catch(e){const why=e&&e.message;NETLOG('enterErr',why);
     if(why==='taken'&&host&&!restore&&(S.codeTries=(S.codeTries||0)+1)<5){S.joining=false;return enterRoom(genCode(),true);}
     S.codeTries=0;
     if(why==='noroom'){S.joining=false;S.roomErr='ما فيه غرفة بهالرمز. تأكد من الرمز، أو أنشئ غرفة جديدة.';render();return;}
     S.joining=false;S.roomErr=e&&e.message==='full'?'الغرفة مليانة، ما فيها مكان لك الحين.':given?nearErr(e&&e.message):'ما قدرت أتصل بالغرفة، تأكد من النت وجرّب مرة ثانية.';render();return;}
-  netReset();S.codeTries=0;
+  netReset();S.codeTries=0;NETLOG('enter',host&&!restore?'host':restore?'restore':'join');
   S.mode='online';S.via=given?'near':'net';S.code=code;S.nr=nr;S.joining=false;S.chat={};S.myChat=[];S.chatSkip=new Set();S.chatIn={};S.avs={};S.chatJump=false;S.chatTray=false;S.chatReady=false;S.chatSeen=Date.now();S.priv=Array(MAXP).fill(null);S.seen=null;S.roles=new Set();S.names={};lastPeers=[];S.browse=!!(restore&&restore.b&&restore.st&&restore.st.g);S.modal=null;
   S.offline=false;S.roomEmpty=false;S.goneAt={};S.joinT=Date.now();tabEnter(code);
   // a saved room: its state, the seat table and the epoch it was at; a saved host takes the room back only if nobody else did (net.js)
@@ -298,22 +298,27 @@ async function enterRoom(code,host,restore,given){
   setTimeout(()=>{if(S.nr===nr)render();},GRACE+200);
   afterChange();
 }
-function leaveRoom(msg){if(S.mode==='online')tabMark(null);if(S.unsub)try{S.unsub();}catch(e){}S.unsub=null;if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;S.offline=false;S.roomEmpty=false;lastPeers=[];S.roles=new Set();netReset();S.me=null;if(msg)toast(msg);render();}
+function leaveRoom(msg){if(window.NETLOG)NETLOG('leave',msg||null);if(S.mode==='online')tabMark(null);if(S.unsub)try{S.unsub();}catch(e){}S.unsub=null;if(S.nr)S.nr.leave().catch(()=>{});S.nr=null;S.via=null;S.mode=null;S.modal=null;S.offline=false;S.roomEmpty=false;lastPeers=[];S.roles=new Set();netReset();S.me=null;if(msg)toast(msg);render();}
 /* what the room transport says about the connection: 'lost' / 'back', 'full' while it tries to get back in,
    and for a nearby room 'gone' (the room's phone is no longer around) or 'bye' (its owner closed it) */
 function netState(st){
-  S.lostAt=Date.now();
+  NETLOG('st',st);S.lostAt=Date.now();
   if(st==='back'){if(S.offline){S.offline=false;toast('رجع الاتصال 👍');}reseal();render();return;}
   if(st==='gone'||st==='bye'){leaveRoom(st==='bye'?'صاحب الغرفة قفلها':'ما عاد نلقى جوال صاحب الغرفة');return;}
   // Claude rooms only report trouble, never that it is over: there it stays a toast
   if(st!=='lost'&&st!=='full'){toast('انقطع الاتصال، نحاول نرجع…');return;}
   const was=S.offline;S.offline=st;if(!was)toast(st==='full'?'الغرفة مليانة، نحاول ندخل…':'انقطع الاتصال، نحاول نرجع…');render();}
 // nothing is played while the connection is down: the move would stay on this phone only
-function netDown(){if(S.mode!=='online'||!S.offline)return false;if(Date.now()-(S.offT||0)>1500){S.offT=Date.now();toast('انقطع الاتصال، استنى لين يرجع');}return true;}
+function netDown(){if(S.mode!=='online'||!S.offline)return false;
+  // a player's move waits in its queue and goes out once the connection is back (net.js); only the host's own moves wait here
+  if(!amHost()&&S.hostFp)return false;if(Date.now()-(S.offT||0)>1500){S.offT=Date.now();toast('انقطع الاتصال، استنى لين يرجع');}return true;}
 // a player who dropped out gets GRACE ms before the others can skip them, so a short network cut does not cost the game
 const GRACE=15000;
 // online: a player whose phone has been out of the room for longer than GRACE (a short drop does not count)
-const goneLong=r=>S.mode==='online'&&!S.roles.has(r)&&Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE;
+// (the seat whose turn it is gets GRACE_TURN: everyone is waiting for it)
+const GRACE_TURN=6000;
+const graceOf=r=>{const d=S.st.d;return d&&d.win==null&&Array.isArray(d.pl)&&d.pl[d.turn]===r?GRACE_TURN:GRACE;};
+const goneLong=r=>S.mode==='online'&&!S.roles.has(r)&&Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=graceOf(r);
 // the roles in the room: seats whose device key is here
 // (a phone whose page is frozen or asleep, net.js freshFp, counts as gone for the round; it keeps its seat for HOLD)
 function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(let r=0;r<MAXP;r++)if(S.ids[r]&&S.peersByFp[S.ids[r]]&&freshFp(S.ids[r]))s.add(r);
@@ -865,7 +870,7 @@ app.addEventListener('click',e=>{
   const t=e.target.closest('[data-a],[data-ga]');if(!t||t.disabled)return;
   if(t.classList.contains('sheet-bg')&&e.target!==t)return;
   const i=t.dataset.i!=null?+t.dataset.i:null;
-  if(t.dataset.ga){if(netDown())return;if(S.needUpd){toast('حدّث التطبيق عشان تلعب في هالغرفة');return;}const G=GAMES[S.st.g],a=t.dataset.ga;if(!G||!S.st.d)return;
+  if(t.dataset.ga){if(netDown())return;if(S.mode==='online'&&amHost()&&S.me!=null&&S.ab[S.me]){delete S.ab[S.me];publish();}if(S.needUpd){toast('حدّث التطبيق عشان تلعب في هالغرفة');return;}const G=GAMES[S.st.g],a=t.dataset.ga;if(!G||!S.st.d)return;
     // a secret game online: the host plays on the whole state, the others ask the host (net.js)
     // online a guest's move goes to the host first: the button answers at once so the tap never feels lost
     if(S.mode==='online'&&!amHost()){t.classList.add('tap-ok');setTimeout(()=>t.classList.remove('tap-ok'),220);}

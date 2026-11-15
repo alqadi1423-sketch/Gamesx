@@ -10,17 +10,34 @@ const MAX_MSG = 32768;
 const RATE_MAX = 120, RATE_MS = 10000;
 // how long an empty room can still be joined (its players coming back after a break)
 const ROOM_KEEP = 12 * 3600 * 1000;
+// a phone that has sent nothing (no message, no ping) for SILENT is gone: its socket is closed and the others told it left.
+// Without this a phone that lost its signal or changed networks stays in the room (a ghost) until Cloudflare's TCP gives up,
+// and ghosts fill the room's 16 places. The app pings after 5 s of quiet (older ones every 20 s)
+const SILENT = 45000, SWEEP = 20000;
 
 export class Room {
-  constructor(ctx, env) { this.ctx = ctx; this.rate = new Map(); } // peer -> {t0, n, cut}; only lives while the room is awake
-
-  peers() {
-    return this.ctx.getWebSockets().map(ws => { try { return ws.deserializeAttachment()?.peer; } catch { return null; } }).filter(p => p && !this.rate.get(p)?.cut);
+  constructor(ctx, env) {
+    this.ctx = ctx; this.rate = new Map(); // peer -> {t0, n, cut}; only lives while the room is awake
+    this.seen = new Map(); // peer -> the last time it sent a message (while awake; pings are answered without waking the room)
+    try { ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"t":"ping"}', '{"t":"pong"}')); } catch {}
   }
+  lastHeard(ws) {
+    const a = ws.deserializeAttachment() || {}; let p = 0;
+    try { const d = this.ctx.getWebSocketAutoResponseTimestamp(ws); if (d) p = d.getTime(); } catch {}
+    return Math.max(a.at || 0, p, this.seen.get(a.peer) || 0);
+  }
+  async sweepSoon() { try { const al = await this.ctx.storage.getAlarm(); if (!al || al > Date.now() + SWEEP) await this.ctx.storage.setAlarm(Date.now() + SWEEP); } catch {} }
+
+  // the sockets still in the room (one closed here for silence or flooding may linger until its phone answers the close)
+  alive() { return this.ctx.getWebSockets().filter(ws => { try { const a = ws.deserializeAttachment(); return !a?.gone && !this.rate.get(a?.peer)?.cut; } catch { return false; } }); }
+  peers() {
+    return this.alive().map(ws => { try { return ws.deserializeAttachment()?.peer; } catch { return null; } }).filter(Boolean);
+  }
+  shut(ws, code, why) { const a = ws.deserializeAttachment() || {}; try { ws.serializeAttachment({ ...a, gone: true }); } catch {} try { ws.close(code, why); } catch {} }
 
   broadcast(obj, except) {
     const s = JSON.stringify(obj);
-    for (const ws of this.ctx.getWebSockets()) if (ws !== except) { try { ws.send(s); } catch {} }
+    for (const ws of this.alive()) if (ws !== except) { try { ws.send(s); } catch {} }
   }
 
   // a room exists once its owner opened it (?c=1). Joining a code nobody opened is refused before the player gets in,
@@ -46,7 +63,7 @@ export class Room {
     } else if (q.get('j') === '1') { if (!await this.isOpen()) return this.refuse('noroom', 4004); }
     // an older app says neither: it opens the room as before
     else if (!await this.isOpen()) await this.ctx.storage.put('open', { at: Date.now() });
-    if (this.ctx.getWebSockets().length >= 16) {
+    if (this.alive().length >= 16) {
       // a browser can't read an HTTP error on a WebSocket upgrade, so accept it, say why, and close
       const [c, s] = Object.values(new WebSocketPair());
       s.accept(); s.send('{"t":"full"}'); s.close(4001, 'full');
@@ -56,15 +73,16 @@ export class Room {
     const [client, server] = Object.values(pair);
     const peer = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ peer });
+    server.serializeAttachment({ peer, at: Date.now() });
     server.send(JSON.stringify({ t: 'hello', peer, peers: this.peers().filter(p => p !== peer) }));
     this.broadcast({ t: 'join', peer }, server);
+    await this.sweepSoon();
     return new Response(null, { status: 101, webSocket: client });
   }
 
   async webSocketMessage(ws, msg) {
     const a = ws.deserializeAttachment() || {};
-    const now = Date.now(); let r = this.rate.get(a.peer);
+    const now = Date.now(); this.seen.set(a.peer, now); let r = this.rate.get(a.peer);
     if (r?.cut) return;
     if (!r || now - r.t0 >= RATE_MS) this.rate.set(a.peer, r = { t0: now, n: 0 });
     if (++r.n > RATE_MAX) {
@@ -82,8 +100,8 @@ export class Room {
   async webSocketClose(ws) {
     const a = ws.deserializeAttachment() || {};
     // the last one out: the room stays open for ROOM_KEEP, then it is forgotten
-    try { if (this.ctx.getWebSockets().filter(x => x !== ws).length === 0) { await this.ctx.storage.put('open', { at: Date.now() }); await this.ctx.storage.setAlarm(Date.now() + ROOM_KEEP + 60000); } } catch {}
-    this.rate.delete(a.peer);
+    try { if (this.alive().filter(x => x !== ws).length === 0) { await this.ctx.storage.put('open', { at: Date.now() }); await this.ctx.storage.setAlarm(Date.now() + ROOM_KEEP + 60000); } } catch {}
+    this.rate.delete(a.peer); this.seen.delete(a.peer);
     this.broadcast({ t: 'leave', peer: a.peer }, ws);
     try { ws.close(); } catch {}
   }
@@ -91,7 +109,18 @@ export class Room {
   async webSocketError(ws) { return this.webSocketClose(ws); }
 
   async alarm() {
-    if (this.ctx.getWebSockets().length) return;
+    if (this.ctx.getWebSockets().length) {
+      const now = Date.now();
+      for (const ws of this.alive()) if (now - this.lastHeard(ws) > SILENT) {
+        const a = ws.deserializeAttachment() || {};
+        this.shut(ws, 4008, 'silent'); this.seen.delete(a.peer);
+        this.broadcast({ t: 'leave', peer: a.peer }, ws);
+      }
+      // the last one out sets the long alarm (webSocketClose); until then the room is checked every SWEEP
+      if (this.alive().length) await this.ctx.storage.setAlarm(Date.now() + SWEEP);
+      else { await this.ctx.storage.put('open', { at: Date.now() }); await this.ctx.storage.setAlarm(Date.now() + ROOM_KEEP + 60000); }
+      return;
+    }
     const o = await this.ctx.storage.get('open');
     if (!o || Date.now() - o.at >= ROOM_KEEP) await this.ctx.storage.deleteAll();
   }
