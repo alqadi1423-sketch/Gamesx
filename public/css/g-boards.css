@@ -284,3 +284,5 @@ svg.bd-tv{border-radius:12px;box-shadow:0 6px 0 #3E220F,0 12px 24px rgba(0,0,0,.
 .bd-tv .tvhit:active{fill:rgba(255,216,77,.28)}
 .marble.can:active{opacity:.7}
 .bd-tv .tvgh:active{opacity:.6}
+/* equal rounds (mind.js): this round's own dig waits for the round's end, marked in the player's colour */
+.bd-tr .sand.pend{box-shadow:inset 0 0 0 3px var(--c,#B07B2A),inset 0 -3px 0 rgba(120,80,20,.22)}

@@ -40,8 +40,10 @@ function hAdd(m,card){
   if(hJ(card)){if(m.jk>=0)return null;if(m.t==='g'){if(m.c.length>=4)return null;const miss='shdc'.split('').find(s=>!m.c.some(c=>c[1]===s));return {...m,c:[...m.c,m.c[0][0]+miss],jk:m.c.length};}
     const r=hRunTry([...m.c.filter((_,i)=>i!==m.jk),'XX']);return r&&r.c.length===m.c.length+1?r:null;}
   if(m.t==='g'){if(card[0]!==m.c[0][0])return null;const nat=m.c.filter((_,i)=>i!==m.jk);if(nat.some(c=>c[1]===card[1]))return null;
-    if(m.jk>=0&&m.c[m.jk][1]===card[1])return null;// that is a swap, not an add
-    if(m.c.length>=4)return null;return {...m,c:[...m.c,card]};}
+    if(m.c.length>=4)return null;
+    // the card the joker stands for, added as a 4th card: the joker moves over to the suit still missing
+    if(m.jk>=0&&m.c[m.jk][1]===card[1]){const miss='shdc'.split('').find(s=>s!==card[1]&&!nat.some(c=>c[1]===s));if(!miss)return null;return {...m,c:[...nat,card,card[0]+miss],jk:3};}
+    return {...m,c:[...m.c,card]};}
   if(m.jk>=0&&card===m.c[m.jk])return null;// that is a swap, not an add
   const nat=m.c.map((c,i)=>i===m.jk?'XX':c);const r=hRunTry([...nat,card]);
   if(!r||r.c.length!==m.c.length+1)return null;return r;}

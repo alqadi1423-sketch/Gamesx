@@ -161,16 +161,28 @@ GAMES.w_ladder=w2Race({name:'سلّم الكلمات',lbc:'#5A7D2E',rounds:3,T:(
     if(a==='kk'){if(st.pos<0)return;const c=W2KA[i];if(!c||'ءئؤةى'.includes(c))return;const x=cur.slice(0,st.pos)+c+cur.slice(st.pos+1);if(x===cur)return;
       if(st.ch.includes(x)){toast('مريت عليها قبل');return;}if(!w2L3().set.has(x)&&!w2Known(x)){toast(`«${x}» مو بالقاموس`);return;}
       st.ch=[...st.ch,x];st.pos=-1;try{sfx('pop');}catch(e){}
-      if(x===P.b){w2RSend(d,ctx.v,{ok:1,n:st.ch.length-1,ms:Math.round(Date.now()-st.t0)});}render();}},
-  resolve(d,picks){const P=w2Ladder(d,d.rd);const ok=picks.map(p=>p&&p.ok&&Number.isFinite(p.ms)&&Number.isInteger(p.n)&&p.n>=P.n?{ms:Math.max(0,p.ms),n:p.n}:null);
+      if(x===P.b){w2RSend(d,ctx.v,{ok:1,n:st.ch.length-1,ms:Math.round(Date.now()-st.t0),ch:st.ch.slice(0,40)});}render();}},
+  // the host checks the chain itself; a chain shorter than the one worked out (through a word outside its list) counts as shortest
+  resolve(d,picks){const P=w2Ladder(d,d.rd);const ok=picks.map(p=>{const n=w2LadOk(P,p&&p.ch);return p&&p.ok&&Number.isFinite(p.ms)&&n>0?{ms:Math.max(0,p.ms),n}:null;});
     const fast=ok.map((x,s)=>x?[s,x.ms]:null).filter(Boolean).sort((a,b)=>a[1]-b[1]);const pts=[...d.pts];
-    const lr=ok.map((x,s)=>{if(!x)return '0';let g=3+(x.n===P.n?1:0)+(fast.length&&fast[0][0]===s&&(fast.length===1||fast[1][1]>fast[0][1])?1:0);pts[s]+=g;return g+':'+x.n+':'+Math.round(x.ms/100)/10;});
+    const lr=ok.map((x,s)=>{if(!x)return '0';let g=3+(x.n<=P.n?1:0)+(fast.length&&fast[0][0]===s&&(fast.length===1||fast[1][1]>fast[0][1])?1:0);pts[s]+=g;return g+':'+x.n+':'+Math.round(x.ms/100)/10;});
     return {...d,pts,lr,res:''};},
   summary(d){const P=w2Ladder(d,d.rd-1);const rows=d.pl.map((r,s)=>{const x=String((d.lr||[])[s]||'0').split(':');return {s,g:+x[0]||0,t:x.length>1?`${x[1]} خطوات • ${x[2]} ث`:'ما وصل'};});
     return `<div class="w2sum"><div class="w2sh">الجولة ${d.win!=null?'الأخيرة':d.rd}</div>${w2RaceRows(d,rows)}<p class="w2miss">حل قصير: ${P.path.map(w=>`<b>${escH(w2LDisp(w))}</b>`).join(' ← ')}</p></div>`;},
   botPick(d,s,lv){const P=w2Ladder(d,d.rd);const ok=Math.random()<[0,.5,.75,.93][lv]-(P.n-3)*.08;if(!ok)return {ok:0,n:0,ms:0};
-    return {ok:1,n:P.n+(lv===3?(Math.random()<.2?1:0):lv===2?rnd(2):rnd(4)),ms:[0,60000,38000,22000][lv]+rnd([0,50000,40000,25000][lv])};}
+    const ch=w2LadWalk(P,lv===3?(Math.random()<.2?1:0):lv===2?rnd(2):rnd(4));return {ok:1,n:ch.length-1,ch,ms:[0,60000,38000,22000][lv]+rnd([0,50000,40000,25000][lv])};}
 });
+// a chain the host accepts: starts and ends on the round's words, one letter changed each step, every word a real one and
+// none twice. Returns its number of steps (0 when it is not a good chain)
+function w2LadOk(P,ch){if(!Array.isArray(ch)||ch.length<2||ch.length>41||ch[0]!==P.a||ch[ch.length-1]!==P.b)return 0;const G=w2L3(),seen=new Set();
+  for(let k=0;k<ch.length;k++){const w=ch[k];if(typeof w!=='string'||[...w].length!==3||seen.has(w))return 0;seen.add(w);if(k&&!(G.set.has(w)||w2Known(w)))return 0;
+    if(k){const a=[...ch[k-1]],b=[...w];if(a.filter((c,i)=>c!==b[i]).length!==1)return 0;}}
+  return ch.length-1;}
+// a bot's chain: the shortest one with a few detours through other words of the list (as many as it can fit)
+function w2LadWalk(P,extra){const G=w2L3(),{D}=w2Bfs(P.b);let ch=[P.a],left=P.n+extra;
+  while(ch[ch.length-1]!==P.b){const w=ch[ch.length-1],nx=G.nb[w].filter(x=>!ch.includes(x)&&D[x]!=null&&D[x]<=left-1);if(!nx.length)return P.path;
+    const far=nx.filter(x=>D[x]===left-1&&x!==P.b);const x=far.length?pickR(far):nx.sort((a,b)=>D[a]-D[b])[0];ch.push(x);left--;}
+  return ch;}
 HELP.w_ladder='كل جولة لها كلمة بداية وكلمة نهاية (من ثلاث حروف). اضغط «ابدأ»، والمس الحرف اللي تبي تغيّره واختر بداله حرف، بشرط تطلع كلمة صحيحة ما مريت عليها. كمّل لين توصل كلمة النهاية. عندك دقيقتين: الوصول بـ3 نقاط، والوصول بأقصر عدد خطوات بنقطة زيادة، والأسرع وصول بنقطة زيادة. ثلاث جولات (كل وحدة أطول من اللي قبلها) والأكثر نقاط يفوز.';
 
 /* ---------- كلمات متقاطعة: a mini crossword everyone solves at once ---------- */
@@ -213,7 +225,7 @@ const W2XCL=`قلم:أداة نكتب بها
 بيت:منزل
 سقف:أعلى الغرفة
 درج:نصعد عليه للدور الثاني
-كرة:نلعب بها القدم
+كرة:نركلها في المباراة
 كوب:نشرب فيه
 صحن:نضع فيه الطعام
 قدر:إناء نطبخ فيه
@@ -389,7 +401,7 @@ const W2XCL=`قلم:أداة نكتب بها
 قدم:نمشي عليها
 جلد:يغطي الجسم
 عظم:منه يتكون الهيكل
-بطن:فيها المعدة
+بطن:فيه المعدة
 ظهر:عكس البطن
 صدر:فيه القلب والرئتان
 طماطم:حمراء في السلطة
@@ -476,7 +488,7 @@ GAMES.w_cross=w2Race({name:'كلمات متقاطعة',lbc:'#2D5B8C',rounds:2,T:
   botPick(d,s,lv){const ok=Math.random()<[0,.4,.68,.88][lv];if(!ok)return {ok:0,f:Math.round(([0,.3,.55,.75][lv]+Math.random()*.2)*100)/100,ms:0};
     return {ok:1,f:1,ms:[0,120000,80000,50000][lv]+rnd([0,55000,50000,40000][lv])};}
 });
-HELP.w_cross='كل جولة كلمات متقاطعة صغيرة، والكل يحلها بنفس الوقت. اضغط «ابدأ»: المس خانة (ولمسة ثانية تقلب بين أفقي وعمودي)، أو المس التلميح من القائمة، واكتب الحروف. الأفقي ينقرأ من اليمين لليسار، والعمودي من فوق لتحت، والتاء المربوطة لها خانتها. «اكشف حرف» يحط لك حرف صح بس يزيد وقتك 10 ثواني. اللي يحلها كلها ياخذ 3 نقاط، والأسرع حل يزيد نقطتين، واللي ما خلّص ياخذ نقطة أو نقطتين حسب اللي حله. جولتين والأكثر نقاط يفوز.';
+HELP.w_cross='كل جولة كلمات متقاطعة صغيرة، والكل يحلها بنفس الوقت. اضغط «ابدأ»: المس خانة (ولمسة ثانية تقلب بين أفقي وعمودي)، أو المس التلميح من القائمة، واكتب الحروف. الأفقي ينقرأ من اليمين لليسار، والعمودي من فوق لتحت، والتاء المربوطة لها خانتها. «اكشف حرف» يحط لك حرف صح بس يزيد وقتك 10 ثواني. اللي يحلها كلها ياخذ 3 نقاط، والأسرع حل يزيد نقطتين، واللي ما خلّص ياخذ لين نقطتين حسب اللي حله. جولتين والأكثر نقاط يفوز.';
 
 /* ---------- المساجلة: a hand of real verses; play one that starts with the letter the last verse ended on ----------
    One line: the rhyme letter (الرويّ) the verse ends on | the poet | first half | second half | n for Nabati verses.
@@ -521,7 +533,7 @@ const W2PO=`م|المتنبي|الخيلُ والليلُ والبيداءُ ت�
 م|المتنبي|إذا ساءَ فعلُ المرءِ ساءتْ ظنونُهُ|وصدّقَ ما يعتادُهُ من توهّمِ
 ل|المتنبي|إذا اعتادَ الفتى خوضَ المنايا|فأهونُ ما يمرُّ بهِ الوحولُ
 ل|المتنبي|رماني الدهرُ بالأرزاءِ حتى|فؤادي في غشاءٍ من نبالِ
-ن|المتنبي|بمَ التعلّلُ لا أهلٌ ولا وطنُ|ولا نديمٌ ولا كأسٌ ولا سكنُ
+ن|المتنبي|الرأيُ قبلَ شجاعةِ الشجعانِ|هوَ أوّلٌ وهيَ المحلُّ الثاني
 ب|المتنبي|طوى الجزيرةَ حتى جاءني خبرٌ|فزعتُ فيهِ بآمالي إلى الكذبِ
 ب|أبو تمام|السيفُ أصدقُ إنباءً منَ الكتبِ|في حدِّهِ الحدُّ بينَ الجدِّ واللعبِ
 ل|أبو تمام|نقّلْ فؤادَكَ حيثُ شئتَ منَ الهوى|ما الحبُّ إلا للحبيبِ الأوّلِ
@@ -539,12 +551,12 @@ const W2PO=`م|المتنبي|الخيلُ والليلُ والبيداءُ ت�
 ن|أحمد شوقي|دقّاتُ قلبِ المرءِ قائلةٌ لهُ|إنَّ الحياةَ دقائقٌ وثواني
 س|أحمد شوقي|وطني لو شُغلتُ بالخلدِ عنهُ|نازعتني إليهِ في الخلدِ نفسي
 ن|أحمد شوقي|مخطئٌ من ظنَّ يومًا|أنَّ للثعلبِ دينا
-ء|أحمد شوقي|نظرةٌ فابتسامةٌ فسلامٌ|فكلامٌ فموعدٌ فلقاءُ
+ء|أحمد شوقي|وإذا رحمتَ فأنتَ أمٌّ أو أبٌ|هذانِ في الدنيا هما الرحماءُ
 ء|أحمد شوقي|وُلدَ الهدى فالكائناتُ ضياءُ|وفمُ الزمانِ تبسّمٌ وثناءُ
 ق|حافظ إبراهيم|الأمُّ مدرسةٌ إذا أعددتَها|أعددتَ شعبًا طيّبَ الأعراقِ
 ت|حافظ إبراهيم|أنا البحرُ في أحشائِهِ الدرُّ كامنٌ|فهلْ ساءلوا الغوّاصَ عن صدفاتي
 ت|حافظ إبراهيم|رجعتُ لنفسي فاتّهمتُ حصاتي|وناديتُ قومي فاحتسبتُ حياتي
-ر|أبو القاسم الشابي|إذا الشعبُ يومًا أرادَ الحياةَ|فلا بدَّ أن يستجيبَ القدرْ
+ر|أبو القاسم الشابي|إذا ما طمحتُ إلى غايةٍ|ركبتُ المنى ونسيتُ الحذرْ
 ر|أبو القاسم الشابي|ومن يتهيّبْ صعودَ الجبالِ|يعشْ أبدَ الدهرِ بينَ الحُفَرْ
 ء|أبو القاسم الشابي|سأعيشُ رغمَ الداءِ والأعداءِ|كالنسرِ فوقَ القمّةِ الشمّاءِ
 ل|إيليا أبو ماضي|أيّهذا الشاكي وما بكَ داءٌ|كنْ جميلًا ترَ الوجودَ جميلا
@@ -595,7 +607,7 @@ const W2PO=`م|المتنبي|الخيلُ والليلُ والبيداءُ ت�
 ل|السموأل|إذا المرءُ لم يدنسْ منَ اللؤمِ عرضُهُ|فكلُّ رداءٍ يرتديهِ جميلُ
 ل|السموأل|تعيّرنا أنّا قليلٌ عديدُنا|فقلتُ لها إنَّ الكرامَ قليلُ
 س|صالح بن عبد القدوس|والشيخُ لا يتركُ أخلاقَهُ|حتى يُوارى في ثرى رمسِهِ
-م|المتنبي|مَن أطاقَ التماسَ شيءٍ غلابًا|واغتصابًا لم يلتمسْهُ سؤالا
+ل|المتنبي|مَن أطاقَ التماسَ شيءٍ غلابًا|واغتصابًا لم يلتمسْهُ سؤالا
 ء|المتنبي|ما الخِلُّ إلا من أودُّ بقلبِهِ|وأرى بطرفٍ لا يرى بسوائِهِ
 م|المتنبي|مالي أكتّمُ حبًّا قد برى جسدي|وتدّعي حبَّ سيفِ الدولةِ الأممُ
 م|المتنبي|ما أبعدَ العيبَ والنقصانَ عن شرفي|أنا الثريّا وذانِ الشيبُ والهرمُ

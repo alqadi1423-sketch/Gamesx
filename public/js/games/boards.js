@@ -107,12 +107,22 @@ GAMES.treasure={name:'الكنز المدفون',cat:'mind',lbc:'#B07B2A',
   // the treasure is not placed in advance: each dig draws its spot from the cells that still fit every clue, so it is never in the shared state
   // every player also has one radar (rdr): before digging it tells whether the treasure is in a 3×3 square (sc keeps the answers)
   init:n=>{const z=TRS[n]||8;return {z,o:'.'.repeat(z*z),by:'.'.repeat(z*z),last:'',rdr:'1'.repeat(n),sc:[]};},
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
-  render(d,ctx){const z=d.z,lm=bdLast('treasure',d,d.o),t=d.turn,rm=ctx.my&&S.trR===d.gid+d.o+t&&(d.rdr||'')[t]==='1';
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.win!=null?'':'<br>'+erLine(d)),
+  mask:(d,seat)=>erHide(d,seat),net:{local:['rad']},
+  // equal rounds (mind.js): a dig shows its number when the round ends; whoever digs the treasure in that round wins (two share it)
+  onSkip:(nd,d)=>erSkip(GAMES.treasure,nd,d),
+  onTimeout:d=>erTime(GAMES.treasure,d),
+  erSettle(x){const z=x.z,e=x.er,n=x.pl.length,far=(a,b)=>Math.abs(Math.floor(a/z)-Math.floor(b/z))+Math.abs(a%z-b%z);
+    const ok=trFits(x);let tc=x.t;if(tc==null)tc=ok.length?ok[rnd(ok.length)]:-1;let o=x.o,by=x.by;const won=[],res=[];
+    for(let j=0;j<n;j++){const s=(e.st+j)%n,i=erMv(x,s);if(!Number.isInteger(i)||i<0||i>=z*z)continue;
+      if(i===tc){if(!won.includes(s))won.push(s);continue;}if(o[i]==='.'){const k=far(i,tc);o=setAt(o,i,String.fromCharCode(97+k));by=setAt(by,i,String(s));}res.push(`${nm(x,s)} ${far(i,tc)}`);}
+    if(won.length)return {...x,o:setAt(o,tc,'*'),by:setAt(by,tc,String(won[0])),win:won[0],...(won.length>1?{wins:won}:{}),last:`${won.map(s=>nm(x,s)).join(' و')} لقى الكنز!`};
+    return {...x,o,by,last:`الجولة ${e.r}: ${res.length?'الكنز يبعد '+res.join('، ')+' خطوات':'ما أحد حفر'}`};},
+  render(d,ctx){const z=d.z,lm=bdLast('treasure',d,d.o),t=d.turn,pend=d.win!=null?[]:d.pl.map((_,s)=>s===ctx.v?erMv(d,s):null),rm=ctx.my&&S.trR===d.gid+d.o+t&&(d.rdr||'')[t]==='1';
     const yes=new Set(),no=new Set();for(const [c,y] of d.sc||[])for(let j=0;j<z*z;j++)if(trNear(z,j,c))(y?yes:no).add(j);
     let h=`<div class="cellgrid bd-tr ${ctx.my?'my':''} ${rm?'radar':''}" style="grid-template-columns:repeat(${z},minmax(0,1fr))">${[...d.o].map((v,i)=>{
       const sc=no.has(i)?'sn':yes.has(i)?'sy':'';
-      if(v==='.')return `<button class="cg sand ${sc}" data-ga="${rm?'r':'m'}" data-i="${i}" ${ctx.my?'':'disabled'}></button>`;
+      if(v==='.'){const pk=pend.indexOf(i);return `<button class="cg sand ${sc} ${pk>=0?'pend':''}" data-ga="${rm?'r':'m'}" data-i="${i}" ${pk>=0?`style="--c:${col(d,pk)}"`:''} ${ctx.my?'':'disabled'}></button>`;}
       if(v==='*')return `<div class="cg gold"><span>💰</span></div>`;
       const k=v.charCodeAt(0)-97;return `<div class="cg dug ${i===lm?'lm':''}" style="--h:${heat(k)};--c:${col(d,+d.by[i])}"><b>${k}</b><i></i></div>`;}).join('')}</div>`;
     // the radar bar keeps its place once it is used up, so the board never jumps between turns
@@ -127,9 +137,7 @@ GAMES.treasure={name:'الكنز المدفون',cat:'mind',lbc:'#B07B2A',
     if(a==='r'){if((d.rdr||'')[t]!=='1')return;S.trR=null;const y=trNear(z,tc,i)?1:0;
       act({...d,rdr:setAt(d.rdr,t,'0'),sc:[...(d.sc||[]),[i,y]],last:`${nm(d,t)} شغّل الرادار: الكنز ${y?'داخل المربع 📡✓':'مو في المربع 📡✗'}، الحين يحفر`});return;}
     if(a!=='m')return;
-    if(i===tc){act({...d,o:setAt(d.o,i,'*'),by:setAt(d.by,i,String(t)),win:t,last:`${nm(d,t)} لقى الكنز!`});return;}
-    const k=far(i,tc);
-    act({...d,o:setAt(d.o,i,String.fromCharCode(97+k)),by:setAt(d.by,i,String(t)),turn:nextSeat(d,t),last:`${nm(d,t)} حفر وطلع الكنز يبعد ${k} خطوات`});
+    act(erMove(GAMES.treasure,d,t,i,{last:`${nm(d,t)} حفر، والنتيجة آخر الجولة`}));
   }
 };
 // cell j is in the 3×3 square around c

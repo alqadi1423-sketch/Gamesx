@@ -136,7 +136,7 @@ function bProjWinner(d){// after the first trick: the team with the best single 
 function bScore(d){const t=bTeam(d.decl),o=1-t,mult=d.mult,hk=d.md==='h';const TOT=hk?16:26;
   const projPts=[0,0];if(d.pjw!=null){for(let h=0;h<4;h++)if(bTeam(h)===d.pjw)for(const p of d.pj[h])projPts[d.pjw]+=bPGame(p,d.md);}
   // Baloot is lost when both cards sit in a counted hundred of trumps or four kings / queens
-  let blt=[0,0];if(d.blt!=null){const h=d.blt;const blocked=d.pjw===bTeam(h)&&d.pj[h].some(p=>p.k===100&&p.cards.includes('K'+d.tr)&&p.cards.includes('Q'+d.tr));if(!blocked)blt[bTeam(h)]=2;}
+  let blt=[0,0];if(d.blt!=null){const h=d.blt;const blocked=d.pjw===bTeam(h)&&d.pj[h].some(p=>p.k===100&&(p.cards.includes('K'+d.tr)&&p.cards.includes('Q'+d.tr)||p.q&&'KQ'.includes(p.top)));if(!blocked)blt[bTeam(h)]=2;}
   let res={gp:[0,0],add:[0,0],win:null,kab:null};
   const kab=d.tc[t]===8?t:d.tc[o]===8?o:null;
   if(kab!=null){const base=hk?[25,50,75,100,100][mult-1]:(mult>1?88:44);const pj=projPts[kab]*(mult>1?2:1);res.add[kab]=base+pj+(hk?blt[kab]:0);res.win=kab;res.kab=kab;}

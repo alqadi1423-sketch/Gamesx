@@ -1,6 +1,30 @@
 'use strict';
 /* thinking and guessing: guess the word, guess the number, matchsticks, code breaker, do not say 31 */
 
+/* ---------- equal rounds ----------
+   The races to one secret (treasure, guess the number, code breaker, guess the word) go in rounds, so the seat order decides
+   nothing: every player still in has one turn a round, the moves of a round show what they found together when the round
+   ends (nobody in the round plays on another's find), the game is decided only then, and the first player moves on one seat
+   every round. d.er = {r: the round, st: its first seat, k: per seat this round's move (null: not yet, 'x': the time ran out)}.
+   A move stays with its player until the round ends: the others see only that he has moved ('h'), so moving later tells nothing */
+const erOf=d=>d.er||{r:1,st:d.turn,k:d.pl.map(()=>null)};
+// the next seat still to move this round, going round from the seat after t (-1: the round is done)
+function erNext(d,er,t){const n=d.pl.length;for(let j=1;j<=n;j++){const s=(t+j)%n;if(d.out[s]!=='1'&&er.k[s]==null)return s;}return -1;}
+// a move is kept for the round's end; once everyone still in has moved the game settles the round (G.erSettle)
+function erMove(G,d,t,mv,extra){const e=erOf(d),er={...e,k:e.k.map((x,s)=>s===t?mv:x)},x={...d,...(extra||{}),er},nx=erNext(x,er,t);
+  return nx>=0?{...x,turn:nx}:erClose(G,x);}
+function erClose(G,x){const y=G.erSettle(x);if(y.win!=null)return y;const st=nextSeat(y,y.er.st);return {...y,er:{r:y.er.r+1,st,k:y.pl.map(()=>null)},turn:st};}
+// a seat that leaves: the turn goes to the next one still to move, or the round ends; a player whose time runs out passes this round
+const erSkip=(G,nd,d)=>{if(nd.win!=null||!d.er&&!nd.er)return nd;const er=erOf(nd);if(nd.turn===d.turn&&nd.out[nd.turn]!=='1'&&er.k[nd.turn]==null)return nd;
+  const nx=erNext(nd,er,d.turn);return nx>=0?{...nd,er,turn:nx}:erClose(G,{...nd,er});};
+const erTime=(G,d,last)=>erMove(G,d,d.turn,'x',{last:`${nm(d,d.turn)} خلص وقته`+(last||'')});
+// this round's move of a seat (null when none)
+const erMv=(d,s)=>{const k=erOf(d).k[s];return k==null||k==='x'||k==='h'?null:k;};
+// what seat `seat` may see of the round: its own move, and of the others only that they moved
+const erHide=(d,seat)=>d.win!=null||!d.er?d:{...d,er:{...d.er,k:d.er.k.map((k,s)=>s===seat||k==null?k:'h')}};
+// the line under the status: the round, and who has moved in it
+const erLine=d=>{const e=erOf(d);return `<small>الجولة ${e.r}${e.k.some(k=>k!=null)?` • لعبوا: ${d.pl.map((_,s)=>e.k[s]!=null?nm(d,s):'').filter(Boolean).join('، ')}`:''} • النتيجة آخر الجولة</small>`;};
+
 /* ---------- guess the word ---------- */
 const WORDS={
   'حيوان':['جمل','حصان','غزال','ثعلب','نمر','فيل','خروف','قنفذ','تمساح','دلفين','صقر','نسر','حمار','قرد','ثور','سنجاب','طاووس','كلب','قط','دب','فهد','ضبع','وشق','ماعز','حوت','قرش','سمك','بطريق','نعام','ضفدع','عقرب','ثعبان','حمام','عصفور','بلبل','غراب','هدهد','نحل','نمل','جراد','كنغر','باندا','كوالا','حلزون','خفاش',
@@ -27,27 +51,35 @@ GAMES.word={name:'خمّن الكلمة',cat:'mind',lbc:'#3E7C59',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#58A777"/>${[0,1,2,3].map(k=>`<rect x="${10+k*21}" y="34" width="17" height="24" rx="4" fill="#fff"/><rect x="${10+k*21}" y="58" width="17" height="4" fill="#2D4763"/>`).join('')}<text x="39" y="53" font-size="17" font-weight="800" fill="#2D4763" text-anchor="middle">م</text><text x="81" y="53" font-size="17" font-weight="800" fill="#2D4763" text-anchor="middle">ج</text></svg>`,
   init:n=>{const cats=Object.keys(WORDS);const cat=cats[rnd(cats.length)];const list=WORDS[cat];return {cat,w:list[rnd(list.length)],g:'',pts:Array(n).fill(0),last:''};},
   // online, the other players see only the letters already found (the host checks each guess and each try at the whole word)
-  mask:(d,seat)=>d.win!=null?d:{...d,w:[...d.w].map(ch=>d.g.includes(ch)?ch:'·').join('')},
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx),
+  mask:(d,seat)=>d.win!=null?d:erHide({...d,w:[...d.w].map(ch=>d.g.includes(ch)?ch:'·').join('')},seat),
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.win!=null?'':'<br>'+erLine(d)),
+  // equal rounds: one letter (or one try at the whole word) a round; the letters show, and the points come, when the round ends
+  onSkip:(nd,d)=>erSkip(GAMES.word,nd,d),
+  onTimeout:d=>erTime(GAMES.word,d),
+  erSettle(x){const e=x.er,n=x.pl.length,W=[...x.w],hid=W.filter(ch=>!x.g.includes(ch)).length,pts=[...x.pts],sol=[],res=[];let g=x.g;
+    for(let j=0;j<n;j++){const s=(e.st+j)%n,m=erMv(x,s);if(typeof m!=='string')continue;
+      if(m[0]==='L'){const ch=m.slice(2),k=W.filter(c=>c===ch).length;pts[s]+=k;if(!g.includes(ch))g+=ch;res.push(`${nm(x,s)} «${ch}» ${k?'×'+k:'✗'}`);}
+      else if(wdNorm(x.w)===wdNorm(m.slice(2))){pts[s]+=hid+3;sol.push(s);res.push(`${nm(x,s)} حلّها 🎯 +${hid+3}`);}
+      else{pts[s]=Math.max(0,pts[s]-2);res.push(`${nm(x,s)} حاول يحلها وغلط −2`);}}
+    // at the end the most points win; a tie at the top shares the win (the round's moves were made side by side)
+    const done=sol.length>0||W.every(c=>g.includes(c)),mx=Math.max(...pts.map((p,s)=>x.out[s]==='1'?-1:p)),top=x.pl.map((_,s)=>x.out[s]!=='1'&&pts[s]===mx?s:-1).filter(s=>s>=0);
+    return {...x,g,pts,...(sol.length?{sol:sol[0]}:{}),win:done?(top.length?top[0]:'d'):null,...(done&&top.length>1?{wins:top}:{}),last:`الجولة ${e.r}: ${res.join('، ')||'ما أحد لعب'}${sol.length?`، والكلمة «${x.w}»`:''}`};},
   winExtra:d=>`الكلمة: ${d.w}`,
   // a tile turns over when its letter is found (a new node, so the flip plays once); at the end the missed letters show greyed,
   // or gold when someone solved the whole word
   render(d,ctx){const end=d.win!=null,W=[...d.w],sol=d.sol!=null&&d.sol>=0;
     const hid=W.filter(ch=>!d.g.includes(ch)).length;
     let s=`<div class="gm-root gm-word"><p class="wcat"><span>التصنيف</span><b>${d.cat}</b><em class="wlen">${W.length===2?'حرفين':W.length<=10?W.length+' حروف':W.length+' حرف'}</em></p><div class="wordbox" style="--n:${W.length}">${W.map(ch=>{const o=d.g.includes(ch),sh=o||end;return `<div class="wl ${o?'on':sh?(sol?'sol':'miss'):''}" data-k="${sh?'o':''}">${sh?ch:''}</div>`;}).join('')}</div>
-    <div class="kb">${[...ALPHA].map((ch,i)=>{const u=d.g.includes(ch);return `<button class="key ${u?(d.w.includes(ch)?'hit':'miss'):''}" data-ga="k" data-i="${i}" ${ctx.my&&!u?'':'disabled'}>${ch}</button>`;}).join('')}</div>`;
-    // solving: type the whole word. Right gives a point for every hidden letter plus 3 and ends the round, wrong costs 2 and the turn
+    <div class="kb">${[...ALPHA].map((ch,i)=>{const u=d.g.includes(ch),pk=!end&&erMv(d,ctx.v)==='L:'+ch?ctx.v:-1;return `<button class="key ${u?(d.w.includes(ch)?'hit':'miss'):pk>=0?'pend':''}" data-ga="k" data-i="${i}" ${pk>=0?`style="--c:${col(d,pk)}"`:''} ${ctx.my&&!u?'':'disabled'}>${ch}</button>`;}).join('')}</div>`;
+    // solving: type the whole word. Right gives a point for every letter hidden at the round's start plus 3 and ends the game, wrong costs 2
     if(ctx.my&&!end&&hid>1)s+=`<div class="wsolve"><input class="field" data-draft="wsol" data-enter="sol" maxlength="16" value="${escH((S.draft||{}).wsol||'')}" placeholder="تعرف الكلمة؟ اكتبها" autocomplete="off" enterkeyhint="done"><button class="btn red" data-ga="sol">حلّها (+${hid+3})</button></div>`;
     return s+'</div>';},
   click(a,i,d,ctx){
     if(!ctx.my||d.win!=null)return;const t=d.turn;
-    if(a==='sol'){const x=wdNorm((S.draft||{}).wsol);if(!x)return;if(S.draft)delete S.draft.wsol;const pts=[...d.pts];
-      if(wdNorm(d.w)===x){const hid=[...d.w].filter(ch=>!d.g.includes(ch)).length;pts[t]+=hid+3;
-        act({...d,pts,sol:t,win:mostPts(pts),last:`${nm(d,t)} حلّ الكلمة «${d.w}» وأخذ ${hid+3} 🎯`});return;}
-      pts[t]=Math.max(0,pts[t]-2);act({...d,pts,turn:nextSeat(d,t),last:`${nm(d,t)} حاول يحلها وغلط، نقص 2`});return;}
-    const ch=ALPHA[i];if(!ch||d.g.includes(ch))return;const g=d.g+ch;const k=[...d.w].filter(x=>x===ch).length;const pts=[...d.pts];pts[t]+=k;
-    const done=[...d.w].every(x=>g.includes(x));
-    act({...d,g,pts,win:done?mostPts(pts):null,turn:k?t:nextSeat(d,t),last:k?`${nm(d,t)} اختار «${ch}» وموجود ${k} مرة`:`${nm(d,t)} اختار «${ch}» ومو موجود`});
+    if(a==='sol'){const raw=String((S.draft||{}).wsol||'').trim().slice(0,16),x=wdNorm(raw);if(!x)return;if(S.draft)delete S.draft.wsol;
+      act(erMove(GAMES.word,d,t,'W:'+raw,{last:`${nm(d,t)} حاول يحل الكلمة، والنتيجة آخر الجولة`}));return;}
+    const ch=ALPHA[i];if(!ch||d.g.includes(ch))return;
+    act(erMove(GAMES.word,d,t,'L:'+ch,{last:`${nm(d,t)} اختار «${ch}»، والنتيجة آخر الجولة`}));
   }
 };
 // a typed word as the game compares it: no vowel marks or spaces, plain alif, ة as ه, ى as ي, and «ال» at the start optional
@@ -76,8 +108,17 @@ let NUMV=0;const numTop=d=>d.vr?30:100;
 GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
   icon:iconE('#8C6CC4','🔢'),
   init:n=>({sec:1+rnd(NUMV?30:100),lo:1,hi:NUMV?30:100,vr:NUMV,nb:0,ps:'0'.repeat(n),last:''}),
-  hide:{all:['sec']},
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>${d.vr?'💣 القنبلة':'الرقم السري'} بين ${d.lo} و ${d.hi}${d.vr?' • اللي يقولها يطلع':''}</small>`,
+  hide:{all:['sec']},mask:(d,seat)=>d.win!=null?d:erHide({...d,sec:maskVal(d.sec)},seat),
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>${d.vr?'💣 القنبلة':'الرقم السري'} بين ${d.lo} و ${d.hi}${d.vr?' • اللي يقولها يطلع':''}</small>`+(d.vr||d.win!=null?'':'<br>'+erLine(d)),
+  // classic: equal rounds (erMove); the bomb keeps its own turns
+  onSkip:(nd,d)=>nd.vr?nd:erSkip(GAMES.num,nd,d),
+  onTimeout:d=>d.vr?{...d,turn:nextSeat(d,d.turn)}:erTime(GAMES.num,d),
+  // the round's guesses against the secret: a hit wins (two hits share the win), else the window closes in from every side
+  erSettle(x){const sec=x.sec,g=x.pl.map((_,s)=>erMv(x,s)),hit=g.map((v,s)=>v===sec?s:-1).filter(s=>s>=0);
+    const res=x.pl.map((_,s)=>g[s]==null?'':`${nm(x,s)} ${g[s]}${g[s]===sec?' 🎯':g[s]<sec?' ▲':' ▼'}`).filter(Boolean).join('، ');
+    if(hit.length)return {...x,win:hit[0],...(hit.length>1?{wins:hit}:{}),rr:g,last:`${hit.map(s=>nm(x,s)).join(' و')} صاب الرقم! (${res})`};
+    let lo=x.lo,hi=x.hi;for(const v of g){if(v==null)continue;if(v<sec)lo=Math.max(lo,v+1);else hi=Math.min(hi,v-1);}
+    return {...x,lo,hi,rr:g,last:`الجولة ${x.er.r}: ${res||'ما أحد خمّن'}`};},
   winExtra:d=>d.vr?'آخر واحد سلم من القنابل':`الرقم كان ${d.sec}`,
   // the window still open is drawn as a bar; the two numbers just outside it were guesses, so they keep a mark
   // the last guess pops in as a big arrow (keyed by the window, so it plays once); a bomb that went off shakes the board in
@@ -86,9 +127,11 @@ GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
     let s=`<div class="gm-root gm-num ${d.vr?'nbomb':''}">`;
     if(fresh)s+=`<div class="segs numv">${[['0','🎯 كلاسيكية'],['1','💣 القنبلة']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`;
     s+=`<div class="nrng"><b class="ltr">${L}</b><div class="nbar"><i style="inset-inline-start:${(L-1)/T*100}%;width:${(H-L+1)/T*100}%"></i></div><b class="ltr">${H}</b></div>`;
-    s+=lg?`<p class="nhint ${lg[2]==='أكبر'?'up':'dn'}" data-k="h${L}-${H}"><b class="ltr">${lg[1]}</b><span>${lg[2]==='أكبر'?'▲ أكبر':'▼ أصغر'}</span></p>`:boom?`<p class="nhint nboom" data-k="b${d.nb}">💥 <span>انفجرت!</span></p>`:'';
+    const pend=d.vr?[]:d.pl.map((_,s)=>s===ctx.v?erMv(d,s):null),rr=!d.vr&&Array.isArray(d.rr)?d.rr:null;
+    s+=rr?`<p class="nrr" data-k="r${L}-${H}">${rr.map((v,k)=>v==null?'':`<span style="--c:${col(d,k)}"><b class="ltr">${v}</b>${typeof d.sec==='number'?(v===d.sec?'🎯':v<d.sec?'▲':'▼'):v<L?'▲':v>H?'▼':''}</span>`).join('')}</p>`:lg?`<p class="nhint ${lg[2]==='أكبر'?'up':'dn'}" data-k="h${L}-${H}"><b class="ltr">${lg[1]}</b><span>${lg[2]==='أكبر'?'▲ أكبر':'▼ أصغر'}</span></p>`:boom?`<p class="nhint nboom" data-k="b${d.nb}">💥 <span>انفجرت!</span></p>`:'';
     s+=`<div class="ngrid ${T<100?'g30':''} ${boom?'nboom':''}" data-k="g${d.nb||0}">`;
-    for(let n=1;n<=T;n++){const ok=n>=L&&n<=H;const c=end&&n===d.sec&&!d.vr?'sec':ok?'':n===L-1?'out gs up':n===H+1?'out gs dn':'out';s+=`<button class="nc ${c}" data-ga="m" data-i="${n}" ${ctx.my&&ok?'':'disabled'}>${n}</button>`;}
+    for(let n=1;n<=T;n++){const ok=n>=L&&n<=H,pk=pend.indexOf(n);const c=end&&n===d.sec&&!d.vr?'sec':pk>=0?'pend':ok?'':n===L-1?'out gs up':n===H+1?'out gs dn':'out';
+      s+=`<button class="nc ${c}" data-ga="m" data-i="${n}" ${pk>=0?`style="--c:${col(d,pk)}"`:''} ${ctx.my&&ok?'':'disabled'}>${n}</button>`;}
     s+='</div>';
     // the bomb: one pass per player for every bomb
     if(d.vr&&ctx.my&&!end){const used=(d.ps||'')[d.turn]==='1';s+=`<div class="acts"><button class="btn navy" data-ga="pass" ${used?'disabled':''}>⏭ ${used?'استخدمت التمريرة':'مرّر الدور (مرة لكل قنبلة)'}</button></div>`;}
@@ -98,7 +141,8 @@ GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
     if(a==='vr'){if(d.last||d.nb)return;NUMV=n?1:0;const T=NUMV?30:100;act({...d,vr:NUMV,lo:1,hi:T,sec:1+rnd(T)});return;}
     if(a==='pass'){const ps=d.ps||'0'.repeat(d.pl.length);if(!d.vr||ps[t]==='1')return;act({...d,ps:setAt(ps,t,'1'),turn:nextSeat(d,t),last:`${nm(d,t)} مرّر ⏭`});return;}
     if(!Number.isInteger(n)||n<d.lo||n>d.hi)return;
-    if(n===d.sec){if(!d.vr){act({...d,win:t,last:`${nm(d,t)} قال ${n} وصاب!`});return;}
+    if(!d.vr){act(erMove(GAMES.num,d,t,n,{last:`${nm(d,t)} قال ${n}، والنتيجة آخر الجولة`}));return;}
+    if(n===d.sec){
       // the bomb: whoever says it is out, and a fresh one hides for the rest
       const out=setAt(d.out,t,'1'),al=aliveSeats(d,out);const nd={...d,out,nb:(d.nb||0)+1,last:`💥 ${nm(d,t)} قال ${n} وانفجرت القنبلة!`};
       if(al.length<=1){act({...nd,win:al.length?al[0]:'d'});return;}
@@ -145,8 +189,14 @@ const pegs=(g)=>[...g].map(c=>`<span class="peg" style="--pc:${MMC[+c]}"></span>
 GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F5D80"/>${[0,1,2].map(r=>[0,1,2,3].map(c=>`<circle cx="${20+c*17}" cy="${28+r*22}" r="7" fill="${MMC[(r*2+c*3)%6]}" stroke="#fff" stroke-width="2"/>`).join('')+`<circle cx="88" cy="${24+r*22}" r="3" fill="#fff"/><circle cx="88" cy="${33+r*22}" r="3" fill="#1d2f44"/>`).join('')}</svg>`,
   init:()=>({code:Array(4).fill(0).map(()=>rnd(6)).join(''),h:[],last:''}),
-  hide:{all:['code']},net:{local:['add','clr']},
-  status:(d,ctx)=>{const x=d.h[d.h.length-1];if(!x)return turnTxt(d,ctx);const [b,w]=mmFb(d,x);return `<small>${nm(d,x.s)}: ${b} بمكانها و${w} بغير مكانها</small><br>`+turnTxt(d,ctx);},
+  hide:{all:['code']},net:{local:['add','clr']},mask:(d,seat)=>d.win!=null?d:erHide({...d,code:maskVal(d.code)},seat),
+  status:(d,ctx)=>{const x=d.h[d.h.length-1];let t='';if(x){const [b,w]=mmFb(d,x);t=`<small>${nm(d,x.s)}: ${b} بمكانها و${w} بغير مكانها</small><br>`;}return t+turnTxt(d,ctx)+(d.win!=null?'':'<br>'+erLine(d));},
+  // equal rounds: a try shows its pins when the round ends; whoever breaks the code in that round wins (two share it)
+  onSkip:(nd,d)=>erSkip(GAMES.mm,nd,d),
+  onTimeout:d=>erTime(GAMES.mm,d),
+  erSettle(x){const e=x.er,n=x.pl.length,h=[...x.h],won=[];
+    for(let j=0;j<n;j++){const s=(e.st+j)%n,g=erMv(x,s);if(typeof g!=='string')continue;const [b,w]=mmScore(x.code,g);h.push({s,g,b,w});if(b===4)won.push(s);}
+    return {...x,h:h.slice(-30),...(won.length?{win:won[0],...(won.length>1?{wins:won}:{})}:{})};},
   winExtra:()=>'الشفرة ظاهرة تحت',
   // one board: the hidden code on top, then every try with its pins, the row being filled, and empty rows to come.
   // rows carry data-k so a new try is a new node (it pops in) and an empty hole turning into a peg pops too
@@ -155,8 +205,10 @@ GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
     let s=`<div class="gm-root gm-mm"><div class="mmb">`;
     s+=`<div class="mmr code ${end?'open':''}"><span class="fbl">الشفرة</span><span class="pegs">${end?pegs(d.code):'<i class="hole q">؟</i>'.repeat(4)}</span><span class="lock">${end?'🔓':'🔒'}</span></div><div class="mmh" id="mmh">`;
     s+=d.h.map((x,i)=>{const [b,w]=mmFb(d,x);return `<div class="mmr ${b===4?'win':''}" data-k="h${i}"><b class="n">${i+1}</b><i class="who" style="--c:${col(d,x.s)}"></i><span class="pegs">${pegs(x.g)}</span>${fb(b,w)}</div>`;}).join('');
-    if(ctx.my)s+=`<div class="mmr cur" data-k="cur" style="--c:${col(d,d.turn)}"><b class="n">${d.h.length+1}</b><i class="who"></i><span class="pegs">${[0,1,2,3].map(k=>S.mm[k]!=null?`<span class="peg" style="--pc:${MMC[S.mm[k]]}"></span>`:hole).join('')}</span>${fb(0,0)}</div>`;
-    if(!end)for(let i=d.h.length+(ctx.my?1:0);i<5;i++)s+=`<div class="mmr ghost" data-k="g"><b class="n">${i+1}</b><i class="who"></i><span class="pegs">${hole.repeat(4)}</span>${fb(0,0)}</div>`;
+    // this round's tries wait for their pins
+    let pc=0;if(!end){const e=erOf(d),n=d.pl.length;for(let j=0;j<n;j++){const q=(e.st+j)%n,g=q===ctx.v?erMv(d,q):null;if(typeof g==='string'&&++pc)s+=`<div class="mmr pend" data-k="p${e.r}-${q}"><b class="n">…</b><i class="who" style="--c:${col(d,q)}"></i><span class="pegs">${pegs(g)}</span><span class="mmwait">⏳</span></div>`;}}
+    if(ctx.my)s+=`<div class="mmr cur" data-k="cur" style="--c:${col(d,d.turn)}"><b class="n">${d.h.length+pc+1}</b><i class="who"></i><span class="pegs">${[0,1,2,3].map(k=>S.mm[k]!=null?`<span class="peg" style="--pc:${MMC[S.mm[k]]}"></span>`:hole).join('')}</span>${fb(0,0)}</div>`;
+    if(!end)for(let i=d.h.length+pc+(ctx.my?1:0);i<5;i++)s+=`<div class="mmr ghost" data-k="g"><b class="n">${i+1}</b><i class="who"></i><span class="pegs">${hole.repeat(4)}</span>${fb(0,0)}</div>`;
     s+=`</div></div><div class="mmleg"><span><i class="b"></i>بمكانها</span><span><i class="w"></i>بغير مكانها</span></div>`;
     if(ctx.my)s+=`<div class="mmpal">${MMC.map((c,k)=>`<button class="peg pbig" style="--pc:${c}" data-ga="add" data-i="${k}" ${S.mm.length>=4?'disabled':''} aria-label="لون"></button>`).join('')}</div>
       <div class="acts"><button class="btn navy" data-ga="clr" ${S.mm.length?'':'disabled'}>مسح</button><button class="btn red" data-ga="go" ${S.mm.length===4?'':'disabled'}>جرّب</button></div>`;
@@ -168,8 +220,8 @@ GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
     if(!ctx.my)return;S.mm=S.mm||[];
     if(a==='add'){if(S.mm.length<4)S.mm.push(i);render();return;}
     if(a==='clr'){S.mm=[];render();return;}
-    if(S.mm.length!==4)return;const g=S.mm.join('');S.mm=[];const t=d.turn;const [b,w]=mmScore(d.code,g);
-    act({...d,h:[...d.h,{s:t,g,b,w}].slice(-30),win:b===4?t:null,turn:nextSeat(d,t)});
+    if(S.mm.length!==4)return;const g=S.mm.join('');S.mm=[];const t=d.turn;
+    act(erMove(GAMES.mm,d,t,g,{last:`${nm(d,t)} جرّب، والنتيجة آخر الجولة`}));
   }
 };
 
@@ -211,6 +263,9 @@ function numPlan(N,bomb){const key=N+(bomb?'b':'');if(numPlans[key])return numPl
     V.push(bv);B.push(bk);}
   return numPlans[key]={V,B};}
 GAMES.num.bot=(d,s,lv)=>{const m=d.hi-d.lo+1;let n;
+  // classic, in equal rounds: the round's guesses stay hidden till its end, so every number still open hits as often
+  // and a level cannot do better than another; each bot just guesses inside the window
+  if(!d.vr)return botDo(d,s,'m',d.lo+rnd(m));
   // the pass: kept for a window that is bad to guess in (one number left is the bomb itself)
   if(d.vr&&(d.ps||'')[s]!=='1'){const L=numPlan(Math.max(2,aliveSeats(d).length),true).V[m][0];
     if(m===1&&lv>1||(lv===3&&L>.45&&m<=3)||(lv===1&&Math.random()<.12))return botDo(d,s,'pass',0);}

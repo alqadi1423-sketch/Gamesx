@@ -23,7 +23,7 @@ const u2Fmt=ms=>{const s=Math.max(0,Math.round(ms/1000));return s<60?s+' ث':Mat
    d.pz the puzzle (never its solution), d.lr last round per seat (ms, -1 wrong or gave up, -2 no answer), d.pts, d.tt total time */
 const U2={};
 function u2St(d,v){const k=d.gid+':'+d.rd+':'+v;
-  if(!S.u2||S.u2.key!==k){let o=null;try{const j=JSON.parse(sessionStorage.getItem('u2pz')||'null');if(j&&j.key===k)o=j;}catch(e){}S.u2=o||{key:k,ph:'ready'};}
+  if(!S.u2||S.u2.key!==k){let o=null;try{const j=JSON.parse(sessionStorage.getItem('u2pz')||'null');if(j&&j.key===k)o=j;}catch(e){}S.u2=o||{key:k,ph:'ready',seen:Date.now()};}
   return S.u2;}
 function u2Save(){try{sessionStorage.setItem('u2pz',JSON.stringify(S.u2));}catch(e){}}
 // hand in this phone's answer once
@@ -71,7 +71,9 @@ function u2Game(o){
       return sub+(me>=0?hasPicked(d,me)?'<b>أرسلت، ننتظر الباقين</b>':'<b>حلّها قبل الكل!</b>':'');},
     winExtra:d=>'النقاط: '+d.pl.map((_,s)=>`${nm(d,s)} ${d.pts[s]}`).join('، '),
     // the host makes the puzzle; online it also closes a round nobody finishes (the players' own clocks normally do)
-    host(d){if(d.ph==='gen'){const pz=o.gen(d.lv);return {...d,ph:'go',pz,dl:S.mode==='online'?Date.now()+o.cap(pz,d.lv)+150000:0};}
+    // a maker that gives up is asked again, then at a lower level; with no puzzle yet the host simply tries on its next tick
+    host(d){if(d.ph==='gen'){let pz=null;for(let l=d.lv;l>=1&&!pz;l--)for(let k=0;k<3&&!pz;k++){try{pz=o.gen(l);}catch(e){pz=null;}}
+        if(!pz)return null;return {...d,ph:'go',pz,dl:S.mode==='online'?Date.now()+o.cap(pz,d.lv)+150000:0};}
       if(d.ph==='go'&&d.dl&&S.mode==='online'&&Date.now()>d.dl)return G.resolve(d,simulPicks(d).map(x=>x===undefined?null:x));
       return null;},
     resolve(d,picks){const cap=o.cap(d.pz,d.lv);
@@ -104,7 +106,9 @@ function u2Game(o){
     click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
       if(d.ph==='lv'){if(a==='nr'&&U2NR.includes(i)){S.u2nr=i;render();return;}if(a==='lv'&&i>=1&&i<=3)act({...d,ph:'gen',lv:i,nr:U2NR.includes(S.u2nr)?S.u2nr:3});return;}
       if(d.ph!=='go'||!d.pz)return;const st=u2St(d,ctx.v);
-      if(a==='start'){if(st.ph!=='ready')return;st.ph='go';st.t0=Date.now();st.cap=u2Cap(o,d);st.w=o.init(d.pz);st.h=[];u2Save();render();return;}
+      // online the host closes the round 150 s after the puzzle's own time: a player who waits on «ابدأ» longer than two minutes
+      // has the clock already running, so the time shown is the time really left
+      if(a==='start'){if(st.ph!=='ready')return;st.ph='go';st.t0=S.mode==='online'&&st.seen?Math.min(Date.now(),st.seen+120000):Date.now();st.cap=u2Cap(o,d);st.w=o.init(d.pz);st.h=[];u2Save();render();return;}
       if(st.ph!=='go')return;
       if(a==='quit'){if(!st.q){st.q=1;render();setTimeout(()=>{if(S.u2===st&&st.q){st.q=0;render();}},3000);return;}u2Send(d,ctx.v,{s:'',ms:Date.now()-st.t0});render();return;}
       if(a==='undo'){if(st.h&&st.h.length){st.w=st.h.pop();u2Save();render();}return;}
