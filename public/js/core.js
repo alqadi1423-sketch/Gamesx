@@ -315,7 +315,10 @@ function netDown(){if(S.mode!=='online'||!S.offline)return false;
 // a player who dropped out gets GRACE ms before the others can skip them, so a short network cut does not cost the game
 const GRACE=15000;
 // online: a player whose phone has been out of the room for longer than GRACE (a short drop does not count)
-const goneLong=r=>S.mode==='online'&&!S.roles.has(r)&&Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=GRACE;
+// (the seat whose turn it is gets GRACE_TURN: everyone is waiting for it)
+const GRACE_TURN=6000;
+const graceOf=r=>{const d=S.st.d;return d&&d.win==null&&Array.isArray(d.pl)&&d.pl[d.turn]===r?GRACE_TURN:GRACE;};
+const goneLong=r=>S.mode==='online'&&!S.roles.has(r)&&Date.now()-((S.goneAt||{})[r]??S.joinT??0)>=graceOf(r);
 // the roles in the room: seats whose device key is here
 // (a phone whose page is frozen or asleep, net.js freshFp, counts as gone for the round; it keeps its seat for HOLD)
 function recomputeRoles(){const s=new Set();if(S.me!=null)s.add(S.me);for(let r=0;r<MAXP;r++)if(S.ids[r]&&S.peersByFp[S.ids[r]]&&freshFp(S.ids[r]))s.add(r);

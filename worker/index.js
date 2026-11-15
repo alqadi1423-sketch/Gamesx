@@ -12,7 +12,7 @@ const RATE_MAX = 120, RATE_MS = 10000;
 const ROOM_KEEP = 12 * 3600 * 1000;
 // a phone that has sent nothing (no message, no ping) for SILENT is gone: its socket is closed and the others told it left.
 // Without this a phone that lost its signal or changed networks stays in the room (a ghost) until Cloudflare's TCP gives up,
-// and ghosts fill the room's 16 places. The app pings every 8 s when the room is quiet (older ones every 20 s)
+// and ghosts fill the room's 16 places. The app pings after 5 s of quiet (older ones every 20 s)
 const SILENT = 45000, SWEEP = 20000;
 
 export class Room {

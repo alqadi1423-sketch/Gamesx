@@ -19,8 +19,9 @@ window.WSROOM={
     /* a socket can die without either side being told (a phone that changed networks, slept, or lost signal): it stays open
        and nothing comes through. A room that has said nothing for QUIET is asked (ping) and must answer within PONG_MS; back
        in the app (screen on, back from another app, back online) it is asked at once and must answer within WAKE_MS. One
-       that does not answer is replaced at once. Every TICK the socket is checked; DEAD without a word is dead whatever happens */
-    const QUIET=8000,PONG_MS=4000,WAKE_MS=2500,DEAD=25000,TICK=3000;
+       that does not answer is replaced at once. Every TICK the socket is checked; DEAD without a word is dead whatever happens.
+       (In a room with anyone else in it every phone publishes every 4 s, so a live socket is never quiet for QUIET) */
+    const QUIET=5000,PONG_MS=3000,WAKE_MS=2500,DEAD=20000,TICK=2000;
     let ws=null,me=null,mine={},peers={},hs=[],sts=[],closed=false,opened=false,up=false,ping=null,again=null,tries=0,lastRx=0,probeT=null,probing=0,openAt=0;
     const NL=(...a)=>{try{window.NETLOG&&NETLOG(...a);}catch(e){}};
     const emit=()=>{const arr=[{peer:me||'me',sameTab:true,isMe:true,kind:'viewer',presence:mine}];
