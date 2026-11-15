@@ -4,7 +4,7 @@
    One goal: don't get caught napping. If the cap lands behind you, catch the one who dropped it.
 
    The walker («اللفّاف») drags their kid round the ring with a finger; every step moves the chant on
-   («طاق طاق طاقية… شبّاك ورا شبّاك…»). A flick (or the cap button) drops the cap behind the sitter they are passing.
+   («طاق طاق طاقية… شبّاك ورا شبّاك…», sung by a synth; a real recording plays instead once audio/taqiya.json names it). A flick (or the cap button) drops the cap behind the sitter they are passing.
    They keep walking to bluff; when they come right round to the cap again, that sitter is «شرب»: −1, and they swap.
    Every sitter sees the circle from their own place: the others in front, nothing behind. They hear the steps behind
    them (stereo, nearer and louder), see the walker's shadow sweep over the floor, feel the heartbeat when he is right
@@ -18,7 +18,7 @@
    the host clamps and checks them and publishes positions. Where the cap lies (dp) is the walker's alone until it is
    found or the lap comes round; a look is answered by the host. Bots (and absent players) are moved by the host.
    ===================================================================================================== */
-const TQ={VW:300,VR:520,VA:110,LOOKS:3,GAME:300000,RES:3200,CHASE:9000,TICK:200,TAG:30,DROP2:2000,WALKMAX:40000};
+const TQ={VW:300,VR:520,VA:110,LOOKS:3,GAME:300000,RES:3200,CHASE:9000,TICK:200,TAG:60,DROP2:2000,WALKMAX:40000};
 // the chant, a word a step (a real recording at audio/taqiya-chant.mp3 plays instead of the sung melody if it is there)
 const TQ_CHANT=['طاق','طاق','طاقية','شبّاك','ورا','شبّاك','رنّ','رنّ','يا جرس','حوّل','واركب','الفرس'];
 const TQ_STEP=40; // milli-laps a step
@@ -88,12 +88,12 @@ function tqBotLooks(d,nd,now){const m=S.tqBL&&S.tqBL.k===d.gid+':'+d.rk?S.tqBL:(
   for(const s of d.cr){if(d.out[s]==='1'||!tqIsBot(d,s)||x.lk[s]>=TQ.LOOKS||x.ph!=='walk')continue;const lv=tqLv(d,s),th=tqTh(d,s),a=tqW(d.wp-th),b=tqW(x.wp-th);
     if(Math.abs(b)<45&&x.wp-d.wp<12)m.ling[s]=(m.ling[s]||0)+1;
     if(a<0&&b>=0&&!(m.at[s]>now)){const long=x.wp-x.w0>700?.15:0,lg=(m.ling[s]||0)>=2?.3:0;m.ling[s]=0;
-      const P=(lv===1?.16:lv===2?.24:.3)+lg+long+(lv===3&&x.lk[s]===0?.08:0);if(Math.random()<P)m.at[s]=now+(lv===1?900+rnd(1300):lv===2?500+rnd(900):280+rnd(600));}
+      const P=(lv===1?.2:lv===2?.32:.42)+lg+long+(lv===3&&x.lk[s]===0?.08:0);if(Math.random()<P)m.at[s]=now+(lv===1?900+rnd(1300):lv===2?500+rnd(900):280+rnd(600));}
     // the walker comes round again after a long walk: a careful sitter checks before the lap closes
-    if(lv>=2&&b<0&&b>-120&&x.wp-x.w0>900&&x.lk[s]<TQ.LOOKS-1&&!(m.at[s]>0)&&Math.random()<(lv===3?.05:.02))m.at[s]=now+300;
+    if(lv>=2&&b<0&&b>-120&&x.wp-x.w0>900&&x.lk[s]<TQ.LOOKS-1&&!(m.at[s]>0)&&Math.random()<(lv===3?.08:.04))m.at[s]=now+300;
     if(m.at[s]>0&&now>=m.at[s]){m.at[s]=0;x=tqLook(x,s,now);if(x.ph!=='walk')return x;}}
   return x;}
-const tqBotRun=lv=>TQ.VR*(lv===1?.6+Math.random()*.17:lv===2?.74+Math.random()*.15:.86+Math.random()*.11);
+const tqBotRun=lv=>TQ.VR*(lv===1?.7+Math.random()*.15:lv===2?.78+Math.random()*.14:.86+Math.random()*.11);
 
 /* ---------- the host: every 200 ms it moves the round on from the phones' private parts, the bots and the clocks ---------- */
 function tqHost(d,now){
@@ -138,8 +138,10 @@ const TQS={
     const k=c.createOscillator(),k2=c.createOscillator(),fl=c.createBiquadFilter(),g=c.createGain(),lf=c.createOscillator(),lg=c.createGain();
     k.type='triangle';k2.type='sine';k.frequency.value=f0;k2.frequency.value=f0*2;lf.frequency.value=5.6;lg.gain.value=f0*.012;lf.connect(lg);lg.connect(k.frequency);lg.connect(k2.frequency);
     fl.type='bandpass';fl.frequency.value=1000;fl.Q.value=1.1;tqEnv(c,g,t,.03,.5,.24);k.connect(fl);k2.connect(fl);fl.connect(g).connect(o);for(const x of [k,k2,lf]){x.start(t);x.stop(t+.32);}}};
-// a real recording dropped in later (public/audio/taqiya-chant.mp3) plays during the walk; missing: silently the synth
-function tqRec(on,rate){try{if(!TQA.tried){TQA.tried=true;const a=new Audio();a.loop=true;a.preload='auto';a.addEventListener('canplaythrough',()=>{TQA.recOk=true;},{once:true});a.addEventListener('error',()=>{TQA.recOk=false;},{once:true});a.src='audio/taqiya-chant.mp3';TQA.rec=a;}
+// a real recording dropped in later (public/audio/, named in audio/taqiya.json) plays during the walk; else the synth
+// the hook: audio/taqiya.json names the file ({"chant":"taqiya-chant.mp3"}); null (as shipped) asks for nothing, so no 404
+function tqRec(on,rate){try{if(!TQA.tried){TQA.tried=true;fetch('audio/taqiya.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{const f=j&&typeof j.chant==='string'&&/^[\w.-]+\.(mp3|ogg|m4a)$/.test(j.chant)?j.chant:null;if(!f)return;
+    const a=new Audio();a.loop=true;a.preload='auto';a.addEventListener('canplaythrough',()=>{TQA.recOk=true;},{once:true});a.addEventListener('error',()=>{TQA.recOk=false;},{once:true});a.src='audio/'+f;TQA.rec=a;}).catch(()=>{});}
   const a=TQA.rec;if(!a||!TQA.recOk)return;if(on&&!S.mute){a.playbackRate=Math.max(.7,Math.min(1.4,rate||1));if(a.paused)a.play().catch(()=>{});}else if(!a.paused)a.pause();}catch(e){}}
 
 /* ---------- drawing: the courtyard from above (the walker, the chase, the watchers) ---------- */
