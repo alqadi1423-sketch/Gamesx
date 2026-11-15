@@ -1,0 +1,139 @@
+/* «طاق طاق طاقية» (taqiya): the courtyard at night. Uses css/kit-hara.css. Transform/opacity animations only, finite. */
+.tq{position:relative;width:calc(100% + 8px);margin:0 -4px;color:#F4F6FA;font-weight:700;padding-bottom:210px}
+.tq.ph-res,.tq.ph-end{padding-bottom:84px}
+/* HUD: the round, the clock, the lap, the fakes left (public), the event */
+.tq-hud{display:flex;align-items:center;gap:5px;padding:6px 8px;border-radius:16px 16px 0 0;background:#16223A;box-shadow:inset 0 -1px 0 rgba(255,255,255,.08);overflow:hidden}
+.tq-c{display:flex;align-items:center;gap:4px;height:28px;padding:0 9px;border-radius:12px;background:#0E1626;font-size:13px;font-weight:800;white-space:nowrap;flex:none}
+.tq-c b{font-size:15px}.tq-c small{font-size:11px;color:#A9BBD3;font-weight:600}
+.tq-clk{direction:ltr}.tq-clk.low b{color:#FF8A80}
+.tq-lapc b{color:#FFD84D;font-size:17px}.tq-lapc i{display:flex;gap:2px;font-style:normal}
+.tq-lapc u{width:9px;height:9px;border-radius:50%;background:#2E3E50;text-decoration:none;font-size:8px;line-height:9px;text-align:center;color:#A9BBD3}
+.tq-lapc u.on{background:#FFD84D}.tq-lapc u:not(.on){background:none;box-shadow:inset 0 0 0 1.4px #A9BBD3}
+.tq-fk{color:#7FD3FF;box-shadow:inset 0 0 0 1.5px #7FD3FF;margin-inline-start:auto}.tq-fk svg{flex:none}
+.tq-ev{font-size:15px;padding:0 7px}
+.tq-last{background:#9C7BD6;color:#fff;font-size:12px}
+/* the stage */
+.tq-stage{position:relative;background:#2B3852;border-radius:0 0 16px 16px;overflow:hidden}
+.tq-map{position:relative;width:100%;aspect-ratio:360/440;background-size:100% 100%;background-color:#594634}
+.tq-cmap{aspect-ratio:360/420;background-color:#2B3852}
+.tq-map>svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.tq-map text{font-family:inherit;font-weight:800;text-anchor:middle}
+.tq-stage.gf .tq-map{filter:blur(7px)}
+html.lite .tq-stage.gf .tq-map{filter:none}
+html.lite .tq-stage.gf::after{content:'';position:absolute;inset:0;background:rgba(200,210,230,.82)}
+/* names on solid pills */
+.tq-pl rect{fill:rgba(12,19,33,.9);stroke:rgba(255,255,255,.16);stroke-width:1}
+.tq-pl text{fill:#fff}
+.tq-pl.me rect{fill:#fff;stroke:#17233A;stroke-width:1.4}.tq-pl.me text{fill:#17233A}
+.tq-pl.gold rect{fill:#F0B429;stroke:#fff;stroke-width:1.8}.tq-pl.gold text{fill:#17233A}
+.tq-pl.lap rect{fill:#F0B429;stroke:#17233A;stroke-width:1.6}.tq-pl.lap text{fill:#17233A}
+.tq-pl.lf rect{fill:#EC6158;stroke:#fff;stroke-width:1.4}
+.tq-pl.tg rect{fill:#9C7BD6;stroke:#fff;stroke-width:1.4}
+.tq-pl.tr rect{fill:#0E1626;stroke:#7FD3FF;stroke-width:1.4;stroke-dasharray:3 2}.tq-pl.tr text{fill:#7FD3FF}
+.tq-pl.gs rect{fill:#4AB1E8;stroke:#fff;stroke-width:1.5}
+.tq-pl.ev rect{fill:#FFF4D6;stroke:#17233A;stroke-width:1.4}.tq-pl.ev text{fill:#17233A}
+.tq-pl.dp rect{stroke:#fff;stroke-width:2}.tq-pl.dp.up rect{fill:#3FAE5C}.tq-pl.dp.dn rect{fill:#EC6158}.tq-pl.dp text{direction:ltr;unicode-bidi:bidi-override}
+.tq-pl.r0 rect{fill:#2F6FA8;stroke:#7FD3FF;stroke-width:1.6}.tq-pl.r1 rect{fill:#2C7151;stroke:#7BEA9C;stroke-width:1.6}.tq-pl.r2 rect{fill:#5A3A22;stroke:#FFB37A;stroke-width:1.6}
+.tq-pl.r2.off rect{fill:#3A2A22;stroke-dasharray:3 2}.tq-pl.r2.off text{fill:#FFB37A}
+.tq-ring{fill:none;stroke:#FFE7B0;stroke-opacity:.35;stroke-width:2.2;stroke-dasharray:2 7;stroke-linecap:round}
+.tq-lane{fill:none;stroke:#FFD84D;stroke-width:3;stroke-dasharray:1 7;stroke-linecap:round}
+.tq-sel{fill:none;stroke:#fff;stroke-opacity:.35;stroke-width:1.5;stroke-dasharray:4 4}
+.tq-sel.on{fill:#FFD84D;fill-opacity:.18;stroke:#FFD84D;stroke-opacity:1;stroke-width:2.6;stroke-dasharray:6 4}
+.tq-gs{fill:#4AB1E8;fill-opacity:.2;stroke:#7FD3FF;stroke-width:2.6}
+.tq-pulse{fill:none;stroke:#EC6158;stroke-width:3}
+.tq-tap{fill:transparent;cursor:pointer}
+.tq-z{font-size:11px;fill:#FFF4D6;opacity:.85}
+/* the walker moves on the ring a step every tick; the step itself is a short transform transition */
+.tq-w{transition:transform .45s linear}.tq-w.fl .tq-wi{transform:scaleX(-1)}
+html.lite .tq-w{transition:none}
+.tq-arcb{fill:none;stroke:rgba(14,22,38,.55);stroke-width:8}
+.tq-arc{fill:none;stroke:#FFD84D;stroke-width:5.5;stroke-linecap:round}
+.tq-rt{fill:none;stroke:var(--c);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:2 7;opacity:.85}
+.tq-rt.on{stroke-width:5;stroke-dasharray:none;opacity:1}.tq-rt.off{stroke:#9FB3C8;opacity:.45}
+/* the dock stays reachable on short phones */
+.tq-dock{position:fixed;z-index:5;left:50%;bottom:0;transform:translateX(-50%);width:min(540px,100%);padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 8px)}
+.tq-dock .big{margin:0}
+.tq-dock:empty{display:none}
+.tq-wait,.tq-tip{text-align:center;color:var(--mut);font-size:15px;margin:6px 0}
+.tq-tip{font-size:12.5px;margin:7px 0 0}
+.tq-prop{display:inline-flex;align-items:center;height:17px;padding:0 6px;border-radius:9px;border:1.5px dashed #7FD3FF;color:#2F7DB3;font-size:10px;font-weight:800;font-style:normal;line-height:1;white-space:nowrap;vertical-align:middle;background:var(--bg)}
+@media (prefers-color-scheme:dark){.tq-prop{color:#7FD3FF}}
+/* plan: laps, cap, gold, غفلة, go */
+.tq-seg{display:flex;gap:6px;margin-bottom:7px}
+.tq-o{position:relative;flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;min-height:46px;padding:3px 5px;border-radius:14px;background:var(--surface);color:var(--ink);box-shadow:var(--e1),inset 0 0 0 2px var(--edge);font-weight:800;line-height:1.1}
+.tq-o.on{background:#F0B429;color:#17233A;box-shadow:0 3px 0 #9A6A0E,inset 0 0 0 2px #FFE38A}
+.tq-o:disabled{opacity:.42}
+.tq-laps b{font-size:24px;line-height:1}.tq-laps span{font-size:13.5px}
+.tq-laps em{font-style:normal;font-size:11.5px;line-height:17px;padding:0 5px;border-radius:9px;background:rgba(74,177,232,.16);color:#2F7DB3}
+.tq-laps .on em{background:#17233A;color:#FFD84D}
+@media (prefers-color-scheme:dark){.tq-laps em{color:#7FD3FF}}
+.tq-caps .tq-o{flex-direction:column;gap:1px;min-height:54px;padding:4px 2px}
+.tq-caps .tq-o b{display:block;font-size:13px;line-height:15px}.tq-caps .tq-o small{display:block;font-size:10.5px;line-height:12px;font-weight:600;opacity:.8;white-space:nowrap}
+.tq-caps .tq-o svg,.tq-caps .tq-o i{flex:none}.tq-caps .tq-o i{font-style:normal;font-size:18px;line-height:20px}
+.tq-o.tq-gold:not(.on){box-shadow:var(--e1),inset 0 0 0 2px #F0B429}
+.tq-o.tq-gfl:not(.on){box-shadow:var(--e1),inset 0 0 0 2px #9C7BD6}
+.tq-o.tq-gfl.on{background:#9C7BD6;color:#fff;box-shadow:0 3px 0 #5E3FA0,inset 0 0 0 2px #D7C6FF}
+.tq-go{background:#3FAE5C;min-height:56px;padding:8px 10px;font-size:19px}
+.tq-go small{font-size:12.5px}
+/* walk: the trace, my guess, «صرخة» */
+.tq-hint{position:relative;display:flex;align-items:center;gap:9px;padding:7px 10px;margin:4px 0 9px;border-radius:16px;background:var(--surface);border:1.5px dashed #7FD3FF;color:var(--ink)}
+.tq-hint>i:not(.tq-prop){flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:rgba(127,211,255,.15);font-style:normal;font-size:17px}
+.tq-hint span{flex:1;min-width:0}.tq-hint b{display:block;font-size:12.5px;color:#2F7DB3;line-height:15px}.tq-hint small{display:block;font-size:14.5px;font-weight:800;line-height:19px;color:var(--ink);opacity:1}
+@media (prefers-color-scheme:dark){.tq-hint b{color:#7FD3FF}}
+.tq-hint .tq-prop{position:absolute;top:-9px;left:12px}
+.tq-two{display:flex;gap:8px}
+.tq-two .big{flex-direction:row;display:flex;align-items:center;gap:8px;min-height:68px;padding:6px 10px;font-size:18px;text-align:start;line-height:1.15}
+.tq-two .big>i:not(.tq-prop){font-style:normal;font-size:22px;flex:none}.tq-two .big>svg{flex:none}
+.tq-two .big span{min-width:0}.tq-two .big small{display:block;font-size:12px;font-weight:600;opacity:.92}
+.tq-gs{flex:1.5;background:#4AB1E8;color:#fff;cursor:default;box-shadow:var(--lip)}
+.tq-gs:not(.on){background:#2D4763}
+.tq-sc{flex:1;background:#2D4763;box-shadow:var(--lip),inset 0 0 0 3px #F0B429!important}.tq-sc small{color:#FFD84D}
+.tq-sc.on{background:#C98F1A}
+/* alert: «شفتها!», «تحسّس» */
+.tq-saw{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:14px;min-height:92px;font-size:34px;background:#EC6158;box-shadow:0 5px 0 #8E2B26,0 0 0 4px #FFD84D;margin:4px 0 12px!important}
+.tq-saw small{font-size:13px}
+.tq-cdb{fill:#17233A;stroke:rgba(255,255,255,.2);stroke-width:6}.tq-cdf{fill:none;stroke:#FFD84D;stroke-width:6;stroke-linecap:round}
+.tq-cdt{fill:#fff;font-size:18px;font-weight:800;text-anchor:middle;font-family:inherit}
+.tq-feel{position:relative;flex:1.5;background:#2D4763;box-shadow:var(--lip),inset 0 0 0 2.5px #7FD3FF}
+.tq-feel small{color:#7FD3FF}.tq-feel.on{background:#1F5A3E}.tq-feel .tq-prop{position:absolute;top:-9px;left:10px}
+.tq-feel:disabled{opacity:1}.tq-feel:disabled:not(.on){opacity:.45}
+.tq-risk{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 12px;border-radius:18px;background:var(--surface);box-shadow:var(--e1);color:var(--ink)}
+.tq-risk b{font-size:13.5px;line-height:18px}.tq-risk small{font-size:12px;color:#E5484D;font-weight:800}
+/* the chase: routes with habits, the tap race */
+.tq-lbl2{display:flex;align-items:center;justify-content:space-between;margin:0 4px 6px;font-size:14.5px;font-weight:800;color:var(--ink)}
+.tq-lbl2 span{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mut)}
+.tq-routes{display:flex;gap:7px}
+.tq-rb{position:relative;flex:1;min-height:72px;border-radius:16px;background:var(--surface);color:var(--ink);box-shadow:var(--e1),inset 0 5px 0 var(--c);display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:4px;font-weight:800}
+.tq-rb.r0{--c:#4AB1E8}.tq-rb.r1{--c:#3FAE5C}.tq-rb.r2{--c:#F28C38}
+.tq-rb b{font-size:17px;line-height:21px}.tq-rb small{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mut);font-weight:700}
+.tq-rb em{position:absolute;bottom:-9px;font-style:normal;font-size:10.5px;font-weight:800;padding:0 7px;line-height:18px;border-radius:9px;background:#F28C38;color:#fff;border:1.5px solid var(--bg);white-space:nowrap}
+.tq-rb.on{background:#24412F;color:#fff;box-shadow:inset 0 0 0 2.5px #7BEA9C,inset 0 5px 0 var(--c)}
+.tq-rb:disabled{opacity:.55;background:repeating-linear-gradient(135deg,var(--surface) 0 8px,var(--surface-2) 8px 16px)}.tq-rb:disabled b{text-decoration:line-through}
+.tq-hbp{display:flex;gap:2px;font-style:normal}.tq-hbp u{width:7px;height:7px;border-radius:2px;background:var(--surface-2);text-decoration:none}.tq-hbp u.on{background:#F28C38}
+.tq-race{display:flex;flex-direction:column;gap:8px}
+.tq-rbar{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}.tq-rbar i{display:block;height:100%;background:#F0B429;transform-origin:right}
+.tq-tap{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:14px;min-height:96px;font-size:28px;background:#FFD84D;color:#17233A;box-shadow:0 5px 0 #9A6A0E,0 0 0 3px #fff;touch-action:manipulation}
+.tq-tap b{font-size:38px;min-width:54px;direction:ltr}
+/* the round's result and the end */
+.tq-tell{display:flex;align-items:center;gap:9px;margin:10px 0 6px;padding:7px 10px;border-radius:14px;background:var(--surface);color:var(--ink);box-shadow:var(--e1)}
+.tq-tell svg{flex:none}.tq-tell b{display:block;font-size:14.5px;color:var(--ink)}.tq-tell small{display:block;font-size:12px;color:var(--mut);font-weight:600}
+.tq-rows{display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+.tq-row{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:13px;background:var(--surface);color:var(--ink);box-shadow:var(--e1);border-inline-start:5px solid var(--c)}
+.tq-row>svg{flex:none}.tq-row span{flex:1;min-width:0}.tq-row b{display:block;font-size:14.5px;line-height:17px}
+.tq-row small{display:block;font-size:11.5px;line-height:14px;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tq-row em{font-style:normal;min-width:40px;text-align:center;font-size:14px;font-weight:800;line-height:22px;border-radius:11px;background:var(--surface-2)}
+.tq-row em.up{background:#3FAE5C;color:#fff}.tq-row em.dn{background:#EC6158;color:#fff}
+.tq-row i{font-style:normal;width:30px;text-align:center;font-size:15px;font-weight:800;color:#C98F1A}
+.tq-row.won{box-shadow:var(--e1),inset 0 0 0 2px #F0B429}
+.tq-final{margin-top:10px}
+.ph-res .tq-dock{position:static;transform:none;width:auto;padding:10px 0 4px;background:none}
+.tq-next{background:#9C7BD6;min-height:54px;font-size:18px}.tq-next small{font-size:12px}
+/* the status card: what just happened, then what to do */
+.st-main .tq-st{display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.15;text-align:start;max-width:100%}
+.tq-st>i{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;font-style:normal;font-size:16px;background:var(--surface-2)}
+.tq-st span{min-width:0}
+.tq-st b{display:block;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tq-st small{display:block;font-size:12px;font-weight:600;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tq-st.al>i{background:#EC6158}.tq-st.ch>i{background:#F0B429}.tq-st.rs.catch>i,.tq-st.go>i{background:#3FAE5C}.tq-st.rs.miss>i,.tq-st.rs.esc>i{background:#9C7BD6}.tq-st.rs.fs>i,.tq-st.rs.fi>i{background:#E7DCC8}
+.tq-todo{margin:3px 0 0;font-size:14.5px;font-weight:800;line-height:1.2;color:var(--ink)}
+.cover .msg{font-weight:800}

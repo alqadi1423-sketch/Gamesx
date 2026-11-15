@@ -247,3 +247,62 @@ const KH=(()=>{
 
   return {OL,f,T,st,lite,C,art:{roof,facade,court,door,car,trailer,barrel,crate,palm,tree,lamp,pool,tank,shed,tent,field,shop,ruin,defs},bg,CAST,kid,face:face1,sprite,beam,say,burst,tw,graph,walk,banner,card,snd,ensureDefs};
 })();
+
+/* =====================================================================================================
+   More of the kit, first used by «طاق طاق طاقية» (n-taqiya.js). Additive: nothing above changes.
+     KH.sit({who|c,pose,mood,s,flip,x,y})  a kid sitting cross-legged on the floor (head at 0,-33):
+                                 pose sit | situp (one hand up) | sitcheer (both up) | sitlook (hand at the head, turning)
+     KH.cap(x,y,kind,s)          the cap («طاقية»): kind cap (white, knitted) | gold | fake (a patched rag)
+     KH.sprite('sleepcat',x,y)   a ginger cat curled up asleep (works through KH.sprite like the other figures)
+     KH.art.moon(x,y) KH.art.lights(x0,y0,x1,y1,sag,n,off) KH.art.rug(cx,cy,rx,ry) KH.art.jar(x,y) KH.art.stairs(x,y,w,h)
+     KH.art.icecart(x,y)         the courtyard pieces: moon with its glow, a string of coloured bulbs, a round rug, a water
+                                 jar (زير), stairs up to the roof, the ice-cream seller's cart
+     KH.art.defs2()              the gradients the pieces above need (once per art SVG, next to KH.art.defs())
+   ===================================================================================================== */
+Object.assign(KH,(()=>{
+  const OL=KH.OL,f=KH.f,T=KH.T,s2=w=>` stroke="${OL}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  const sk='var(--ks,#F2C29B)',kc='var(--kc,#EC6158)';
+  const hand=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.3" fill="${sk}"${s2(1.3)}/>`;
+  const arm=d=>`<path d="${d}" fill="none" stroke="${kc}" stroke-width="5" stroke-linecap="round"/>`;
+  const legs=`<ellipse rx="19" ry="4.5" fill="#000" opacity=".32"/><path d="M-18 -3q-1-9 7-11h22q8 2 7 11q-7 3-18 3t-18-3z" fill="#2D4763"${s2(1.4)}/>`+
+    `<path d="M-14 -5q7 5 15 1M14 -5q-7 5-15 1" fill="none" stroke="${sk}" stroke-width="4.6" stroke-linecap="round"/><ellipse cx="-5.5" cy="-2.2" rx="4.4" ry="2.7" fill="#fff"${s2(1.3)}/><ellipse cx="5.5" cy="-2.2" rx="4.4" ry="2.7" fill="#fff"${s2(1.3)}/>`;
+  const torso=`<path d="M-10 -11q-1-14 10-14t10 14z" fill="${kc}"${s2(1.6)}/><path d="M-4 -24.5l4 4 4-4" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.4"/>`;
+  const SIT={sit:legs+arm('M-8 -19q-6 4-8 9M8 -19q6 4 8 9')+hand(-15.5,-9)+hand(15.5,-9)+torso,
+    situp:legs+arm('M-8 -19q-6 4-8 9')+hand(-15.5,-9)+torso+arm('M8 -20l8 -12')+hand(16.5,-33),
+    sitcheer:legs+torso+arm('M-8 -20l-8 -12M8 -20l8 -12')+hand(-16.5,-33)+hand(16.5,-33),
+    sitlook:legs+arm('M-8 -19q-6 4-8 9')+hand(-15.5,-9)+torso+arm('M8 -20q8 -2 6 -12')+hand(13.5,-33)};
+  const SIT_MOOD={sitcheer:'g',sitlook:'o'};
+  const capBody=(fill,dot,extra)=>`<ellipse cy="3" rx="11" ry="3.4" fill="#000" opacity=".3"/><path d="M-10 1.5a10 9.5 0 0 1 20 0q-10 4-20 0z" fill="${fill}"${s2(1.5)}/><path d="M-8.2 -2.5q8.2 3 16.4 0M-6 -6q6 2.4 12 0" fill="none" stroke="${dot}" stroke-width="1.3" stroke-dasharray="1.6 1.6"/>${extra}`;
+  const CAPS={cap:capBody('#FAFBFD','#B9C6D6',`<path d="M-10 1.5q10 4 20 0" fill="none" stroke="#C8D3E0" stroke-width="1.6"/>`),
+    gold:capBody('#FFD24D','#C98F1A',`<path d="M-5 -5.5l1.2 2.4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`),
+    fake:capBody('#E7DCC8','#B49B78',`<path d="M-1 -8l3 6M3 -8l-3 6" stroke="#C0612B" stroke-width="1.3"/><rect x="2" y="-4" width="6" height="5" rx="1" fill="#C9B48E"${s2(1)}/>`)};
+  const SLEEPCAT=`<ellipse cy="5" rx="19" ry="5" fill="#000" opacity=".3"/><path d="M14 4q6 6-4 8.5q-10 1.5-16-1" fill="none" stroke="${OL}" stroke-width="6.4" stroke-linecap="round"/><path d="M14 4q6 6-4 8.5q-10 1.5-16-1" fill="none" stroke="#E39B4E" stroke-width="4" stroke-linecap="round"/>`+
+    `<ellipse cx="2" cy="1" rx="15" ry="9.5" fill="#E39B4E"${s2(1.5)}/><path d="M3 -7.5q2 4 0 8M8 -6q2 4 0 8M13 -3.5q1.5 3 0 6" fill="none" stroke="#B5652A" stroke-width="2" stroke-linecap="round"/>`+
+    `<path d="M-15 -4l-1-8 5 4z" fill="#E39B4E"${s2(1.3)}/><path d="M-6 -6l3-7 2 6z" fill="#E39B4E"${s2(1.3)}/><circle cx="-9" cy="-1" r="7.5" fill="#E39B4E"${s2(1.5)}/><ellipse cx="-9" cy="2.6" rx="3.6" ry="2.4" fill="#FBE3C4"/>`+
+    `<path d="M-14 -1.6q1.8 1.6 3.4 0M-7.6 -1.6q1.8 1.6 3.4 0" fill="none" stroke="${OL}" stroke-width="1.3" stroke-linecap="round"/><path d="M-9.8 1.2h1.6l-.8 1z" fill="#D9534F"/>`;
+  let done=false;
+  function ensure(){KH.ensureDefs();if(typeof document==='undefined'||!document.body||(done&&document.getElementById('kh-sit-sit')))return;done=true;
+    try{const d=document.createElement('div');d.setAttribute('aria-hidden','true');d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';const g=(id,c)=>`<g id="kh-${id}">${c}</g>`;
+      d.innerHTML=`<svg width="0" height="0"><defs>${Object.keys(SIT).map(k=>g('sit-'+k,SIT[k])).join('')}${Object.keys(CAPS).map(k=>g('cap-'+k,CAPS[k])).join('')}${g('sleepcat',SLEEPCAT)}</defs></svg>`;document.body.appendChild(d);}catch(e){}}
+  const castOf=o=>{const w=o.who!=null?o.who:o.c?Math.max(0,KH.CAST.findIndex(x=>x.c.toLowerCase()===String(o.c).toLowerCase())):0;return ((w%8)+8)%8;};
+  function sit(o={}){ensure();const w=castOf(o),K=KH.CAST[w],pose=SIT[o.pose]?o.pose:'sit',mood=o.mood||SIT_MOOD[pose]||K.m,s=o.s||1;
+    return `<g transform="translate(${f(o.x||0)} ${f(o.y||0)}) scale(${f((o.flip?-s:s)*100)/100} ${f(s*100)/100})" style="--kc:${o.c||K.c};--ks:${K.skin}"><use href="#kh-sit-${pose}"/><g transform="translate(0 -33)"><use href="#kh-h${w}"/><use href="#kh-m-${mood}"/></g></g>`;}
+  const cap=(x,y,kind='cap',s=1)=>{ensure();return `<use href="#kh-cap-${CAPS[kind]?kind:'cap'}" transform="translate(${f(x)} ${f(y)})${s!==1?` scale(${s})`:''}"/>`;};
+  const sprite0=KH.sprite;const sprite=(pose,x,y,o={})=>{if(pose==='sleepcat')ensure();return sprite0(pose,x,y,o);};
+  // courtyard pieces (plain SVG strings)
+  const BULB=['#FFD873','#EC6158','#7FD3FF','#7BEA9C','#FFB37A'];
+  const defs2=()=>`<defs>${BULB.map((c,i)=>`<radialGradient id="khb${i}"><stop offset="0" stop-color="${c}" stop-opacity=".55"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`).join('')}<radialGradient id="khmg"><stop offset=".2" stop-color="#FFF1C1" stop-opacity=".35"/><stop offset="1" stop-color="#FFF1C1" stop-opacity="0"/></radialGradient><radialGradient id="khrug" cx=".5" cy=".5" r=".5"><stop offset=".7" stop-color="#7E2A33"/><stop offset="1" stop-color="#5E1F28"/></radialGradient></defs>`;
+  const moon=(x,y)=>`<circle cx="${x}" cy="${y}" r="62" fill="url(#khmg)"/><circle cx="${x}" cy="${y}" r="17" fill="#FFF1C1"${s2(1.4)}/><circle cx="${x-5}" cy="${y-4}" r="3.6" fill="#EAD9A2"/><circle cx="${x+6}" cy="${y+5}" r="2.6" fill="#EAD9A2"/><circle cx="${x+3}" cy="${y-8}" r="1.6" fill="#EAD9A2"/>`;
+  function lights(x0,y0,x1,y1,sag,n,off=0){const cx=(x0+x1)/2,cy=(y0+y1)/2+sag;let s=`<path d="M${x0} ${y0}Q${f(cx)} ${f(cy)} ${x1} ${y1}" fill="none" stroke="#0A101C" stroke-width="1.6"/>`,g='',b='';
+    for(let i=1;i<n;i++){const t=i/n,x=f((1-t)*(1-t)*x0+2*t*(1-t)*cx+t*t*x1),y=f((1-t)*(1-t)*y0+2*t*(1-t)*cy+t*t*y1),k=(i+off)%BULB.length;
+      g+=`<circle cx="${x}" cy="${f(y+5)}" r="11" fill="url(#khb${k})"/>`;b+=`<path d="M${x} ${y}v2" stroke="#0A101C" stroke-width="2"/><ellipse cx="${x}" cy="${f(y+5)}" rx="3" ry="3.8" fill="${BULB[k]}" stroke="#0A101C"/><circle cx="${f(x-.9)}" cy="${f(y+3.8)}" r="1" fill="#fff" opacity=".85"/>`;}
+    return s+g+b;}
+  const rug=(cx,cy,rx,ry)=>`<ellipse cx="${cx}" cy="${cy+6}" rx="${rx+4}" ry="${ry+4}" fill="#000" opacity=".25"/><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#khrug)"${s2(1.8)}/>`+
+    `<ellipse cx="${cx}" cy="${cy}" rx="${rx-8}" ry="${f(ry-7)}" fill="none" stroke="#E2B65A" stroke-width="2.2" stroke-dasharray="2 5"/><ellipse cx="${cx}" cy="${cy}" rx="${f(rx*.62)}" ry="${f(ry*.55)}" fill="none" stroke="#E2B65A" stroke-opacity=".7" stroke-width="1.6"/><ellipse cx="${cx}" cy="${cy}" rx="${f(rx*.56)}" ry="${f(ry*.47)}" fill="#2D3E66" opacity=".55"/>`;
+  const jar=(x,y)=>`<ellipse cx="${x}" cy="${y+18}" rx="13" ry="5" fill="#000" opacity=".3"/><path d="M${x-10} ${y}q-6 16 10 18q16-2 10-18z" fill="#B97A4A"${s2(1.4)}/><ellipse cx="${x}" cy="${y}" rx="8" ry="3" fill="#7A4A2A"${s2(1.2)}/>`;
+  function stairs(x,y,w,h){let s='';const st=h/5;for(let i=0;i<5;i++)s+=`<rect x="${x}" y="${f(y+h-(i+1)*st)}" width="${f(w-i*w*.11)}" height="${f(st+1)}" fill="${i%2?'#C9A577':'#D6B588'}"${s2(1.2)}/>`;return s;}
+  const icecart=(x,y)=>T(x,y,`<ellipse cy="15" rx="32" ry="6" fill="#000" opacity=".3"/><rect x="-22" y="-14" width="46" height="27" rx="5" fill="#FAFBFD"${s2(1.8)}/><path d="M-22 -4h46" stroke="#EE7FB3" stroke-width="5"/><circle cx="-10" cy="14" r="5" fill="#45567A"${s2(1.6)}/><circle cx="14" cy="14" r="5" fill="#45567A"${s2(1.6)}/>`+
+    `<path d="M2 -14v-12" stroke="${OL}" stroke-width="2"/><path d="M-24 -24a26 13 0 0 1 52 0z" fill="#EC6158"/><path d="M-11 -34l4 10M2 -37v13M15 -34l-4 10" stroke="#fff" stroke-width="5"/><path d="M-24 -24a26 13 0 0 1 52 0z" fill="none"${s2(1.8)}/>`+
+    `<path d="M-2 4l4 10 4-10z" fill="#E2B65A"${s2(1.3)}/><circle cx="2" cy="2" r="4.5" fill="#EE7FB3"${s2(1.3)}/>`);
+  return {sit,cap,sprite,ensureDefs2:ensure,art:{...KH.art,moon,lights,rug,jar,stairs,icecart,defs2}};
+})());
