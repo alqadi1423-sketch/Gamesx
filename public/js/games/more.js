@@ -18,11 +18,11 @@ GAMES.war={name:'حرب الأوراق',cat:'cards',lbc:'#3A5F8F',
   viewer:d=>simulViewer(d),coverMsg:d=>d.res||'',
   status:(d,ctx)=>simulStatus(d,ctx,ptsBadges(d,d.pts)),
   winExtra:d=>d.res,
-  render(d,ctx){if(d.win!=null)return `<div class="gm gm-war">${warLast(d)}</div>`;const v=ctx.v,me=v!=null&&v>=0;const free=me?warFree(d,v):[];const mp=me?seatPick(d,ctx,v,d.rd):null;
+  render(d,ctx){if(d.win!=null)return `<div class="gm-root gm-war">${warLast(d)}</div>`;const v=ctx.v,me=v!=null&&v>=0;const free=me?warFree(d,v):[];const mp=me?seatPick(d,ctx,v,d.rd):null;
     const pot=d.pot||0;
     // the prize sits on the felt as a gold card (a new node each round, so it deals in), with a tie carried over on top;
     // beside it the rounds and the prizes still to come, then the last round's cards and what each other player still holds
-    let s=`<div class="gm gm-war"><div class="mtab wtab"><div class="wprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${d.prize+pot}</b>${pot?`<em>${d.prize} + ${pot} من التعادل</em>`:''}</div>
+    let s=`<div class="gm-root gm-war"><div class="mtab wtab"><div class="wprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${d.prize+pot}</b>${pot?`<em>${d.prize} + ${pot} من التعادل</em>`:''}</div>
     <div class="wrds"><span class="wrd">${[0,1,2,3,4,5,6].map(k=>`<i class="${k<d.rd?'done':k===d.rd?'on':''}"></i>`).join('')}</span><small>جولة ${d.rd+1} من 7</small>
     ${d.left.length?`<span class="wnext"><small>الجوائز الجاية</small>${[...d.left].sort((a,b)=>b-a).map(x=>`<i>${x}</i>`).join('')}</span>`:''}</div></div>${warLast(d)}`;
     // your cards first (the move), then what the others still hold
@@ -65,8 +65,8 @@ GAMES.lowu={name:'أصغر رقم فريد',cat:'quiz',lbc:'#2E6F73',
   // and the numbers: the ones this player has used are spent
   render(d,ctx){const v=ctx.v,me=v!=null&&v>=0,free=me?luFree(d,v):[],mp=me?seatPick(d,ctx,v,d.rd):null,val=(d.prize||1)+(d.pot||0);
     const last=Array.isArray(d.lp)?`<div class="llast" data-k="l${d.rd}">${d.pl.map((_,s)=>d.lp[s]>0?`<span class="${s===d.lw?'win':''}" style="--c:${col(d,s)};--j:${s}"><b class="ltr">${d.lp[s]}</b><small>${nm(d,s)}</small></span>`:'').join('')}</div>`:'';
-    if(d.win!=null)return `<div class="gm gm-lowu">${last}</div>`;
-    return `<div class="gm gm-lowu"><div class="lhead"><div class="lprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${val}</b>${d.pot?`<em>+${d.pot} من قبل</em>`:''}</div>
+    if(d.win!=null)return `<div class="gm-root gm-lowu">${last}</div>`;
+    return `<div class="gm-root gm-lowu"><div class="lhead"><div class="lprize" data-k="p${d.rd}"><small>الجائزة</small><b class="ltr">${val}</b>${d.pot?`<em>+${d.pot} من قبل</em>`:''}</div>
       <div class="lrds">${Array(d.rounds).fill(0).map((_,k)=>`<i class="${k<d.rd?'done':k===d.rd?'on':''}"></i>`).join('')}</div></div>${last}
       <div class="lgrid">${Array(d.max).fill(0).map((_,k)=>{const n=k+1,u=me&&!free.includes(n);return `<button class="lnum ${u?'used':''} ${mp===n?'sel':''}" data-ga="m" data-i="${n}" ${ctx.my&&!u?'':'disabled'}>${n}</button>`;}).join('')}</div>
       ${me?`<p class="lleft">باقي معك ${free.length} أرقام و${d.rounds-d.rd} جولات</p>`:''}</div>`;},
@@ -102,8 +102,8 @@ GAMES.two3={name:'ثلثين المتوسط',cat:'quiz',lbc:'#5D4E9E',
   // last round on a 0 to 100 line: every pick as a dot in the player's colour, and the target as a gold flag (a new node each round)
   render(d,ctx){const v=+((S.draft||{}).t23??50),f=d.fr||[2,3];
     const line=Array.isArray(d.lp)?`<div class="t3line" data-k="l${d.rd}"><div class="t3bar">${d.tg!=null?`<i class="t3tg" style="right:${d.tg}%"><b class="ltr">${d.tg}</b></i>`:''}${d.pl.map((_,s)=>d.lp[s]>=0?`<i class="t3p ${(d.lw||[]).includes(s)?'win':''}" style="right:${d.lp[s]}%;--c:${col(d,s)};--j:${s}"></i>`:'').join('')}</div><p>${d.res||''}</p></div>`:'';
-    if(d.win!=null)return `<div class="gm gm-two3">${line}</div>`;
-    return `<div class="gm gm-two3"><div class="t3goal" data-k="g${d.rd}"><small>جولة ${d.rd+1} من ${d.rounds}، الهدف</small><b>${t3Txt(f)}</b></div>${line}${ctx.my?`<div class="t3card"><span class="big-num ltr">${v}</span></div><div class="t3rng"><input type="range" class="t3r" min="0" max="100" value="${v}" data-draft="t23" style="--v:${v}"><div class="t3tk"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div><button class="btn red wide" data-ga="go">ثبّت رقمي</button>`:''}</div>`;},
+    if(d.win!=null)return `<div class="gm-root gm-two3">${line}</div>`;
+    return `<div class="gm-root gm-two3"><div class="t3goal" data-k="g${d.rd}"><small>جولة ${d.rd+1} من ${d.rounds}، الهدف</small><b>${t3Txt(f)}</b></div>${line}${ctx.my?`<div class="t3card"><span class="big-num ltr">${v}</span></div><div class="t3rng"><input type="range" class="t3r" min="0" max="100" value="${v}" data-draft="t23" style="--v:${v}"><div class="t3tk"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div><button class="btn red wide" data-ga="go">ثبّت رقمي</button>`:''}</div>`;},
   // the slider's filled part follows the thumb (core only updates the number)
   after(){const r=app.querySelector('.gm-two3 .t3r');if(r&&!r._t3){r._t3=1;r.addEventListener('input',()=>r.style.setProperty('--v',r.value));}},
   click(a,i,d,ctx){if(!ctx.my)return;const v=Math.max(0,Math.min(100,Math.round(+((S.draft||{}).t23??50))));if(S.draft)delete S.draft.t23;simulPick(d,ctx.v,v);},
@@ -136,7 +136,7 @@ GAMES.uxo={name:'إكس أو المضاعفة',cat:'board',lbc:'#8E3B46',
   render(d,ctx){let h=S.uxoH;if(!h||h.gid!==d.gid)h=S.uxoH={gid:d.gid,b:d.b,lm:-1};
     if(h.b!==d.b){let i=-1;for(let x=0;x<81;x++)if(h.b[x]!==d.b[x]&&d.b[x]!=='.'){i=x;break;}h.lm=i;h.b=d.b;}
     let wl=[];if(d.win!=null){const L=L3.find(L=>d.w[L[0]]!=='.'&&d.w[L[0]]!=='d'&&d.w[L[0]]===d.w[L[1]]&&d.w[L[1]]===d.w[L[2]]);if(L)wl=L;}
-    let s='<div class="gm gm-uxo"><div class="uxo">';
+    let s='<div class="gm-root gm-uxo"><div class="uxo">';
     for(let k=0;k<9;k++){const w=d.w[k],act=d.win==null&&w==='.'&&(d.nb<0||d.nb===k),won=w!=='.'&&w!=='d';
       s+=`<div class="ub ${act?'act':''} ${won?'won':''} ${w==='d'?'dr':''} ${wl.includes(k)?'uwin':''}" style="${won?`--c:${col(d,+w)};--l:${lit(d,+w)}`:''}">${[...small(d.b,k)].map((c,j)=>`<button class="uc ${k*9+j===h.lm?'lm':''} ${ctx.my&&act&&c==='.'?'can':''}" data-ga="m" data-i="${k*9+j}" ${ctx.my&&act&&c==='.'?'':'disabled'}>${c!=='.'?shape(d.pl[+c]):''}</button>`).join('')}${won?`<div class="ubw">${shape(d.pl[+w])}</div>`:''}</div>`;}
     return s+'</div></div>';},
@@ -360,7 +360,7 @@ GAMES.wires={name:'فك القنبلة',cat:'mind',lbc:'#3B3B3B',
   render(d,ctx){const v=ctx.local?d.turn:ctx.v;const my=ctx.my&&d.win==null;const kn=v>=0&&Array.isArray(d.kn[v])?d.kn[v].filter(i=>i>=0):[];
     const kb=v>=0&&Array.isArray(d.kn[v])?d.kn[v].filter(i=>i<-0.5).map(i=>-i-1):[];const scan=my&&d.ps[d.turn]!=='1'&&S.wscan===d.gid+':'+d.nb+':'+d.turn;
     const left=[...Array(d.k).keys()].filter(i=>!d.cut.includes(i));const boom=!d.cut.length&&/^💥/.test(d.last||'');
-    let s=`<div class="gm gm-wires"><div class="bombx ${boom?'boom':''}" data-k="b${d.nb}"><div class="bhd">${BOMB}<div class="blcd"><b class="ltr">${String(left.length).padStart(2,'0')}</b><small>أسلاك باقية</small></div><i class="bled"></i></div>
+    let s=`<div class="gm-root gm-wires"><div class="bombx ${boom?'boom':''}" data-k="b${d.nb}"><div class="bhd">${BOMB}<div class="blcd"><b class="ltr">${String(left.length).padStart(2,'0')}</b><small>أسلاك باقية</small></div><i class="bled"></i></div>
     <div class="wset ${d.k>8?'two':''}">${[...Array(d.k).keys()].map(i=>{const c=WCOL[i][0];if(d.cut.includes(i))return `<div class="wire cut ${d.win!=null&&i===d.bomb?'deadly':''}" style="--c:${c}"><i class="wh a"></i><i class="wh b"></i></div>`;
       const known=kn.includes(i),bad=kb.includes(i),tag=my?'button':'div';
       return `<${tag} class="wire ${known?'known':''} ${bad?'bad':''} ${d.win!=null&&i===d.bomb?'deadly':''} ${scan?'wscn':''}" style="--c:${c}" ${my?`data-ga="${scan?'scan':'cut'}" data-i="${i}" aria-label="${scan?'افحص':'قص'} السلك ${WCOL[i][1]}"`:''}><i class="wh"></i>${known?'<s class="wsafe">سليم ✓</s>':bad?'<s class="wsafe wbad">💣 هذا هو!</s>':''}</${tag}>`;}).join('')}</div></div>`;
@@ -409,10 +409,10 @@ GAMES.fish={name:'صيد السمك',cat:'cards',lbc:'#1F6F8B',hide:{seat:['hand
     const pond=`<div class="fpond"><div class="fstk ${nk?'':'none'}">${nk?cardHTML('??'):''}</div><small>باقي في المخزن ${nk}</small></div>`;
     const seat=(i,my,ts)=>{const n=d.hands[i].length/2,can=my&&ts.includes(i);const in_=`<b>${nm(d,i)}</b><span class="fbk">${'<i></i>'.repeat(Math.min(n,5))}<em>${n}</em></span><small>📚 ${d.books[i].length}</small>${((d.kn||[])[i]||'')?`<span class="fkn">عنده ${[...d.kn[i]].map(r=>`<b class="ltr">${RKN(r)}</b>`).join('')}</span>`:''}`;
       return can?`<button class="fseat can ${i===S.tgt?'sel':''}" style="--c:${col(d,i)}" data-ga="tgt" data-i="${i}">${in_}</button>`:`<div class="fseat ${d.out[i]==='1'?'out':''}" style="--c:${col(d,i)}">${in_}</div>`;};
-    if(v<0||d.win!=null)return `<div class="gm gm-fish"><div class="mtab ftab"><div class="fseats">${d.pl.map((_,i)=>seat(i,false,[])).join('')}</div>${pond}</div></div>`;
+    if(v<0||d.win!=null)return `<div class="gm-root gm-fish"><div class="mtab ftab"><div class="fseats">${d.pl.map((_,i)=>seat(i,false,[])).join('')}</div>${pond}</div></div>`;
     const hand=cardsOf(d.hands[v]).sort((a,b)=>rv(a)-rv(b));const my=ctx.my&&d.turn===v;let ts=[];
     if(my){ts=d.pl.map((_,i)=>i).filter(i=>i!==v&&d.hands[i].length);if(S.tgt==null||!ts.includes(S.tgt))S.tgt=ts[0]??null;}
-    let s=`<div class="gm gm-fish">${my&&ts.length?'<p class="lbl">من تسأل؟</p>':''}<div class="mtab ftab"><div class="fseats">${d.pl.map((_,i)=>i).filter(i=>i!==v).map(i=>seat(i,my,ts)).join('')}</div>${pond}</div>`;
+    let s=`<div class="gm-root gm-fish">${my&&ts.length?'<p class="lbl">من تسأل؟</p>':''}<div class="mtab ftab"><div class="fseats">${d.pl.map((_,i)=>i).filter(i=>i!==v).map(i=>seat(i,my,ts)).join('')}</div>${pond}</div>`;
     s+=`<div class="hand fhand">${hand.map(c=>my&&S.tgt!=null?cardHTML(c,false,'pick" data-ga="ask" data-i="'+RANKS.indexOf(rk(c))):cardHTML(c)).join('')||'<span class="note">ما عندك أوراق</span>'}</div>`;
     if(d.books[v])s+=`<div class="fbooks"><small>📚</small>${[...d.books[v]].map(r=>`<b class="ltr">${RKN(r)}</b>`).join('')}</div>`;
     if(my&&(!hand.length||S.tgt==null))s+=`<div class="acts"><button class="btn blue" data-ga="draw">${d.dk.length?'اسحب ورقة':'مرّر الدور'}</button></div>`;
@@ -466,7 +466,7 @@ GAMES.n99={name:'لعبة 99',cat:'cards',lbc:'#5B2C6F',hide:{seat:['hands'],all
   // the running total as a meter on the felt (green, then orange, then red near 99); beside it the direction, the pile and the
   // card just played (a new node each play, so it lands on the pile); the players with their lives under it
   render(d,ctx){const v=ctx.local?(d.win!=null?0:ctx.v):ctx.v;const hot=d.tot>89?'hot':d.tot>69?'warm':'';const nk=d.dk.length/2;const lv=d.lv||d.pl.map(()=>1);const L=Math.max(...lv,1)>1||lives99(d.pl.length)>1;
-    let s=`<div class="gm gm-n99"><div class="mtab n9tab"><div class="n9m ${hot}"><svg viewBox="0 0 100 100"><circle class="tr" cx="50" cy="50" r="42" pathLength="100"/><circle class="fl" cx="50" cy="50" r="42" pathLength="100" style="stroke-dasharray:${Math.round(Math.min(99,d.tot)/99*1000)/10} 100"/></svg><b class="ltr" data-k="${d.tot}">${d.tot}</b><small>لا تتعدى 99</small></div>
+    let s=`<div class="gm-root gm-n99"><div class="mtab n9tab"><div class="n9m ${hot}"><svg viewBox="0 0 100 100"><circle class="tr" cx="50" cy="50" r="42" pathLength="100"/><circle class="fl" cx="50" cy="50" r="42" pathLength="100" style="stroke-dasharray:${Math.round(Math.min(99,d.tot)/99*1000)/10} 100"/></svg><b class="ltr" data-k="${d.tot}">${d.tot}</b><small>لا تتعدى 99</small></div>
     <div class="n9side"><div class="n9dir"><span>${d.dir>0?'↻':'↺'}</span><small>الدور</small></div><div class="n9pile">${d.lc?`<div class="n9last" data-k="c${d.pc}">${cardHTML(d.lc)}</div>`:''}</div><div class="fstk ${nk?'':'none'}">${nk?cardHTML('??'):''}</div></div></div>
     <div class="n9lv">${d.pl.map((_,o)=>`<span class="${o===d.turn&&d.win==null?'on':''} ${d.out[o]==='1'?'out':''}" style="--c:${col(d,o)}"><b>${nm(d,o)}</b>${L?`<em>${'❤'.repeat(lv[o])}${'<u>❤</u>'.repeat(Math.max(0,lives99(d.pl.length)-lv[o]))}</em>`:''}</span>`).join('')}</div>`;
     if(v<0||d.win!=null)return s+'</div>';const my=ctx.my&&d.turn===v;const h=cardsOf(d.hands[v]);
@@ -501,4 +501,4 @@ GAMES.n99.bot=(d,s,lv)=>{const H=cardsOf(d.hands[s]);const opts=[];
   const o=opts.map(o=>[o,sc(o)]).sort((a,b)=>b[1]-a[1])[0][0];return GAMES.n99.play(d,o.i,o.alt);};
 
 // the three quiz games of this file render inside .gm.gm-<id>, so their question card can be styled without touching other quizzes
-['prov','seq','stroop'].forEach(id=>{const G=GAMES[id],r=G.render;G.render=function(d,ctx){const h=r.call(this,d,ctx);return h?`<div class="gm gm-${id}">${h}</div>`:h;};});
+['prov','seq','stroop'].forEach(id=>{const G=GAMES[id],r=G.render;G.render=function(d,ctx){const h=r.call(this,d,ctx);return h?`<div class="gm-root gm-${id}">${h}</div>`:h;};});

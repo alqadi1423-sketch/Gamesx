@@ -124,7 +124,7 @@ GAMES.k_okey={name:'أوكي',cat:'cards',lbc:'#B5651D',teams:'none',
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';
     return s+k2Who(d,ctx)+(d.ph==='draw'?': اسحب من الكومة أو خذ الحجر المرمي':': ارمِ حجر');},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph!=='sum',ok=d.ok,p=k2Prev(d,d.turn);
-    let h=`<div class="k2 k2ok">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.pts[s]}</em>`)}`;
+    let h=`<div class="k2-root k2ok">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.pts[s]}</em>`)}`;
     h+=`<div class="k2felt k2okt"><div class="k2okc"><div class="k2stk"><${my&&d.ph==='draw'?'button data-ga="draw"':'div'} class="k2pile">${k2okT('??',ok)}<small>${d.dk.length/2}</small></${my&&d.ph==='draw'?'button':'div'}><span>الكومة</span></div>
       <div class="k2stk"><div class="k2ind">${k2okT(d.ind,'')}</div><span>المؤشر</span></div><div class="k2stk"><div class="k2ind">${k2okT(ok,ok)}</div><span>الأوكي</span></div></div>
       <div class="k2okd">${d.pl.map((_,s)=>{const top=d.disc[s].slice(-2),take=my&&d.ph==='draw'&&s===p&&top;
@@ -272,7 +272,7 @@ GAMES.k_fives={name:'الدومينو الخمسات',cat:'cards',lbc:'#6B4F3A',
     if(d.bone)return k2dDraw(d,d.turn);return GAMES.k_fives.pass(d);},
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';return s+k2Who(d,ctx)+` • الهدف ${k2fT(d)}`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph==='play';
-    let h=`<div class="k2 k2fv">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.sc[k2fSi(d,s)]}</em>${d.pairs&&!d.tm?`<u>${s%2?'🔷':'🔶'}</u>`:''}`,s=>d.turn===s&&d.ph==='play'&&d.win==null)}${k2fTable(d)}`;
+    let h=`<div class="k2-root k2fv">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.sc[k2fSi(d,s)]}</em>${d.pairs&&!d.tm?`<u>${s%2?'🔷':'🔶'}</u>`:''}`,s=>d.turn===s&&d.ph==='play'&&d.win==null)}${k2fTable(d)}`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel k2sum"><h3>${r&&r.w>=0?nameTag(d,r.w)+(cardsOf(d.hands[r.w]).length?' أقل نقاط':' خلّص قطعه')+' 🏆':'انقفل اللعب بتعادل'}</h3>
       ${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${r?r.pips[s]:0} بالقطع</em><b>${d.sc[k2fSi(d,s)]}</b></div>`).join('')}
       <div class="k2tot">${r?k2fSides(d).map((t,i)=>r.add[i]?`<span style="--c:${col(d,d.pl.findIndex((_,s)=>k2fSide(d,s)===t))}">+${r.add[i]}</span>`:'').join(''):''}</div>${ctx.my?k2Next(d):''}</div>`;return h+'</div>';}
@@ -356,7 +356,7 @@ GAMES.k_train={name:'قطار الدومينو',cat:'cards',lbc:'#8E3B2E',teams:
     if(L.length)return k2tPlay(d,L[0],k2tFits(d,s,cardsOf(d.hands[s])[L[0]])[0]);if(d.bone&&!d.drew)return k2tDrawOne(d);return k2tPass(d);},
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='opt')return 'كم جولة نلعب؟';if(d.ph==='sum')return s+'انتهت الجولة';
     return s+k2Who(d,ctx)+` • جولة ${d.rd+1} من ${d.nr}`+(d.dbl?' • غطّ الدبل':'');},
-  render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="k2 k2tr">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.sc[s]}</em>`,s=>d.turn===s&&d.ph==='play'&&d.win==null)}`;
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="k2-root k2tr">${k2Seats(d,s=>`<i>${cardsOf(d.hands[s]).length}</i><em>${d.sc[s]}</em>`,s=>d.turn===s&&d.ph==='play'&&d.win==null)}`;
     if(d.ph==='opt')return h+`<div class="panel k2opt"><h3>قطار الدومينو</h3><p>كل جولة تبدأ من دبل أصغر من اللي قبلها</p>${ctx.my?k2Btns([[4,'قصيرة: 4 جولات','navy'],[13,'كاملة: 13 جولة','blue']],'nr'):'<p class="note">ننتظر اختيار عدد الجولات</p>'}</div></div>`;
     const my=ctx.my&&d.turn===v&&d.ph==='play';const sel=my?k2Sel(d,'tr',d.hands[v]):[],si=sel.length?sel[0]:-1;const st=si>=0?cardsOf(d.hands[v])[si]:null;const can=st?k2tFits(d,v,st):[];
     h+=`<div class="k2felt k2tfelt"><div class="k2hub"><span class="dom dbl eng">${k2dV(k2dT(d.eng,d.eng),48,true)}</span><small>المحطة</small><span class="bone"><i></i>المخزن ${d.bone.length/2}</span></div>${['m',...d.pl.map((_,s)=>s).filter(s=>d.out[s]!=='1')].map(k=>k2tRow(d,k,v,can.includes(k))).join('')}</div>`;
@@ -473,7 +473,7 @@ GAMES.k_durak={name:'الأحمق',cat:'cards',lbc:'#4E5D2A',teams:'none',outDon
     if(d.ph==='take')return s+(me?'<b class="yt">تبي ترمي له زيادة؟</b>':`${nameTag(d,d.turn)} يرمي على ${nameTag(d,d.def)}`);
     return s+(me?`<b class="yt">${d.tb.length?'ترمي ورقة؟':'هاجم'}</b>`:`${nameTag(d,d.turn)} ${d.tb.length?'يرمي':'يهاجم'} ${nameTag(d,d.def)}`);},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.win==null;
-    let h=`<div class="k2 k2du">${k2Seats(d,s=>`<i>${d.out[s]==='1'?'✓':cardsOf(d.hands[s]).length}</i>${s===d.att&&d.win==null?'<u>⚔️</u>':s===d.def&&d.win==null?'<u>🛡️</u>':''}${d.fool===s?'<u>🃏</u>':''}`)}`;
+    let h=`<div class="k2-root k2du">${k2Seats(d,s=>`<i>${d.out[s]==='1'?'✓':cardsOf(d.hands[s]).length}</i>${s===d.att&&d.win==null?'<u>⚔️</u>':s===d.def&&d.win==null?'<u>🛡️</u>':''}${d.fool===s?'<u>🃏</u>':''}`)}`;
     h+=`<div class="k2felt k2dut"><div class="k2dutop"><div class="k2trump">${d.dk?`<span class="k2tc">${cardHTML(d.tc)}</span>`:''}${k2Stock(d.dk.length/2,false)}<em>الحكم <b class="${'hd'.includes(d.tr)?'rs':''}">${K2SN[d.tr]}</b></em></div>
       <span class="k2dc">مرمي ${d.dc||0}</span></div><div class="k2tbl">${d.tb.length?d.tb.map((p,k)=>`<span class="k2pair" data-k="p${k}${p[0]}">${cardHTML(p[0])}${p[1]?`<span class="k2over">${cardHTML(p[1])}</span>`:''}</span>`).join(''):`<p class="note">${d.win!=null?'':'الطاولة فاضية'}</p>`}</div>
       ${d.ph==='take'?`<p class="k2tk">${nm(d,d.def)} بياخذ الورق</p>`:''}</div>`;
@@ -570,7 +570,7 @@ GAMES.k_gin={name:'جن رمي',cat:'cards',lbc:'#2B5E8C',teams:'none',
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';const me=!ctx.local&&d.turn===ctx.v;
     const what=d.ph==='up1'||d.ph==='up2'?'تاخذ الورقة المكشوفة؟':d.ph==='draw'?'اسحب':'ارمِ ورقة أو اطرق';return s+(me?`<b class="yt">${what}</b>`:`دور ${nameTag(d,d.turn)}: ${what}`);},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph!=='sum';
-    let h=`<div class="k2 k2gin">${k2Seats(d,s=>`<em>${d.sc[s]}</em>${d.pr.includes(s)?'<u>🃏</u>':`<u>⏳${d.q.indexOf(s)+1}</u>`}`,s=>d.turn===s&&d.ph!=='sum'&&d.win==null)}`;
+    let h=`<div class="k2-root k2gin">${k2Seats(d,s=>`<em>${d.sc[s]}</em>${d.pr.includes(s)?'<u>🃏</u>':`<u>⏳${d.q.indexOf(s)+1}</u>`}`,s=>d.turn===s&&d.ph!=='sum'&&d.win==null)}`;
     const o=v>=0&&d.pr.includes(v)?k2gOther(d,v):d.pr[1],top=k2gTop(d),up=d.ph==='up1'||d.ph==='up2',canD=my&&!d.fs&&(d.ph==='draw'||up)&&top;
     h+=`<div class="k2felt k2gt"><div class="k2opp">${nameTag(d,o)} <span class="k2backs">${'<i></i>'.repeat(Math.min(11,cardsOf(d.hands[o]).length))}</span></div>
       <div class="k2mid">${k2Stock(d.dk.length/2,my&&d.ph==='draw','stock')}<div class="k2disc">${top?`<${canD?'button data-ga="take"':'div'} class="k2top ${canD?'can':''}" data-k="g${d.disc.length}">${cardHTML(top,true)}</${canD?'button':'div'}>`:'<i class="k2emp"></i>'}<small>المرمي</small></div></div></div>`;
@@ -656,7 +656,7 @@ GAMES.k_golf={name:'غولف الورق',cat:'cards',lbc:'#2E7D4F',teams:'none',
   status(d,ctx){const s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='opt')return 'كم حفرة نلعب؟';if(d.ph==='sum')return s+'انتهت الحفرة';const me=!ctx.local&&d.turn===ctx.v;
     const what=d.ph==='flip'?'اكشف ورقتين من ورقك':!d.dc?'اسحب من الكومة أو خذ المرمي':d.fd?'حطها مكان ورقة من ورقك':'حطها مكان ورقة أو ارمها';
     return s+(me?`<b class="yt">${what}</b>`:`دور ${nameTag(d,d.turn)}`)+` <small>• الحفرة ${d.ho+1}/${d.nh}</small>`;},
-  render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="k2 k2golf">`;
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="k2-root k2golf">`;
     if(d.ph==='opt')return h+`${k2Seats(d,()=>'')}<div class="panel k2opt"><h3>غولف الورق</h3><p>كل جولة «حفرة»، والأقل نقاط يفوز</p>${ctx.my?k2Btns([[4,'قصيرة: 4 حفر','navy'],[9,'كاملة: 9 حفر','blue']],'nh'):'<p class="note">ننتظر الاختيار</p>'}</div></div>`;
     const my=ctx.my&&d.turn===v&&(d.ph==='play'||d.ph==='flip');
     h+=k2Seats(d,s=>`<em>${d.sc[s]}</em>${d.ph!=='sum'?`<u>👁 ${k2gfShown(d,s)}</u>`:''}`,s=>d.turn===s&&d.ph!=='sum'&&d.win==null);

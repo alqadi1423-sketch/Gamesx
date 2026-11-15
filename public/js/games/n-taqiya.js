@@ -328,7 +328,7 @@ GAMES.taqiya={name:'طاق طاق طاقية',cat:'party',lbc:'#8E2F3A',minP:3,t
     else if(role==='laf')view=tqTop(d,me,'drag');
     else if(role==='run')view=tqTop(d,me,'short');
     else view=tqTop(d,me,d.ph==='chase'?'short':'');
-    let h=`<div class="tq kh ph-${d.ph} r-${role}">`+tqHud(d,me,role)+`<div class="tq-stage ${lk?'turn':''}">${view}${d.ph==='walk'&&!fin?tqChant(d):''}</div>`;
+    let h=`<div class="tq-root kh ph-${d.ph} r-${role}">`+tqHud(d,me,role)+`<div class="tq-stage ${lk?'turn':''}">${view}${d.ph==='walk'&&!fin?tqChant(d):''}</div>`;
     if(fin)return h+tqSum(d)+'</div>';
     return h+`<div class="tq-dock">${tqDock(d,me,role)}</div></div>`;},
   click(a,i,d,ctx){const v=ctx.v,me=v!=null&&v>=0&&v<d.pl.length?v:-1;if(d.win!=null)return;const mine=!S.inIntent;

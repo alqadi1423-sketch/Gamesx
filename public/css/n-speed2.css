@@ -1,11 +1,11 @@
-/* ===== speed2: speed and reflex games (scoped to .s2 boards). Motion is transform/opacity only and short;
+/* ===== speed2: speed and reflex games (scoped to .s2-root boards). Motion is transform/opacity only and short;
    moving pieces (balloons, the clock) are moved from script, so html.lite keeps them smooth ===== */
-.s2{width:100%;max-width:440px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:10px;--s2p:#FFFBF0;--s2pi:#2D4763;--s2slate:#1F2A36}
-@media (prefers-color-scheme:dark){.s2{--s2p:#F3EEDF}}
-.s2 .spd{padding:4px 0}
+.s2-root{width:100%;max-width:440px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:10px;--s2p:#FFFBF0;--s2pi:#2D4763;--s2slate:#1F2A36}
+@media (prefers-color-scheme:dark){.s2-root{--s2p:#F3EEDF}}
+.s2-root .spd{padding:4px 0}
 .s2tip{margin:0;padding:4px 12px;border-radius:999px;background:var(--surface-2);color:var(--ink);font-weight:800;font-size:14px;box-shadow:inset 0 0 0 1px var(--edge)}
 .s2leg{margin:2px 0 0;font-size:13px}
-.s2 .spd-card .rdyi svg{width:100%;height:100%;display:block}
+.s2-root .spd-card .rdyi svg{width:100%;height:100%;display:block}
 @keyframes s2-in{from{opacity:0;transform:scale(.7)}}
 @keyframes s2-up{from{opacity:0;transform:translateY(8px)}}
 @keyframes s2-shake{0%,100%{transform:none}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}

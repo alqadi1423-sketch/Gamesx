@@ -16,25 +16,25 @@ button.b2pt{cursor:pointer}
 .b2pt.lm::before,.b2pt.lmf::before{content:'';position:absolute;inset:4%;border-radius:50%;box-shadow:0 0 0 2.5px rgba(240,180,41,.95)}
 .b2pt.lmf::before{inset:24%;box-shadow:none;background:rgba(240,180,41,.55)}
 /* pieces: a shaded stone with a lip; states add a ring through --rg */
-.b2s{position:relative;display:block;width:86%;height:86%;border-radius:50%;--rg:0 0 0 0 transparent;transition:transform var(--t1) var(--ease)}
-.b2s.s0{background:radial-gradient(circle at 36% 30%,#FFFFFF,#F1EADB 48%,#CDBD9E);box-shadow:var(--rg),inset 0 0 0 1px rgba(110,90,62,.5),0 2px 0 #9C8460,0 3px 4px rgba(50,25,0,.28)}
-.b2s.s1{background:radial-gradient(circle at 36% 30%,#6E839D,#2F4157 50%,#141C27);box-shadow:var(--rg),inset 0 0 0 1px rgba(0,0,0,.6),0 2px 0 #0A1017,0 3px 4px rgba(0,0,0,.3)}
-.b2s.red.s0{background:radial-gradient(circle at 36% 30%,#FF8A7E,#D8473C 52%,#9C2A22);box-shadow:var(--rg),inset 0 0 0 1px rgba(90,10,0,.5),0 2px 0 #7A1E18,0 3px 4px rgba(50,0,0,.3)}
-.b2s::after{content:'';position:absolute;inset:22%;border-radius:50%;box-shadow:0 0 0 1.2px rgba(110,90,62,.28)}
-.b2s.s1::after{box-shadow:0 0 0 1.2px rgba(255,255,255,.13)}
-.b2pt.mv .b2s{--rg:0 0 0 2.5px rgba(240,180,41,.95)}
-.b2pt.sel .b2s{--rg:0 0 0 3px #FFD84D;transform:scale(1.1) translateY(-2px)}
-.b2pt.cap .b2s{--rg:0 0 0 3px #E5534B}
-.b2pt.gone .b2s{opacity:.3;transform:scale(.85)}
-.b2pt.lmt .b2s{animation:bd-land var(--t2) var(--ease)}
-.b2pt.won .b2s{--rg:0 0 0 3px var(--gold);animation:bd-win .45s ease-in-out 2}
-.b2bd.my button.b2pt:active .b2s{transform:scale(.92)}
-.b2s.b2gh{opacity:0;animation:b2gone .4s ease-out;pointer-events:none}
-.b2s.inm{--rg:0 0 0 1.5px rgba(240,180,41,.55)}
+.b2-stone{position:relative;display:block;width:86%;height:86%;border-radius:50%;--rg:0 0 0 0 transparent;transition:transform var(--t1) var(--ease)}
+.b2-stone.s0{background:radial-gradient(circle at 36% 30%,#FFFFFF,#F1EADB 48%,#CDBD9E);box-shadow:var(--rg),inset 0 0 0 1px rgba(110,90,62,.5),0 2px 0 #9C8460,0 3px 4px rgba(50,25,0,.28)}
+.b2-stone.s1{background:radial-gradient(circle at 36% 30%,#6E839D,#2F4157 50%,#141C27);box-shadow:var(--rg),inset 0 0 0 1px rgba(0,0,0,.6),0 2px 0 #0A1017,0 3px 4px rgba(0,0,0,.3)}
+.b2-stone.red.s0{background:radial-gradient(circle at 36% 30%,#FF8A7E,#D8473C 52%,#9C2A22);box-shadow:var(--rg),inset 0 0 0 1px rgba(90,10,0,.5),0 2px 0 #7A1E18,0 3px 4px rgba(50,0,0,.3)}
+.b2-stone::after{content:'';position:absolute;inset:22%;border-radius:50%;box-shadow:0 0 0 1.2px rgba(110,90,62,.28)}
+.b2-stone.s1::after{box-shadow:0 0 0 1.2px rgba(255,255,255,.13)}
+.b2pt.mv .b2-stone{--rg:0 0 0 2.5px rgba(240,180,41,.95)}
+.b2pt.sel .b2-stone{--rg:0 0 0 3px #FFD84D;transform:scale(1.1) translateY(-2px)}
+.b2pt.cap .b2-stone{--rg:0 0 0 3px #E5534B}
+.b2pt.gone .b2-stone{opacity:.3;transform:scale(.85)}
+.b2pt.lmt .b2-stone{animation:bd-land var(--t2) var(--ease)}
+.b2pt.won .b2-stone{--rg:0 0 0 3px var(--gold);animation:bd-win .45s ease-in-out 2}
+.b2bd.my button.b2pt:active .b2-stone{transform:scale(.92)}
+.b2-stone.b2gh{opacity:0;animation:b2gone .4s ease-out;pointer-events:none}
+.b2-stone.inm{--rg:0 0 0 1.5px rgba(240,180,41,.55)}
 .b2hand{display:flex;justify-content:center;gap:22px;margin:10px 0 0}
 .b2hand span{display:flex;align-items:center;gap:6px;font-weight:800;opacity:.55;font-size:18px}
 .b2hand span.on{opacity:1}
-.b2hand .b2s{width:22px;height:22px}
+.b2hand .b2-stone{width:22px;height:22px}
 
 /* mancala: a carved board with deep pits and coloured seeds */
 .b2ow{width:min(100%,430px);margin:4px auto}
@@ -57,25 +57,25 @@ button.b2pt{cursor:pointer}
 /* seega: square board, the centre square crossed */
 .b2sg .b2ln{stroke-width:.7}
 .b2mid{stroke:#A0462E;stroke-width:1.6;stroke-linecap:round}
-.b2sg .b2s{width:80%;height:80%}
+.b2sg .b2-stone{width:80%;height:80%}
 /* fanorona: a long board */
 .b2bd.b2fn{width:min(100%,430px)}
-.b2fn .b2s{width:90%;height:90%}
+.b2fn .b2-stone{width:90%;height:90%}
 .b2fn .b2pt.vis::before{content:'';position:absolute;inset:34%;border-radius:50%;background:rgba(229,83,75,.55)}
 /* tablut: squares, the edge where the king escapes, the throne */
 .b2edge{fill:rgba(90,150,70,.16)}
 .b2thr{fill:rgba(160,110,40,.35)}
 .b2thx{stroke:rgba(120,70,20,.55);stroke-width:1;stroke-linecap:round}
 .b2tb .b2ln{stroke-width:.45;stroke:#7A522A}
-.b2tb .b2s{width:80%;height:80%}
-.b2s.kg{display:grid;place-items:center;--rg:0 0 0 2px #E8B83A}
-.b2s .b2cr{position:relative;z-index:1;width:72%;height:72%}
-.b2pt.mv .b2s.kg{--rg:0 0 0 2.5px rgba(240,180,41,.95)}
+.b2tb .b2-stone{width:80%;height:80%}
+.b2-stone.kg{display:grid;place-items:center;--rg:0 0 0 2px #E8B83A}
+.b2-stone .b2cr{position:relative;z-index:1;width:72%;height:72%}
+.b2pt.mv .b2-stone.kg{--rg:0 0 0 2.5px rgba(240,180,41,.95)}
 /* amazons: a chequered board, queens, burnt arrow squares */
 .b2dk rect{fill:rgba(140,92,45,.42)}
 .b2az .b2pt{border-radius:0}
-.b2az .b2s.b2q{width:96%;height:96%;background:none!important;box-shadow:var(--rg)!important;border-radius:50%}
-.b2az .b2s.b2q::after{display:none}
+.b2az .b2-stone.b2q{width:96%;height:96%;background:none!important;box-shadow:var(--rg)!important;border-radius:50%}
+.b2az .b2-stone.b2q::after{display:none}
 .b2az .b2q .chp{width:100%;height:100%}
 .b2ar{display:block;width:72%;height:72%;border-radius:22%;background:radial-gradient(circle at 40% 35%,#8C4A2C,#5A2A16 70%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),0 1.5px 0 rgba(0,0,0,.3)}
 .b2ar::after{content:'';display:block;width:100%;height:100%;background:linear-gradient(45deg,transparent 46%,rgba(255,220,180,.55) 46%,rgba(255,220,180,.55) 54%,transparent 54%)}
@@ -88,23 +88,23 @@ button.b2pt{cursor:pointer}
 .b2hc polygon{fill:#F7EBD2;stroke:#B08A55;stroke-width:.55}
 .b2hr{stroke:#D8473C;stroke-width:3.2;stroke-linecap:round;fill:none}
 .b2hb{stroke:#2F7DB3;stroke-width:3.2;stroke-linecap:round;fill:none}
-.b2hx .b2s{width:84%;height:84%}
-.b2s.hx0{background:radial-gradient(circle at 36% 30%,#FF9A8E,#D8473C 55%,#9C2A22);box-shadow:var(--rg),inset 0 0 0 1px rgba(90,10,0,.45),0 1.5px 0 #7A1E18}
-.b2s.hx1{background:radial-gradient(circle at 36% 30%,#9AD0F2,#2F7DB3 55%,#1C4F75);box-shadow:var(--rg),inset 0 0 0 1px rgba(0,30,60,.45),0 1.5px 0 #163E5C}
-.b2s.hx0::after,.b2s.hx1::after{display:none}
+.b2hx .b2-stone{width:84%;height:84%}
+.b2-stone.hx0{background:radial-gradient(circle at 36% 30%,#FF9A8E,#D8473C 55%,#9C2A22);box-shadow:var(--rg),inset 0 0 0 1px rgba(90,10,0,.45),0 1.5px 0 #7A1E18}
+.b2-stone.hx1{background:radial-gradient(circle at 36% 30%,#9AD0F2,#2F7DB3 55%,#1C4F75);box-shadow:var(--rg),inset 0 0 0 1px rgba(0,30,60,.45),0 1.5px 0 #163E5C}
+.b2-stone.hx0::after,.b2-stone.hx1::after{display:none}
 .b2hx button.b2pt:hover::after{content:'';position:absolute;inset:30%;border-radius:50%;background:rgba(60,40,10,.18)}
 .chside.hx0{background:#D8473C;color:#fff;box-shadow:none}.chside.hx1{background:#2F7DB3;color:#fff;box-shadow:none}
 /* go: a light kaya board, slate and shell stones, territory marks while counting */
 .b2bd.b2go{background:linear-gradient(135deg,#ECC987,#DFB46C 60%,#D6A95E)}
 .b2go .b2ln{stroke:#4A3214;stroke-width:.45}
 .b2go .b2dt{fill:#4A3214}
-.b2s.go{width:94%;height:94%}
-.b2s.go::after{display:none}
-.b2s.go.s1{background:radial-gradient(circle at 36% 30%,#5C636D,#22272E 55%,#0B0D10);box-shadow:var(--rg),0 1.5px 1.5px rgba(0,0,0,.45)}
-.b2s.go.s0{background:radial-gradient(circle at 36% 30%,#FFFFFF,#F2F0EA 55%,#C9C4B6);box-shadow:var(--rg),0 1.5px 1.5px rgba(0,0,0,.35)}
+.b2-stone.go{width:94%;height:94%}
+.b2-stone.go::after{display:none}
+.b2-stone.go.s1{background:radial-gradient(circle at 36% 30%,#5C636D,#22272E 55%,#0B0D10);box-shadow:var(--rg),0 1.5px 1.5px rgba(0,0,0,.45)}
+.b2-stone.go.s0{background:radial-gradient(circle at 36% 30%,#FFFFFF,#F2F0EA 55%,#C9C4B6);box-shadow:var(--rg),0 1.5px 1.5px rgba(0,0,0,.35)}
 .b2go .b2pt.lm::before{inset:34%;box-shadow:none;background:none;border-radius:50%;border:2px solid #E5534B;z-index:2}
 .b2go .b2pt.ko::after{content:'';position:absolute;inset:32%;border:1.5px solid rgba(229,83,75,.8)}
-.b2s.go.dead{opacity:.4;transform:scale(.8)}
+.b2-stone.go.dead{opacity:.4;transform:scale(.8)}
 .b2tr{position:absolute;width:32%;height:32%;border-radius:2px;z-index:2}
 .b2tr.t0{background:#1C2026;box-shadow:0 0 0 1px rgba(255,255,255,.4)}.b2tr.t1{background:#FBFAF5;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
 
@@ -112,19 +112,19 @@ button.b2pt{cursor:pointer}
 .b2bd.b2xq{background:linear-gradient(135deg,#F0D29C,#E2B978 60%,#D9AE6A)}
 .b2xq .b2ln{stroke:#6A3F1A;stroke-width:.5}
 .b2rv{font-size:4.6px;fill:rgba(106,63,26,.75);text-anchor:middle;font-weight:800}
-.b2s.xq{width:94%;height:94%;display:grid;place-items:center;background:radial-gradient(circle at 40% 32%,#FFF8EA,#F3E3C2 60%,#DCC394);box-shadow:var(--rg),inset 0 0 0 1.5px currentColor,inset 0 0 0 3px #F6EAD0,inset 0 0 0 4px currentColor,0 2px 0 #A88A5A,0 3px 4px rgba(60,30,0,.25)}
-.b2s.xq::after{display:none}
-.b2s.xq.s0{color:#B0342B}.b2s.xq.s1{color:#22303F}
-.b2s.xq b{font-size:clamp(13px,4.6vw,21px);line-height:1;font-weight:700;font-family:'Noto Serif SC','Songti SC','SimSun',serif}
-.b2xq .b2pt.kc .b2s{--rg:0 0 0 3px #E5534B}
-.b2xq .b2pt.cap .b2s{--rg:0 0 0 3px #E5534B}
+.b2-stone.xq{width:94%;height:94%;display:grid;place-items:center;background:radial-gradient(circle at 40% 32%,#FFF8EA,#F3E3C2 60%,#DCC394);box-shadow:var(--rg),inset 0 0 0 1.5px currentColor,inset 0 0 0 3px #F6EAD0,inset 0 0 0 4px currentColor,0 2px 0 #A88A5A,0 3px 4px rgba(60,30,0,.25)}
+.b2-stone.xq::after{display:none}
+.b2-stone.xq.s0{color:#B0342B}.b2-stone.xq.s1{color:#22303F}
+.b2-stone.xq b{font-size:clamp(13px,4.6vw,21px);line-height:1;font-weight:700;font-family:'Noto Serif SC','Songti SC','SimSun',serif}
+.b2xq .b2pt.kc .b2-stone{--rg:0 0 0 3px #E5534B}
+.b2xq .b2pt.cap .b2-stone{--rg:0 0 0 3px #E5534B}
 .b2xql{font-size:12.5px;line-height:1.6;margin:6px 4px 0}
 /* star halma: a wooden star, tinted points, glass marbles in the players' colours */
 .b2bd.b2hm{width:min(100%,380px);background:none;box-shadow:none}
 .b2hst{fill:#E2BE84;stroke:#8E5E30;stroke-width:1.2;stroke-linejoin:round}
 .b2hh circle{fill:rgba(80,48,18,.5)}
-.b2s.hm{width:100%;height:100%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.9) 0,rgba(255,255,255,.25) 22%,rgba(255,255,255,0) 45%),var(--c);box-shadow:var(--rg),inset 0 -3px 4px rgba(0,0,0,.28),0 1.5px 1.5px rgba(0,0,0,.35)}
-.b2s.hm::after{display:none}
+.b2-stone.hm{width:100%;height:100%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.9) 0,rgba(255,255,255,.25) 22%,rgba(255,255,255,0) 45%),var(--c);box-shadow:var(--rg),inset 0 -3px 4px rgba(0,0,0,.28),0 1.5px 1.5px rgba(0,0,0,.35)}
+.b2-stone.hm::after{display:none}
 .b2hm .b2pt.to::after{width:50%;height:50%}
 .b2hm .b2pt.lmf::before{inset:30%}
 .b2hmc{display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--c);vertical-align:-3px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}

@@ -352,7 +352,7 @@ GAMES.hide={name:'غميضة الحارة',cat:'party',lbc:'#C0612B',minP:3,team
     // sounds, once per event on the phone that shows it
     this.sounds(d,me);
     const near=hidden&&myP>=0&&(d.ph==='sk'||d.ph==='rn')&&d.sp>=0&&hdDist(d.sp,myP)<=1&&d.n>0;
-    let h=`<div class="hd kh ${iSk?'is-sk':me>=0?'is-hd':''} ph-${d.ph} ${d.mo?'late':''}" style="--me:${me>=0?col(d,me):'#C0612B'}">`+hdHud(d,me,near);
+    let h=`<div class="hd-root kh ${iSk?'is-sk':me>=0?'is-hd':''} ph-${d.ph} ${d.mo?'late':''}" style="--me:${me>=0?col(d,me):'#C0612B'}">`+hdHud(d,me,near);
     h+=`<div class="hd-stage">`;
     const sw=S.hdSw&&S.hdSw.gid===d.gid?S.hdSw:(S.hdSw={gid:d.gid,sp:d.sp,ek:d.ek,from:null});if(sw.ek!==d.ek){sw.from=sw.sp!==d.sp?sw.sp:null;sw.sp=d.sp;sw.ek=d.ek;}const walkFrom=sw.from;
     h+=hdMapSVG(d,ctx,{me,pick,sel,mode,zsel,from:myP,runFrom:ctx.my&&d.ph==='rn'&&hidden&&S.hdRunPv?myP:-1,walkFrom});

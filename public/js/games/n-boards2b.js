@@ -66,7 +66,7 @@ GAMES.b_hex={...B2TEAM,name:'السداسي',cat:'board',lbc:'#C2453A',
   winText:d=>b2WinTxt(d,B2HXN,{join:'وصل الطرفين'}),
   status:(d,ctx)=>b2Stat(d,ctx,B2HXN,d.sd?'• وصّل الطرفين الزرق':'• وصّل الطرفين الحمر',-1).replace('class="chside ','class="chside hx'+d.sd+' '),
   render(d,ctx){const my=ctx.my,n=d.n,{W,H,xy,w}=b2hxGeo(n);const ln=new Set(d.ln||[]);
-    const pts=xy.map(([x,y],i)=>{const v=d.b[i];const tap=my&&v==='.';return {q:i,x,y,i:tap?i:null,c:(d.lm&&d.lm[0]===i?'lm lmt':'')+(ln.has(i)?' won':''),p:v!=='.'?`<i class="b2s hx${v}"></i>`:''};});
+    const pts=xy.map(([x,y],i)=>{const v=d.b[i];const tap=my&&v==='.';return {q:i,x,y,i:tap?i:null,c:(d.lm&&d.lm[0]===i?'lm lmt':'')+(ln.has(i)?' won':''),p:v!=='.'?`<i class="b2-stone hx${v}"></i>`:''};});
     let h=b2Board('b2hx bd-b2',W,H,w*.98,b2hxBg(n),pts,false,my);
     if(my&&d.nmv===1&&d.sd===1&&!d.swp)h+='<div class="row chact"><button class="btn green" data-ga="swap">بدّل (خذ الحجر الأول)</button></div>';
     if(my&&!d.nmv)h+=`<div class="row chact"><button class="btn ${n===9?'green':''}" data-ga="size" data-i="9">لوحة 9×9</button><button class="btn ${n===11?'green':''}" data-ga="size" data-i="11">لوحة 11×11</button></div>`;
@@ -257,7 +257,7 @@ GAMES.b_xiangqi={...B2TEAM,name:'الشطرنج الصيني',cat:'board',lbc:'#
   render(d,ctx){const my=ctx.my,s=d.sd,flip=b2Flip(d,ctx),P=b2Sel(d),lg=my?b2xqLegal(d.b,s):[];const f=P?P.f:-1;
     const mv=new Set(lg.map(m=>(m/90)|0)),to=new Set(lg.filter(m=>((m/90)|0)===f).map(m=>m%90));const kc=b2xqCheck(d.b,s)?d.b.indexOf(s?'k':'K'):-1;
     const pts=B2XQXY.map(([x,y],i)=>{const v=d.b[i];const tap=my&&(mv.has(i)||to.has(i));const cs=b2Cls(d,i,{sel:f,to,mv:P?null:mv})+(i===kc?' kc':'')+(to.has(i)&&v!=='.'?' cap':'');
-      const p=v!=='.'?`<i class="b2s xq s${b2xqSide(v)}"><b>${B2XQC[v]}</b></i>`:b2Ghost(d,i).replace('b2s ','b2s xq ');return {q:i,x,y,i:tap?i:null,c:cs,p};});
+      const p=v!=='.'?`<i class="b2-stone xq s${b2xqSide(v)}"><b>${B2XQC[v]}</b></i>`:b2Ghost(d,i).replace('b2s ','b2s xq ');return {q:i,x,y,i:tap?i:null,c:cs,p};});
     return b2Board('b2xq bd-b2',100,111,10.2,B2XQBG,pts,flip,my)+'<p class="note b2xql">帥將 ملك • 仕士 مستشار • 相象 فيل • 傌馬 حصان • 俥車 عربة • 炮砲 مدفع • 兵卒 جندي</p>'+b2ResignBtn(ctx);},
   after:d=>b2Fly('xq',d),
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='resign')return b2Resign(d);if(a!=='pt')return;const lg=b2xqLegal(d.b,d.sd),P=b2Sel(d);
@@ -341,7 +341,7 @@ GAMES.b_halma={teams:'none',name:'القفز',cat:'board',lbc:'#3F7FBF',
   render(d,ctx){const my=ctx.my,k=d.sd,goal=b2hmGoal(d,k),P=b2Sel(d),c=String(k);let to=new Map(),mv=new Set();
     if(my){for(let i=0;i<121;i++)if(d.b[i]===c&&b2hmDests(d.b,i,k,goal).size)mv.add(i);if(P)to=b2hmDests(d.b,P.f,k,goal);}
     const L=d.lm||[];const pts=B2HMXY.map(([x,y],i)=>{const v=d.b[i];const tap=my&&(mv.has(i)||to.has(i));
-      return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:P?P.f:-1,to:new Set(to.keys()),mv:P?null:mv}),p:v!=='.'?`<i class="b2s hm" style="--c:${b2hmCol(d,+v)}"></i>`:''};});
+      return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:P?P.f:-1,to:new Set(to.keys()),mv:P?null:mv}),p:v!=='.'?`<i class="b2-stone hm" style="--c:${b2hmCol(d,+v)}"></i>`:''};});
     return b2Board('b2hm bd-b2',144,166,8.4,b2hmBg(d),pts,false,my)+(my&&!mv.size?'<div class="row chact"><button class="btn" data-ga="skip">ما عندي حركة، مرّر</button></div>':'');},
   after:d=>b2Fly('hm',d),
   click(a,i,d,ctx){if(!ctx.my)return;const k=d.sd,goal=b2hmGoal(d,k),P=b2Sel(d);if(a==='skip'){if(!b2hmMoves(d.b,k,goal).length)act(b2hmDo(d,null));return;}if(a!=='pt')return;

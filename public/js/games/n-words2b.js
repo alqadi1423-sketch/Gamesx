@@ -19,12 +19,12 @@ function w2Race(o){const R=o.rounds;
     status:(d,ctx)=>simulStatus(d,ctx,`<small>جولة ${Math.min(d.rd+1,R)} من ${R}</small><br>`,true),
     winExtra:d=>'النقاط: '+d.pts.map((x,s)=>`${nm(d,s)} ${x}`).join('، '),
     render(d,ctx){const last=d.rd>0?o.summary(d,ctx):'';
-      if(d.win!=null)return `<div class="w2 w2race">${last}</div>`;
-      if(!ctx.my)return `<div class="w2 w2race">${ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="w2sent"><b>✓</b>أرسلت، ننتظر الباقين</div>':''}${qzWho(d,ctx)}${last}</div>`;
+      if(d.win!=null)return `<div class="w2-root w2race">${last}</div>`;
+      if(!ctx.my)return `<div class="w2-root w2race">${ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="w2sent"><b>✓</b>أرسلت، ننتظر الباقين</div>':''}${qzWho(d,ctx)}${last}</div>`;
       const st=w2RSt(d,ctx.v);
-      if(st.ph==='ready')return `<div class="w2 w2race"><div class="w2ready"><div class="w2ri">${o.icon}</div><b>${o.title}</b><span class="w2rd">جولة ${d.rd+1} من ${R} • ${Math.round(o.T(d)/1000)} ثانية</span><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>${last}</div>`;
+      if(st.ph==='ready')return `<div class="w2-root w2race"><div class="w2ready"><div class="w2ri">${o.icon}</div><b>${o.title}</b><span class="w2rd">جولة ${d.rd+1} من ${R} • ${Math.round(o.T(d)/1000)} ثانية</span><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>${last}</div>`;
       w2RAgain(d,ctx,st);if(st.ph==='go'&&Date.now()>st.t0+o.T(d)+300){setTimeout(()=>{if(S.w2r===st&&st.ph==='go')w2RSend(d,ctx.v,o.timeUp(d,st));},0);}
-      return `<div class="w2 w2race">${w2Clock(st.t0+o.T(d),o.T(d),'var(--ok)')}${o.view(d,ctx,st)}</div>`;},
+      return `<div class="w2-root w2race">${w2Clock(st.t0+o.T(d),o.T(d),'var(--ok)')}${o.view(d,ctx,st)}</div>`;},
     click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const st=w2RSt(d,ctx.v);
       if(a==='start'){if(st.ph!=='ready')return;st.ph='go';st.t0=Date.now();o.begin(d,st);const v=ctx.v;st.tm=setTimeout(()=>{if(S.w2r===st&&st.ph==='go'){w2RSend(d,v,o.timeUp(d,st));render();}},o.T(d)+50);render();return;}
       if(st.ph!=='go')return;
@@ -650,7 +650,7 @@ GAMES.w_poem={name:'المساجلة',cat:'words',lbc:'#6B4226',
   redeal:d=>d.win!=null?d:{...d,...GAMES.w_poem.init(d.pl.length),last:'انعادت التوزيعة من جديد'},
   render(d,ctx){const V=w2Pv(),v=ctx.v;const card=(id,cls,extra,ga)=>{const x=V[id];if(!x)return '';
       return `<${ga?'button':'div'} class="w2vs ${cls||''}" ${ga||''} data-k="v${id}"><span class="w2vl s">${x.s}</span><p><span>${escH(x.a)}</span><span>${escH(x.b)}</span></p><span class="w2vp">${escH(x.p)}${x.nb?' • نبطي':''}</span><span class="w2vl r">${x.r}</span>${extra||''}</${ga?'button':'div'}>`;};
-    let h=`<div class="w2 w2po"><div class="w2ch-top"><span class="w2chip"><i>📜</i>الكومة ${d.dk.length}</span><span class="w2need ${d.need?'':'free'}" id="pn${d.tb.length}"><small>${d.need?'البيت يبدأ بـ':'البيت'}</small><b>${d.need||'أي بيت'}</b></span></div>`;
+    let h=`<div class="w2-root w2po"><div class="w2ch-top"><span class="w2chip"><i>📜</i>الكومة ${d.dk.length}</span><span class="w2need ${d.need?'':'free'}" id="pn${d.tb.length}"><small>${d.need?'البيت يبدأ بـ':'البيت'}</small><b>${d.need||'أي بيت'}</b></span></div>`;
     const n=d.tb.length;if(n){h+=`<div class="w2tbl">${d.tb.slice(-2).map((id,k,a)=>{const s=d.by[n-a.length+k];return card(id,k===a.length-1?'top':'old','<i class="w2by" style="--c:'+col(d,s)+'">'+nm(d,s)+'</i>');}).join('')}</div>`;}
     else if(d.win==null)h+=`<p class="w2empty">${nm(d,d.turn)} يفتتح المساجلة بأي بيت</p>`;
     const hand=v!=null&&v>=0?d.h[v]:null;const mine=ctx.my&&d.win==null&&d.turn===v;
@@ -710,15 +710,15 @@ GAMES.w_long={name:'أطول كلمة',cat:'words',lbc:'#A23B5A',
   host(d){if(d.ph!=='pick')return null;if(Date.now()-d.ts>15000||goneLong(d.pl[d.turn])){const {v}=w2LgCnt(d.L);return w2LgAdd(d,v<3&&Math.random()<.5?'v':'c');}return null;},
   onTimeout:d=>d.ph==='pick'?w2LgAdd(d,'c'):d,
   render(d,ctx){const slots=`<div class="w2lslots">${[...Array(9)].map((_,k)=>`<i class="${d.L[k]?'on':''} ${d.L[k]&&'اوي'.includes(d.L[k])?'vw':''}" data-k="${d.L[k]?'l':''}">${d.L[k]||''}</i>`).join('')}</div>`;
-    if(d.win!=null)return `<div class="w2 w2lg">${w2LgSum(d)}</div>`;
+    if(d.win!=null)return `<div class="w2-root w2lg">${w2LgSum(d)}</div>`;
     if(d.ph==='pick'){const can=w2LgCan(d.L);
-      return `<div class="w2 w2lg">${slots}${ctx.my?`<div class="w2acts"><button class="btn w2vb" data-ga="v" ${can.v?'':'disabled'}>حرف مد<small>ا و ي</small></button><button class="btn w2cb" data-ga="c" ${can.c?'':'disabled'}>حرف ثاني<small>باقي الحروف</small></button></div><p class="note">الحرف نفسه يطلع بالقرعة. لازم 3 حروف مد على الأقل و4 من الباقي</p>`:`<p class="note">${nm(d,d.turn)} يختار الحروف…</p>`}${w2LgSum(d)}</div>`;}
-    if(!ctx.my)return `<div class="w2 w2lg">${slots}${ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="w2sent"><b>✓</b>أرسلت، ننتظر الباقين</div>':''}${qzWho(d,ctx)}</div>`;
+      return `<div class="w2-root w2lg">${slots}${ctx.my?`<div class="w2acts"><button class="btn w2vb" data-ga="v" ${can.v?'':'disabled'}>حرف مد<small>ا و ي</small></button><button class="btn w2cb" data-ga="c" ${can.c?'':'disabled'}>حرف ثاني<small>باقي الحروف</small></button></div><p class="note">الحرف نفسه يطلع بالقرعة. لازم 3 حروف مد على الأقل و4 من الباقي</p>`:`<p class="note">${nm(d,d.turn)} يختار الحروف…</p>`}${w2LgSum(d)}</div>`;}
+    if(!ctx.my)return `<div class="w2-root w2lg">${slots}${ctx.v>=0&&hasPicked(d,ctx.v)?'<div class="w2sent"><b>✓</b>أرسلت، ننتظر الباقين</div>':''}${qzWho(d,ctx)}</div>`;
     const st=w2RSt(d,ctx.v);
-    if(st.ph==='ready')return `<div class="w2 w2lg">${slots}<div class="w2ready"><b>كوّن أطول كلمة من هالحروف (كل حرف مرة)</b><span class="w2rd">${W2LGT/1000} ثانية</span><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div></div>`;
+    if(st.ph==='ready')return `<div class="w2-root w2lg">${slots}<div class="w2ready"><b>كوّن أطول كلمة من هالحروف (كل حرف مرة)</b><span class="w2rd">${W2LGT/1000} ثانية</span><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div></div>`;
     w2RAgain(d,ctx,st);if(st.ph==='go'&&Date.now()>st.t0+W2LGT+300)setTimeout(()=>{if(S.w2r===st&&st.ph==='go')w2RSend(d,ctx.v,st.keep||'');},0);
     const w=(st.sel||[]).map(i=>d.L[i]).join('');
-    return `<div class="w2 w2lg">${w2Clock(st.t0+W2LGT,W2LGT,'var(--ok)')}${w2TypedBox(w,'المس الحروف')}<div class="w2ltiles">${[...d.L].map((c,i)=>`<button class="w2lt ${st.sel.includes(i)?'used':''} ${'اوي'.includes(c)?'vw':''}" data-ga="t" data-i="${i}" ${st.sel.includes(i)?'disabled':''}>${c}</button>`).join('')}</div>
+    return `<div class="w2-root w2lg">${w2Clock(st.t0+W2LGT,W2LGT,'var(--ok)')}${w2TypedBox(w,'المس الحروف')}<div class="w2ltiles">${[...d.L].map((c,i)=>`<button class="w2lt ${st.sel.includes(i)?'used':''} ${'اوي'.includes(c)?'vw':''}" data-ga="t" data-i="${i}" ${st.sel.includes(i)?'disabled':''}>${c}</button>`).join('')}</div>
       <div class="w2acts"><button class="btn soft" data-ga="bk" aria-label="امسح">⌫</button><button class="btn soft" data-ga="clr">مسح</button><button class="btn" data-ga="keep" ${w.length>=3?'':'disabled'}>ثبّت الكلمة</button></div>
       <div class="w2keep">${st.keep?`كلمتك: <b>${escH(w2LDisp(st.keep))}</b> (${w2Len(st.keep)} حروف)، دوّر أطول أو اضغط «خلصت»`:'ثبّت أطول كلمة تلقاها، وتقدر تغيّرها لين يخلص الوقت'}</div><button class="btn red wide" data-ga="go">خلصت</button></div>`;},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;

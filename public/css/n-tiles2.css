@@ -2,7 +2,7 @@
    بشتي، الأزواج الصاعدة، ورق الحظ. Tokens from the top of style.css, cards from g-cards.css, domino tiles as in cards.js. */
 
 /* ---------- shared: the seat strip, the felt, buttons ---------- */
-.k2{width:min(100%,470px);margin:0 auto}
+.k2-root{width:min(100%,470px);margin:0 auto}
 .k2seats{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:2px 0 8px}
 .k2seat{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 4px;border-radius:99px;background:var(--surface);box-shadow:var(--e1),inset 0 0 0 1.5px var(--c);font-size:13px;line-height:1.4;transition:transform var(--t2) var(--ease)}
 .k2seat b{color:var(--ink);max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -18,7 +18,9 @@
   border:6px solid transparent;box-shadow:inset 0 0 30px rgba(0,0,0,.35),0 6px 14px rgba(14,28,46,.2)}
 .k2acts{margin:8px 0}
 .k2acts .btn{min-height:46px;padding:0 16px;font-size:16px}
-.btn.green,.k2go{background:var(--ok)}
+.k2-root .btn.green,.k2go{background:var(--ok)}
+/* the selected card in a hand rises (this rule used to come from n-cards2.css, unscoped; kept here so the tiles games look the same) */
+.k2-root .bcard.sel .card.card.card{transform:translateY(-18px);box-shadow:inset 0 0 0 1px rgba(34,54,77,.17),var(--ring),0 8px 14px rgba(14,28,46,.24)}
 .k2go{margin:12px 0 2px}
 .k2hint{text-align:center;color:var(--ink)}
 .k2sum h3{text-align:center}

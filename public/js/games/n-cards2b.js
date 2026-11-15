@@ -87,7 +87,7 @@ GAMES.c_basra={name:'باصرة',cat:'cards',lbc:'#1F7A4D',
   onTimeout(d){if(d.ph==='sum')return c2bsNext(d);const H=cardsOf(d.hands[d.turn]);return c2bsPlay(d,H[rnd(H.length)]);},
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';
     return s+(me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`)+` <small>• باقي في الكوتشينة ${d.dk.length/2}</small>`;},
-  render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="c2">${c2fsFloor(d,v,{bw:'باصرة! +10'})}${c2fsPiles(d,{bn:'باصرة'})}`;
+  render(d,ctx){const v=ctx.local?d.turn:ctx.v;let h=`<div class="c2-root">${c2fsFloor(d,v,{bw:'باصرة! +10'})}${c2fsPiles(d,{bn:'باصرة'})}`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>نتيجة الجولة</h3>${c2fsSides(d).map((t,i)=>`<div class="bsr"><span>${c2fsSideName(d,t)}</span><em>${r.cnt[i]} ورقة${i===r.top?' 🏆':''}</em><b>+${r.add[i]} → ${d.sc[i]}</b></div>`).join('')}
       ${r.top<0?'<p class="note">تعادلتوا بعدد الورق: الـ30 تنتقل للجولة الجاية</p>':''}${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
     if(v>=0&&d.hands[v]!=null)h+=c2fsHand(d,v,ctx.my&&d.turn===v);return h+'</div>';},
@@ -159,7 +159,7 @@ GAMES.c_shakba={name:'شكبة',cat:'cards',lbc:'#A0522D',
     return s+(me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`)+` <small>• باقي ${d.dk.length/2}</small>`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v;const pend=my&&Array.isArray(S.sel)&&S.sel[0]===c2skSelKey(d)?S.sel[1]:null;
     const opts=pend?c2skOpts(cardsOf(d.fl),pend):[];
-    let h=`<div class="c2">${c2fsFloor(d,v,{bw:'شكبة! +1',hl:opts.flat()})}${c2fsPiles(d,{bn:'شكبة'})}`;
+    let h=`<div class="c2-root">${c2fsFloor(d,v,{bw:'شكبة! +1',hl:opts.flat()})}${c2fsPiles(d,{bn:'شكبة'})}`;
     if(d.ph==='sum'){const r=d.sum,nmS=i=>i<0?'تعادل':c2fsSideName(d,c2fsSides(d)[i]);h+=`<div class="panel bsum"><h3>نتيجة الجولة</h3>
       <div class="bsr"><span>الكارطة (أكثر ورق)</span><em>${r.cnt.join(' / ')}</em><b>${nmS(r.kar)}</b></div><div class="bsr"><span>الديناري</span><em></em><b>${nmS(r.din)}</b></div>
       <div class="bsr"><span>البرميلة (السبعات)</span><em></em><b>${nmS(r.bar)}</b></div><div class="bsr"><span>السبعة الحية 7♦</span><em></em><b>${nmS(r.hay)}</b></div>
@@ -235,7 +235,7 @@ GAMES.c_eights={name:'الثمانيات',cat:'cards',lbc:'#2E7D9A',
   onTimeout(d){if(d.ph==='sum')return c2e8Next(d);const L=c2e8Legal(d,d.turn);if(L.length){const c=L[0];return c2e8Play(d,c,c[1]);}return d.dk.length?{...c2e8Draw(d),turn:nextSeat(d,d.turn)}:c2e8Pass(d);},
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';return s+c2shWho(d,ctx)+`: نزّل ${C2SN[d.su]} أو ${d.disc.slice(-2)[0]==='T'?'10':d.disc.slice(-2)[0]} أو ثمانية`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v&&d.ph==='play';const top=d.disc.slice(-2);
-    let h=`<div class="c2">${c2shSeats(d,{x:s=>` <em>${d.sc[s]}</em>`})}<div class="sh-tab"><${my&&d.dk.length?'button data-ga="draw"':'div'} class="sh-stk">${cardHTML('??',true)}<small>${d.dk.length/2}</small></${my&&d.dk.length?'button':'div'}>
+    let h=`<div class="c2-root">${c2shSeats(d,{x:s=>` <em>${d.sc[s]}</em>`})}<div class="sh-tab"><${my&&d.dk.length?'button data-ga="draw"':'div'} class="sh-stk">${cardHTML('??',true)}<small>${d.dk.length/2}</small></${my&&d.dk.length?'button':'div'}>
       <div class="sh-pile"><span class="sh-top" data-k="e${d.disc.length}">${c2Card(top,true)}</span></div><span class="sh-suit">الطلب <em class="${'hd'.includes(d.su)?'rs':''}">${C2SN[d.su]}</em></span></div>`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${nameTag(d,r.w)} ${r.blocked?'أقل ورق (انقفلت)':'خلّص ورقه'} 🏆</h3>${d.pl.map((_,s)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${s===r.w?'🏆 0':'+'+r.pen[s]}</em><b>${d.sc[s]}</b></div>`).join('')}
       ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
@@ -293,7 +293,7 @@ GAMES.c_cheat={name:'الكذاب',cat:'cards',lbc:'#7A3E9D',
   onTimeout(d){if(d.lp&&d.fin>=0)return c2chBelieve(d);const H=cardsOf(d.hands[d.turn]);const m=H.filter(c=>c[0]===C2CH_R[d.rk]);return c2chPlay(d,m.length?m:[H[0]]);},
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';return s+c2shWho(d,ctx)+(d.lp?(d.fin>=0?`: ${nm(d,d.fin)} خلّص ورقه، تصدّقه؟`:`: تصدّق ${nm(d,d.lp.s)}؟ وإلا نزّل ${chRn(C2CH_R[d.rk])}`):`: نزّل ${chRn(C2CH_R[d.rk])}`);},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v;const sel=my?c2shSel(d,c2chKeyT):[];
-    let h=`<div class="c2">${c2shSeats(d,{})}<div class="sh-tab"><div class="sh-pile">${d.pile?`<span class="sh-top" data-k="p${d.pile.length}">${cardHTML('??',true)}</span>`:'<div class="card big hempty"></div>'}</div>`;
+    let h=`<div class="c2-root">${c2shSeats(d,{})}<div class="sh-tab"><div class="sh-pile">${d.pile?`<span class="sh-top" data-k="p${d.pile.length}">${cardHTML('??',true)}</span>`:'<div class="card big hempty"></div>'}</div>`;
     h+=`<div class="sh-stk"><small>${cardsOf(d.pile).length} ورقة</small></div>`;
     if(d.rv)h+=`<span class="sh-msg ${d.rv.lie?'bad':'ok'}" data-k="rv${d.rv.n}">${d.rv.lie?'كذب! 🤥':'صادق 😇'}</span><div class="sh-reveal" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);--cwm:26px">${d.rv.c.map(c2Mini).join('')}</div>`;
     else if(d.lp)h+=`<span class="sh-claim" data-k="c${d.pile.length}">${nm(d,d.lp.s)}: ${d.lp.n} × ${chRn(d.lp.r)}</span>`;
@@ -362,7 +362,7 @@ GAMES.c_scat={name:'واحد وثلاثين',cat:'cards',lbc:'#C7662B',outDone:f
   status(d,ctx){let s=d.last?`<small>${d.last}</small><br>`:'';if(d.ph==='sum')return s+'انتهت الجولة';
     return s+c2shWho(d,ctx)+(d.ph==='draw'?`: اسحب، خذ المكشوفة${d.kn<0?'، أو دق':''}`:': ارمِ ورقة')+(d.kn>=0?` <small>• ${nm(d,d.kn)} داق</small>`:'');},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v;const top=d.disc.slice(-2);const can=my&&d.ph==='draw';
-    let h=`<div class="c2">${c2shSeats(d,{cnt:s=>d.lives[s],done:s=>!d.lives[s],x:s=>s===d.kn?' 👊':''})}<div class="sh-tab"><${can?'button data-ga="stock"':'div'} class="sh-stk">${cardHTML('??',true)}<small>${d.dk.length/2}</small></${can?'button':'div'}>
+    let h=`<div class="c2-root">${c2shSeats(d,{cnt:s=>d.lives[s],done:s=>!d.lives[s],x:s=>s===d.kn?' 👊':''})}<div class="sh-tab"><${can?'button data-ga="stock"':'div'} class="sh-stk">${cardHTML('??',true)}<small>${d.dk.length/2}</small></${can?'button':'div'}>
       <${can&&top?'button data-ga="take"':'div'} class="sh-stk sh-pile"><span class="sh-top" data-k="s${d.disc.length}">${top?c2Card(top,true):'<div class="card big hempty"></div>'}</span><small>المكشوفة</small></${can&&top?'button':'div'}></div>`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${r.b31>=0?`${nameTag(d,r.b31)} جاب 31!`:'النتيجة'}</h3>${d.pl.map((_,s)=>r.val[s]<0?'':`<div class="bsr"><span>${nameTag(d,s)}${s===d.kn?' 👊':''}</span><em>${cardsOf(d.hands[s]).map(c2Mini).join('')} ${r.val[s]}</em><b>${r.loss[s]?'‎-'+r.loss[s]+' 💔':'✓'} ${'❤️'.repeat(d.lives[s])||'💀'}</b></div>`).join('')}
       ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
@@ -446,7 +446,7 @@ GAMES.c_pres={name:'الرئيس والوزير',cat:'cards',lbc:'#9C7A1E',
     return s+c2shWho(d,ctx)+(d.tc?`: اغلب ${d.tc>1?d.tc+' × ':''}${d.tp[0]==='T'?'10':d.tp[0]} أو باس`:': ابدأ لمّة جديدة')+` <small>• جولة ${d.rd+1} من 5</small>`;},
   render(d,ctx){const v=ctx.local?d.turn:ctx.v,my=ctx.my&&d.turn===v;const sel=my?c2shSel(d,c2prKeyT):[];const n=d.pl.length;
     const tl=s=>{const i=d.order?d.order.indexOf(String(s)):-1;return i>=0?` <u>${c2prTitle(n,i)}</u>`:'';};
-    let h=`<div class="c2">${c2shSeats(d,{x:s=>`${d.fin.includes(String(s))?' ✓':d.pa[s]==='1'?' <em>باس</em>':''}${tl(s)}`,done:s=>d.fin.includes(String(s))})}
+    let h=`<div class="c2-root">${c2shSeats(d,{x:s=>`${d.fin.includes(String(s))?' ✓':d.pa[s]==='1'?' <em>باس</em>':''}${tl(s)}`,done:s=>d.fin.includes(String(s))})}
       <div class="sh-tab"><div class="sh-pile">${d.tp?cardsOf(d.tp).map(c=>`<span class="sh-top" data-k="t${c}">${c2Card(c,true)}</span>`).join(''):'<p class="note" style="color:#fff">لمّة جديدة</p>'}</div>${d.tp&&d.lead>=0?`<span class="sh-suit">${nm(d,d.lead)}</span>`:''}</div>`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>نتيجة الجولة ${d.rd}</h3>${r.ord.map((s,i)=>`<div class="bsr"><span>${nameTag(d,s)}</span><em>${c2prTitle(r.ord.length,i)}</em><b>+${r.ord.length-1-i} → ${d.sc[s]}</b></div>`).join('')}
       ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}

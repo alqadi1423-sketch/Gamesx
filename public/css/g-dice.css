@@ -131,7 +131,7 @@ button.dice:disabled{cursor:default}
 
 /* ================= camel race ================= */
 /* a sand track that bends back (1-8 on top, 9-16 below), camels as coloured saddles that stack, the pyramid's five dice and the betting cards */
-.ctrack{width:min(100%,440px);margin:0 auto;padding:7px;border-radius:var(--r-l);background:radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.3),transparent 60%),linear-gradient(180deg,#F0D49A,#E2B96C);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 4px 0 #B98A3E,var(--e2)}
+.board>.ctrack{width:min(100%,440px);margin:0 auto;padding:7px;border-radius:var(--r-l);background:radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.3),transparent 60%),linear-gradient(180deg,#F0D49A,#E2B96C);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 4px 0 #B98A3E,var(--e2)}
 .crow{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;direction:ltr}
 .crow+.crow{margin-top:3px}
 .ct{position:relative;min-width:0;min-height:72px;display:flex;flex-direction:column;align-items:center;padding:2px 0 3px;border-radius:9px;background:linear-gradient(180deg,#FFF6E0,#F8E6BD);box-shadow:inset 0 -2px 0 rgba(160,110,40,.18)}
@@ -342,10 +342,10 @@ button.dice:disabled{cursor:default}
 @keyframes du-pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
 
 /* ================= tapping battle ================= */
-.tw .memnum{font-size:56px;padding:10px 20px;letter-spacing:2px;color:var(--ink);background:var(--surface);box-shadow:var(--e1)}
+.spd.tw .memnum{font-size:56px;padding:10px 20px;letter-spacing:2px;color:var(--ink);background:var(--surface);box-shadow:var(--e1)}
 .tapbtn{background:radial-gradient(circle at 38% 30%,#7EE2A6,#2ECC71 38%,#1E8449 75%);box-shadow:inset 0 -8px 0 rgba(0,0,0,.18),inset 0 6px 0 rgba(255,255,255,.3),0 0 0 8px rgba(30,132,73,.18),0 10px 0 #145A32,0 16px 28px rgba(0,0,0,.25);text-shadow:0 3px 0 rgba(0,0,0,.25);transition:transform 60ms ease-out,box-shadow 60ms ease-out}
 .tapbtn:active{transform:translateY(8px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),inset 0 6px 0 rgba(255,255,255,.3),0 0 0 12px rgba(30,132,73,.22),0 2px 0 #145A32,0 4px 10px rgba(0,0,0,.25)}
-.tw .tbar{width:100%;max-width:320px;margin-left:auto;margin-right:auto}
+.spd.tw .tbar{width:100%;max-width:320px;margin-left:auto;margin-right:auto}
 
 /* ================= dark mode: the boards stay light materials but lose their glare ================= */
 @media (prefers-color-scheme:dark){
@@ -359,7 +359,7 @@ button.dice:disabled{cursor:default}
  .arena{box-shadow:inset 0 0 0 5px #8A6440,inset 0 0 0 7px #6B4A2C,inset 0 10px 18px rgba(0,0,0,.28),0 5px 0 #0b1118}
  .ytray,.ltable,.stray{box-shadow:inset 0 3px 10px rgba(0,0,0,.4),0 3px 0 #0b1118}
  .lgrid{box-shadow:inset 0 3px 10px rgba(0,0,0,.35),0 4px 0 #0b1118}
- .ctrack{box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 4px 0 #0b1118,0 10px 20px rgba(0,0,0,.35)}
+ .board>.ctrack{box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 4px 0 #0b1118,0 10px 20px rgba(0,0,0,.35)}
  .sbox{box-shadow:inset 0 0 0 3px #4A2A12,inset 0 6px 10px rgba(0,0,0,.35),0 5px 0 #0b1118}
 }
 /* farkle sizes its dice inline (50px die, 40px face) */
@@ -393,10 +393,10 @@ button.dice:disabled{cursor:default}
 .tanks .shock{animation-duration:.42s}.tanks .deb{animation-duration:.42s}.tanks.quake{animation-duration:.36s}
 .hx.flash{animation-duration:.42s}.dwroll.shake>div{animation-duration:.42s}
 /* tapping battle: the five seconds drain as one css animation */
-.tw .twd{width:100%;transform-origin:100% 50%;animation:tw-drain 5s linear forwards}
+.spd.tw .twd{width:100%;transform-origin:100% 50%;animation:tw-drain 5s linear forwards}
 @keyframes tw-drain{to{transform:scaleX(0)}}
-html.lite .tw .twd{animation-duration:5s!important;animation-iteration-count:1!important}
-@media (prefers-reduced-motion:reduce){.tw .twd{animation-duration:5s!important;animation-iteration-count:1!important}}
+html.lite .spd.tw .twd{animation-duration:5s!important;animation-iteration-count:1!important}
+@media (prefers-reduced-motion:reduce){.spd.tw .twd{animation-duration:5s!important;animation-iteration-count:1!important}}
 .duel.fake b{color:#F7DC6F;animation:du-pop .22s var(--spring)}
 /* five dice: five of a kind makes the tray jump once the dice have landed */
 .ytray.yz{animation:yz-jump .4s .3s var(--spring) both}
@@ -419,8 +419,8 @@ button.cd.can:active{transform:translateY(1px) scale(.95)}
 @keyframes dw-rise{0%{transform:translateY(2px) scale(.6);opacity:0}35%{opacity:1}100%{transform:translateY(-3px);opacity:0}}
 /* tapping battle: the kind of round, the exact goal, and the two pads that must take turns */
 .twk{font-size:19px}
-.tw .twgoal{font-weight:800;color:var(--mut);margin:0 0 6px}
-.tw .twgoal b{font-size:26px;color:var(--ink);margin-inline-start:4px}
+.spd.tw .twgoal{font-weight:800;color:var(--mut);margin:0 0 6px}
+.spd.tw .twgoal b{font-size:26px;color:var(--ink);margin-inline-start:4px}
 .twpads{display:flex;justify-content:center;gap:14px;margin-top:14px}
 .twpads .tapbtn{width:min(42vw,160px);height:min(42vw,160px);margin:0;font-size:40px;display:grid;place-items:center;line-height:1.05}
 .twpads .tapbtn small{display:block;font-size:16px;font-weight:900}

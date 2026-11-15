@@ -1,10 +1,10 @@
 /* ألعاب الجمعات (2): تمثيل صامت، الكلمات الممنوعة، البطاطا الحارة، عشرين سؤال، مين أنا، ربط الكلمات، حقيقتين وكذبة،
-   مين الأكثر، قصة متسلسلة، الرسام المزيف، توقع الأغلبية، سؤال وجواب، المزاد. Everything is scoped under .p2 */
-.p2{--paper:#FFF8EC;--paper-ink:#3A2E22;--paper-line:#E9D9BE;width:min(100%,460px);margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px}
-.p2 .big{background-color:var(--navy)}
-.p2 .green{background:var(--ok)} .p2 .red{background:var(--red)}
-.p2 .big{margin:8px 0}
-.p2 .wide{width:100%}
+   مين الأكثر، قصة متسلسلة، الرسام المزيف، توقع الأغلبية، سؤال وجواب، المزاد. Everything is scoped under .p2-root */
+.p2-root{--paper:#FFF8EC;--paper-ink:#3A2E22;--paper-line:#E9D9BE;width:min(100%,460px);margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.p2-root .big{background-color:var(--navy)}
+.p2-root .green{background:var(--ok)} .p2-root .red{background:var(--red)}
+.p2-root .big{margin:8px 0}
+.p2-root .wide{width:100%}
 .p2-lead{margin:4px 0;text-align:center;font-weight:800;font-size:18px;color:var(--ink);line-height:1.4}
 .p2-lead.small{font-size:16px}
 .p2-red{color:var(--bad)}
@@ -68,8 +68,8 @@
 .p2-gsr{padding:10px 14px;border-radius:var(--r-m);background:var(--c);color:#fff;font-weight:800;font-size:16px;box-shadow:0 3px 0 rgba(0,0,0,.2);transition:transform var(--t1)}
 .p2-gsr:active{transform:translateY(2px);box-shadow:none}
 .p2-lg{background:var(--c,var(--red))}
-.p2 .p2-buzz{background:#B03A2E}
-.p2 .p2-buzzbig{background:#C0392B;font-size:22px}
+.p2-root .p2-buzz{background:#B03A2E}
+.p2-root .p2-buzzbig{background:#C0392B;font-size:22px}
 .p2-feed{display:flex;flex-direction:column;gap:3px;padding:8px 10px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1)}
 .p2-feed p{margin:0;font-size:15px;animation:p2up .25s var(--ease) both}
 .p2-feed p.ok{color:var(--ok);font-weight:800} .p2-feed p.cl i{color:#E67E22;font-style:normal;font-weight:800}
@@ -108,7 +108,7 @@
 .p2-potato svg{width:100%;height:auto;display:block}
 @keyframes p2wob{0%{transform:scale(.8) rotate(-12deg)}60%{transform:scale(1.08) rotate(6deg)}100%{transform:none}}
 .p2-boom{font-size:86px;line-height:1;animation:p2pop .35s var(--spring) both}
-.p2 .p2-passb{background:var(--c)}
+.p2-root .p2-passb{background:var(--c)}
 .p2-words{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
 .p2-words span{padding:2px 10px;border-radius:99px;background:var(--surface);box-shadow:inset 0 0 0 2px var(--c);font-weight:800;font-size:14px}
 
@@ -122,8 +122,8 @@
 .p2-dots{width:100%;display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px}
 .p2-dots i{height:8px;border-radius:4px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--edge)}
 .p2-dots i.y{background:var(--ok);box-shadow:none} .p2-dots i.n{background:var(--bad);box-shadow:none} .p2-dots i.u{background:#E69B2E;box-shadow:none}
-.p2 .p2-peek{align-self:center}
-.p2 .sm{min-height:40px}
+.p2-root .p2-peek{align-self:center}
+.p2-root .sm{min-height:40px}
 .p2-tabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .p2-tabs button{padding:10px 12px;min-height:40px;border-radius:12px;background:var(--surface-2);color:var(--ink);font-weight:800;font-size:15px;box-shadow:0 2px 0 var(--edge)}
 .p2-tabs button.on{background:var(--navy);color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.25)}
@@ -288,6 +288,6 @@ button.p2-st:active{transform:translateY(2px)}
   .p2-cat{background:#E9D3AE}
   .p2-q.done{background:#243241}
 }
-.p2 .p2-fskip{align-self:center}
+.p2-root .p2-fskip{align-self:center}
 .p2-st small.nm{width:auto;height:auto;padding:2px 9px;border-radius:99px;background:var(--c);color:#fff;font-size:12px;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .p2-num{display:inline-block;direction:ltr;unicode-bidi:isolate}
