@@ -52,6 +52,8 @@ function propose(nd){
   S.st={...S.st,s:S.st.s+1,d:nd};S.wild=null;S.dside=null;sfx('tap');render();}
 function queueIntent(m){
   if(S.mode!=='online')return false;
+  // (a private part that is not there is nothing to send: the host would only turn it down)
+  if(m.t==='pv'&&(!m.p||typeof m.p!=='object'))return false;
   // a private part is sent whole every time: a newer one replaces those still waiting at the end of the queue (typing, drawing).
   // One with a tap or a move after it stays, so the host reads them in the order they were made
   let snap=S.clickSnap||null;
