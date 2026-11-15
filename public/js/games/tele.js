@@ -106,8 +106,11 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     // the word in play is also the last one in the list of used words
     if(pWord(d)){const got=seat>=0&&d.got.some(g=>g[0]===seat);v.wp=pPat(d);if(!got){v.w=-1;if(Array.isArray(d.used))v.used=d.used.map((x,i)=>i===d.used.length-1?-1:x);}}
     if(d.bt)delete v.bt;return v;},
-  privShow:(d,seat,role,p,own)=>{if(own||!p)return p;const o={gid:p.gid};if(p.dr&&typeof p.dr==='object')o.dr=p.dr;return o;},
-  privOk:(d,r,o,p)=>(p.dr==null||typeof p.dr==='object'&&typeof p.dr.s==='string'&&p.dr.s.length<=2*PMAX+400&&r===d.pl[pDrawer(d)])&&
+  // the others see a drawing only while it is the one on now (an old one the player drew before is not sent on)
+  privShow:(d,seat,role,p,own)=>{if(own||!p)return p;const o={gid:p.gid};if(p.dr&&typeof p.dr==='object'&&p.dr.k===pKey(d))o.dr=p.dr;return o;},
+  // a drawing for the word on now comes from its drawer only. A guesser who drew an earlier word still has that drawing in his
+  // part: it is old (another key), never shown, and it does not turn his guess down
+  privOk:(d,r,o,p)=>(p.dr==null||typeof p.dr==='object'&&typeof p.dr.s==='string'&&p.dr.s.length<=2*PMAX+400&&(r===d.pl[pDrawer(d)]||p.dr.k!==pKey(d)))&&
     (p.gq==null||typeof p.gq==='object'&&Array.isArray(p.gq.l)&&p.gq.l.length<=3&&p.gq.l.every(x=>Array.isArray(x)&&Number.isInteger(x[0])&&typeof x[1]==='string'&&x[1].length<=24)),
   selfPub:true,
   net:{local:['col','sz','undo','clr','peek','send']},
@@ -161,7 +164,8 @@ GAMES.tele={name:'ارسم وخمّن',cat:'quiz',lbc:'#D35400',noTimer:true,
     if(a==='send'&&!iDraw&&v>=0&&!d.tap){const txt=String(S.draft.pg||'').trim().slice(0,24);if(!txt)return;S.draft.pg='';
       // online the word is not on this phone: the host says how close it was (in the feed)
       const E=pWord(d);if(E&&pwMatch(E,txt)===1)toast('قريب! 🔥');
-      const r=d.pl[v],p0=S.priv[r],p=p0&&p0.gid===d.gid?p0:{},k=pKey(d);const gq=p.gq&&p.gq.k===k?p.gq:{k,n:0,l:[]};const n2=gq.n+1;
+      // (a drawing left from an earlier word this player drew is not sent along with the guess)
+      const r=d.pl[v],p0=S.priv[r],p=p0&&p0.gid===d.gid?{...p0}:{},k=pKey(d);if(p.dr&&p.dr.k!==k)delete p.dr;const gq=p.gq&&p.gq.k===k?p.gq:{k,n:0,l:[]};const n2=gq.n+1;
       setPriv(r,{...p,gid:d.gid,gq:{k,n:n2,l:[...gq.l,[n2,txt]].slice(-3)}});}},
   // one device runs the clock, reads the typed guesses and plays the bots
   host(d){const now=Date.now(),dr=pDrawer(d);

@@ -56,19 +56,28 @@ function uiApply(G,u){if(!u||typeof u!=='object')return;const ks=uiKeys(G);
 function ctxFor(d,v,priv){const G=GAMES[S.st.g];const extra=G&&G.canAct?G.canAct(d,priv):true;
   if(G&&isSimul(G,d)){const ok=v!=null&&v>=0&&d.out[v]!=='1'&&d.win==null&&!hasPicked(d,v);return {local:false,v,priv,my:ok&&extra,simul:true};}
   return {local:false,v,priv,my:d.win==null&&extra&&d.turn===v};}
-/* host side: runs one player's click on the whole state, as that player, with the UI that player had.
-   Nothing it does reaches this phone: its move, private part, toasts and UI changes are caught and handed back */
-function sandboxClick(G,d,seat,a,i,ui){
+/* host side: runs fn as seat `seat` of state d, with the UI that seat had (ui). Nothing it does reaches this phone: moves
+   (act), private parts (setPriv), toasts and UI changes are caught, and this phone's own UI is put back afterwards */
+function asSeat(G,d,seat,ui,fn){
   const ks=uiKeys(G),sv={},had={};for(const k of ks){had[k]=k in S;sv[k]=S[k];}
-  const me=S.me,tt=window.toast,rr=window.render,hr=S.holdRender,hv=S.holdVK,rp=S.renderPending,cap=NET_CAP;
-  const list=[];let err=null,res=null;
-  try{uiLoad(G,ui);const ui0=uiSnap(G);
-    S.me=d.pl[seat];window.toast=t=>{if(list.length<6)list.push(String(t).slice(0,120));};window.render=()=>{};S.holdRender=true;NET_CAP={v:undefined,pv:null};
+  const me=S.me,mu=S.mute,tt=window.toast,rr=window.render,hr=S.holdRender,hv=S.holdVK,rp=S.renderPending,cap=NET_CAP,ac=ACT_CAP,list=[];
+  try{uiLoad(G,ui);S.me=d.pl[seat];S.mute=true;window.toast=t=>{if(list.length<6)list.push(String(t).slice(0,120));};window.render=()=>{};S.holdRender=true;NET_CAP={v:undefined,pv:null};ACT_CAP=null;
+    return fn(list);}
+  finally{NET_CAP=cap;ACT_CAP=ac;for(const k of ks){if(had[k])S[k]=sv[k];else delete S[k];}S.me=me;S.mute=mu;window.toast=tt;window.render=rr;S.holdRender=hr;S.holdVK=hv;S.renderPending=rp;}}
+// one player's click on the whole state, as that player: the move, private part, toasts and UI changes it makes
+function sandboxClick(G,d,seat,a,i,ui){
+  return asSeat(G,d,seat,ui,list=>{const ui0=uiSnap(G);let err=null;
     try{G.click(a,i,d,ctxFor(d,seat,S.priv));}catch(e){err=e;}
-    const after=uiSnap(G),u={};for(const k of ks){if(k==='draft'&&!('draft' in after))continue;if(!jsEq(after[k],ui0[k]))u[k]=after[k]===undefined?null:after[k];}
-    res={v:NET_CAP.v,pv:NET_CAP.pv,toasts:list.slice(0,3),u,err};}
-  finally{NET_CAP=cap;for(const k of ks){if(had[k])S[k]=sv[k];else delete S[k];}S.me=me;window.toast=tt;window.render=rr;S.holdRender=hr;S.holdVK=hv;S.renderPending=rp;}
-  return res;}
+    const after=uiSnap(G),u={};for(const k of uiKeys(G)){if(k==='draft'&&!('draft' in after))continue;if(!jsEq(after[k],ui0[k]))u[k]=after[k]===undefined?null:after[k];}
+    return {v:NET_CAP.v,pv:NET_CAP.pv,toasts:list.slice(0,3),u,err};});}
+// every private part as seat `seat` may see it (the host's own copy holds them all)
+const seatPriv=(G,d,seat)=>S.priv.map((p,r)=>{try{return privFor(G,d,seat,r,p);}catch(e){return null;}});
+/* the button a player tapped, as that seat sees it on state d (its own view, its UI): the button's words, or null when it is
+   not there or is off. A tap made on an older board still means the same when this is the same on the board now */
+function seatBtn(G,d,seat,a,i,ui){if(!d||seat<0)return null;let v=d;try{v=viewOf(G,d,seat);}catch(e){return null;}const pv=seatPriv(G,d,seat);
+  return asSeat(G,v,seat,ui,()=>{let h='';try{const c=ctxFor(v,seat,pv);h=G.render(v,c)+(G.status?'<i>'+G.status(v,c)+'</i>':'');}catch(e){return null;}
+    TPL.innerHTML=h;const el=[...TPL.content.querySelectorAll('[data-ga]')].find(e=>e.dataset.ga===a&&(i==null?e.dataset.i==null:+e.dataset.i===i));TPL.innerHTML='';
+    if(!el||el.hasAttribute('disabled'))return null;return (el.textContent+'|'+(el.getAttribute('aria-label')||'')).replace(/\s+/g,' ').trim();});}
 /* the few public moves a game lets a player make when it is not their turn (the game's own click allows exactly these):
    blackjack's next hand, answering a monopoly trade (or taking one's own offer back), answering a backgammon double */
 const OFFTURN={
