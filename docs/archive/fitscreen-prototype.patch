@@ -1,0 +1,265 @@
+diff --git a/public/css/style.css b/public/css/style.css
+index 057abfc..242958c 100644
+--- a/public/css/style.css
++++ b/public/css/style.css
+@@ -1224,3 +1224,64 @@ html.lite .floatrx{will-change:auto}
+ /* «انسحاب»: a quiet link under the board, and a sheet that asks first */
+ .ffw{text-align:center;margin:14px 0 76px}.ffw .link{font-size:15px;color:var(--mut);display:inline-block}
+ .sheet.ff p{margin:4px 0 0;font-size:16px;line-height:1.6;text-align:center}.sheet.ff .acts .btn{flex:1;min-width:130px}
++/* ---------- one fixed screen in a game (prototype: html.fit, core.js fitSync) ----------
++   a column as tall as the phone: compact header, the board zone takes the rest (the board shrinks evenly to fit it),
++   the game's own dock and the chat bar at the bottom; the page itself never scrolls */
++html.fit,html.fit body{height:100%;overflow:hidden;overscroll-behavior:none}
++html.fit #app[data-s=game]{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0;overflow:hidden;padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:calc(8px + var(--dockh,0px) + env(safe-area-inset-bottom))}
++html.fit body.rxon #app[data-s=game]{padding-bottom:calc(6px + var(--dockh,0px) + var(--rxh))}
++html.fit #app[data-s=game]>*{flex:none}
++html.fit #app.scr-in>.bzone{animation:none}
++html.fit #app[data-s=game]>.bzone{flex:1 1 auto;min-height:0;position:relative;overflow:hidden;margin-inline:-6px;padding-inline:6px;scrollbar-width:none}
++html.fit .bzone::-webkit-scrollbar{display:none}
++html.fit .bzone>.board{zoom:var(--bz,1);width:calc(100% * var(--bz,1));margin-inline:auto}
++html.fit #app[data-fo] .bzone{overflow-y:auto;overscroll-behavior:contain}
++html.fit #app[data-fo] .bzone::after{content:'';position:sticky;bottom:0;display:block;height:14px;margin-top:-14px;background:linear-gradient(transparent,var(--bg));pointer-events:none}
++html.fit .board .hd-dock,html.fit .board .tq-dock,html.fit .board .gsx-cf{zoom:calc(1 / var(--bz,1))}
++html.fit .cover{min-height:min(480px,calc(100dvh - 300px));padding:20px 18px}
++/* the header: one row for the title (and the room code online), one for the players, one for the status */
++html.fit #app[data-s=game] .top{margin:0 0 4px;min-height:40px;gap:6px}
++html.fit #app[data-s=game] .top .ib{width:40px;height:40px;font-size:17px}
++html.fit #app[data-s=game] .top h1{font-size:19px;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.15;min-width:0}
++html.fit #app[data-s=game] .top h1.long{font-size:16px}
++.tcode{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 9px;border-radius:99px;background:var(--surface-2);color:var(--mut);font-size:11.5px;font-weight:700;box-shadow:inset 0 0 0 1px var(--edge)}
++.tcode b{color:var(--ink);font-size:12.5px;letter-spacing:2px;direction:ltr}
++html.fit #app[data-s=game]>.roombar{display:none}
++html.fit .players{padding:10px 2px 4px;margin:-6px -2px 2px}
++html.fit .pt{height:44px}
++html.fit .players.four .pt{height:52px}
++html.fit .players.many{display:grid;grid-template-columns:repeat(var(--pn,8),minmax(0,1fr));gap:4px;overflow:visible}
++html.fit .players.many .pt{height:52px;padding:3px 2px 4px;gap:1px}
++html.fit .players.many .pt i{width:22px;height:22px}
++html.fit .players.many .pt i svg{width:13px;height:13px}
++html.fit .players.many .pt span{font-size:11px}
++html.fit .players.many .pt em{font-size:10.5px}
++html.fit .players.many .pt i b{top:2px;right:2px;min-width:14px;height:14px;line-height:14px;font-size:9px;padding:0 2px}
++html.fit .players.many .pt.on::after,html.fit .players.many .pt.won::after,html.fit .players.many .pt.done::after{padding:0 5px;font-size:10px}
++html.fit .tstrip{margin:0 0 4px}
++html.fit .status{height:58px;margin:0 0 6px;padding:3px 14px 5px;font-size:16px}
++html.fit .st-main{font-size:15.5px}
++html.fit .st-sub{font-size:12px}
++html.fit .status:has(.gone),html.fit .status:has(.abme){min-height:58px}
++/* the keyboard is up: only the title and the status stay above the board, the chat bar steps aside */
++html.fit.fitkb .players,html.fit.fitkb .tstrip,html.fit.fitkb .rx,html.fit.fitkb .st-sub{display:none}
++html.fit.fitkb body.rxon #app[data-s=game]{padding-bottom:6px}
++html.fit.fitkb .status{height:44px}
++/* a phone on its side: the header becomes a column beside the board */
++@media (orientation:landscape) and (max-height:520px){
++ html.fit #app[data-s=game]{max-width:none;display:grid;grid-template-columns:minmax(250px,34%) minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr);column-gap:14px;align-content:stretch}
++ html.fit #app[data-s=game]>*{grid-column:1;min-width:0}
++ html.fit #app[data-s=game]>.bzone{grid-column:2;grid-row:1 / 6;height:auto}
++ html.fit .players.many{grid-template-columns:repeat(4,minmax(0,1fr));row-gap:12px}
++ html.fit .status .st-sub{display:block}
++ html.fit .cover{min-height:calc(100dvh - 40px)}
++}
++/* a folded part of a game (fitFold): a quiet button under the board, its content in a sheet */
++.ffold{display:inline-flex;align-items:center;gap:6px;min-height:40px;margin:10px auto 2px;padding:0 16px;border-radius:99px;background:var(--surface);color:var(--ink);font-size:14.5px;font-weight:800;box-shadow:var(--e1)}
++.ffold i{font-style:normal;font-size:11px;color:var(--mut)}
++.sheet.fold .board{margin-top:4px}
++/* parts that show one at a time in the fixed screen (fitTabs): equal tabs in one row */
++.ftabs{display:flex;gap:5px;width:100%;margin:4px 0 8px}
++.ftab{flex:1 1 0;min-width:0;min-height:40px;padding:2px 4px;border-radius:12px;background:var(--surface);color:var(--ink);font-size:13px;font-weight:800;line-height:1.15;box-shadow:var(--e1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
++.ftab.on{background:var(--navy);color:#fff;box-shadow:0 2px 0 var(--line)}
++.ftab .ftq{font-style:normal;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--gold);color:#fff;font-size:11px}
+diff --git a/public/js/core.js b/public/js/core.js
+index 11fd716..4ace49b 100644
+--- a/public/js/core.js
++++ b/public/js/core.js
+@@ -485,12 +485,66 @@ function render(){
+     if(mb._k!==lk||!mb._s){const first=!mb._s;mb._k=lk;mb._s=1;const j=app.querySelector('.jump');
+       if(first||atBot||(last&&last.me)){mb.scrollTop=mb.scrollHeight;if(S.chatJump){S.chatJump=false;if(j)j.classList.remove('on');}}
+       else if(!S.chatJump){S.chatJump=true;if(j)j.classList.add('on');}}}}
+-  navSync();
++  navSync();fitSync();
+   if(fid&&document.activeElement!==app.querySelector(`[data-draft="${fid}"]`)){const el=app.querySelector(`[data-draft="${fid}"]`);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(cs,cs);}catch(e){}}}
+   const strip=app.querySelector('.players');if(strip&&strip.scrollWidth>strip.clientWidth+2){const on=strip.querySelector('.pt.on');const k=S.st.g+':'+(S.st.d&&S.st.d.turn);if(on&&S.stripKey!==k){S.stripKey=k;const c=strip.getBoundingClientRect(),e=on.getBoundingClientRect();strip.scrollBy({left:(e.left+e.width/2)-(c.left+c.width/2),behavior:'smooth'});}}
+   const G=GAMES[S.st.g];if(G&&G.after&&S.st.d&&!S.browse&&(S.mode==='online'||S.mode==='local'))try{G.after(dView(),mkCtx());}catch(e){console.error(e);}
+   noteHere();
+ }
++/* ================= one fixed screen in a game (prototype; «?fit=0» in the address turns it off) =================
++   The game screen is a column as tall as the phone: a compact header, then the board zone that takes the rest, then the
++   game's own dock and the chat bar at the bottom. The page never scrolls: the board is measured after each change
++   (ResizeObserver, one read and at most one write) and shrunk evenly with CSS zoom when it is taller than its zone, never
++   below FIT_MIN; past that the zone scrolls inside (#app[data-fo]) so nothing is ever cut off. The board keeps its width in
++   its own pixels, so a smaller board never wraps differently and the measure is stable. With the keyboard up the scale is
++   kept and the zone scrolls to the field being typed in. */
++// «?fit=scroll»: the other option shown to the owner, the board keeps its size and only its zone scrolls
++const FIT_MIN=/[?&]fit=scroll\b/.test(location.search)?1:.62;
++const FIT={on:!/[?&]fit=0\b/.test(location.search),z:1,b:null,zn:null,dk:null,ro:null,fullH:0,fullW:0};
++function fitSync(){
++  const de=document.documentElement,on=FIT.on&&app.dataset.s==='game';
++  if(de.classList.contains('fit')!==on)de.classList.toggle('fit',on);
++  const zn=on?app.querySelector('.bzone'):null,b=zn&&zn.querySelector('.board'),dk=b&&b.querySelector('.hd-dock,.tq-dock');
++  if(b===FIT.b&&zn===FIT.zn&&dk===FIT.dk)return;
++  if(!FIT.ro){if(typeof ResizeObserver!=='function'){FIT.on=false;de.classList.remove('fit');return;}FIT.ro=new ResizeObserver(fitMeasure);
++    // a browser older than the standard zoom (Chrome/WebView before 128) gives sizes inside a zoomed box unscaled: taps and the
++    // measure would be off, so there the board keeps its size and only its zone scrolls
++    try{const t=document.createElement('div');t.style.cssText='position:absolute;visibility:hidden;width:100px;height:4px;zoom:.5';document.body.appendChild(t);
++      if(Math.abs(t.getBoundingClientRect().width-50)>2)FIT.min=1;t.remove();}catch(e){FIT.min=1;}}
++  FIT.ro.disconnect();FIT.b=b;FIT.zn=zn;FIT.dk=dk;
++  if(!b){app.style.removeProperty('--bz');app.style.removeProperty('--dockh');delete app.dataset.fo;FIT.z=1;de.classList.remove('fitkb');return;}
++  FIT.ro.observe(zn);FIT.ro.observe(b);if(dk)FIT.ro.observe(dk);else app.style.setProperty('--dockh','0px');
++}
++function fitMeasure(){
++  const b=FIT.b,zn=FIT.zn,de=document.documentElement;if(!b||!b.isConnected)return;
++  if(FIT.dk&&FIT.dk.isConnected)app.style.setProperty('--dockh',Math.ceil(FIT.dk.getBoundingClientRect().height)+'px');
++  // the phone's full height for this width (turning the phone starts again); the keyboard only ever makes it shorter
++  const vh=window.innerHeight,vw=window.innerWidth;if(vw!==FIT.fullW||vh>FIT.fullH){FIT.fullW=vw;FIT.fullH=vh;}
++  // the keyboard is up (the page got much shorter while a field in the board has the focus): keep the scale, show the field
++  const ae=document.activeElement,kb=vh<FIT.fullH*.8&&!!ae&&b.contains(ae)&&/^(INPUT|TEXTAREA)$/.test(ae.tagName);
++  if(de.classList.contains('fitkb')!==kb)de.classList.toggle('fitkb',kb);
++  if(kb){app.dataset.fo='1';ae.scrollIntoView({block:'nearest'});return;}
++  // what sticks out under the board (a badge, a shadow) counts too, so the zone never scrolls by a few pixels
++  const z=FIT.z,avail=zn.clientHeight,r=b.getBoundingClientRect(),bot=r.bottom-zn.getBoundingClientRect().top+zn.scrollTop,extra=Math.max(0,zn.scrollHeight-Math.max(avail,bot)),natH=(r.height+extra)/z,sw=b.scrollWidth,cw=b.clientWidth;
++  let nz=Math.min(1,natH>avail?(avail-4)/natH:1,sw>cw+2?cw/sw:1);
++  const mn=Math.max(FIT_MIN,FIT.min||0),over=nz<mn;nz=Math.max(mn,Math.floor(nz*100)/100);
++  if(over)app.dataset.fo='1';else delete app.dataset.fo;
++  if(Math.abs(nz-z)>.004){FIT.z=nz;app.style.setProperty('--bz',nz);}
++}
++// secondary content of a game (a log, a score sheet, a clue list): in the fixed screen it is one small button under the board
++// that opens it in a sheet, so it never pushes the board down; without the fixed screen it shows in place as before
++const FIT_FOLD=!/[?&]fit=nofold\b/.test(location.search);
++function fitFold(key,label,html){if(!FIT.on||!FIT_FOLD)return html;S.fold=S.fold||{};S.fold[key]={label,html};
++  return `<button class="ffold" data-a="m-fold" data-v="${key}">${label}<i>▴</i></button>`;}
++// parts of a game that sit one under the other (the categories of a review): in the fixed screen one shows at a time,
++// with a row of tabs above it, instead of a tall stack; «?fit=notabs» keeps the stack (and lets the scale do the fitting)
++const FIT_TABS=!/[?&]fit=notabs\b/.test(location.search);
++function fitTabs(key,tabs){if(!FIT.on||!FIT_TABS||tabs.length<2)return tabs.map(t=>t[1]).join('');S.ftab=S.ftab||{};const k=Math.min(tabs.length-1,S.ftab[key]||0);
++  return `<div class="ftabs" role="tablist">${tabs.map((t,i)=>`<button class="ftab ${i===k?'on':''}" role="tab" aria-selected="${i===k}" data-a="ftab" data-k="${key}" data-v="${i}">${t[0]}</button>`).join('')}</div>${tabs[k][1]}`;}
++// the board's scale: code that moves things by screen distances divides by it (inside the board a pixel is smaller)
++const fitZ=()=>FIT.b&&FIT.b.isConnected?FIT.z:1;
++addEventListener('resize',()=>{if(FIT.b)fitMeasure();});
++addEventListener('focusout',()=>{if(FIT.b&&document.documentElement.classList.contains('fitkb'))setTimeout(fitMeasure,60);});
+ function topBar(title,back,extra,noMute){
+   return `<div class="top"><button class="ib" data-a="${back}" aria-label="رجوع">${BACK}</button><h1${String(title).replace(/<[^>]*>/g,'').length>15?' class="long"':''}>${title}</h1>${extra||''}${noMute?'':`<button class="ib" data-a="mute" aria-label="${S.mute?'شغّل الصوت':'اكتم الصوت'}" aria-pressed="${S.mute}">${S.mute?'🔇':'🔊'}</button>`}</div>`;
+ }
+@@ -687,7 +741,7 @@ function gMatch(k,q){if(!q)return true;let h=GQ_CACHE.get(k);if(h==null){const G
+ function scoreBar(sc,d){try{
+   const G=GAMES[S.st.g];let pts=null;try{pts=G.points?G.points(d):(Array.isArray(d.pts)?d.pts:null);}catch(e){}
+   const simul=isSimul(G,d),n=d.pl.length,tm=Array.isArray(d.tm)&&d.tm.length===n&&d.tm.every(t=>TEAMS[t])?d.tm:null;
+-  return `<div class="players ${n>4?'many':n>3?'four':''} ${tm?'teams':''}" style="--n:${Math.min(n,4)}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&!(typeof G.noTurn==='function'?G.noTurn(d):G.noTurn)&&d.turn===s;
++  return `<div class="players ${n>4?'many':n>3?'four':''} ${tm?'teams':''}" style="--n:${Math.min(n,4)};--pn:${n}">${d.pl.map((r,s)=>{const me=S.mode==='online'&&r===S.me;const label=me?'أنت':pname(r);const on=d.win==null&&!simul&&!(typeof G.noTurn==='function'?G.noTurn(d):G.noTurn)&&d.turn===s;
+     const pk=(simul&&d.win==null&&d.out[s]!=='1'?(hasPicked(d,s)?'<u class="pk ok">✓</u>':'<u class="pk">…</u>'):'')+(d.win==null&&abOn(r)?'<u class="pk ab" title="يلعب عنه البوت" aria-label="يلعب عنه البوت">🤖</u>':'');
+     const won=typeof d.win==='number'&&(d.win===s||(Array.isArray(d.wins)&&d.wins.includes(s)));
+     return `<div class="pt ${on?'on':''} ${me?'me':''} ${won?'won':''} ${d.out[s]==='1'?(G.outDone?'done':'out'):''}" data-r="${r}" style="--c:${COLS[r]}${tm?`;--tc:${TEAMS[tm[s]].c}`:''}"><i>${shapeW(r)}${sc[r]?`<b>${escH(sc[r])}</b>`:''}${tm?`<s class="tmb">${TEAMS[tm[s]].e}</s>`:''}</i><div class="tx"><span>${label}</span>${pts?`<em>${escH(pts[s])}</em>`:''}</div>${pk}</div>`;}).join('')}</div>${tm?teamStrip(d,pts):''}`;}catch(e){console.error(e);return '';}
+@@ -718,8 +772,8 @@ function renderGame(){
+   // the status card takes the colour of whoever plays now (or of the winner)
+   const acc=cover?null:d.win==null?(isSimul(G,d)?null:col(d,d.turn)):typeof d.win==='number'?col(d,d.win):null;
+   const fv=favGames().includes(g);
+-  OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button><button class="ib" data-a="m-settings" aria-label="إعدادات اللعبة">⚙️</button>`,true)}${roomBar()}${scoreBar(sc,d)}
+-  <div class="status ${cover?'nil':''} ${acc?'acc':''} ${d.win!=null?'over':''} ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}"${acc?` style="--c:${acc}"`:''}>${cover?'':statusBox(statusHTML(d,G,ctx))}<div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div></div><div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>
++  OUT=`${topBar(FIT.on&&S.mode==='online'&&S.code?`${G.name}<button class="tcode" data-a="${S.via==='near'?'noop':'copy'}" aria-label="نسخ رمز الغرفة">${S.via==='near'?'📶 غرفة قريبة':`غرفة <b>${escH(S.code)}</b>`}</button>`:G.name,S.mode==='online'?'browse':'grid',`<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button><button class="ib" data-a="m-settings" aria-label="إعدادات اللعبة">⚙️</button>`,true)}${roomBar()}${scoreBar(sc,d)}
++  <div class="status ${cover?'nil':''} ${acc?'acc':''} ${d.win!=null?'over':''} ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}"${acc?` style="--c:${acc}"`:''}>${cover?'':statusBox(statusHTML(d,G,ctx))}<div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div></div>${FIT.on?'<div class="bzone">':''}<div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>${FIT.on?'</div>':''}
+   ${S.mode==='online'?fabs():''}
+   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
+ }
+@@ -776,6 +830,7 @@ function modalHTML(){
+     return `<div class="sheet-bg" data-a="closemodal"><div class="sheet ff" role="dialog" aria-modal="true"><div class="sh-head"><h2>🏳️ تنسحب؟</h2><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div>
+       <p>${n>2?'بتطلع من هالجولة، واللعب يكمل للباقين. وتلعب معهم الجولة الجاية.':'بتطلع من هالجولة، والفوز يروح للي قدامك.'}</p>
+       <div class="acts"><button class="btn red" data-a="ff">إيه، انسحب</button><button class="btn soft" data-a="closemodal">لا، بكمل</button></div></div></div>`;}
++  else if(m==='fold'){const f=S.fold&&S.fold[S.foldK];title=f?f.label:'';inner=f?`<div class="board fold-in">${f.html}</div>`:'';}
+   else if(m==='react'){title='رد سريع';inner=`<div class="rxs">${RX.map(i=>`<button class="rxe" data-a="rx" data-i="${i}" aria-label="${EMJ[i].n}">${EMJ[i].svg}</button>`).join('')}</div>`;}
+   else if(m==='settings'){
+     const opt=(key,val,label)=>`<button class="seg ${c[key]===val?'on':''}" data-a="cfg" data-k="${key}" data-v="${val}" ${h?'':'disabled'}>${label}</button>`;
+@@ -795,7 +850,7 @@ function modalHTML(){
+     ${h?`<button class="link" data-a="resetsc" style="color:var(--red)">تصفير نقاط الجلسة</button>`:''}
+     ${S.st.g&&S.st.d&&!S.browse&&canForfeit()?`<button class="btn soft ffb" data-a="m-ff">🏳️ انسحب من اللعبة</button>`:''}`;
+   }
+-  return `<div class="sheet-bg" data-a="closemodal"><div class="sheet ${m==='help'?'help':m==='settings'?'set':m==='react'?'react':''}" role="dialog" aria-modal="true"><div class="sh-head"><h2>${title}</h2><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div>${inner}${m==='settings'?'<button class="big navy" data-a="closemodal">تم</button>':''}</div></div>`;
++  return `<div class="sheet-bg" data-a="closemodal"><div class="sheet ${m==='fold'?'fold':''} ${m==='help'?'help':m==='settings'?'set':m==='react'?'react':''}" role="dialog" aria-modal="true"><div class="sh-head"><h2>${title}</h2><button class="x" data-a="closemodal" aria-label="إغلاق">✕</button></div>${inner}${m==='settings'?'<button class="big navy" data-a="closemodal">تم</button>':''}</div></div>`;
+ }
+ function chatList(){const h=hideSet();return Object.values(S.chat).filter(m=>m.s!==1&&!(m.f&&h.has(m.f))).sort((a,b)=>a.t-b.t).slice(-60);}
+ function unread(){const h=hideSet();let n=0;for(const k in S.chat){const m=S.chat[k];if(m.t>S.chatSeen&&!m.me&&m.s!==1&&!(m.f&&h.has(m.f)))n++;}return n;}
+@@ -865,6 +920,8 @@ app.addEventListener('click',e=>{
+   const t=e.target.closest('[data-a],[data-ga]');if(!t||t.disabled)return;
+   if(t.classList.contains('sheet-bg')&&e.target!==t)return;
+   const i=t.dataset.i!=null?+t.dataset.i:null;
++  // a move picked in a folded part (a clue from the list) closes its sheet, so the board shows what it did
++  if(t.dataset.ga&&S.modal==='fold'&&t.closest('.sheet.fold')){S.modal=null;setTimeout(render,0);}
+   if(t.dataset.ga){if(netDown())return;if(S.needUpd){toast('حدّث التطبيق عشان تلعب في هالغرفة');return;}const G=GAMES[S.st.g],a=t.dataset.ga;if(!G||!S.st.d)return;
+     // a secret game online: the host plays on the whole state, the others ask the host (net.js)
+     // online a guest's move goes to the host first: the button answers at once so the tap never feels lost
+@@ -929,6 +986,8 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
+     case 'm-settings':S.modal='settings';render();break;
+     case 'lite':lsSet(LSK.lite,t.dataset.v==='1'?'1':'0');applyLite();render();break;
+     case 'm-help':S.modal='help';render();break;
++    case 'ftab':S.ftab=S.ftab||{};S.ftab[t.dataset.k]=+t.dataset.v||0;render();break;
++    case 'm-fold':S.foldK=t.dataset.v;S.modal='fold';render();break;
+     case 'm-react':S.modal='react';render();break;
+     case 'm-chat':S.modal='chat';S.chatSeen=Date.now();S.chatJump=false;render();setTimeout(()=>{const b=document.querySelector('.msgs');if(b)b.scrollTop=b.scrollHeight;},0);break;
+     case 'send':{if(sendChat({x:S.draft.chat})){S.draft.chat='';const el=app.querySelector('[data-draft="chat"]');if(el)el.value='';}render();const el=app.querySelector('[data-draft="chat"]');if(el)el.focus({preventScroll:true});break;}
+diff --git a/public/js/games/classic.js b/public/js/games/classic.js
+index 08bebdc..54639ba 100644
+--- a/public/js/games/classic.js
++++ b/public/js/games/classic.js
+@@ -13,7 +13,7 @@ const bdStill=()=>{try{return document.documentElement.classList.contains('lite'
+ /* look only: a piece already drawn on its new square slides there from the earlier squares `via` (elements, first = where it
+    started), moving by transform only. Its square is lifted above the others while it flies. Nothing waits for it */
+ function bdFly(el,via,ms){if(!el||!el.animate||!via.length||bdStill())return;const b=el.getBoundingClientRect();if(!b.width)return;
+-  const fr=via.map(v=>{const a=v.getBoundingClientRect();return `translate(${(a.left+a.width/2-b.left-b.width/2).toFixed(1)}px,${(a.top+a.height/2-b.top-b.height/2).toFixed(1)}px) scale(1.1)`;});
++  const k=typeof fitZ==='function'?fitZ():1,fr=via.map(v=>{const a=v.getBoundingClientRect();return `translate(${((a.left+a.width/2-b.left-b.width/2)/k).toFixed(1)}px,${((a.top+a.height/2-b.top-b.height/2)/k).toFixed(1)}px) scale(1.1)`;});
+   const host=el.parentElement;if(host&&host.classList){host.classList.add('bd-fly');setTimeout(()=>host.classList.remove('bd-fly'),ms+60);}
+   try{el.animate([...fr.map(transform=>({transform})),{transform:'none'}],{duration:ms,easing:'cubic-bezier(.3,.75,.35,1)'});}catch(e){}}
+ GAMES.ttt={name:'إكس أو',cat:'board',lbc:'#B9483F',
+diff --git a/public/js/games/mono.js b/public/js/games/mono.js
+index 884b65c..3489f09 100644
+--- a/public/js/games/mono.js
++++ b/public/js/games/mono.js
+@@ -221,7 +221,7 @@ GAMES.mono={name:'عقارات الحارة',cat:'board',lbc:'#C0392B',noTimer:f
+   after(d){const m=d.mv;if(!m||!once('mo'+d.gid+'_'+m.sid))return;if(liteFx())return;const bd=document.getElementById('mboard'),tok=document.getElementById('mt'+m.s);if(!bd||!tok)return;
+     S.holdRender=true;const br=bd.getBoundingClientRect();const cell=i=>bd.querySelector(`[data-c="${i}"]`).getBoundingClientRect();
+     tok.style.visibility='hidden';const f=document.createElement('div');f.className='mfly';f.style.setProperty('--c',col(d,m.s));bd.appendChild(f);
+-    const place=(i,ms)=>{const r=cell(i);f.style.transition=ms?`transform ${ms}ms cubic-bezier(.3,.7,.4,1)`:'none';f.style.transform=`translate(${r.left-br.left+r.width/2-9}px,${r.top-br.top+r.height/2-9}px)`;};
++    const place=(i,ms)=>{const r=cell(i);f.style.transition=ms?`transform ${ms}ms cubic-bezier(.3,.7,.4,1)`:'none';const k=typeof fitZ==='function'?fitZ():1;f.style.transform=`translate(${(r.left-br.left+r.width/2)/k-9}px,${(r.top-br.top+r.height/2)/k-9}px)`;};
+     const jumps=m.path.slice(1).filter((x,k)=>(x-m.path[k]+40)%40>1).length,walk=m.path.length-1-jumps;
+     const st=Math.max(45,Math.min(110,Math.round((760-jumps*300)/Math.max(1,walk))));place(m.path[0],0);void f.offsetWidth;let k=1;
+     const end=()=>{f.remove();tok.style.visibility='';sfx('pop');S.holdRender=false;if(S.renderPending)render();};
+diff --git a/public/js/games/n-sport2.js b/public/js/games/n-sport2.js
+index 782020a..a0a46d3 100644
+--- a/public/js/games/n-sport2.js
++++ b/public/js/games/n-sport2.js
+@@ -321,7 +321,7 @@ GAMES.r_bowl={name:'البولينج',cat:'sport',lbc:'#5B3FA0',
+         ${r2Seg('bs',BW_SP,sp,true)}
+         ${r2Meter(key,m,[[0,1000,'z0'],[300,700,'z1'],[410,590,'z2']],sv==null,sv,'الإطلاق: وقّف المؤشر في النص')}
+         ${r2Stop(key,'roll','🎳 ارمِ الكرة',sv==null)}`;}
+-    return s+sh+'</div>';},
++    return s+(typeof fitFold==='function'?fitFold('bw','🎳 ورقة النقاط',sh):sh)+'</div>';},
+   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
+     if(a==='ba'){if(Number.isInteger(i)&&i>=0&&i<=16){S.draft.ba=String(i);render();}return;}
+     if(a==='bs'){if(Number.isInteger(i)&&i>=0&&i<3){S.draft.bs=String(i);render();}return;}
+diff --git a/public/js/games/n-words2b.js b/public/js/games/n-words2b.js
+index 4b99eee..2fdba65 100644
+--- a/public/js/games/n-words2b.js
++++ b/public/js/games/n-words2b.js
+@@ -458,7 +458,7 @@ GAMES.w_cross=w2Race({name:'كلمات متقاطعة',lbc:'#2D5B8C',rounds:2,T:
+       return `<button class="w2xc ${i===st.sel?'sel':''} ${on.has(i)?'on':''} ${f&&f===c&&st.chk?'ok':''}" data-ga="c" data-i="${i}">${n&&X.words.some(w=>w.cs[0]===i)?`<small>${n}</small>`:''}${f?escH(f):''}</button>`;}).join('')}</div>`;
+     const list=dn=>X.words.filter(w=>w.dn===dn).map(w=>`<button class="w2xl ${cw===w?'on':''} ${w.cs.every(i=>st.f[i]===X.g[i])?'done':''}" data-ga="cl" data-i="${X.words.indexOf(w)}"><b>${w.n}</b>${escH(w.clue)}<small>(${w.cs.length})</small></button>`).join('');
+     return `<div class="w2xclue">${cw?`<b>${cw.n} ${cw.dn?'عمودي':'أفقي'}</b> ${escH(cw.clue)}`:''}</div>${grid}${w2Kb({ga:'kk',ok:'hint',okTxt:'اكشف حرف (+10 ث)',okCls:'soft',noEnter:true,dis:c=>'ءئؤى'.includes(c)})}
+-      <div class="w2xls"><div><h4>أفقي</h4>${list(0)}</div><div><h4>عمودي</h4>${list(1)}</div></div><p class="note">كشف الحرف يزيد وقتك 10 ثواني${st.pen?` (كشفت ${st.pen})`:''}</p><button class="btn soft w2quit" data-ga="quit">استسلم</button>`;},
++      ${(h=>typeof fitFold==='function'?fitFold('wx','📋 كل التلميحات',h):h)(`<div class="w2xls"><div><h4>أفقي</h4>${list(0)}</div><div><h4>عمودي</h4>${list(1)}</div></div>`)}<p class="note">كشف الحرف يزيد وقتك 10 ثواني${st.pen?` (كشفت ${st.pen})`:''}</p><button class="btn soft w2quit" data-ga="quit">استسلم</button>`;},
+   click(a,i,d,ctx,st){const X=w2Xw(w2XId(d,d.rd));
+     const step=k=>{const w=w2XWord(X,st.sel,st.dn);if(!w)return;const j=w.cs.indexOf(st.sel)+k;if(j>=0&&j<w.cs.length)st.sel=w.cs[j];};
+     const done=()=>{if(X.g.every((c,j)=>!c||st.f[j]===c)){try{sfx('win');}catch(e){}w2RSend(d,ctx.v,{ok:1,f:1,ms:Math.round(Date.now()-st.t0+st.pen*10000)});}};
+diff --git a/public/js/games/party.js b/public/js/games/party.js
+index fb9e3d2..2349bec 100644
+--- a/public/js/games/party.js
++++ b/public/js/games/party.js
+@@ -99,10 +99,10 @@ GAMES.cats={name:'إنسان حيوان جماد',cat:'quiz',lbc:'#8A5A2B',noTim
+     const sc=d.ph==='score',canVote=!sc&&(d.seq||S.mode==='local'||v>=0);
+     const myOb=(()=>{if(d.seq||S.mode==='local')return null;const p=v>=0?S.priv[d.pl[v]]:null;return p&&p.ob&&p.ob.k===cKey(d)?p.ob.l:[];})();
+     let s=`<div class="cletter small"><span>الحرف</span><b>${d.L}</b></div>`;
+-    s+=CATF.map((c,k)=>`<div class="ccat ${k===d.gd?'gold':''}"><h4>${CATI[k]} ${c}${k===d.gd?' <em class="cgold">⭐ ×2</em>':''}</h4><div class="cans">${d.pl.map((_,x)=>{const w=d.ans[x][k];const st=d.sa[x][k];const key=x+'_'+k;
++    s+=(typeof fitTabs==='function'?(t=>fitTabs('cats'+d.gid+'_'+d.r,t)):(t=>t.map(x=>x[1]).join('')))(CATF.map((c,k)=>[`${CATI[k]} ${c}${k===d.gd?' ⭐':''}${d.pl.some((_,x)=>d.sa[x][k]===1&&!(sc?d.rejF[x][k]:cRejected(d,x,k)))?' <em class="ftq">؟</em>':''}`,`<div class="ccat ${k===d.gd?'gold':''}"><h4>${CATI[k]} ${c}${k===d.gd?' <em class="cgold">⭐ ×2</em>':''}</h4><div class="cans">${d.pl.map((_,x)=>{const w=d.ans[x][k];const st=d.sa[x][k];const key=x+'_'+k;
+         const rej=sc?d.rejF[x][k]:cRejected(d,x,k);const mine=myOb&&myOb.includes(key);const pts=sc?d.rs[x][k]:null;
+         const icon=!w?'—':st===0?'✗':rej?'👎':st===2?'✓':'؟';const tap=canVote&&st===1&&x!==v;
+-        return `<${tap?'button':'span'} class="ca cs${st} ${w?'':'none'} ${rej?'rej':''} ${mine?'mine':''}" style="--c:${col(d,x)}" ${tap?`data-ga="ob" data-i="${x*5+k}"`:''}><small>${nm(d,x)}</small><b>${w?escH(w):'ما كتب'}</b><i>${icon}${pts!=null?` ${pts?'+'+pts:'0'}`:''}</i></${tap?'button':'span'}>`;}).join('')}</div></div>`).join('');
++        return `<${tap?'button':'span'} class="ca cs${st} ${w?'':'none'} ${rej?'rej':''} ${mine?'mine':''}" style="--c:${col(d,x)}" ${tap?`data-ga="ob" data-i="${x*5+k}"`:''}><small>${nm(d,x)}</small><b>${w?escH(w):'ما كتب'}</b><i>${icon}${pts!=null?` ${pts?'+'+pts:'0'}`:''}</i></${tap?'button':'span'}>`;}).join('')}</div></div>`]));
+     if(!sc){const done=d.seq||S.mode==='local'?false:(()=>{const p=v>=0?S.priv[d.pl[v]]:null;return !!(p&&p.ob&&p.ob.k===cKey(d)&&p.ob.ok);})();
+       s+=d.seq||S.mode==='local'?`<button class="btn red wide" data-ga="calc">احسب النقاط ✓</button>`:v>=0?`<button class="btn red wide" data-ga="ok" ${done?'disabled':''}>${done?'✓ ننتظر الباقين':'تمام، احسبوا ✓'}</button>`:'';}
+     else if(d.win==null){const tot=d.pl.map((_,x)=>[x,d.rs[x].reduce((a,b)=>a+b,0)]).sort((a,b)=>b[1]-a[1]);
