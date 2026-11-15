@@ -35,3 +35,4 @@
 - **سجلات الألعاب** (`games/<id>.md`): الأجزاء بين `auto:start` و`auto:end` تتحدث بـ `node tools/gen-game-logs.js` (و`--check` يقول إذا فيه شي قديم)، والباقي باليد. أي قرار أو اقتراح يخص لعبة ينكتب في سجلها، والاقتراح ينضاف كمان لـ[proposals.md](proposals.md). التفاصيل في [games/README.md](games/README.md).
 - **القرارات** تنضاف في أول [decisions.md](decisions.md) بتاريخ اليوم.
 - **الصور** في `docs/img/`: PNG مضغوطة، كل صورة 200 ك.ب أو أقل. وصور تصاميم كل لعبة في `docs/games/img/<id>/`.
+- [مراجعة كل الألعاب (نوفمبر 2026)](review-2026-11.md)
