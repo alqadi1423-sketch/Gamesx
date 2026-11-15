@@ -86,20 +86,20 @@ function u2Game(o){
     botDelay(d,s,lv){if(d.ph!=='go')return 900+u2R(700);return u2BotPlan(o,d,s,lv).ms;},
     botPick(d,s,lv){const P=u2BotPlan(o,d,s,lv),sol=u2Sol(o,d);if(!sol)return {s:'',ms:P.ms};return {s:P.ok?sol:o.spoil(d.pz,sol),ms:P.ms};},
     render(d,ctx){
-      if(d.win!=null)return `<div class="u2 u2end">${u2Board(d)}</div>`;
-      if(d.ph==='lv'){if(!ctx.my)return `<div class="u2"><div class="spd-card u2pick"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div><p class="note">${nm(d,d.turn)} يختار المستوى…</p></div></div>`;
+      if(d.win!=null)return `<div class="u2-root u2end">${u2Board(d)}</div>`;
+      if(d.ph==='lv'){if(!ctx.my)return `<div class="u2-root"><div class="spd-card u2pick"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div><p class="note">${nm(d,d.turn)} يختار المستوى…</p></div></div>`;
         const nr=U2NR.includes(S.u2nr)?S.u2nr:3;
-        return `<div class="u2"><div class="spd-card u2pick"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div>
+        return `<div class="u2-root"><div class="spd-card u2pick"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div>
           <p class="lbl">عدد الجولات</p><div class="u2seg">${U2NR.map(n=>`<button class="${n===nr?'on':''}" data-ga="nr" data-i="${n}">${n}</button>`).join('')}</div>
           <p class="lbl">المستوى</p><div class="u2lvs">${[1,2,3].map(l=>`<button class="btn ${['','blue','navy','red'][l]}" data-ga="lv" data-i="${l}"><b>${U2LV[l]}</b><small>${o.lvTxt[l]}</small></button>`).join('')}</div></div></div>`;}
-      if(d.ph==='gen'||!d.pz)return `<div class="u2"><div class="spd-card u2pick"><div class="rdyi">${o.icon}</div><div class="spdt">نجهّز اللغز…</div></div>${u2Board(d)}</div>`;
+      if(d.ph==='gen'||!d.pz)return `<div class="u2-root"><div class="spd-card u2pick"><div class="rdyi">${o.icon}</div><div class="spdt">نجهّز اللغز…</div></div>${u2Board(d)}</div>`;
       if(!ctx.my){const mine=ctx.v>=0&&hasPicked(d,ctx.v);let me='';if(mine){const p=seatPick(d,ctx,ctx.v,d.rd);if(p&&typeof p==='object')me=p.s?`<div class="spd-me">وقتك <b>${u2Fmt(p.ms)}</b></div>`:'<div class="spd-me no">ما حليتها هالمرة</div>';}
-        return `<div class="u2">${mine?`<div class="spd spd-sent"><div class="spd-ck">✓</div><div class="spdt">أرسلت</div>${me}<p class="note">ننتظر الباقين</p></div>`:''}${qzWho(d,ctx)}${u2Board(d)}</div>`;}
+        return `<div class="u2-root">${mine?`<div class="spd spd-sent"><div class="spd-ck">✓</div><div class="spdt">أرسلت</div>${me}<p class="note">ننتظر الباقين</p></div>`:''}${qzWho(d,ctx)}${u2Board(d)}</div>`;}
       const st=u2St(d,ctx.v);u2Again(d,ctx,st);
-      if(st.ph==='ready')return `<div class="u2"><div class="spd-card u2ready"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div><div class="u2tags"><span class="spd-rd">جولة ${d.rd+1} من ${d.nr}</span>${u2LvTag(o,d)}</div><p class="note">عندك ${u2Min(u2Cap(o,d))}. ${o.goal||''}</p><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>${u2Board(d)}</div>`;
-      if(st.ph==='sent')return `<div class="u2"><div class="spd spd-sent"><div class="spd-ck ${st.pick&&st.pick.s?'':'no'}">${st.pick&&st.pick.s?'✓':'✗'}</div><div class="spdt">${st.pick&&st.pick.s?'حليتها!':'ما انحلّت'}</div>${st.pick&&st.pick.s?`<div class="spd-me">وقتك <b>${u2Fmt(st.pick.ms)}</b></div>`:''}<p class="note">ننتظر الباقين</p>${qzWho(d,ctx)}</div></div>`;
+      if(st.ph==='ready')return `<div class="u2-root"><div class="spd-card u2ready"><div class="rdyi">${o.icon}</div><div class="spdt">${o.title}</div><div class="u2tags"><span class="spd-rd">جولة ${d.rd+1} من ${d.nr}</span>${u2LvTag(o,d)}</div><p class="note">عندك ${u2Min(u2Cap(o,d))}. ${o.goal||''}</p><button class="btn red wide" data-ga="start">جاهز، ابدأ</button></div>${u2Board(d)}</div>`;
+      if(st.ph==='sent')return `<div class="u2-root"><div class="spd spd-sent"><div class="spd-ck ${st.pick&&st.pick.s?'':'no'}">${st.pick&&st.pick.s?'✓':'✗'}</div><div class="spdt">${st.pick&&st.pick.s?'حليتها!':'ما انحلّت'}</div>${st.pick&&st.pick.s?`<div class="spd-me">وقتك <b>${u2Fmt(st.pick.ms)}</b></div>`:''}<p class="note">ننتظر الباقين</p>${qzWho(d,ctx)}</div></div>`;
       const left=st.t0+st.cap;
-      return `<div class="u2 u2go u2-${o.cls}"><div class="u2bar"><span class="u2clk">⏱ <b data-u2end="${left}">${u2Left(left)}</b></span>${u2LvTag(o,d)}</div>${o.view(d.pz,st.w,st,ctx)}
+      return `<div class="u2-root u2go u2-${o.cls}"><div class="u2bar"><span class="u2clk">⏱ <b data-u2end="${left}">${u2Left(left)}</b></span>${u2LvTag(o,d)}</div>${o.view(d.pz,st.w,st,ctx)}
         <div class="u2acts">${o.noUndo?'':`<button class="btn soft" data-ga="undo" ${st.h&&st.h.length?'':'disabled'}>↶ تراجع</button>`}<button class="btn soft" data-ga="clr">مسح</button><button class="btn soft u2quit ${st.q?'sure':''}" data-ga="quit">${st.q?'متأكد؟ استسلم':'استسلم'}</button></div></div>`;},
     click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
       if(d.ph==='lv'){if(a==='nr'&&U2NR.includes(i)){S.u2nr=i;render();return;}if(a==='lv'&&i>=1&&i<=3)act({...d,ph:'gen',lv:i,nr:U2NR.includes(S.u2nr)?S.u2nr:3});return;}

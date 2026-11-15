@@ -1,5 +1,5 @@
 /* «غميضة الحارة» (hide): the night map of the حارة. Uses css/kit-hara.css. Transform/opacity animations only, finite. */
-.hd{position:relative;width:calc(100% + 8px);margin:0 -4px;color:#F4F6FA;font-weight:700}
+.hd-root{position:relative;width:calc(100% + 8px);margin:0 -4px;color:#F4F6FA;font-weight:700}
 /* HUD: the 3 minutes, the searches left, the powers, the step's seconds */
 .hd-hud{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:16px 16px 0 0;background:#16223A;box-shadow:inset 0 -1px 0 rgba(255,255,255,.08)}
 .hd-clk{display:flex;align-items:center;gap:4px;padding:2px 10px 2px 4px;border-radius:14px;background:#0E1626;direction:ltr}
@@ -74,7 +74,7 @@ html.lite .hd-fx,html.lite .hd-beat,html.lite .hd-cnt{animation:none}
 @media (prefers-reduced-motion:reduce){.hd-fx,.hd-beat,.hd-cnt{animation:none}}
 /* the action dock stays reachable on short phones */
 .hd-dock{position:fixed;z-index:5;left:50%;bottom:0;transform:translateX(-50%);width:min(540px,100%);padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 8px)}
-.hd{padding-bottom:6px}
+.hd-root{padding-bottom:6px}
 .hd-dock .big{margin:0}
 .hd-acts{display:flex;gap:8px}
 .hd-acts .big{flex:1;min-height:56px;font-size:18px;padding:10px 8px}

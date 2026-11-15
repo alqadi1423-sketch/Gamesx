@@ -34,16 +34,16 @@ function b2Board(cls,W,H,sz,bg,pts,flip,my){
   for(const p of pts){const x=flip?W-p.x:p.x,y=flip?H-p.y:p.y,tap=p.i!=null;
     h+=`<${tap?'button':'div'} class="b2pt ${p.c||''}" data-q="${p.q}" style="left:${((x-sz/2)/W*100).toFixed(2)}%;top:${((y-sz/2)/H*100).toFixed(2)}%"${tap?` data-ga="${p.ga||'pt'}" data-i="${p.i}"`:''}>${p.p||''}</${tap?'button':'div'}>`;}
   return h+'</div>';}
-const b2Stone=(side,cls,x)=>`<i class="b2s s${side} ${cls||''}">${x||''}</i>`;
+const b2Stone=(side,cls,x)=>`<i class="b2-stone s${side} ${cls||''}">${x||''}</i>`;
 // a piece taken by the last move fades where it stood (invisible without motion)
-const b2Ghost=(d,q)=>{for(const [c,s] of d.lc||[])if(c===q)return `<i class="b2s s${s} b2gh" data-k="g${d.mvn||0}"></i>`;return '';};
+const b2Ghost=(d,q)=>{for(const [c,s] of d.lc||[])if(c===q)return `<i class="b2-stone s${s} b2gh" data-k="g${d.mvn||0}"></i>`;return '';};
 // the classes every point shares: last move (lm the landing point, lmf the way there), selected, legal target, movable
 function b2Cls(d,q,o){const L=d.lm||[];const c=[];if(L.length&&L[L.length-1]===q)c.push('lm','lmt');else if(L.includes(q))c.push('lmf');
   if(o){if(o.sel===q)c.push('sel');if(o.to&&o.to.has(q))c.push('to');if(o.cap&&o.cap.has(q))c.push('cap');if(o.mv&&o.mv.has(q))c.push('mv');}return c.join(' ');}
 // motion: the piece on the last point of d.lm slides along the earlier points (look only, nothing waits for it)
 function b2Fly(tag,d){const L=d.lm;const k=tag+d.gid+':'+(d.mvn||0);if(S.b2Fx===k)return;S.b2Fx=k;if(!L||L.length<2)return;
   const q=x=>app.querySelector(`.b2bd [data-q="${x}"]`);const el=q(L[L.length-1]),via=L.slice(0,-1).map(q);
-  if(el&&via.every(Boolean))bdFly(el.querySelector('.b2s'),via,Math.min(450,230+80*(L.length-2)));}
+  if(el&&via.every(Boolean))bdFly(el.querySelector('.b2-stone'),via,Math.min(450,230+80*(L.length-2)));}
 const b2Dots=(xy,r)=>`<g class="b2dt">${xy.map(([x,y])=>`<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>`;
 const b2Line=(a,b,c)=>`<path d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"${c?` class="${c}"`:''}/>`;
 
@@ -524,7 +524,7 @@ function b2azThink(d,lv){const n=d.n,s=d.sd,c=String(s);let ms=b2azMoves(d.b,n,s
 const b2azXY=n=>[...Array(n*n)].map((_,i)=>[5+(i%n)*10,5+(i/n|0)*10]);
 const b2azBG=n=>{let g='';for(let i=0;i<n*n;i++)if(((i/n|0)+i%n)%2)g+=`<rect x="${(i%n)*10}" y="${(i/n|0)*10}" width="10" height="10"/>`;return `<svg viewBox="0 0 ${n*10} ${n*10}" aria-hidden="true"><g class="b2dk">${g}</g></svg>`;};
 const B2AZN=['الأبيض','الأسود'];
-const b2azQ=s=>`<i class="b2s b2q s${s}"><svg viewBox="0 0 40 40" class="chp ${s?'bk':'wh'}">${CHP.q}</svg></i>`;
+const b2azQ=s=>`<i class="b2-stone b2q s${s}"><svg viewBox="0 0 40 40" class="chp ${s?'bk':'wh'}">${CHP.q}</svg></i>`;
 GAMES.b_amazons={...B2TEAM,name:'الملكات والسهام',cat:'board',lbc:'#2E7D6B',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3E9C86"/>${[0,1,2,3].map(r=>[0,1,2,3].map(c=>`<rect x="${10+c*20}" y="${10+r*20}" width="20" height="20" fill="${(r+c)%2?'#B98A55':'#EED6AC'}"/>`).join('')).join('')}<g transform="translate(12 12) scale(.9)" fill="#fff" stroke="#2D4763" stroke-width="1.6" stroke-linejoin="round">${CHP.q}</g><circle cx="70" cy="70" r="6" fill="#7A3B22"/><path d="M46 54L66 34M60 34h6v6" stroke="#E5534B" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>`,
   init:()=>({n:10,b:b2azInit(10),ph:'move',at:-1,ar:-1,sd:0,tr:[0,0],nmv:0,lm:null,mvn:0,last:''}),

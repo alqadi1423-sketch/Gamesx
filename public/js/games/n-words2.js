@@ -545,7 +545,7 @@ GAMES.w_chain={name:'سلسلة الكلمات',cat:'words',lbc:'#2E7D5B',noTime
   onSkip:(nd,d)=>({...nd,dl:Date.now()+w2ChT(nd)}),
   render(d,ctx){const C=W2CATS[d.cat],end=d.win!=null;const my=ctx.my&&!end;const draft=my?String(S.draft.wch||''):'';
     const tail=d.w.slice(-6);const off=d.w.length-tail.length;
-    let h=`<div class="w2 w2ch"><div class="w2ch-top"><span class="w2chip"><i>${C[1]}</i>${C[0]}</span><span class="w2need ${d.need?'':'free'}" id="wn${d.w.length}"><small>${d.need?'تبدأ بـ':'الحرف'}</small><b>${d.need||'أي حرف'}</b></span></div>`;
+    let h=`<div class="w2-root w2ch"><div class="w2ch-top"><span class="w2chip"><i>${C[1]}</i>${C[0]}</span><span class="w2need ${d.need?'':'free'}" id="wn${d.w.length}"><small>${d.need?'تبدأ بـ':'الحرف'}</small><b>${d.need||'أي حرف'}</b></span></div>`;
     h+=`<div class="w2chain">${tail.length?tail.map((w,k)=>{const j=off+k,s=d.by[j];const L=w2Last(w);return `<span class="w2lk ${j===d.w.length-1?'new':''}" style="--c:${col(d,s)}" data-k="c${j}">${escH(w.slice(0,-1))}<b>${escH(w.slice(-1))}</b></span>`;}).join('<i class="w2arw">←</i>'):'<span class="w2empty">أول واحد يبدأ بأي كلمة من التصنيف</span>'}</div>`;
     if(!end)h+=w2Clock(d.dl,w2ChT(d),col(d,d.turn));
     if(my){h+=w2TypedBox(draft,d.need?`كلمة تبدأ بـ«${d.need}»`:'اكتب أي كلمة من التصنيف')+w2Kb({ok:'ok',okTxt:'أرسل'})+`<button class="btn soft w2give" data-ga="give">ما عندي كلمة (−❤️)</button>`;}
@@ -604,10 +604,10 @@ GAMES.w_rope={name:'حبل الكلمة',cat:'words',lbc:'#3C79B8',teams:'none',
     const ropes=[...Array(W2RP_N)].map((_,k)=>{const x=24+k*10.4,on=k>=d.miss;return `<path class="w2rope ${on?'':'off'}" d="M${x} 72 L${50+(k-2.5)*5} 98" />`;}).join('');
     const fly=d.ph==='show'&&d.how==='fly';
     const bal=`<svg class="w2bal ${fly?'fly':''}" viewBox="0 0 100 140" aria-hidden="true"><g class="w2bal-b"><ellipse cx="50" cy="40" rx="34" ry="38" fill="#EC6158"/><path d="M50 2c-12 10-16 24-16 38s4 28 16 38c12-10 16-24 16-38S62 12 50 2z" fill="#F0B429"/><path d="M27 70q23 10 46 0" stroke="#B5432B" stroke-width="3" fill="none"/>${ropes}<rect x="36" y="96" width="28" height="18" rx="4" fill="#A0652B"/><path d="M36 102h28" stroke="#7A4A2A" stroke-width="2"/></g><path d="M8 136h84" stroke="#4CB97F" stroke-width="6" stroke-linecap="round"/><path d="M50 114v22" class="w2peg" stroke="#7A4A2A" stroke-width="3"/></svg>`;
-    if(d.ph==='pick'){if(!ctx.my)return `<div class="w2 w2rp">${bal}<p class="note">${nm(d,d.set)} يختار كلمة يخبيها…</p></div>`;
-      return `<div class="w2 w2rp"><p class="w2lead">اختر كلمة يخمنونها، وكل حرف غلط يفك حبل من المنطاد</p><div class="w2picks">${d.ch.map((i,k)=>i>=0&&L[i]?`<button class="btn soft w2pk" data-ga="pk" data-i="${k}"><b>${escH(L[i][2])}</b><small>${escH(L[i][0])}</small></button>`:'').join('')}</div></div>`;}
+    if(d.ph==='pick'){if(!ctx.my)return `<div class="w2-root w2rp">${bal}<p class="note">${nm(d,d.set)} يختار كلمة يخبيها…</p></div>`;
+      return `<div class="w2-root w2rp"><p class="w2lead">اختر كلمة يخمنونها، وكل حرف غلط يفك حبل من المنطاد</p><div class="w2picks">${d.ch.map((i,k)=>i>=0&&L[i]?`<button class="btn soft w2pk" data-ga="pk" data-i="${k}"><b>${escH(L[i][2])}</b><small>${escH(L[i][0])}</small></button>`:'').join('')}</div></div>`;}
     const showW=d.ph==='show'||d.win!=null;const W=showW&&d.w>=0?[...L[d.w][1]]:null;const pat=[...(d.pat||'')];
-    let h=`<div class="w2 w2rp"><div class="w2rp-top">${bal}<div class="w2rp-side"><span class="w2chip"><i>🏷️</i>${escH(d.cat)}</span><span class="w2tries">${W2RP_N-d.miss} حبال باقية</span>${iSet&&d.w>=0&&L[d.w]?`<span class="w2mine">كلمتك: <b>${escH(L[d.w][2])}</b></span>`:''}</div></div>`;
+    let h=`<div class="w2-root w2rp"><div class="w2rp-top">${bal}<div class="w2rp-side"><span class="w2chip"><i>🏷️</i>${escH(d.cat)}</span><span class="w2tries">${W2RP_N-d.miss} حبال باقية</span>${iSet&&d.w>=0&&L[d.w]?`<span class="w2mine">كلمتك: <b>${escH(L[d.w][2])}</b></span>`:''}</div></div>`;
     h+=`<div class="w2slots" style="--n:${pat.length}">${pat.map((c,k)=>{const ch=W?W[k]:c==='·'?'':c;const miss=W&&c==='·';return `<i class="${ch?(miss?'miss':'on'):''}" data-k="${ch?'o':''}">${ch}</i>`;}).join('')}</div>`;
     if(d.ph==='play'&&d.win==null){const can=ctx.my&&v!==d.set&&!(ctx.local&&d.turn===d.set);
       h+=`<div class="w2abc">${[...ALPHA].map((c,i)=>{const u=d.g.includes(c);return `<button class="w2k ${u?(pat.includes(c)?'hit':'miss'):''}" data-ga="k" data-i="${i}" ${can&&!u?'':'disabled'}>${c}</button>`;}).join('')}</div>`;
@@ -661,7 +661,7 @@ GAMES.w_crypt={name:'فك الشفرة',cat:'words',lbc:'#4B3A86',noTimer:false,
   render(d,ctx){const sel=S.w2sym&&S.w2sym.g===d.gid+d.rd?S.w2sym.n:-1;const my=ctx.my&&d.ph==='play'&&d.win==null;const show=d.ph==='show'||d.win!=null;
     const words=[];let cur=[];d.enc.forEach((n,i)=>{if(!n){words.push(cur);cur=[];}else cur.push([n,i]);});words.push(cur);
     const cnt=n=>d.enc.filter(x=>x===n).length;
-    let h=`<div class="w2 w2cr"><div class="w2crt">${words.map(w=>`<span class="w2crw">${w.map(([n,i])=>{const c=d.kn[n]!=='-'?d.kn[n]:show&&d.k&&d.k[n]&&d.k[n]!=='?'?d.k[n]:'';return `<button class="w2cc ${c?'on':''} ${n===sel?'sel':''} ${show&&d.kn[n]==='-'?'rev':''}" data-ga="sym" data-i="${n}" ${my&&!c?'':'disabled'} data-k="${c?'o':''}"><b>${c}</b><small>${n}</small></button>`;}).join('')}</span>`).join('')}</div>`;
+    let h=`<div class="w2-root w2cr"><div class="w2crt">${words.map(w=>`<span class="w2crw">${w.map(([n,i])=>{const c=d.kn[n]!=='-'?d.kn[n]:show&&d.k&&d.k[n]&&d.k[n]!=='?'?d.k[n]:'';return `<button class="w2cc ${c?'on':''} ${n===sel?'sel':''} ${show&&d.kn[n]==='-'?'rev':''}" data-ga="sym" data-i="${n}" ${my&&!c?'':'disabled'} data-k="${c?'o':''}"><b>${c}</b><small>${n}</small></button>`;}).join('')}</span>`).join('')}</div>`;
     if(my){h+=sel>0?`<p class="w2lead">رقم <b>${sel}</b> يطلع ${cnt(sel)} ${cnt(sel)>2?'مرات':cnt(sel)===2?'مرتين':'مرة'}: وش حرفه؟</p>`:'<p class="w2lead">اختر رقم وبعدين الحرف اللي تتوقعه</p>';
       const used=new Set([...d.kn].filter(c=>c!=='-'));h+=w2Kb({ga:'L',dis:c=>sel<0||used.has(c==='ى'?'ي':c)||c==='ى',cls:c=>used.has(c)?'used':''});}
     else if(d.ph==='play'&&d.win==null)h+=`<p class="note">${nm(d,d.turn)} يفك الشفرة…</p>`;

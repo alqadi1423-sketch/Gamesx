@@ -42,7 +42,7 @@ const s2Ready=(o,d,RN)=>`<div class="spd spd-ready"><div class="spd-card"><div c
 // the round's line; games scored by accuracy name their best player «the most exact» rather than «the fastest»
 const s2Res=(o,d)=>{const r=d.res||'';return o.best?r.replace('. الأسرع: ',`. ${o.best}: `):r;};
 // a speed game: o.view / o.start / o.click play one round on this phone; o.bot gives a bot's result for the same round
-function s2Base(o){const RN=o.rounds||5,box=h=>`<div class="s2 ${o.cls}">${h}</div>`;
+function s2Base(o){const RN=o.rounds||5,box=h=>`<div class="s2-root ${o.cls}">${h}</div>`;
   return {name:o.name,cat:'speed',lbc:o.lbc,icon:o.icon,
     botPick:(d,s,lv)=>o.bot(d,s,lv),
     init:n=>({rd:0,pts:Array(n).fill(0),res:''}),

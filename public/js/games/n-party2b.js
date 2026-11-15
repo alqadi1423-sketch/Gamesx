@@ -36,7 +36,7 @@ GAMES.p_2t1l={name:'حقيقتين وكذبة',cat:'party',lbc:'#C2185B',
     if(d.ph==='write')return s+'كل واحد يكتب حقيقتين وكذبة عن نفسه';
     if(d.ph==='vote')return s+`<small>${d.qi+1} من ${d.ord.length}</small><br>وين كذبة ${nameTag(d,d.q)}؟`;
     return s+`هذي كانت كذبة ${nameTag(d,d.q)}`;},
-  render(d,ctx){const v=ctx.v;let h='<div class="p2 p2-tt">';
+  render(d,ctx){const v=ctx.v;let h='<div class="p2-root p2-tt">';
     if(d.ph==='write'){if(!ctx.my||v==null||v<0)return h+'<p class="p2-lead small">ننتظر الكل يكتب…</p>'+p2Wait(d)+'</div>';
       const tl=S.draft['p2tl'+v];h+=`<p class="p2-lead">${nm(d,v)}: اكتب ثلاث أشياء عنك، وحدة منها كذبة، وحدد الكذبة</p>`;
       h+=[0,1,2].map(k=>`<div class="p2-ttin ${String(tl)===String(k)?'lie':''}"><input class="field" data-draft="p2t${v}_${k}" maxlength="45" value="${escH(S.draft['p2t'+v+'_'+k]||'')}" placeholder="${['مثلًا: زرت أبها بالصيف','مثلًا: أخاف من القطط','مثلًا: أعرف أطبخ مندي'][k]}" autocomplete="off"><button class="p2-lie" data-ga="tl" data-i="${k}">${String(tl)===String(k)?'🤥 الكذبة':'كذبة؟'}</button></div>`).join('');
@@ -90,7 +90,7 @@ GAMES.p_most={name:'مين الأكثر',cat:'party',lbc:'#B9770E',teams:'none',
   net:{local:[]},
   viewer:d=>d.win==null&&d.ph==='vote'?simulViewer(d):null,coverMsg:d=>d.res||'',
   status(d,ctx){const s=d.res?`<small>${d.res}</small><br>`:'';return s+`<small>السؤال ${d.r+1} من ${d.R}</small><br>`+(d.ph==='vote'?'صوّتوا بالسر':'النتيجة');},
-  render(d,ctx){const v=ctx.v;let h=`<div class="p2 p2-most"><div class="p2-qcard" data-k="mq${d.r}"><small>مين أكثر واحد ممكن…</small><b>${P2MOSTQ[d.qi]}؟</b></div>`;
+  render(d,ctx){const v=ctx.v;let h=`<div class="p2-root p2-most"><div class="p2-qcard" data-k="mq${d.r}"><small>مين أكثر واحد ممكن…</small><b>${P2MOSTQ[d.qi]}؟</b></div>`;
     if(d.ph==='vote'){if(!ctx.my||v==null||v<0)return h+'<p class="note">ننتظر الأصوات…</p>'+p2Wait(d)+'</div>';
       return h+`<p class="p2-lead small">${nm(d,v)}، مين تختار؟</p>`+p2Tiles(d,{v,ga:'v',can:s=>d.out[s]!=='1',sub:s=>s===v?'أنت':''})+'</div>';}
     const cnt=d.pl.map(()=>0);(d.vt||[]).forEach(x=>{if(x>=0)cnt[x]++;});
@@ -140,7 +140,7 @@ GAMES.p_story={name:'قصة متسلسلة',cat:'party',lbc:'#6E2C00',teams:'non
   onTimeout:d=>d.ph==='write'?p2StWrite(d,d.turn,''):d.ph==='show'?GAMES.p_story.next(d):d,
   status(d,ctx){const top=`<small>الجولة ${d.r+1} من ${d.R}</small><br>`;if(d.ph==='write')return top+(!ctx.local&&ctx.v===d.turn?'<b class="yt">دورك تكمّل القصة</b>':`${nameTag(d,d.turn)} يكتب الجملة الجاية`);
     if(d.ph==='vote')return top+'صوّتوا لأحلى جملة بهالجولة';return top+'أحلى جملة';},
-  render(d,ctx){const v=ctx.v;let h='<div class="p2 p2-story">';const cur=d.ph==='write'||d.ph==='vote';
+  render(d,ctx){const v=ctx.v;let h='<div class="p2-root p2-story">';const cur=d.ph==='write'||d.ph==='vote';
     const cnt={};(d.vt||[]).forEach(x=>{if(x>=0)cnt[x]=(cnt[x]||0)+1;});const mx=Math.max(0,...Object.values(cnt));
     h+=`<div class="p2-paper"><p class="op">${P2STOP[d.op]}</p>${d.ln.map(([s,t,tw,b],k)=>t?`<p data-k="sl${k}" class="${k>=d.rs&&cur?'new':''} ${d.ph==='show'&&k>=d.rs&&cnt[k]===mx&&mx>0?'best':''}" style="--c:${col(d,s)}">${escH(t)} <small>— ${nm(d,s)}${k>=d.rs?` • 🔑 ${P2STW[tw]||''}${b?' ✓':''}`:''}${cnt[k]?` • ${cnt[k]} 👍`:''}</small></p>`:'').join('')}${d.ph==='write'?'<p class="dots">…</p>':''}</div>`;
     if(d.ph==='write'){const me=(ctx.local||v===d.turn)&&!isBot(d,d.turn);
@@ -212,7 +212,7 @@ GAMES.p_fake={name:'الرسام المزيف',cat:'party',lbc:'#5B2C6F',teams:'
   status(d,ctx){const v=ctx.v;const kind=d.kc;if(d.ph==='see')return 'كل واحد يشوف بطاقته بالسر';
     if(d.ph==='draw')return `<small>الخط ${d.sk.length+1} من ${d.K} • النوع: ${kind||'…'}</small><br>`+(!ctx.local&&v===d.turn?'<b class="yt">دورك ترسم خط واحد</b>':`${nameTag(d,d.turn)} يرسم`);
     if(d.ph==='vote')return 'مين الرسام المزيف؟ صوّتوا بالسر';return `انكشف ${nameTag(d,d.fk)}! يحاول يعرف الكلمة`;},
-  render(d,ctx){const v=ctx.v,E=P2FK[d.w];let h='<div class="p2 p2-fake">';const kind=d.kc;
+  render(d,ctx){const v=ctx.v,E=P2FK[d.w];let h='<div class="p2-root p2-fake">';const kind=d.kc;
     const card=s=>s===d.fk?`<div class="p2-card fake"><span class="p2-em">🎭</span><b>أنت الرسام المزيف!</b><p>ما تعرف الكلمة. ارسم مثلهم ولا تنكشف</p></div>`:E?`<div class="p2-card"><small class="p2-cat">${E.cat}</small><span class="p2-em">${E.em}</span><b>${E.w}</b><p>واحد منكم ما يعرفها، اكشفوه</p></div>`:'';
     if(d.ph==='see'){if(!ctx.my||v==null||v<0)return h+'<p class="note">كل واحد يشوف بطاقته…</p>'+p2Wait(d)+'</div>';return h+card(v)+'<button class="big green" data-ga="ok">شفت ✓</button></div>';}
     const fin=d.win!=null;const myCard=v!=null&&v>=0&&!fin?(v===d.fk?`<span class="p2-mine fake">🎭 أنت المزيف • النوع: ${kind}</span>`:E?`<span class="p2-mine">كلمتك: ${E.em} <b>${E.w}</b></span>`:''):'';
@@ -287,7 +287,7 @@ GAMES.p_major={name:'توقع الأغلبية',cat:'party',lbc:'#1F618D',minP:3
   net:{local:['mo','mp','mc'],ui:['p2mj']},
   viewer:d=>d.win==null&&d.ph==='vote'?simulViewer(d):null,coverMsg:d=>d.res||'',
   status(d,ctx){const s=d.res?`<small>${d.res}</small><br>`:'';return s+`<small>السؤال ${d.r+1} من ${d.R}</small><br>`+(d.ph==='vote'?'جوابك، وتوقعك لجواب الأغلبية':'وش قالت الأغلبية؟');},
-  render(d,ctx){const v=ctx.v,Q=P2MJQ[d.qi];let h=`<div class="p2 p2-maj"><div class="p2-qcard" data-k="mj${d.r}"><b>${Q.q}</b></div>`;
+  render(d,ctx){const v=ctx.v,Q=P2MJQ[d.qi];let h=`<div class="p2-root p2-maj"><div class="p2-qcard" data-k="mj${d.r}"><b>${Q.q}</b></div>`;
     if(d.ph==='vote'){if(!ctx.my||v==null||v<0)return h+'<p class="note">ننتظر الكل…</p>'+p2Wait(d)+'</div>';
       const k=d.gid+':'+d.rd+':'+v;if(!S.p2mj||S.p2mj.k!==k)S.p2mj={k,o:-1,p:-1,c:2};const M=S.p2mj;
       h+=`<p class="p2-step"><b>١</b> جوابك أنت</p><div class="p2-opts">${Q.o.map((o,i)=>`<button class="${M.o===i?'on':''}" data-ga="mo" data-i="${i}">${o}</button>`).join('')}</div>`;
@@ -342,7 +342,7 @@ GAMES.p_qa={name:'سؤال وجواب',cat:'party',lbc:'#117864',teams:'none',mi
   status(d,ctx){const me=!ctx.local&&ctx.v===d.a;const top=`<small>السائل ${d.k+1} من ${d.K}${d.res?' • '+d.res:''}</small><br>`;
     if(d.ph==='ask')return top+(me?'<b class="yt">اختر سؤالك للمجموعة</b>':`${nameTag(d,d.a)} يختار سؤال`);
     if(d.ph==='write')return top+'الكل يجاوب بالسر';if(d.ph==='match')return top+(me?'<b class="yt">مين كتب كل جواب؟</b>':`${nameTag(d,d.a)} يوزّع الأجوبة`);return top+'النتيجة';},
-  render(d,ctx){const v=ctx.v;let h='<div class="p2 p2-qa">';const iA=(ctx.local||v===d.a)&&!isBot(d,d.a);
+  render(d,ctx){const v=ctx.v;let h='<div class="p2-root p2-qa">';const iA=(ctx.local||v===d.a)&&!isBot(d,d.a);
     h+=`<div class="p2-asker" style="--c:${col(d,d.a)}"><i>${shapeW(d.pl[d.a])}</i><b>${nm(d,d.a)}</b><small>يسأل</small></div>`;
     if(d.ph==='ask'){if(!iA)return h+'<p class="note">يختار سؤال…</p></div>';
       h+=`<div class="p2-stm">${d.qo.map(i=>`<button class="p2-st" data-ga="qq" data-i="${i}"><span>${P2QAQ[i].q}</span></button>`).join('')}</div>`;
@@ -413,7 +413,7 @@ GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
   net:{local:[]},
   viewer:d=>d.win==null&&d.ph==='bid'?simulViewer(d):null,coverMsg:d=>d.res||'',
   status(d,ctx){return (d.ph!=='bid'&&d.res?`<small>${d.res}</small><br>`:`<small>الصندوق ${d.i+1} من ${d.B} • 👁 ${nm(d,d.pk)} شاف داخله</small><br>`)+(d.ph==='bid'?'زايدوا بالسر':'انفتح الصندوق');},
-  render(d,ctx){const v=ctx.v;let h='<div class="p2 p2-auc">';
+  render(d,ctx){const v=ctx.v;let h='<div class="p2-root p2-auc">';
     h+=`<div class="p2-boxes">${d.bx.map((x,i)=>{const open=i<d.i||i===d.i&&d.ph==='show';return `<i class="${i===d.i?'now':''} ${open?'open '+p2AuBox(x):''}" data-k="bx${i}">${open?p2Sg(x):i===d.i?'🎁':''}</i>`;}).join('')}</div>`;
     const left=p2AuLeft(d);h+=`<div class="p2-left"><small>القيم الباقية بالصناديق</small><span>${left.map(x=>`<b class="${p2AuBox(x)}">${p2Sg(x)}</b>`).join('')}</span></div>`;
     if(d.ph==='bid'){const peek=v!=null&&v>=0&&v===d.pk&&d.bx[d.i]!=null&&d.bx[d.i]>-99;

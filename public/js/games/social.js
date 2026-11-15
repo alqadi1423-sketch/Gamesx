@@ -57,7 +57,7 @@ function baraWhy(d){if(!d.vw||!d.votes)return '';const rows=d.votes.map((t,s)=>t
   return rows.length?`<ul class="mfacc bwhy">${rows.join('')}</ul>`:'';}
 const baraCount=d=>{const c=d.pl.map(()=>0);(d.votes||[]).forEach(x=>{if(x>=0&&x<c.length)c[x]++;});return c;};
 function baraTiles(d,v,can,cnt){return `<div class="pvg n${d.pl.length}">${d.pl.map((r,s)=>{const out=d.out[s]==='1',ok=can(s),bo=!!cnt&&s===d.bo;
-    const cls=`pv ${out?'out':ok?'can':cnt?'':'no'} ${s===v?'me':''} ${bo?'hot':''}`;
+    const cls=`pv-tile ${out?'out':ok?'can':cnt?'':'no'} ${s===v?'me':''} ${bo?'hot':''}`;
     const inner=`<i>${shapeW(r)}${cnt&&cnt[s]?`<u class="pvc">${cnt[s]}</u>`:''}${bo?'<u class="pvm">🕵️</u>':''}</i><span>${nm(d,s)}</span>${s===v?'<em>أنت</em>':bo?'<em>برة السالفة</em>':''}`;
     return ok?`<button class="${cls}" style="--c:${COLS[r]}" data-ga="v" data-i="${s}">${inner}</button>`:`<div class="${cls}" style="--c:${COLS[r]}">${inner}</div>`;}).join('')}</div>`;}
 // the word shows only at the end: while they guess, the one out of the loop may be looking at this screen
@@ -179,7 +179,7 @@ function mfSky(d){const n=`<small>${aliveSeats(d).length} باقين</small>`;
 // every seat as a tile: the ones you can pick now are buttons (data-ga="p"), the ones that are out are greyed and show their role
 function mfRoster(d,v,can,cnt){const meM=v>=0&&d.roles[v]==='m';
   return `<div class="pvg n${d.pl.length}">${d.pl.map((r,s)=>{const out=d.out[s]==='1',ok=!out&&can(s),mate=meM&&s!==v&&d.roles[s]==='m';
-    const cls=`pv ${out?'out':ok?'can':'no'} ${s===v?'me':''} ${mate?'mate':''}`;const rn=out&&mfShow(d,s,v)?mfRN(d,s):'';
+    const cls=`pv-tile ${out?'out':ok?'can':'no'} ${s===v?'me':''} ${mate?'mate':''}`;const rn=out&&mfShow(d,s,v)?mfRN(d,s):'';
     const inner=`<i>${shapeW(r)}${out?'<u class="pvx">💀</u>':''}${mate?`<u class="pvm">${s===d.gf?'👑':'🎩'}</u>`:''}${cnt&&cnt[s]?`<u class="pvc">${cnt[s]}</u>`:''}</i><span>${nm(d,s)}</span>${rn?`<em>${rn}</em>`:s===v?'<em>أنت</em>':''}`;
     return ok?`<button class="${cls}" style="--c:${COLS[r]}" data-ga="p" data-i="${s}">${inner}</button>`:`<div class="${cls}" style="--c:${COLS[r]}">${inner}</div>`;}).join('')}</div>`;}
 // what just happened: who died in the night (with their role turning over), or how the town voted

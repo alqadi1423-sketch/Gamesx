@@ -92,7 +92,7 @@ GAMES.r_pen={name:'ركلات الترجيح',cat:'sport',lbc:'#2E8B57',outDone:
     const k=d.gid+':'+d.rd+':'+v;if(!S.r2pen||S.r2pen.k!==k)S.r2pen={k,z:null,p:1,v:null};const U=S.r2pen,pick=ctx.my&&d.win==null;
     // the replay: this phone's kick of last round (else the first one)
     const L=d.lr||[],fe=L.find(x=>x[0]===v)||L[0];
-    let s=`<div class="r2 r2pen">`;
+    let s=`<div class="r2-root r2pen">`;
     // the shoot-out sheet: one row per player, a dot per kick (shown under the picks, so they never need a scroll)
     const cols=Math.max(d.R,...d.kr.map(x=>x.length));
     const sheet=`<div class="pn-sheet">${d.pl.map((r,i)=>`<div class="pn-row ${d.out[i]==='1'?'off':''}"><b style="--c:${col(d,i)}">${nm(d,i)}</b><span>${Array(cols).fill(0).map((_,j)=>{const c=d.kr[i][j];return `<i class="${c==='o'?'ok':c==='x'?'no':''}"></i>`;}).join('')}</span><em>${d.g[i]}</em></div>`).join('')}</div>`;
@@ -219,7 +219,7 @@ GAMES.r_darts={name:'السهام',cat:'sport',lbc:'#8E3B2F',
   winExtra:d=>'الباقي: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.rem[s]}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,a=r2Dr('da',0,80,1),key=d.gid+':'+(d.sid||0),sv=r2Stopped(key);
     const [ax,ay]=dtAimPt(a),r=d.rem[t],plan=r<=170?dtPlan(r):null;
-    let s=`<div class="r2 r2dt"><div class="dt-top"><div class="dt-big" style="--c:${col(d,t)}"><small>باقي ${nm(d,t)}</small><b>${r}</b></div><div class="dt-turn">${[0,1,2].map(k=>{const x=d.dar[k];return `<span class="${x?'on':''}">${x?x[3]:'—'}</span>`;}).join('')}</div></div>`;
+    let s=`<div class="r2-root r2dt"><div class="dt-top"><div class="dt-big" style="--c:${col(d,t)}"><small>باقي ${nm(d,t)}</small><b>${r}</b></div><div class="dt-turn">${[0,1,2].map(k=>{const x=d.dar[k];return `<span class="${x?'on':''}">${x?x[3]:'—'}</span>`;}).join('')}</div></div>`;
     s+=`<svg class="dt-svg ${my?'can':''}" viewBox="-205 -205 410 410" data-k="dts"><circle r="204" fill="#3B2A22"/><circle r="200" fill="#1E2328"/>${r2DtBoard()}
       ${d.dar.map((x,k)=>`<g class="dt-dart ${k===d.dar.length-1?'last':''}" data-k="dd${d.sid}-${k}" style="transform:translate(${x[0]}px,${x[1]}px)"><circle r="5" fill="#fff" stroke="#111" stroke-width="2"/><path d="M0 0l22-22" stroke="#F0B429" stroke-width="4"/><path d="M18-26l12-4-4 12z" fill="${col(d,t)}"/></g>`).join('')}
       ${my?`<g class="dt-aim" style="transform:translate(${ax.toFixed(1)}px,${ay.toFixed(1)}px)"><circle r="13" fill="none" stroke="#FFD84D" stroke-width="3"/><path d="M-20 0h12M8 0h12M0-20v12M0 8v12" stroke="#FFD84D" stroke-width="3"/></g>`:''}</svg>`;
@@ -306,7 +306,7 @@ GAMES.r_bowl={name:'البولينج',cat:'sport',lbc:'#5B3FA0',
     // pins: the rack as it stood for the last ball, the ones it knocked shown lying down, the others standing
     const showPn=L&&L.pn&&!(my&&d.pn==='1111111111'&&L.pn!==d.pn)?L.pn:d.pn,fall=showPn===(L&&L.pn)?L.down:'0000000000';
     const pin=(k,dn)=>`<g class="bw-pin ${dn?'dn':''}" style="transform:translate(${X(BW_X[k])}px,${PY(k)}px)${dn?` rotate(${BW_X[k]<0?-70:70}deg)`:''}"><ellipse cx="0" cy="2.4" rx="4.6" ry="2.2" fill="rgba(0,0,0,.18)"/><circle r="4.4" fill="#fff" stroke="#C9D3DE" stroke-width=".8"/><circle r="2.5" fill="none" stroke="#E5534B" stroke-width="1.1"/></g>`;
-    let s=`<div class="r2 r2bw"><svg class="bw-svg" viewBox="0 0 140 250" data-k="bws" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="bwl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D9A86A"/><stop offset=".5" stop-color="#EBCB95"/><stop offset="1" stop-color="#D9A86A"/></linearGradient></defs>
+    let s=`<div class="r2-root r2bw"><svg class="bw-svg" viewBox="0 0 140 250" data-k="bws" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="bwl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D9A86A"/><stop offset=".5" stop-color="#EBCB95"/><stop offset="1" stop-color="#D9A86A"/></linearGradient></defs>
       <rect width="140" height="250" fill="#2B2440"/><rect x="21" y="8" width="98" height="242" fill="#3E3557"/><rect x="21" y="8" width="9" height="242" fill="#575073"/><rect x="110" y="8" width="9" height="242" fill="#575073"/>
       <rect x="30" y="8" width="80" height="242" fill="url(#bwl)"/>${[...Array(9)].map((_,k)=>`<path d="M${38+k*8} 8V250" stroke="#B9874E" stroke-width=".5" opacity=".6"/>`).join('')}
       <rect x="30" y="8" width="80" height="16" fill="#1E1A2E" opacity=".5"/>${[-3,-2,-1,0,1,2,3].map(x=>`<path d="M${X(x)} 168l-2.4 5h4.8z" fill="#5B3FA0" opacity=".75"/>`).join('')}<path d="M30 222h80" stroke="#8B2E2E" stroke-width="1.4"/>
@@ -397,7 +397,7 @@ GAMES.r_golf={name:'الغولف الصغير',cat:'sport',lbc:'#3E9D4A',
   status:(d,ctx)=>r2Stat(d,ctx,`<small>الحفرة ${d.hl+1} من ${d.H}${d.win==null?` • الضربة ${(d.sk[d.turn]||0)+1}`:''}</small><br>`),
   winExtra:d=>'الضربات: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.sc[s].reduce((p,q)=>p+q,0)}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,c=glHole(d.gid,d.hl),key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),a=glA(d,t),L=d.lx;
-    let s=`<div class="r2 r2gl"><svg class="gl-svg ${my?'can':''}" viewBox="-4 -4 108 138" data-k="gls${d.hl}" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="glg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63C77F"/><stop offset="1" stop-color="#47A862"/></linearGradient><pattern id="glw" width="8" height="5" patternUnits="userSpaceOnUse"><path d="M0 3q2-2 4 0t4 0" stroke="#fff" stroke-width=".5" fill="none" opacity=".5"/></pattern></defs>
+    let s=`<div class="r2-root r2gl"><svg class="gl-svg ${my?'can':''}" viewBox="-4 -4 108 138" data-k="gls${d.hl}" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="glg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63C77F"/><stop offset="1" stop-color="#47A862"/></linearGradient><pattern id="glw" width="8" height="5" patternUnits="userSpaceOnUse"><path d="M0 3q2-2 4 0t4 0" stroke="#fff" stroke-width=".5" fill="none" opacity=".5"/></pattern></defs>
       <rect x="-4" y="-4" width="108" height="138" rx="5" fill="#8A5A2B"/><rect x="-2" y="-2" width="104" height="134" rx="4" fill="#A8743F"/><rect width="100" height="130" fill="url(#glg)"/>${[0,1,2,3,4,5,6].map(k=>`<rect y="${k*20}" width="100" height="10" fill="#fff" opacity=".05"/>`).join('')}
       ${c.SA.map(r=>`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" rx="5" fill="#E9D7A6" stroke="#D2BA7F" stroke-width=".6"/>`).join('')}
       ${c.WA.map(r=>`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="#3C8DCB"/><rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="url(#glw)"/>`).join('')}
@@ -478,7 +478,7 @@ GAMES.r_hoops={name:'السلة',cat:'sport',lbc:'#D9662B',
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)}: ${HP_W.slice(0,d.lt[s]).join('')||'نظيف'}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),L=d.lx;
     const sel=d.ph==='match'?d.ch:r2Dr('hs',0,HP_S.length-1,-1),sp=hpOk(d,sel)?sel:-1;
-    let s=`<div class="r2 r2hp"><svg class="hp-svg" viewBox="0 0 200 172" data-k="hps" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="hpw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9B97E"/><stop offset="1" stop-color="#D49A5A"/></linearGradient></defs>
+    let s=`<div class="r2-root r2hp"><svg class="hp-svg" viewBox="0 0 200 172" data-k="hps" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="hpw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9B97E"/><stop offset="1" stop-color="#D49A5A"/></linearGradient></defs>
       <rect width="200" height="172" fill="url(#hpw)"/>${[...Array(10)].map((_,k)=>`<path d="M${k*20+10} 0V172" stroke="#C08447" stroke-width=".6" opacity=".55"/>`).join('')}
       <rect x="67" y="0" width="66" height="84" fill="#C9463D" opacity=".85"/><g fill="none" stroke="#fff" stroke-width="1.6"><rect x="1" y="1" width="198" height="170"/><rect x="67" y="0" width="66" height="84"/><circle cx="100" cy="84" r="20"/><path d="M20 0V22A80 80 0 0 0 180 22V0"/><path d="M84 170a16 16 0 0 1 32 0"/></g>
       <rect x="84" y="9" width="32" height="3" fill="#fff"/><circle cx="100" cy="20" r="5.5" fill="none" stroke="#E8742B" stroke-width="2"/>
@@ -528,7 +528,7 @@ GAMES.r_arch={name:'الرماية بالقوس',cat:'sport',lbc:'#B23A48',
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${arTot(d.ar[s])} (X ${arX(d.ar[s])})`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),ax=r2Dr('ax',-60,60,0),end=Math.floor(Math.min(d.rn,AR_N-1)/3);
     const RC=['#fff','#fff','#1E2328','#1E2328','#3B8FD9','#3B8FD9','#E5534B','#E5534B','#F2C230','#F2C230'],w=d.w;
-    let s=`<div class="r2 r2ar"><svg class="ar-svg" viewBox="-120 -112 240 238" data-k="ars"><defs><linearGradient id="arsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CC9EE"/><stop offset="1" stop-color="#D7EEF9"/></linearGradient></defs>
+    let s=`<div class="r2-root r2ar"><svg class="ar-svg" viewBox="-120 -112 240 238" data-k="ars"><defs><linearGradient id="arsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CC9EE"/><stop offset="1" stop-color="#D7EEF9"/></linearGradient></defs>
       <rect x="-120" y="-112" width="240" height="238" fill="url(#arsk)"/><path d="M-120 40q40-18 80-6t80-4 80 2V126h-240z" fill="#7DBE62"/><path d="M-120 70q60-12 120 0t120-4V126h-240z" fill="#69AD52"/>
       <path d="M-74 100l14-60M74 100l-14-60" stroke="#8A5A2B" stroke-width="5"/><rect x="-106" y="-106" width="212" height="212" rx="10" fill="#D8C49A"/>
       ${RC.map((c,k)=>`<circle r="${100-k*10}" fill="${c}" stroke="${k<2?'#C9D3DE':k<4?'#fff':'rgba(0,0,0,.25)'}" stroke-width=".7"/>`).join('')}<circle r="5" fill="none" stroke="rgba(0,0,0,.3)" stroke-width=".6"/><path d="M-3 0h6M0-3v6" stroke="#1E2328" stroke-width=".8"/>
@@ -636,7 +636,7 @@ GAMES.r_pool={name:'البلياردو الصغير',cat:'sport',lbc:'#1F7A4A',
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${d.pts[s]}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),a=plAim(d)/10,L=d.lx,low=plLow(d.bl);
     const ball=(k,x,y,cls)=>`<g class="pl-b ${cls||''}" data-b="${k}" style="transform:translate(${x}px,${y}px)"><circle r="${PL_R}" fill="${PL_C[k]}" stroke="rgba(0,0,0,.35)" stroke-width=".3"/>${k===9?`<path d="M-4-1.7h8v3.4h-8z" fill="#fff" opacity=".9"/>`:''}${k?`<circle r="2.1" fill="#fff"/><text y="1" text-anchor="middle">${k}</text>`:'<circle cx="-1" cy="-1" r=".8" fill="#fff" opacity=".8"/>'}</g>`;
-    let s=`<div class="r2 r2pl"><svg class="pl-svg ${my?'can':''}" viewBox="-12 -12 224 124" data-k="pls" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="plf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33A86B"/><stop offset="1" stop-color="#23854F"/></linearGradient></defs>
+    let s=`<div class="r2-root r2pl"><svg class="pl-svg ${my?'can':''}" viewBox="-12 -12 224 124" data-k="pls" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="plf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33A86B"/><stop offset="1" stop-color="#23854F"/></linearGradient></defs>
       <rect x="-12" y="-12" width="224" height="124" rx="7" fill="#7A4A22"/><rect x="-10" y="-10" width="220" height="120" rx="6" fill="#94602F"/><rect x="-4" y="-4" width="208" height="108" rx="2" fill="#1C6B43"/><rect width="200" height="100" fill="url(#plf)"/>
       ${[25,50,75,125,150,175].map(x=>`<circle cx="${x}" cy="-7" r=".9" fill="#F3E6C8"/><circle cx="${x}" cy="107" r=".9" fill="#F3E6C8"/>`).join('')}${[25,50,75].map(y=>`<circle cx="-7" cy="${y}" r=".9" fill="#F3E6C8"/><circle cx="207" cy="${y}" r=".9" fill="#F3E6C8"/>`).join('')}
       <path d="M50 0V100" stroke="#fff" stroke-width=".3" opacity=".25"/><circle cx="150" cy="50" r=".7" fill="#fff" opacity=".5"/>

@@ -1,13 +1,13 @@
 /* n-sport2: sport and skill games (penalties, darts, bowling, mini golf, hoops, archery, pool, horse race, falconry,
-   fishing, dhow race, show jumping, hopscotch). Uses the tokens at the top of style.css; scoped to .r2 boards. */
-.r2{width:min(100%,460px);margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px}
-.r2 svg{display:block;width:100%;height:auto;border-radius:var(--r-l);box-shadow:var(--e2)}
+   fishing, dhow race, show jumping, hopscotch). Uses the tokens at the top of style.css; scoped to .r2-root boards. */
+.r2-root{width:min(100%,460px);margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.r2-root svg{display:block;width:100%;height:auto;border-radius:var(--r-l);box-shadow:var(--e2)}
 .r2lbl{margin:2px 0;text-align:center;font-weight:800;color:var(--ink);font-size:15px}
 .r2lbl .sm{margin-inline-start:6px;padding:3px 10px;font-size:13px}
 .r2tip{display:block;text-align:center;color:var(--mut);font-size:12.5px;margin-top:-4px}
 .r2seg{margin:0}
 .r2seg .seg{padding:7px 8px;font-size:14px}
-.r2 .btn.wide{margin-top:4px}
+.r2-root .btn.wide{margin-top:4px}
 .r2row{direction:ltr;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
 .r2row .btn{min-height:44px;padding:0 14px;font-size:16px}
 
@@ -57,7 +57,7 @@
 .dt-turn{flex:1;display:flex;gap:5px}
 .dt-turn span{flex:1;display:grid;place-items:center;background:var(--surface);border-radius:var(--r-s);font-weight:800;color:var(--mut);box-shadow:var(--e1);font-size:15px}
 .dt-turn span.on{color:var(--ink);box-shadow:inset 0 0 0 2px var(--gold)}
-.r2 .dt-svg{background:#3B2A22;border-radius:50%;width:min(100%,340px);margin:0 auto}
+.r2-root .dt-svg{background:#3B2A22;border-radius:50%;width:min(100%,340px);margin:0 auto}
 .dt-svg:not(.can) .dt-s{pointer-events:none}
 .dt-svg.can .dt-s{cursor:pointer}
 .dt-svg.can .dt-s:active{opacity:.7}
@@ -68,7 +68,7 @@
 .dt-aim,.dt-dart{pointer-events:none}
 
 /* ---------- bowling ---------- */
-.r2 .bw-svg{width:min(58%,220px);margin:0 auto;border-radius:var(--r-m)}
+.r2-root .bw-svg{width:min(58%,220px);margin:0 auto;border-radius:var(--r-m)}
 .bw-pin.dn{opacity:.4}
 .bw-sheet{display:grid;gap:3px;background:var(--surface);border-radius:var(--r-m);padding:6px;box-shadow:var(--e1);direction:ltr}
 .bw-row{display:grid;grid-template-columns:52px repeat(9,minmax(0,1fr)) minmax(0,1.4fr);gap:2px;align-items:stretch;font-size:11px}
@@ -81,7 +81,7 @@
 .bw-row.on span{box-shadow:inset 0 0 0 1px var(--c)}
 
 /* ---------- mini golf ---------- */
-.r2 .gl-svg{width:min(100%,300px);margin:0 auto;touch-action:manipulation}
+.r2-root .gl-svg{width:min(100%,300px);margin:0 auto;touch-action:manipulation}
 .gl-svg.can{cursor:crosshair}
 .gl-card{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(var(--h),minmax(0,1fr)) minmax(0,1fr);gap:2px 3px;background:var(--surface);border-radius:var(--r-m);padding:6px 8px;box-shadow:var(--e1);font-size:13px;align-items:center}
 .gl-card b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -106,7 +106,7 @@
 .hp-row i.got{background:var(--bad);color:#fff}
 
 /* ---------- archery ---------- */
-.r2 .ar-svg{width:min(100%,320px);margin:0 auto}
+.r2-root .ar-svg{width:min(100%,320px);margin:0 auto}
 .ar-wt{font-size:12px;font-weight:800;fill:#1B4F72}
 .ar-tab{display:grid;grid-template-columns:minmax(0,1.8fr) repeat(4,minmax(0,1fr)) minmax(0,1.1fr) minmax(0,.8fr);gap:2px 3px;background:var(--surface);border-radius:var(--r-m);padding:6px 8px;box-shadow:var(--e1);font-size:13px;align-items:center}
 .ar-tab b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -116,7 +116,7 @@
 .ar-aim,.ar-hit{pointer-events:none}
 
 /* ---------- pool ---------- */
-.r2 .pl-svg{border-radius:var(--r-m);touch-action:manipulation}
+.r2-root .pl-svg{border-radius:var(--r-m);touch-action:manipulation}
 .pl-svg.can{cursor:crosshair}
 .pl-b text{font-size:2.9px;font-weight:800;fill:#1E2328}
 .pl-b.low>circle:first-child{stroke:#FFD84D;stroke-width:.7}
@@ -163,7 +163,7 @@
 .fs-info{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13px;font-weight:700;color:var(--mut);padding:0 4px}
 
 /* ---------- dhow race ---------- */
-.r2 .dh-svg{width:min(100%,210px);margin:0 auto}
+.r2-root .dh-svg{width:min(100%,210px);margin:0 auto}
 .dh-wt{font-size:3.4px;font-weight:800;fill:#1B4F72}
 .dh-b.me>g>path:first-child{stroke:#FFD84D;stroke-width:.8}
 .dh-rose{position:relative;width:216px;height:216px;margin:0 auto;border-radius:50%;background:radial-gradient(circle,var(--surface) 0 38%,var(--surface-2) 39% 100%);box-shadow:var(--e1)}
@@ -194,7 +194,7 @@
 .sj-tab small{color:var(--mut)}
 
 /* ---------- hopscotch ---------- */
-.r2 .hs-svg{width:min(52%,200px);margin:0 auto;border-radius:var(--r-m)}
+.r2-root .hs-svg{width:min(52%,200px);margin:0 auto;border-radius:var(--r-m)}
 .hs-sq text{font-size:15px;font-weight:800;fill:#fff;paint-order:stroke;stroke:#7D8994;stroke-width:2px}
 .hs-sq .hs-h{font-size:10px;stroke:none}
 .hs-sq.done rect,.hs-sq.done path{fill:rgba(255,255,255,.28)}

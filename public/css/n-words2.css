@@ -1,6 +1,6 @@
-/* ===== words2: Arabic word games (scoped to .w2 boards and the quiz words) ===== */
-.w2{width:100%;max-width:470px;display:flex;flex-direction:column;align-items:center;gap:10px;--w2t:#FFF8EA;--w2tb:#E9D6B0;--w2ti:#5A3B12}
-@media (prefers-color-scheme:dark){.w2{--w2t:#3A3226;--w2tb:#1E1912;--w2ti:#F6E7C8}}
+/* ===== words2: Arabic word games (scoped to .w2-root boards and the quiz words) ===== */
+.w2-root{width:100%;max-width:470px;display:flex;flex-direction:column;align-items:center;gap:10px;--w2t:#FFF8EA;--w2tb:#E9D6B0;--w2ti:#5A3B12}
+@media (prefers-color-scheme:dark){.w2-root{--w2t:#3A3226;--w2tb:#1E1912;--w2ti:#F6E7C8}}
 .w2lead{margin:0;text-align:center;font-weight:800;color:var(--ink);font-size:16px}
 .w2lead b{color:var(--red)}
 .w2chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:var(--surface);box-shadow:var(--e1);font-weight:800;font-size:15px}
@@ -79,7 +79,7 @@
 .w2tried i{font-style:normal;padding:0 7px;border-radius:7px;background:var(--surface-2);text-decoration:line-through;font-weight:800}
 .w2tried small{width:100%;text-align:center}
 @keyframes w2pop{from{transform:scale(.7);opacity:.3}to{transform:none;opacity:1}}
-html.lite .w2 *{animation:none!important;transition:none!important}
+html.lite .w2-root *{animation:none!important;transition:none!important}
 /* the races: ready card, sent card, the round's results */
 .w2ready{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;padding:16px;border-radius:var(--r-xl);background:var(--surface);box-shadow:var(--e2);text-align:center}
 .w2ready>b{font-size:18px;line-height:1.5}

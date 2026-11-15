@@ -173,7 +173,7 @@ function c2TeamGame(o){return {teams:'native',teamsOk:z=>z.length===2&&Math.abs(
   ...o.G};}
 // shared render frame: score bar, felt, last trick, the phase panel, the hand
 function c2Frame(d,ctx,o){const v=ctx.local?d.turn:ctx.v,{mine,me,watch}=c2Me(d,v),ah=d.ah;
-  let h=`<div class="blt c2 ${o.cls||''}">${o.head(d,me)}`;
+  let h=`<div class="blt c2-root ${o.cls||''}">${o.head(d,me)}`;
   h+=c2Table(d,me,{on:d.ph==='sum'?-1:ah,info:k=>o.info(d,k),mark:o.mark?k=>o.mark(d,k):null,center:o.center?o.center(d,me):null});
   // the strip keeps its place (hidden) while the old trick still lies on the felt, so the hand under it never jumps
   if(d.ph==='play')h+=d.lt&&d.tk?c2Last(d,o.lastX?o.lastX(d):''):'<div class="blast c2off" aria-hidden="true"></div>';
@@ -654,7 +654,7 @@ GAMES.c_estim=c2IndGame({name:'استيميشن',lbc:'#1D5C8C',
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
     if(d.ph==='len')return s+`${who}: اختر طول اللعبة`;if(d.ph==='call')return s+`${who}: الطلب${d.best?` • أعلى طلب ${d.best.v} ${c2esSuN(d.best.s)}`:''}`;
     if(d.ph==='est')return s+`${who}: كم لمّة بتاخذ بالضبط؟${d.ei===d.eo.length-1?' <small>(أنت المخاطر)</small>':''}`;if(d.ph==='play')return s+who;return s+`انتهت الجولة ${d.r}`;},
-  render(d,ctx){if(d.ph==='len'){const my=ctx.my;return `<div class="blt c2"><div class="panel bsum"><h3>استيميشن</h3><p>كل واحد لحاله، والمطلوب تاخذ بالضبط عدد اللمّات اللي قلته</p>
+  render(d,ctx){if(d.ph==='len'){const my=ctx.my;return `<div class="blt c2-root"><div class="panel bsum"><h3>استيميشن</h3><p>كل واحد لحاله، والمطلوب تاخذ بالضبط عدد اللمّات اللي قلته</p>
       ${my?'<button class="big navy" data-ga="len" data-i="0">لعبة قصيرة: 8 جولات</button><button class="big green" data-ga="len" data-i="1">لعبة كاملة: 18 جولة</button>':`<p class="note">${nameTag(d,d.turn)} يختار طول اللعبة</p>`}</div></div>`;}
     return c2Frame(d,ctx,{
     head:d=>c2HeadMid(`${d.trs?(d.trs==='n'?'صن':c2Su(d.trs)):''} <small>جولة ${d.r} من ${d.nr+d.ns}${d.r>d.nr?' (سريعة)':''} • ${d.T} لمّات${(d.mul||1)>1?' • مضاعفة':''}</small>`),

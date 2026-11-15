@@ -34,7 +34,7 @@ GAMES.word={name:'خمّن الكلمة',cat:'mind',lbc:'#3E7C59',
   // or gold when someone solved the whole word
   render(d,ctx){const end=d.win!=null,W=[...d.w],sol=d.sol!=null&&d.sol>=0;
     const hid=W.filter(ch=>!d.g.includes(ch)).length;
-    let s=`<div class="gm gm-word"><p class="wcat"><span>التصنيف</span><b>${d.cat}</b><em class="wlen">${W.length===2?'حرفين':W.length<=10?W.length+' حروف':W.length+' حرف'}</em></p><div class="wordbox" style="--n:${W.length}">${W.map(ch=>{const o=d.g.includes(ch),sh=o||end;return `<div class="wl ${o?'on':sh?(sol?'sol':'miss'):''}" data-k="${sh?'o':''}">${sh?ch:''}</div>`;}).join('')}</div>
+    let s=`<div class="gm-root gm-word"><p class="wcat"><span>التصنيف</span><b>${d.cat}</b><em class="wlen">${W.length===2?'حرفين':W.length<=10?W.length+' حروف':W.length+' حرف'}</em></p><div class="wordbox" style="--n:${W.length}">${W.map(ch=>{const o=d.g.includes(ch),sh=o||end;return `<div class="wl ${o?'on':sh?(sol?'sol':'miss'):''}" data-k="${sh?'o':''}">${sh?ch:''}</div>`;}).join('')}</div>
     <div class="kb">${[...ALPHA].map((ch,i)=>{const u=d.g.includes(ch);return `<button class="key ${u?(d.w.includes(ch)?'hit':'miss'):''}" data-ga="k" data-i="${i}" ${ctx.my&&!u?'':'disabled'}>${ch}</button>`;}).join('')}</div>`;
     // solving: type the whole word. Right gives a point for every hidden letter plus 3 and ends the round, wrong costs 2 and the turn
     if(ctx.my&&!end&&hid>1)s+=`<div class="wsolve"><input class="field" data-draft="wsol" data-enter="sol" maxlength="16" value="${escH((S.draft||{}).wsol||'')}" placeholder="تعرف الكلمة؟ اكتبها" autocomplete="off" enterkeyhint="done"><button class="btn red" data-ga="sol">حلّها (+${hid+3})</button></div>`;
@@ -83,7 +83,7 @@ GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
   // the last guess pops in as a big arrow (keyed by the window, so it plays once); a bomb that went off shakes the board in
   render(d,ctx){const end=d.win!=null,L=d.lo,H=d.hi,T=numTop(d),fresh=!d.last&&!d.nb;
     const lg=/(\d+)، (?:الرقم|القنبلة) (أكبر|أصغر)/.exec(d.last||''),boom=/^💥/.test(d.last||'');
-    let s=`<div class="gm gm-num ${d.vr?'nbomb':''}">`;
+    let s=`<div class="gm-root gm-num ${d.vr?'nbomb':''}">`;
     if(fresh)s+=`<div class="segs numv">${[['0','🎯 كلاسيكية'],['1','💣 القنبلة']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`;
     s+=`<div class="nrng"><b class="ltr">${L}</b><div class="nbar"><i style="inset-inline-start:${(L-1)/T*100}%;width:${(H-L+1)/T*100}%"></i></div><b class="ltr">${H}</b></div>`;
     s+=lg?`<p class="nhint ${lg[2]==='أكبر'?'up':'dn'}" data-k="h${L}-${H}"><b class="ltr">${lg[1]}</b><span>${lg[2]==='أكبر'?'▲ أكبر':'▼ أصغر'}</span></p>`:boom?`<p class="nhint nboom" data-k="b${d.nb}">💥 <span>انفجرت!</span></p>`:'';
@@ -121,7 +121,7 @@ GAMES.nim={name:'أعواد الكبريت',cat:'mind',lbc:'#9C4A2F',
     if(h.p!==d.p.join()){h.lp=h.p.split(',').map(Number);h.p=d.p.join();h.mx=h.mx.map((m,i)=>Math.max(m,d.p[i]||0));}
     const fresh=!d.last,lim=d.vr===2?3:99;
     const segs=fresh?`<div class="segs nimv">${NIMVN.map((t,v)=>`<button class="seg ${v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:'';
-    return `<div class="gm gm-nim ${d.vr===1?'mis':''}">${segs}<div class="piles">${d.p.map((n,pi)=>{const tk=Math.max(0,(h.lp[pi]||0)-n),gone=Math.max(0,(h.mx[pi]||0)-n-tk);
+    return `<div class="gm-root gm-nim ${d.vr===1?'mis':''}">${segs}<div class="piles">${d.p.map((n,pi)=>{const tk=Math.max(0,(h.lp[pi]||0)-n),gone=Math.max(0,(h.mx[pi]||0)-n-tk);
       return `<div class="pilecard ${n?'':'empty'} ${tk?'lm':''}"><span class="pn">${pi+1}</span><div class="sticks">${Array(n).fill(0).map((_,j)=>`<button class="match ${n-j>lim?'far':''}" data-ga="m" data-i="${pi*100+j}" ${ctx.my&&n-j<=lim?'':'disabled'} aria-label="خذ ${n-j}"></button>`).join('')}${'<i class="mg tk"></i>'.repeat(tk)}${'<i class="mg"></i>'.repeat(gone)}${n||tk||gone?'':'<span class="note">فاضية</span>'}</div><b class="pc2">${n}</b></div>`;}).join('')}</div></div>`;},
   click(a,i,d,ctx){
     if(!ctx.my||!Number.isInteger(i))return;
@@ -152,7 +152,7 @@ GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
   // rows carry data-k so a new try is a new node (it pops in) and an empty hole turning into a peg pops too
   render(d,ctx){S.mm=S.mm||[];const end=d.win!=null,hole='<i class="hole"></i>';
     const fb=(b,w)=>`<span class="fb">${Array(4).fill(0).map((_,k)=>`<i class="${k<b?'b':k<b+w?'w':''}"></i>`).join('')}</span>`;
-    let s=`<div class="gm gm-mm"><div class="mmb">`;
+    let s=`<div class="gm-root gm-mm"><div class="mmb">`;
     s+=`<div class="mmr code ${end?'open':''}"><span class="fbl">الشفرة</span><span class="pegs">${end?pegs(d.code):'<i class="hole q">؟</i>'.repeat(4)}</span><span class="lock">${end?'🔓':'🔒'}</span></div><div class="mmh" id="mmh">`;
     s+=d.h.map((x,i)=>{const [b,w]=mmFb(d,x);return `<div class="mmr ${b===4?'win':''}" data-k="h${i}"><b class="n">${i+1}</b><i class="who" style="--c:${col(d,x.s)}"></i><span class="pegs">${pegs(x.g)}</span>${fb(b,w)}</div>`;}).join('');
     if(ctx.my)s+=`<div class="mmr cur" data-k="cur" style="--c:${col(d,d.turn)}"><b class="n">${d.h.length+1}</b><i class="who"></i><span class="pegs">${[0,1,2,3].map(k=>S.mm[k]!=null?`<span class="peg" style="--pc:${MMC[S.mm[k]]}"></span>`:hole).join('')}</span>${fb(0,0)}</div>`;
@@ -183,7 +183,7 @@ GAMES.c31={name:'لا تقول 31',cat:'mind',lbc:'#C0392B',
   status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.vr?'<br><small>ممنوع تزيد نفس الرقم اللي زاده اللي قبلك</small>':''),
   // a counter in the colour of the player on turn; each step shows the number it would say, the losing one in red
   render(d,ctx){const ok=c31Steps(d),fresh=!d.last;
-    return `<div class="gm gm-c31" style="--c:${col(d,d.turn)}">${fresh?`<div class="segs c31v">${[['0','🔢 كلاسيكية'],['1','🚫 لا تكرر']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:''}<div class="cdial"><b class="cnum ltr" data-k="${d.n}">${d.n}</b><div class="ctrack"><i style="width:${d.n/d.tgt*100}%"></i><u style="inset-inline-start:${(d.tgt-3)/d.tgt*100}%"></u></div><p class="lbl">اللي يقول ${d.tgt} يخسر</p></div>
+    return `<div class="gm-root gm-c31" style="--c:${col(d,d.turn)}">${fresh?`<div class="segs c31v">${[['0','🔢 كلاسيكية'],['1','🚫 لا تكرر']].map(([v,t])=>`<button class="seg ${+v===(d.vr||0)?'on':''}" data-ga="vr" data-i="${v}" ${ctx.my?'':'disabled'}>${t}</button>`).join('')}</div>`:''}<div class="cdial"><b class="cnum ltr" data-k="${d.n}">${d.n}</b><div class="ctrack"><i style="width:${d.n/d.tgt*100}%"></i><u style="inset-inline-start:${(d.tgt-3)/d.tgt*100}%"></u></div><p class="lbl">اللي يقول ${d.tgt} يخسر</p></div>
     <div class="csteps">${[1,2,3].map(k=>{const ban=d.n+k<=d.tgt&&!ok.includes(k);return `<button class="cstep ${d.n+k===d.tgt?'lose':''} ${ban?'ban':''}" data-ga="m" data-i="${k}" ${ctx.my&&ok.includes(k)?'':'disabled'}><b class="ltr">+${k}</b><small class="ltr">${ban?'🚫':d.n+k<=d.tgt?d.n+k:'—'}</small></button>`;}).join('')}</div></div>`;},
   click(a,k,d,ctx){
     if(!ctx.my)return;
