@@ -60,7 +60,7 @@ GAMES.p_2t1l={name:'حقيقتين وكذبة',cat:'party',lbc:'#C2185B',
     if(a==='v'&&d.ph==='vote'&&ctx.my&&v!==d.q&&[0,1,2].includes(i)){simulPick(d,v,i);return;}
     if(a==='ok'&&d.ph==='vote'&&ctx.my&&v===d.q){simulPick(d,v,9);return;}
     if(a==='next'&&d.ph==='show'&&(ctx.local||v===d.turn)){act(GAMES.p_2t1l.next(d));}},
-  next(d){const k=d.qi+1;if(k>=d.ord.length)return {...d,ph:'end',win:mostPts(d.pts)};return p2TtVote(d,k);},
+  next(d){const k=d.qi+1;if(k>=d.ord.length)return {...d,ph:'end',win:mostPts(d.pts,d)};return p2TtVote(d,k);},
   resolve(d,picks){if(d.ph==='write'){const sm=d.pl.map(()=>null),lie=d.pl.map(()=>-1);picks.forEach((p,s)=>{if(p2TtOk(p)){sm[s]=p.a.map(x=>p2T(x,45));lie[s]=p.l;}});
       const ord=[];for(let k=0;k<d.pl.length;k++){const s=(d.st+k)%d.pl.length;if(sm[s])ord.push(s);}
       if(!ord.length)return {...d,sm,lie,ph:'end',win:'d'};return p2TtVote({...d,sm,lie,ord,res:'الكل كتب! نبدأ'},0);}
@@ -72,7 +72,7 @@ GAMES.p_2t1l={name:'حقيقتين وكذبة',cat:'party',lbc:'#C2185B',
     if(lv===1||lv===2&&Math.random()<.4)return rnd(3);const sc=L.map(x=>p2TtSusp(x)+Math.random()*(lv===3?.5:1.2));return sc.indexOf(Math.max(...sc));},
   bot(d,s){if(d.ph==='show'&&d.turn===s)return GAMES.p_2t1l.next(d);return d;},
   botDelay:(d,s,lv)=>d.ph==='show'?4500:BOTMS[lv]+rnd(2500)};
-HELP.p_2t1l='كل واحد يكتب ثلاث أشياء عن نفسه: اثنين صدق وواحد كذب، ويحدد الكذبة (محد يشوفها). بعدها تطلع جمل كل لاعب بالدور، والباقين يصوّتون بالسر: أي وحدة الكذبة؟ اللي يعرف الكذبة ياخذ نقطة، وصاحب الجمل ياخذ نقطة عن كل واحد انخدع. على جوال واحد كل واحد يكتب ويصوّت لحاله والجوال يتمرر. البوت عنده جمل جاهزة، والصعب منهم يحاول يكتشف الكذبة الغريبة ويخدعكم أحيانًا بكذبة عادية. مع الفرق: نقاط الفريق تنجمع.';
+HELP.p_2t1l='كل واحد يكتب ثلاث أشياء عن نفسه: اثنين صدق وواحد كذب، ويحدد الكذبة (محد يشوفها). بعدها تطلع جمل كل لاعب بالدور، والباقين يصوّتون بالسر: أي وحدة الكذبة؟ اللي يعرف الكذبة ياخذ نقطة، وصاحب الجمل ياخذ نقطة عن كل واحد انخدع. البوت عنده جمل جاهزة، والصعب منهم يحاول يكتشف الكذبة الغريبة ويخدعكم أحيانًا بكذبة عادية. مع الفرق: نقاط الفريق تنجمع.';
 
 /* =====================================================================================================
    مين الأكثر (p_most): «who is most likely to…». Everyone votes in secret, then the votes are revealed.
@@ -99,7 +99,7 @@ GAMES.p_most={name:'مين الأكثر',cat:'party',lbc:'#B9770E',teams:'none',
     return h+p2Next(d,ctx,d.r+1>=d.R,'السؤال الجاي ←')+'</div>';},
   click(a,i,d,ctx){const v=ctx.v;if(a==='v'&&d.ph==='vote'&&ctx.my&&d.out[i]!=='1'){simulPick(d,v,i);return;}
     if(a==='next'&&d.ph==='show'&&(ctx.local||v===d.turn)){act(GAMES.p_most.next(d));}},
-  next(d){const r=d.r+1;if(r>=d.R)return {...d,ph:'end',win:mostPts(d.pts)};return p2MostQ({...d,r});},
+  next(d){const r=d.r+1;if(r>=d.R)return {...d,ph:'end',win:mostPts(d.pts,d)};return p2MostQ({...d,r});},
   resolve(d,picks){const vt=picks.map(p=>Number.isInteger(p)&&p>=0&&p<d.pl.length?p:-1);const cnt=d.pl.map(()=>0);vt.forEach(x=>{if(x>=0)cnt[x]++;});
     const mx=Math.max(...cnt);const top=mx>0?cnt.map((c,s)=>c===mx?s:-1).filter(s=>s>=0):[];const P=[...d.pts];vt.forEach((x,s)=>{if(top.includes(x))P[s]++;});
     const hv=d.hv.map((h,s)=>h+cnt[s]);return {...d,ph:'show',vt,top,hv,pts:P,turn:p2Rot(d,d.r),ts:Date.now(),res:top.length?`الأكثر: ${top.map(s=>nm(d,s)).join(' و')}`:'محد صوّت'};},
@@ -154,7 +154,7 @@ GAMES.p_story={name:'قصة متسلسلة',cat:'party',lbc:'#6E2C00',teams:'non
     if(a==='sl'&&d.ph==='write'&&(ctx.local||v===d.turn)&&!isBot(d,d.turn)){const s=d.turn;const t=p2T(S.draft['p2sl'+s],70);if(t.length<3){toast('اكتب جملة أول');return;}delete S.draft['p2sl'+s];act(p2StWrite(d,s,t));return;}
     if(a==='v'&&d.ph==='vote'&&ctx.my&&d.ln[i]&&i>=d.rs&&d.ln[i][0]!==v&&d.ln[i][1]){simulPick(d,v,i);return;}
     if(a==='next'&&d.ph==='show'&&(ctx.local||v===d.turn)){act(GAMES.p_story.next(d));}},
-  next(d){const r=d.r+1;if(r>=d.R)return {...d,ph:'end',win:mostPts(d.pts)};const x={...d,r,rs:d.ln.length,wr:[],ph:'write',vt:null,tw:p2Fresh('stw',P2STW.length)};return {...x,turn:p2StWriter(x)};},
+  next(d){const r=d.r+1;if(r>=d.R)return {...d,ph:'end',win:mostPts(d.pts,d)};const x={...d,r,rs:d.ln.length,wr:[],ph:'write',vt:null,tw:p2Fresh('stw',P2STW.length)};return {...x,turn:p2StWriter(x)};},
   resolve(d,picks){const vt=picks.map((p,s)=>Number.isInteger(p)&&d.ln[p]&&p>=d.rs&&d.ln[p][0]!==s?p:-1);const P=[...d.pts];vt.forEach(x=>{if(x>=0)P[d.ln[x][0]]++;});
     return {...d,ph:'show',vt,pts:P,turn:p2Rot(d,d.r),ts:Date.now()};},
   host(d){if(d.ph==='show'&&Date.now()-d.ts>12000)return GAMES.p_story.next(d);return null;},
@@ -301,7 +301,7 @@ GAMES.p_major={name:'توقع الأغلبية',cat:'party',lbc:'#1F618D',minP:3
     if(['mo','mp','mc'].includes(a)&&d.ph==='vote'&&S.p2mj){if(a==='mo')S.p2mj.o=i;if(a==='mp')S.p2mj.p=i;if(a==='mc'&&i>=1&&i<=3)S.p2mj.c=i;render();return;}
     if(a==='msend'&&d.ph==='vote'&&ctx.my&&S.p2mj&&S.p2mj.k===d.gid+':'+d.rd+':'+v){const M=S.p2mj;const p=M.o*100+M.p*10+M.c;if(!p2MjOk(d,p)){toast('اختر جوابك وتوقعك');return;}simulPick(d,v,p);return;}
     if(a==='next'&&d.ph==='show'&&(ctx.local||v===d.turn)){act(GAMES.p_major.next(d));}},
-  next(d){const r=d.r+1;if(r>=d.R)return {...d,ph:'end',win:mostPts(d.pts)};return p2MjQ({...d,r});},
+  next(d){const r=d.r+1;if(r>=d.R)return {...d,ph:'end',win:mostPts(d.pts,d)};return p2MjQ({...d,r});},
   resolve(d,picks){const Q=P2MJQ[d.qi];const cnt=Q.o.map(()=>0);const pk=picks.map(p=>p2MjOk(d,p)?p2MjDec(p):null);pk.forEach(x=>{if(x)cnt[x.o]++;});
     const mx=Math.max(...cnt);const mj=mx>0?cnt.map((c,i)=>c===mx?i:-1).filter(i=>i>=0):[];const P=[...d.pts];
     pk.forEach((x,s)=>{if(!x)return;x.g=mj.includes(x.p)?x.c:-(x.c-1);P[s]=Math.max(0,P[s]+x.g);});
@@ -371,7 +371,7 @@ GAMES.p_qa={name:'سؤال وجواب',cat:'party',lbc:'#117864',teams:'none',mi
     if(a==='next'&&d.ph==='show'&&(ctx.local||v===d.turn)){act(GAMES.p_qa.next(d));}},
   score(d){const P=[...d.pts];let ok=0;d.an.forEach((_,k)=>{if(d.mt[k]===d.ow[k]){P[d.a]++;ok++;}else if(d.ow[k]>=0)P[d.ow[k]]++;});
     return {...d,ph:'show',pts:P,turn:d.a,ts:Date.now(),res:`${nm(d,d.a)} عرف ${ok} من ${d.an.length}`};},
-  next(d){const k=d.k+1;if(k>=d.K)return {...d,ph:'end',win:mostPts(d.pts)};return p2QaAsk(d,k);},
+  next(d){const k=d.k+1;if(k>=d.K)return {...d,ph:'end',win:mostPts(d.pts,d)};return p2QaAsk(d,k);},
   resolve(d,picks){const got=[];picks.forEach((p,s)=>{if(s!==d.a&&typeof p==='string'&&p.trim())got.push([s,p2T(p,30)]);});
     if(got.length<2)return GAMES.p_qa.next({...d,res:'ما وصل أجوبة كفاية'});const sh=p2Sh(got);
     return {...d,ph:'match',an:sh.map(x=>x[1]),ow:sh.map(x=>x[0]),mt:sh.map(()=>-1),turn:d.a};},
@@ -425,7 +425,7 @@ GAMES.p_auction={name:'المزاد',cat:'party',lbc:'#7E5109',
     return h+p2Next(d,ctx,d.i+1>=d.B,'الصندوق الجاي ←')+'</div>';},
   click(a,i,d,ctx){const v=ctx.v;if(a==='bid'&&d.ph==='bid'&&ctx.my&&Number.isInteger(i)&&i>=0&&i<=d.co[v]){simulPick(d,v,i);return;}
     if(a==='next'&&d.ph==='show'&&(ctx.local||v===d.turn)){act(GAMES.p_auction.next(d));}},
-  next(d){const i=d.i+1;if(i>=d.B)return {...d,ph:'end',win:mostPts(d.co)};return {...d,i,ph:'bid',pk:p2AuPk(d,i),rd:d.rd+1,bids:null,wn:-1};},
+  next(d){const i=d.i+1;if(i>=d.B)return {...d,ph:'end',win:mostPts(d.co,d)};return {...d,i,ph:'bid',pk:p2AuPk(d,i),rd:d.rd+1,bids:null,wn:-1};},
   // the highest bid wins; a tie goes to the one with fewer coins, then to the first after the peeker
   resolve(d,picks){const bids=picks.map((p,s)=>Number.isInteger(p)&&p>=0&&p<=d.co[s]?p:-1);const mx=Math.max(...bids);const co=[...d.co];let wn=-1;const x=d.bx[d.i];
     if(mx>0){const top=bids.map((b,s)=>b===mx?s:-1).filter(s=>s>=0);const ord=[...Array(d.pl.length).keys()].map(k=>(d.pk+1+k)%d.pl.length);

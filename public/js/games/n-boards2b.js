@@ -34,8 +34,8 @@ function b2hxThink(d,lv){const n=d.n,s=d.sd,c=String(s),b=d.b,N=n*n;const free=[
   if(d.nmv===1&&!d.swp&&lv>1){const f=b.search(/[01]/),r=f/n|0,k=f%n,ctr=(n-1)/2;if(Math.max(Math.abs(r-ctr),Math.abs(k-ctr))<=n/4)return {swap:1};}
   const ns=[0,140,40,4][lv];const sc=free.map(i=>{const nb=setAt(b,i,c);return {i,v:b2hxEv(nb,n,s)+Math.random()*ns};}).sort((x,y)=>y.v-x.v);
   if(lv<3||sc[0].v>=5e4)return sc[0];
-  let best=sc[0],bv=-Infinity,budget=2600;const o=String(1-s);
-  for(const m of sc.slice(0,12)){const nb=setAt(b,m.i,c);let worst=Infinity;
+  let best=sc[0],bv=-Infinity,budget=2600;const o=String(1-s),tEnd=performance.now()+B2MS;// the same time cap as the other board bots
+  for(const m of sc.slice(0,12)){if(m!==sc[0]&&performance.now()>tEnd)break;const nb=setAt(b,m.i,c);let worst=Infinity;
     const rep=[];for(let i=0;i<N;i++)if(nb[i]==='.')rep.push(i);
     for(const r of rep){if(budget--<=0)break;const v=b2hxEv(setAt(nb,r,o),n,s);if(v<worst)worst=v;if(worst<=bv)break;}
     if(worst>bv){bv=worst;best=m;}if(budget<=0)break;}
@@ -44,12 +44,17 @@ function b2hxDo(d,m){const s=d.sd,n=d.n;
   if(m.swap){const f=d.b.search(/[01]/),r=f/n|0,k=f%n,t=k*n+r;const b=setAt(setAt(d.b,f,'.'),t,'1');return b2Pass(d,s,{b,swp:1,lm:[t],nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} بدّل: صار الحجر الأول له`});}
   const b=setAt(d.b,m.i,String(s));const ln=b2hxWin(b,n,s);const x={...d,b,lm:[m.i],nmv:(d.nmv||0)+1,last:`${b2Tm(d,s)} حط حجر`};
   if(ln)return b2Won({...x,ln},s,'join');return b2Pass(x,s);}
-const b2hxGeo=n=>{const w=10,h=w*.866,W=(n-1)*w*1.5+w*2+4,H=(n-1)*h+h*2+4;const xy=[...Array(n*n)].map((_,i)=>{const r=i/n|0,c=i%n;return [w+2+c*w+r*w/2,h+2+r*h];});return {w,h,W,H,xy};};
+// the rhombus stands on its point (turned 60°, which leaves each hexagon as it was), so on a phone it fills the height
+// instead of squeezing its long side into the width: cells about 40% bigger
+const B2HXR=[Math.cos(Math.PI/3),Math.sin(Math.PI/3)],b2hxRot=(x,y)=>[x*B2HXR[0]-y*B2HXR[1],x*B2HXR[1]+y*B2HXR[0]];
+const b2hxGeo=n=>{const w=10,h=w*.866,m=w*1.2;const raw=[...Array(n*n)].map((_,i)=>{const r=i/n|0,c=i%n;return b2hxRot(c*w+r*w/2,r*h);});
+  const x0=Math.min(...raw.map(p=>p[0]))-m,y0=Math.min(...raw.map(p=>p[1]))-m,W=Math.max(...raw.map(p=>p[0]))-x0+m,H=Math.max(...raw.map(p=>p[1]))-y0+m;
+  return {w,h,W,H,xy:raw.map(([x,y])=>[x-x0,y-y0])};};
 const B2HXBG={};
 function b2hxBg(n){if(B2HXBG[n])return B2HXBG[n];const {w,W,H,xy}=b2hxGeo(n);const R=w/1.732;
   const hexP=([x,y])=>[0,1,2,3,4,5].map(k=>{const a=Math.PI/6+k*Math.PI/3;return `${(x+R*Math.cos(a)).toFixed(2)},${(y+R*Math.sin(a)).toFixed(2)}`;}).join(' ');
   let g='';for(let i=0;i<n*n;i++)g+=`<polygon points="${hexP(xy[i])}"/>`;
-  const p=(i,dx,dy)=>`${(xy[i][0]+dx).toFixed(1)} ${(xy[i][1]+dy).toFixed(1)}`;
+  const p=(i,dx,dy)=>{[dx,dy]=b2hxRot(dx,dy);return `${(xy[i][0]+dx).toFixed(1)} ${(xy[i][1]+dy).toFixed(1)}`;};
   const top=`M${p(0,-w*.5,-R*1.1)}L${p(n-1,w*.5,-R*1.1)}`,bot=`M${p(n*n-n,-w*.5,R*1.1)}L${p(n*n-1,w*.5,R*1.1)}`,lef=`M${p(0,-w*.62,-R*.4)}L${p(n*n-n,-w*.62,R*.4)}`,rig=`M${p(n-1,w*.62,-R*.4)}L${p(n*n-1,w*.62,R*.4)}`;
   return B2HXBG[n]=`<svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true"><path d="${top}${bot}" class="b2hr"/><path d="${lef}${rig}" class="b2hb"/><g class="b2hc">${g}</g></svg>`;}
 const B2HXN=['الأحمر','الأزرق'];
@@ -57,9 +62,9 @@ GAMES.b_hex={...B2TEAM,name:'السداسي',cat:'board',lbc:'#C2453A',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#F2E3C6"/><path d="M8 18H70" stroke="#D8473C" stroke-width="7" stroke-linecap="round"/><path d="M30 84H92" stroke="#D8473C" stroke-width="7" stroke-linecap="round"/><path d="M8 26L30 76" stroke="#2F7DB3" stroke-width="7" stroke-linecap="round"/><path d="M70 26L92 76" stroke="#2F7DB3" stroke-width="7" stroke-linecap="round"/>${[[30,32],[42,44],[48,58],[60,70]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="7" fill="#D8473C"/>`).join('')}${[[24,52],[60,42],[72,50]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="7" fill="#2F7DB3"/>`).join('')}</svg>`,
   init:()=>({n:9,b:'.'.repeat(81),sd:0,tr:[0,0],swp:0,nmv:0,lm:null,ln:null,mvn:0,last:''}),
   onTimeout(d){const free=[...d.b].map((v,i)=>v==='.'?i:-1).filter(i=>i>=0);return b2hxDo(d,{i:b2Rnd(free)});},
-  points:d=>d.pl.map((_,s)=>s%2?'🔵 يمين ويسار':'🔴 فوق وتحت'),
+  points:d=>d.pl.map((_,s)=>s%2?'🔵 الطرفين الزرق':'🔴 الطرفين الحمر'),
   winText:d=>b2WinTxt(d,B2HXN,{join:'وصل الطرفين'}),
-  status:(d,ctx)=>b2Stat(d,ctx,B2HXN,d.sd?'• وصّل اليمين باليسار':'• وصّل فوق بتحت',-1).replace('class="chside ','class="chside hx'+d.sd+' '),
+  status:(d,ctx)=>b2Stat(d,ctx,B2HXN,d.sd?'• وصّل الطرفين الزرق':'• وصّل الطرفين الحمر',-1).replace('class="chside ','class="chside hx'+d.sd+' '),
   render(d,ctx){const my=ctx.my,n=d.n,{W,H,xy,w}=b2hxGeo(n);const ln=new Set(d.ln||[]);
     const pts=xy.map(([x,y],i)=>{const v=d.b[i];const tap=my&&v==='.';return {q:i,x,y,i:tap?i:null,c:(d.lm&&d.lm[0]===i?'lm lmt':'')+(ln.has(i)?' won':''),p:v!=='.'?`<i class="b2s hx${v}"></i>`:''};});
     let h=b2Board('b2hx bd-b2',W,H,w*.98,b2hxBg(n),pts,false,my);
@@ -72,7 +77,7 @@ GAMES.b_hex={...B2TEAM,name:'السداسي',cat:'board',lbc:'#C2453A',
     if(a==='pt'&&d.b[i]==='.')act(b2hxDo(d,{i}));},
   bot(d,s,lv){return b2hxDo(d,b2hxThink(d,lv));},
   botDelay:()=>500+rnd(400)};
-HELP.b_hex='السداسي (هيكس): لوحة معيّن من خلايا سداسية (9×9 أو 11×11 تختارونها قبل أول حجر). الأحمر يبي يوصّل الطرف اللي فوق بالطرف اللي تحت، والأزرق يوصّل اليمين باليسار. كل دور تحط حجر واحد في أي خلية فاضية، والحجر ما يتحرك ولا ينأكل. أول واحد يسوي سلسلة متصلة من حجاره بين طرفيه يفوز، وما فيه تعادل أبد. عشان البداية تكون عادلة: بعد أول حجر للأحمر، الأزرق يقدر يضغط «بدّل» وياخذ الحجر الأول لنفسه (ينقلب لونه وينعكس مكانه لجهته)، وبعدها يلعب الأحمر. الأحمر يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون.';
+HELP.b_hex='السداسي (هيكس): لوحة معيّن من خلايا سداسية (9×9 أو 11×11 تختارونها قبل أول حجر). اللوحة واقفة على رأسها: الأحمر يبي يوصّل طرفيه الحمر ببعض، والأزرق يوصّل طرفيه الزرق. كل دور تحط حجر واحد في أي خلية فاضية، والحجر ما يتحرك ولا ينأكل. أول واحد يسوي سلسلة متصلة من حجاره بين طرفيه يفوز، وما فيه تعادل أبد. عشان البداية تكون عادلة: بعد أول حجر للأحمر، الأزرق يقدر يضغط «بدّل» وياخذ الحجر الأول لنفسه (ينقلب لونه وينعكس مكانه لجهته)، وبعدها يلعب الأحمر. الأحمر يبدأ. إذا أكثر من لاعبين: فريقين يتناوبون.';
 
 /* ================= قو: go 9×9 ================= */
 // area scoring (stones plus surrounded points), komi 7.5 for white, no suicide, simple ko. Two passes in a row stop play:

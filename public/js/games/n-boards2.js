@@ -102,7 +102,7 @@ GAMES.b_mancala={...B2TEAM,name:'المنقلة',cat:'board',lbc:'#8A5A2B',
   init:()=>({p:Array(12).fill(4),kp:[0,0],sd:0,tr:[0,0],quiet:0,hist:[],lm:null,got:[],cp:[],mvn:0,last:''}),
   onTimeout(d){return b2owDo(d,b2Rnd(b2owLegal(d.p,d.sd)));},
   points:d=>d.pl.map((_,s)=>`${s%2?'فوق':'تحت'} ${d.kp[s%2]}`),
-  winText:d=>b2WinTxt(d,['اللي تحت','اللي فوق'],{half:'تعادل 24 و24',more:'جمع أكثر من 24',stuck:'الخصم ما يقدر يعطيه، وكل واحد أخذ اللي في جهته',loop:'اللعب صار يدور، وكل واحد أخذ اللي في جهته',d:'تعادل'}),
+  winText:d=>b2WinTxt(d,[0,1].map(sd=>`${d.pl.map((_,s)=>s).filter(s=>s%2===sd).map(s=>nm(d,s)).join(' و')} (${sd?'فوق':'تحت'})`),{half:'تعادل 24 و24',more:'جمع أكثر من 24',stuck:'الخصم ما يقدر يعطيه، وكل واحد أخذ اللي في جهته',loop:'اللعب صار يدور، وكل واحد أخذ اللي في جهته',d:'تعادل'}),
   status:(d,ctx)=>b2Stat(d,ctx,['اللي تحت','اللي فوق'],b2owRow(d.p,1-d.sd)?'':'<br><small>جهة الخصم فاضية: لازم تعطيه حب</small>'),
   render(d,ctx){const flip=b2Flip(d,ctx),my=ctx.my,lg=my?new Set(b2owLegal(d.p,d.sd)):new Set();
     const got=new Map((d.got||[]).map((j,k)=>[j,k]));const cp=new Set(d.cp||[]);
@@ -391,7 +391,7 @@ GAMES.b_fanoron={...B2TEAM,name:'فانورونا',cat:'board',lbc:'#4E7A3A',
   onTimeout(d){if(d.ch)return b2fnDo(d,{stop:1});return b2fnDo(d,b2Rnd(b2fnMoves(d.b,d.sd,null)));},
   points:d=>d.pl.map((_,s)=>`${s%2?'⚫':'⚪'} ${b2fnCnt(d.b,s%2)}`),
   winText:d=>b2WinTxt(d,B2M9N,{all:'أكل كل حجار الخصم',block:'الخصم ما عنده حركة',more:'30 حركة لكل واحد بدون أكل، وعنده حجار أكثر',q:'تعادل: 30 حركة لكل واحد بدون أكل'}),
-  status(d,ctx){const caps=b2fnCaps(d.b,d.sd,d.ch);return b2Stat(d,ctx,B2M9N,d.ch?'• كمّل الأكل بنفس الحجر أو اضغط خلاص':caps.length?'<br><small>الأكل إجباري: تقدّم لحجر الخصم أو ابتعد عنه</small>':'');},
+  status(d,ctx){const caps=b2fnCaps(d.b,d.sd,d.ch);return b2Stat(d,ctx,B2M9N,d.ch?'• كمّل الأكل بنفس الحجر أو اضغط خلاص':caps.length?'• الأكل إجباري':'');},
   render(d,ctx){const my=ctx.my,s=d.sd,flip=b2Flip(d,ctx),P=b2Sel(d),ms=my?b2fnMoves(d.b,s,d.ch):[];
     const f=d.ch?d.ch.at:P&&P.f!=null?P.f:-1;const mv=new Set(ms.map(m=>m.f));const to=new Set(ms.filter(m=>m.f===f).map(m=>m.t));
     // a landing point with both kinds of capture: the player taps the first piece of the line to take

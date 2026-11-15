@@ -55,7 +55,9 @@ const rgRem=(d,s)=>d.pl.filter((_,x)=>x!==s&&alive(d,x)&&d.pd[x]!=='1').length;
 function topGain(x,v,none){const vs=x.res.map((r,s)=>alive(x,s)&&r!=null?v(r):null);const ok=vs.filter(z=>z!=null);const mx=ok.length?Math.max(...ok):null;
   const gain=vs.map(z=>z!=null&&z===mx&&mx>(none==null?-Infinity:none)?1:0);const w=gain.map((g,s)=>g?s:-1).filter(s=>s>=0);
   return {gain,w};}
-const winMsg=(x,w,what)=>w.length?`الجولة لـ${w.map(s=>nm(x,s)).join(' و')}${what?' '+what:''}`:'ما أحد كسب الجولة';
+// «لـ» before a name: «الأحمر» reads «للأحمر», not «لـالأحمر»
+const d2Li=t=>{t=String(t);return t.startsWith('ال')?'لل'+t.slice(2):'لـ'+t;};
+const winMsg=(x,w,what)=>w.length?`الجولة ${d2Li(w.map(s=>nm(x,s)).join(' و'))}${what?' '+what:''}`:'ما أحد كسب الجولة';
 
 /* ======================= 1. ship, captain and crew ======================= */
 /* five dice, three throws. A 6 (the ship) must come first, then a 5 (the captain), then a 4 (the crew); they are set aside
@@ -327,7 +329,7 @@ function buRoll(d){const t=d.turn,u=buUnit(d,t),dv=rollN(3),tg=d.rd,c=cnt6(dv);l
   if(c[tg]===3){g=21;kind='bunco';}else if(Math.max(...c)===3){g=5;kind='mini';}else g=c[tg];
   const rp=[...d.rp];rp[u]=(rp[u]||0)+g;const pts=d.pts.map((v,s)=>s===t?v+g:v),bk=d.bk.map((v,s)=>s===t&&kind==='bunco'?v+1:v);
   let x={...d,dv,rc:d.rc+1,rp,pts,bk,lt:{s:t,g,kind},last:kind==='bunco'?`${nm(d,t)} بونكو!! +21 🎉`:kind==='mini'?`${nm(d,t)} ثلاثة متشابهة +5`:g?`${nm(d,t)} +${g}`:`${nm(d,t)} ما جاب شي، الدور للي بعده`};
-  if(rp[u]>=21){const m=buSeats(d,u);const rw=d.rw.map((v,s)=>m.includes(s)?v+1:v);x={...x,rw,last:x.last+` • الجولة ${tg} لـ${buName(d,u)} 🏆`};
+  if(rp[u]>=21){const m=buSeats(d,u);const rw=d.rw.map((v,s)=>m.includes(s)?v+1:v);x={...x,rw,last:x.last+` • الجولة ${tg} ${d2Li(buName(d,u))} 🏆`};
     if(tg>=BU_R)return {...x,...buEnd(x)};return {...x,rd:tg+1,rp:Array(d.pl.length).fill(0),turn:nextSeat(d,t)};}
   return g?x:{...x,turn:nextSeat(d,t)};}
 GAMES.d_bunco={name:'بونكو',cat:'dice',lbc:'#C2457A',net:{host:['roll']},redeal:d=>d,
@@ -540,23 +542,23 @@ HELP.d_three='الثلاثات بخمس زهرات: الهدف أقل مجموع
 /* nine holes. On a hole throw three dice again and again until two of them match: the number of throws is your strokes.
    Lowest total after nine holes wins */
 const GF_R=9;
-const GF={R:GF_R,low:true,fresh:()=>({dv:[],st:0}),rate:x=>{const vs=x.res.map((v,s)=>alive(x,s)&&v!=null?v:null),mn=Math.min(...vs.filter(v=>v!=null));
+const GF={R:GF_R,low:true,fresh:()=>({dv:[],stk:0}),rate:x=>{const vs=x.res.map((v,s)=>alive(x,s)&&v!=null?v:null),mn=Math.min(...vs.filter(v=>v!=null));
   const w=vs.map((v,s)=>v===mn?s:-1).filter(s=>s>=0);return {gain:x.res.map(v=>v||0),msg:`أحسن ضربة بالحفرة ${mn}: ${w.map(s=>nm(x,s)).join(' و')}${mn===1?' ⛳':''}`};}};
 const gfDbl=dv=>new Set(dv).size<3;
-function gfRoll(d){const t=d.turn,dv=rollN(3),st=d.st+1,x={...d,dv,st,rc:d.rc+1};
+function gfRoll(d){const t=d.turn,dv=rollN(3),st=(d.stk||0)+1,x={...d,dv,stk:st,rc:d.rc+1};
   if(!gfDbl(dv))return {...x,last:`${nm(d,t)}: ضربة ${st}`};
   const hs=d.hs.map((h,s)=>s===t&&d.rn<=GF_R?[...h,st]:h);
   return rgNext({...x,hs,res:x.res.map((v,s)=>s===t?st:v),lt:{s:t,dv,v:st},last:`${nm(d,t)} دخّلها بـ${st} ${st===1?'ضربة ⛳':'ضربات'}`},t,GF);}
 GAMES.d_golf={name:'غولف النرد',cat:'dice',lbc:'#3E8E41',net:{host:['roll']},redeal:d=>d,
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#58B05C"/><ellipse cx="50" cy="74" rx="40" ry="16" fill="#3E8E41"/><ellipse cx="62" cy="74" rx="6" ry="2.6" fill="#1E3B1F"/><path d="M62 74V18" stroke="#fff" stroke-width="3"/><path d="M62 18L84 26L62 34Z" fill="#E5483F"/><rect x="18" y="52" width="22" height="22" rx="5" fill="#fff" transform="rotate(-10 29 63)"/><circle cx="24" cy="58" r="2.4" fill="#2D4763"/><circle cx="34" cy="68" r="2.4" fill="#2D4763"/><circle cx="34" cy="58" r="2.4" fill="#2D4763"/><circle cx="24" cy="68" r="2.4" fill="#2D4763"/></svg>`,
-  init:n=>({...rgInit(n),dv:[],st:0,hs:Array(n).fill(0).map(()=>[]),ld:0}),start:d=>({...d,ld:d.turn}),
+  init:n=>({...rgInit(n),dv:[],stk:0,hs:Array(n).fill(0).map(()=>[]),ld:0}),start:d=>({...d,ld:d.turn}),
   points:d=>d.tot,status:lastSt,
   winExtra:d=>'الضربات (الأقل يفوز): '+d.pl.map((r,s)=>`${nm(d,s)} ${d.tot[s]}`).join('، '),
   onTimeout(d){let x=d;for(let k=0;k<60&&x.turn===d.turn&&x.rn===d.rn&&x.win==null;k++)x=gfRoll(x);return x;},onSkip:(nd,d)=>rgSkip(nd,d,GF),
   render(d,ctx){const my=ctx.my&&d.win==null,show=d.dv.length?d.dv:d.lt?d.lt.dv:[],fr=show.length&&once(`gf${d.gid}_${d.rc}`);const c=cnt6(show);
-    let s=`<div class="d2-hd"><span>${d.rn>GF_R?'<b>حفرة فاصلة</b>':`الحفرة <b>${d.rn}</b> من ${GF_R}`}</span><span>ضربات هالحفرة <b>${d.st}</b></span></div>`;
+    let s=`<div class="d2-hd"><span>${d.rn>GF_R?'<b>حفرة فاصلة</b>':`الحفرة <b>${d.rn}</b> من ${GF_R}`}</span><span>ضربات هالحفرة <b>${d.stk}</b></span></div>`;
     s+=`<div class="ytray d2-tray d2-green">${show.length?show.map(x=>dieH(x,{roll:fr,cls:c[x]>1?'hit':''})).join(''):dieH(0)+dieH(0)+dieH(0)}${show.length&&gfDbl(show)?'<b class="d2-sum">⛳</b>':''}</div>`;
-    s+=`<div class="acts">${rollBtn(d,my,d.st?'اضرب مرة ثانية':'اضرب')}</div>`;
+    s+=`<div class="acts">${rollBtn(d,my,d.stk?'اضرب مرة ثانية':'اضرب')}</div>`;
     s+=`<div class="d2-gf"><div class="d2-gfh"><i></i>${[...Array(GF_R)].map((_,k)=>`<u class="${k+1===d.rn?'on':''}">${k+1}</u>`).join('')}<b>Σ</b></div>${d.pl.map((r,p)=>alive(d,p)?`<div class="${p===d.turn&&d.win==null?'on':''}" style="--c:${col(d,p)}"><i>${nm(d,p)}</i>${[...Array(GF_R)].map((_,k)=>{const v=d.hs[p][k];return `<u class="${v===1?'ace':v>=5?'bad':''}">${v??''}</u>`;}).join('')}<b>${d.tot[p]}</b></div>`:'').join('')}</div>`;
     return s;},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null||a!=='roll')return;act(gfRoll(d));}
@@ -572,7 +574,7 @@ const T21={R:T21_R,fresh:()=>({tt:0,dv:[],rl:0}),rate(x){const vs=x.res.map((v,s
   if(!ok.length)return {gain:x.res.map(()=>0),msg:'الكل احترق! ما أحد كسب الجولة'};const mx=Math.max(...ok);let w=vs.map((v,s)=>v===mx?s:-1).filter(s=>s>=0);let tie='';
   // a tie at the top: one die each, again until one is higher
   for(let k=0;k<20&&w.length>1;k++){const r=w.map(()=>R6()),hi=Math.max(...r);tie+=` (${w.map((s,j)=>`${nm(x,s)} ${r[j]}`).join('، ')})`;w=w.filter((s,j)=>r[j]===hi);}
-  const gain=x.res.map((_,s)=>w.length===1&&s===w[0]?1:0);return {gain,msg:w.length===1?`الجولة لـ${nm(x,w[0])} بـ${mx}${tie?' بعد زهرة الفصل'+tie:''}`:'تعادل بالجولة'};}};
+  const gain=x.res.map((_,s)=>w.length===1&&s===w[0]?1:0);return {gain,msg:w.length===1?`الجولة ${d2Li(nm(x,w[0]))} بـ${mx}${tie?' بعد زهرة الفصل'+tie:''}`:'تعادل بالجولة'};}};
 function t21End(d,t,msg){return rgNext({...d,res:d.res.map((r,s)=>s===t?(d.tt>21?-1:d.tt):r),lt:{s:t,v:d.tt},last:msg},t,T21);}
 function t21Roll(d){const t=d.turn,dv=rollN(d.tt>=14?1:2),tt=d.tt+dsum(dv),x={...d,dv,tt,rl:d.rl+1,rc:d.rc+1};
   if(tt>21)return t21End(x,t,`${nm(d,t)} طلع ${tt} واحترق 🔥`);if(tt===21)return t21End(x,t,`${nm(d,t)} جاب 21 بالضبط! 🎯`);return {...x,last:`${nm(d,t)}: ${tt}`};}

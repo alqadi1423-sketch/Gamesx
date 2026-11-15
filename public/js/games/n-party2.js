@@ -507,12 +507,13 @@ GAMES.p_who={name:'مين أنا',cat:'party',lbc:'#2E86C1',teams:'none',
   bot(d,s,lv){const C=P2Q[d.c];
     if(d.ph==='ans'&&s===d.turn){const I=C.items[d.cd[d.ask]];let a=I?I.v[d.cq]:0;if(lv===1&&Math.random()<.08)a=1-Math.min(1,a);return p2WhoNextAsk({...d,ql:[...d.ql,[d.ask,d.cq,a]].slice(-60)},d.ask);}
     if(d.ph!=='ask'||s!==d.ask)return d;const cands=p2WhoCands(d,s);if(!cands.length)return p2WhoNextAsk(d,s);
-    const lim=[0,3,2,1][lv];if(cands.length<=lim&&(lv>1||Math.random()<.6))return p2WhoGuess(d,s,p2Pick(cands));
+    // a wrong guess only costs the turn and rules that card out, so hard guesses from five cards down (a guess wins 1 in k at once)
+    const lim=[0,3,2,5][lv];if(cands.length<=lim&&(lv>1||Math.random()<.6))return p2WhoGuess(d,s,p2Pick(cands));
     const asked=d.ql.filter(e=>e[0]===s).map(e=>e[1]);const qs=C.q.map((_,i)=>i);
     let q=lv===1&&Math.random()<.5?p2Pick(qs):p2TqBest(cands,qs,(x,qi)=>C.items[x].v[qi],asked);
     if(q==null)return p2WhoGuess(d,s,p2Pick(cands));return {...d,ph:'ans',cq:q,turn:p2WhoAns(d,s),last:''};},
   botDelay:(d,s,lv)=>d.ph==='ans'?1000:1400+rnd(1200)};
-HELP.p_who='كل واحد تطلع له بطاقة (كلكم من نفس النوع: حيوانات أو أكل أو مهن…) يشوفها الكل إلا هو! بدورك اسأل سؤال عن بطاقتك جوابه نعم أو لا («يطير؟»)، واللي بعدك يجاوبك وهو شايف بطاقتك. أو إذا عرفت مين أنت اختارها من القائمة: البطاقات اللي مع غيرك مستحيل تكون لك، والتخمين الغلط يروح دورك. أول واحد يعرف بطاقته يفوز. على جوال واحد: اللي يسأل ما يشوف إلا بطاقات الباقين، وبعدها ينعطى الجوال للي يجاوب.';
+HELP.p_who='كل واحد تطلع له بطاقة (كلكم من نفس النوع: حيوانات أو أكل أو مهن…) يشوفها الكل إلا هو! بدورك اسأل سؤال عن بطاقتك جوابه نعم أو لا («يطير؟»)، واللي بعدك يجاوبك وهو شايف بطاقتك. أو إذا عرفت مين أنت اختارها من القائمة: البطاقات اللي مع غيرك مستحيل تكون لك، والتخمين الغلط يروح دورك. أول واحد يعرف بطاقته يفوز.';
 
 /* =====================================================================================================
    ربط الكلمات (p_link): a hidden word comes with five linked words (the last one is its emoji). Players bid how few
@@ -526,12 +527,12 @@ function p2LkCard(d,cn,sb){const w=p2Fresh('lk',P2W.length,d.used);return {...d,
 function p2LkBid(d,s,b){if(b<1||b>=d.bid)return d;const x={...d,bid:b,pv:d.by>=0&&!sameTeam(d,d.by,s)?d.by:d.pv,by:s,ps:[],last:`${nm(d,s)} يقول: أعرفها بـ ${b}`};
   if(b===1)return p2LkPlay(x);const nx=p2LkNextBid(x,s);return nx<0?p2LkPlay(x):{...x,turn:nx};}
 function p2LkPass(d,s){const x={...d,ps:[...d.ps,s],last:`${nm(d,s)} خلّاها له`};const nx=p2LkNextBid(x,s);return nx<0?p2LkPlay(x):{...x,turn:nx};}
-function p2LkPlay(d){const x={...d,ph:'play',turn:d.by,rv:0,ra:[]};return p2LkReveal(x);}
+function p2LkPlay(d){if(d.by<0||d.out[d.by]==='1')return p2LkCard(d,d.cn,d.out[d.sb]==='1'?nextSeat(d,d.sb):d.sb);const x={...d,ph:'play',turn:d.by,rv:0,ra:[]};return p2LkReveal(x);}
 function p2LkReveal(d){if(d.rv>=d.bid)return d;const A=p2LkAs(d.w);return {...d,rv:d.rv+1,ra:[...d.ra,A[d.rv]]};}
 function p2LkGuess(d,txt){const E=P2W[d.w];const ok=!!E&&p2Match(E.alts,txt)===2;const P=[...d.pts];const pr=6-d.bid;let last;
   if(ok){P[d.by]+=pr;last=`${nm(d,d.by)} عرفها وأخذ ${pr}`;}else if(d.pv>=0&&d.out[d.pv]!=='1'){P[d.pv]+=pr;last=`غلط! النقاط (${pr}) راحت لـ ${nm(d,d.pv)}`;}else last='غلط! وما أحد ياخذ النقاط';
   return {...d,ph:'show',pts:P,gs:[p2T(txt,24),ok?1:0],ts:Date.now(),last};}
-function p2LkNext(d){const cn=d.cn+1;if(cn>=d.C)return {...d,ph:'end',win:mostPts(d.pts)};return p2LkCard(d,cn,nextSeat(d,d.sb));}
+function p2LkNext(d){const cn=d.cn+1;if(cn>=d.C)return {...d,ph:'end',win:mostPts(d.pts,d)};return p2LkCard(d,cn,nextSeat(d,d.sb));}
 // what a well-read bot makes of the linked words it has seen: the cards that share the most of them
 function p2LkCands(ra){const R=ra.map(p2N);let best=-1,out=[];P2W.forEach((E,i)=>{const A=p2LkAs(i).map(p2N);const sc=R.filter(r=>A.includes(r)).length;if(sc>best){best=sc;out=[i];}else if(sc===best)out.push(i);});return {best,out};}
 GAMES.p_link={name:'ربط الكلمات',cat:'party',lbc:'#1E8449',
@@ -542,7 +543,12 @@ GAMES.p_link={name:'ربط الكلمات',cat:'party',lbc:'#1E8449',
   // the hidden word is nobody's until the card is over (the linked words shown so far are in d.ra)
   mask(d,seat){if(d.win!=null||d.ph==='show')return d;return {...d,w:-1,used:d.used.map((x,i)=>i===d.used.length-1?-1:x)};},
   net:{local:[]},
-  onSkip(nd){if(nd.win!=null)return nd;if(nd.ph==='play'&&nd.out[nd.by]==='1')return p2LkGuess(nd,'');if(nd.ph==='bid'&&nd.out[nd.turn]==='1')return nd.by>=0?p2LkPass(nd,nd.turn):p2LkCard(nd,nd.cn,nextSeat(nd,nd.sb));return nd;},
+  // a leaver: the one who must guess gives a wrong answer; the top bidder leaving in the bidding starts the card again;
+  // the one whose turn it was to bid passes on to the next bidder
+  onSkip(nd,d){if(nd.win!=null)return nd;if(nd.ph==='play'&&nd.out[nd.by]==='1')return p2LkGuess(nd,'');
+    if(nd.ph!=='bid')return nd;const sb=nd.out[nd.sb]==='1'?nextSeat(nd,nd.sb):nd.sb;
+    if(nd.by>=0&&nd.out[nd.by]==='1')return {...p2LkCard(nd,nd.cn,sb),last:`${nm(nd,nd.by)} طلع، البطاقة من جديد`};
+    if(d&&nd.out[d.turn]==='1'){const nx=p2LkNextBid(nd,d.turn);return nx>=0?{...nd,turn:nx}:nd.by>=0?p2LkPlay(nd):p2LkCard(nd,nd.cn,sb);}return nd;},
   onTimeout(d){if(d.ph==='bid')return d.by>=0?p2LkPass(d,d.turn):p2LkBid(d,d.turn,5);if(d.ph==='play')return p2LkGuess(d,'');return p2LkNext(d);},
   status(d,ctx){const me=s=>!ctx.local&&ctx.v===s;const top=`<small>البطاقة ${d.cn+1} من ${d.C}${d.last?' • '+d.last:''}</small><br>`;
     if(d.ph==='bid')return top+(me(d.turn)?'<b class="yt">دورك: كم كلمة تحتاج؟</b>':`${nameTag(d,d.turn)} يزايد`);
