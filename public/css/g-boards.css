@@ -65,9 +65,9 @@ svg.bd-dots{background:radial-gradient(circle at 30% 20%,#FFFFFF,#F3F6FA);border
 .bd-sea .ships{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);pointer-events:none;z-index:1;overflow:visible}
 .bd-sea.small .ships{inset:4px;width:calc(100% - 8px);height:calc(100% - 8px)}
 .bd-sea .hull .hb{fill:#93A6B8;stroke:#4E6275;stroke-width:.05}
-.bd-sea .hull .hd{fill:#C5D2DD}.bd-sea .hull .hc{fill:#5E7286}.bd-sea .hull .ht circle{fill:#4A5D70}
-.bd-sea .hull.sel .hb{fill:var(--gold);stroke:#9A6B00}.bd-sea .hull.sel .hd{fill:#FFE08A}
-.bd-sea .hull.wreck .hb{fill:#3B434D;stroke:#1d2126}.bd-sea .hull.wreck .hd{fill:#4E5862}.bd-sea .hull.wreck .hc,.bd-sea .hull.wreck .ht circle{fill:#2A3038}
+.bd-sea .hull .sdk{fill:#C5D2DD}.bd-sea .hull .hc{fill:#5E7286}.bd-sea .hull .ht circle{fill:#4A5D70}
+.bd-sea .hull.sel .hb{fill:var(--gold);stroke:#9A6B00}.bd-sea .hull.sel .sdk{fill:#FFE08A}
+.bd-sea .hull.wreck .hb{fill:#3B434D;stroke:#1d2126}.bd-sea .hull.wreck .sdk{fill:#4E5862}.bd-sea .hull.wreck .hc,.bd-sea .hull.wreck .ht circle{fill:#2A3038}
 .bd-sea .sc{position:relative;z-index:2;overflow:visible;background:transparent;border-radius:0;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.26);-webkit-appearance:none;appearance:none}
 .bd-sea .sc:focus{outline:none}
 .bd-sea .sc.can{background:transparent;transition:background var(--t1)}

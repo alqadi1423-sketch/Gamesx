@@ -250,7 +250,7 @@ function seaHull(cells,cls){const n=cells.length,h=cells[0],r=Math.floor(h/8),c=
   const tf=hz?`translate(${c} ${r})`:`translate(${c+1} ${r}) rotate(90)`;
   const tur=[...Array(Math.max(1,n-1)).keys()].map(k=>`<circle cx="${.75+k*(n-1.1)/Math.max(1,n-1)}" cy=".5" r=".13"/>`).join('');
   return `<g class="hull ${cls}" transform="${tf}"><path class="hb" d="M.1 .32Q.1 .17 .3 .17L${n-.6} .17Q${n-.12} .22 ${n-.05} .5Q${n-.12} .78 ${n-.6} .83L.3 .83Q.1 .83 .1 .68Z"/>
-    <rect class="hd" x=".32" y=".36" width="${Math.max(.2,n-1.05)}" height=".28" rx=".12"/><rect class="hc" x="${n*.42-.18}" y=".3" width=".42" height=".4" rx=".08"/><g class="ht">${tur}</g></g>`;}
+    <rect class="sdk" x=".32" y=".36" width="${Math.max(.2,n-1.05)}" height=".28" rx=".12"/><rect class="hc" x="${n*.42-.18}" y=".3" width=".42" height=".4" rx=".08"/><g class="ht">${tur}</g></g>`;}
 const SEAFX={};// when each shot was first seen, so its animation survives quick redraws
 function seaNew(key){const now=Date.now();if(!SEAFX[key])SEAFX[key]=now;return now-SEAFX[key]<1600;}
 function seaGrid(f,sh,show,click,small,marks,flash,fk){
