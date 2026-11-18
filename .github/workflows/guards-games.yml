@@ -14,7 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  games:
+  game-rules:
+    name: game rules
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

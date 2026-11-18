@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   ui:
+    name: interface rules
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
