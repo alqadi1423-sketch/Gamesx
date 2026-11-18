@@ -18,10 +18,13 @@ const cases = [
   ['minP above 8', () => edit('public/js/games/classic.js', s => s + '\nGAMES.ttt.minP=9;\n')],
   ['maxP above 8', () => edit('public/js/games/classic.js', s => s + '\nGAMES.ttt.maxP=12;\n')],
   ['secret without a hook', () => edit('public/js/games/classic.js', s => s + '\nGAMES.ttt.viewer=()=>0;\n')],
+  ['stopped game lost its log', () => fs.renameSync(path.join(tmp, 'docs/games/bj.md'), path.join(tmp, 'docs/games/bj.bak'))],
+  ['stopped game lost its code', () => edit('public/js/games/cards.js', s => s.replace(/GAMES\.bj\s*=/, 'GAMES.bjx='))],
   ['core.js names a game', () => edit('public/js/core.js', s => s + '\nconst ZZ_GUARD_TEST="uno";\n')] ];
 let fail = 0;
 for (let r = 0; r < N; r++) for (const [name, brk] of cases) {
   reset(); const a = run(); brk(); const b = run(); reset();
+  if (fs.existsSync(path.join(tmp, 'docs/games/bj.bak'))) fs.renameSync(path.join(tmp, 'docs/games/bj.bak'), path.join(tmp, 'docs/games/bj.md'));
   if (fs.existsSync(path.join(tmp, 'docs/games/ttt.bak'))) fs.renameSync(path.join(tmp, 'docs/games/ttt.bak'), path.join(tmp, 'docs/games/ttt.md'));
   const c = run(), ok = a === 0 && b !== 0 && c === 0; if (!ok) fail++;
   if (r === 0 || !ok) console.log(`${ok ? '✓' : '✗'} ${name}: clean=${a} broken=${b} restored=${c}`); }
