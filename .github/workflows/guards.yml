@@ -26,6 +26,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      # the generated game docs are read from the real page, so the doc check needs a browser (tools only, never public/)
+      - name: Test tools
+        run: |
+          npm ci --prefix tools --ignore-scripts --no-audit --no-fund
+          npx --prefix tools playwright install --with-deps chromium
       - name: Pick the commit to compare with
         id: base
         env:
