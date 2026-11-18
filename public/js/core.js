@@ -1010,10 +1010,9 @@ const shapeW=r=>`<svg viewBox="0 0 40 40">${SHP[r]('#fff')}</svg>`;
 // a player's kid (kit-hara.js): the kid they picked, else the kid of their colour, always in their colour (KH.pface; o.mood, o.hat)
 const kface=(r,o)=>typeof KH!=='undefined'&&isRole(r)?KH.pface(r,o):shapeW(r);
 
-// the server, for the Android app (its pages come from the phone). The account's workers.dev name moves from alqadi1423 to alaabna
-// (docs/decisions.md, 2026-11-18). The old address is asked first, so the app never talks to the new one before it is ours; once the
-// old one stops answering, the new one is used. An answer counts only if it points to our own release page
-const SERVERS=['https://gamesx.alqadi1423.workers.dev','https://gamesx.alaabna.workers.dev'];
+// the server, for the Android app (its pages come from the phone). The account's workers.dev name moved from alqadi1423 to alaabna
+// (docs/decisions.md, 2026-11-18). An answer counts only if it points to our own release page
+const SERVERS=['https://gamesx.alaabna.workers.dev'];
 let SERVER=SERVERS[0],serverAsk=null;
 function findServer(){if(serverAsk)return serverAsk;let i=0;
   const next=()=>i>=SERVERS.length?Promise.resolve(null):fetch(SERVERS[i]+'/version.json',{cache:'no-store'})
