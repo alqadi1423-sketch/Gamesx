@@ -8,7 +8,10 @@ const path = require('path'), { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..'), fs = require('fs');
 const a = Object.fromEntries(process.argv.slice(2).map(x => { const m = /^--([^=]+)(?:=(.*))?$/.exec(x); return m ? [m[1], m[2] ?? '1'] : [x, '1']; }));
 const { load } = require('./load.js');
-const G = load().__G.GAMES, ids = Object.keys(G);
+const coreSrc = fs.readFileSync(path.join(ROOT, 'public/js/core.js'), 'utf8');
+// games stopped by the owner (STOPPED in core.js) are outside every test
+const sm = /const\s+STOPPED\s*=\s*new Set\(\[([^\]]*)\]\)/.exec(coreSrc), STOPPED = new Set(sm ? [...sm[1].matchAll(/["']([a-z0-9_]+)["']/g)].map(m => m[1]) : []);
+const G = Object.fromEntries(Object.entries(load().__G.GAMES).filter(([i]) => !STOPPED.has(i))), ids = Object.keys(G);
 const SAMPLE = ['ttt', 'uno', 'baloot', 'chess', 'ludo', 'cats', 'tele', 'mafia', 'hide', 'taqiya', 'jakaro', 'trivia', 'sea', 'guess'];
 const SHARED = /^public\/(index\.html|js\/(core|net|views|seal|bots|help|kit-hara|cast-themes|emoji|transport-[a-z]+|boot)\.js|css\/(style|perf|kit-hara)\.css)$/;
 const secret = id => ['viewer', 'privInit', 'resolve', 'simulNow'].some(k => G[id][k] != null);
