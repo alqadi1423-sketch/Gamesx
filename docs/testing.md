@@ -151,3 +151,18 @@ node tools/test/shoot.js --screens --n=4                 # الرئيسية، ا
 ## 6. الكتالوج
 
 `node tools/gen-games-doc.js --check` يتأكد إن [games.md](games.md) مطابق للكود، ويطلع رقم غير صفر إذا لا. وإذا فيه لعبة بدون `HELP` يطلع تحذير.
+
+## 7. الحراس (تشتغل لحالها على كل طلب دمج)
+
+كل قاعدة في [rules.md](rules.md) لها حارس أو بند في قالب طلب الدمج. التفاصيل والدَّين في [review-guards.md](review-guards.md).
+
+| السير | يفحص | تشغيله محليا |
+|---|---|---|
+| `guards.yml` | قواعد المستودع العشر (الصياغة، الوثائق المتولدة، التنسيق، perf.css، السكربت، CSP، رقم النسخة، الهجرات، الأسرار، رسائل الالتزام) | `node tools/guards/check-repo.js --base=origin/main` |
+| `guards-games.yml` | كل لعبة: القوانين والسجل والحدود والأسرار، والمحرك ما يذكر لعبة | `node tools/guards/check-games.js` |
+| `guards-tests.yml` | الألعاب المتغيرة: `smoke` بـ p2,p3,p8,b13، وأونلاين بأربعة مع فحص التسريب، والاختبار المتغير ٥٠ مرة | `node tools/guards/changed-games.js --base=origin/main` |
+| `guards-worker.yml` | الخادم: عزل الغرف، الحجم والمعدل، الرمز المجهول، لا سجلات | `node tools/guards/test-worker.mjs` |
+| `guards-ui.yml` | أماكن HTML الجديدة، ونص اللاعب بـ `escH`، ولا left/right جديدة | `node tools/guards/check-ui.js` |
+| `guards-app.yml` | صلاحيات التطبيق، وملفات القفل، والرخص، والثغرات (شهريا) | `node tools/guards/check-app.js` |
+
+**إثبات كل حارس:** كل حارس له `selftest` يكسر قاعدته عمدا في نسخة مؤقتة: لازم يسقط، وبعد الإرجاع ينجح. مثال: `node tools/guards/selftest.js --repeat=50`.
