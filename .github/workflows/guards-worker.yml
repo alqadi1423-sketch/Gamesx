@@ -1,0 +1,25 @@
+name: Guards (server)
+
+# The room server's rules (docs/rules.md): rooms isolated, size and rate limited, unknown codes refused, nothing logged.
+# Runs the real worker/index.js locally against stand-ins for the runtime; nothing is deployed.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/guards/test-worker.mjs
+      - run: node tools/guards/selftest-worker.mjs
