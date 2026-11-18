@@ -645,6 +645,10 @@ const NOLOCAL=new Set(["arena", "caps", "close", "g_cycles", "geo", "hide", "isl
 function modeKey(){if(S.mode!=='local')return 'net';const b=Object.keys(S.bots||{}).filter(r=>+r<S.localN).length,h=S.localN-b;return (h>=2?'L':'')+(b?'B':'');}
 // automated test runs (navigator.webdriver) keep every game in every way of playing so each one stays covered, unless they ask (__modesOn)
 function modeOk(k){if(navigator.webdriver&&!window.__modesOn)return true;const m=modeKey();return !(m.includes('L')&&NOLOCAL.has(k))&&!(m.includes('B')&&NOBOT.has(k));}
+// games stopped by the owner (2026-11-18, docs/decisions.md): old classics from outside the region and betting games.
+// Their files and logs stay; they are taken out of GAMES once every game script has loaded, so no list, pick, room or test sees them
+const STOPPED=new Set(["b_xiangqi","b_fanoron","b_tablut","b_amazons","b_hex","b_go","b_alquerq","d_beetle","d_bunco","d_chi","d_mex","d_knuck","d_golf","d_three","d_ship","k_golf","k_gin","bj","k_pont","d_ceelo","d_poker"]);
+function stopGames(){for(const g of STOPPED)delete GAMES[g];}
 const modeGames=()=>Object.keys(GAMES).filter(modeOk);
 // a tile is few nodes (its star and the players badge are drawn by CSS): 200 of them stay light
 function tileHTML(k,fav,n){const G=GAMES[k],dim=!fitN(k,n);
@@ -1029,9 +1033,9 @@ function infoScreen(){
    home screen is drawn they are added to the page: the styles before perf.css (the order they always had), the scripts in their
    order (async=false). Anything that needs a game (the game list, a room, a saved game) waits for them, with a loading note */
 function loadGames(){if(S.gstart)return;S.gstart=true;
-  const ts=['later-css','later-js'].map(id=>document.getElementById(id)).filter(Boolean);if(!ts.length){GREADY=true;return;}
+  const ts=['later-css','later-js'].map(id=>document.getElementById(id)).filter(Boolean);if(!ts.length){stopGames();GREADY=true;return;}
   let left=1;const perf=document.querySelector('link[href*="css/perf.css"]');
-  const done=()=>{if(--left>0)return;GREADY=true;S.gload=false;saveMeta();const q=GWAIT.splice(0);S.lastHtml=null;render();for(const f of q)try{f();}catch(e){console.error(e);}};
+  const done=()=>{if(--left>0)return;stopGames();GREADY=true;S.gload=false;saveMeta();const q=GWAIT.splice(0);S.lastHtml=null;render();for(const f of q)try{f();}catch(e){console.error(e);}};
   for(const t of ts){for(const el of [...t.content.children]){let n=null;
       if(el.tagName==='LINK'&&el.getAttribute('href')){n=document.createElement('link');n.rel='stylesheet';n.href=el.getAttribute('href');}
       else if(el.tagName==='SCRIPT'&&el.getAttribute('src')){n=document.createElement('script');n.src=el.getAttribute('src');n.async=false;}
@@ -1062,7 +1066,7 @@ function restoreHere(){let h=null;try{h=JSON.parse(sessionStorage.getItem(HEREK)
 // a screen to come back to after a reload (it needs the games, so it waits for them)
 function hereSaved(){try{const h=JSON.parse(sessionStorage.getItem(HEREK)||'null');return !!h&&['local','online','lobby','stats'].includes(h.m);}catch(e){return false;}}
 function boot(){if(/[?&]info\b/.test(location.search)){infoScreen();return;}
-  if(document.getElementById('later-js'))GREADY=false;
+  if(document.getElementById('later-js'))GREADY=false;else stopGames();
   // a screen to come back to after a reload waits for the games; meanwhile this tab keeps it noted
   const back=hereSaved();if(back)S.hereWait=true;
   navInit();render();

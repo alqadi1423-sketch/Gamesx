@@ -96,6 +96,7 @@
 
 | التاريخ | وش تغيّر | الكومت |
 |---|---|---|
+| 2026-11-15 | (ما له ملخص عربي بعد) Proposal (not merged): give every game group's board root a name no other game writes, and a guard for it | `99b50f8` |
 | 2026-11-15 | (ما له ملخص عربي بعد) taqiya v2: the next walker stands beside the seat with their points in the result | `be196a8` |
 | 2026-11-15 | (ما له ملخص عربي بعد) taqiya v2: chant recording hook via audio/taqiya.json (no 404 when absent), bot tuning, result shows the next walker | `fe8c0ee` |
 | 2026-11-15 | (ما له ملخص عربي بعد) taqiya v2: the real circle game, felt with the hands and the ears | `fb4d095` |
