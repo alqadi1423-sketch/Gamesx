@@ -1,0 +1,8 @@
+{
+  "name": "alaabna-tools",
+  "private": true,
+  "description": "Test and doc tools only (never shipped to public/): Playwright drives the browser for smoke tests and the generated game docs.",
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
