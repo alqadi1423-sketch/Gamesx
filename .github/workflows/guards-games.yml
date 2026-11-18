@@ -1,0 +1,27 @@
+name: Guards (games)
+
+# Every game has its rules, its log, sane player limits and a secrecy hook when it hides something (docs/rules.md).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guards-games-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  games:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/guards/check-games.js
