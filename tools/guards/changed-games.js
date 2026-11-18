@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Which games a change touches, for the test guards: prints JSON {smoke:[ids], online:[ids], why}.
-//   node tools/guards/changed-games.js --base=<git ref> [--all]
+//   node tools/guards/changed-games.js --base=<git ref> [--all] [--shard=k --shards=n]   (k from 0: every n-th game of the sorted list)
 // A game file -> the games it defines; a game stylesheet -> the games of its group; the engine or shared kits -> a fixed
 // sample that covers cards, boards, secrets, simultaneous rounds and the street games. online = those with a secret.
 'use strict';
@@ -27,4 +27,5 @@ for (const f of files) {
   else if (/^public\/css\/g-[a-z]+\.css$/.test(f)) { SAMPLE.forEach(i => G[i] && set.add(i)); why.push(`${f}: shared game styles -> sample`); }
   else if (/^(worker\/|tools\/test\/)/.test(f)) { SAMPLE.forEach(i => G[i] && set.add(i)); why.push(`${f}: server or test tool -> sample`); }
 }
-const smoke = [...set].sort(); console.log(JSON.stringify({ smoke, online: smoke.filter(secret), why }));
+let smoke = [...set].sort();
+if (a.shards) { const n = +a.shards, k = +(a.shard || 0); smoke = smoke.filter((_, i) => i % n === k); } console.log(JSON.stringify({ smoke, online: smoke.filter(secret), why }));
