@@ -1,0 +1,19 @@
+[
+ "public/js/bots.js :: function botGreedy(G,d,s,lv){TPL.innerHTML=G.render(d,botCtx(d,s));const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disabled'",
+ "public/js/core.js :: app.innerHTML=`<div class=\"panel\" style=\"direction:ltr;text-align:left;font-size:14px;line-height:1.7;word-break:break-all\"><b>${escH(navigator.userAgent)}</b><",
+ "public/js/core.js :: const el=document.createElement('div');el.className='floatrx';el.innerHTML=EMJ[i].svg;",
+ "public/js/core.js :: const got=botUI(()=>{for(let k=0;k<8;k++){TPL.innerHTML=G.render(d,ctx);const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disa",
+ "public/js/core.js :: el.innerHTML=`<i class=\"cav\">${chatFace(m.r)}</i><span><b>${chatName(m)}</b>${m.k!=null?`<i class=\"emj\">${emoSVG(m.k)}</i>`:`<em>${escH(m.x)}</em>`}</span>`;",
+ "public/js/core.js :: function morph(el,html){TPL.innerHTML=html;morphKids(el,TPL.content);}",
+ "public/js/core.js :: if(myNow&&!S.wasMy){sfx('turn');buzz();if(!isSimul(G,d)&&d.win==null){const b=document.createElement('div');b.className='ytb';b.style.setProperty('--c',col(d,ct",
+ "public/js/core.js :: if(screen!==S.lastScreen){S.lastScreen=screen;app.innerHTML='';S.lastHtml=null;window.scrollTo(0,0);app.dataset.s=S.mode==null?'home':/\\|g:/.test(screen)?'game'",
+ "public/js/games/n-guess.js :: d.innerHTML=`<svg width=\"0\" height=\"0\"><defs>${ks.map(k=>`<g id=\"gsx-${k}\">${XD[k]}</g>`).join('')}</defs></svg>`;document.body.appendChild(d);}catch(e){}}",
+ "public/js/games/n-jakaro-ui.js :: DEF.innerHTML=`<svg width=\"0\" height=\"0\"><defs>",
+ "public/js/games/n-jakaro-ui.js :: const el=document.createElementNS('http://www.w3.org/2000/svg','g');el.id='jkb'+B;el.innerHTML=v;host.appendChild(el);DB[B]=1;}",
+ "public/js/games/speed.js :: const s=GAMES.typing.s(S.st.d);const x=b.querySelector('.ty-s'),p=b.querySelector('.ty-pr i');if(x)x.innerHTML=tyHTML(s,t.value);if(p)p.style.width=tyPct(s,t.va",
+ "public/js/kit-hara.js :: d.innerHTML=`<svg width=\"0\" height=\"0\"><defs>${Object.keys(SIT).map(k=>g('sit-'+k,SIT[k])).join('')}${Object.keys(CAPS).map(k=>g('cap-'+k,CAPS[k])).join('')}${g",
+ "public/js/kit-hara.js :: d.innerHTML=`<svg width=\"0\" height=\"0\"><defs><linearGradient id=\"kh-beam\"><stop offset=\"0\" stop-color=\"#FFF1B8\" stop-opacity=\".85\"/><stop offset=\"1\" stop-color=",
+ "public/js/kit-hara.js :: try{el.insertAdjacentHTML('beforeend',`<g id=\"kh-${id}\">${PART[id]}</g>`);}catch(e){}}",
+ "public/js/net.js :: TPL.innerHTML=h;const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disabled')&&(!only||only.includes(e.dataset.ga)));TPL.innerH",
+ "public/js/views.js :: TPL.innerHTML=h;const el=[...TPL.content.querySelectorAll('[data-ga]')].find(e=>e.dataset.ga===a&&(i==null?e.dataset.i==null:+e.dataset.i===i));TPL.innerHTML=''"
+]
