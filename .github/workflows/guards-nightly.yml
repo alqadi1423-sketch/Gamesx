@@ -3,9 +3,9 @@ name: Guards (nightly)
 # Every playable game (STOPPED ones are left out) on one phone (p2, p3, p8, b13) and, when it hides something, online
 # with 4 phones and the leak check. Split over 8 parallel jobs; each must stay under half of the 6-hour job limit.
 on:
+  schedule:
+    - cron: '17 23 * * *'   # 02:17 Riyadh time (UTC+3); measured run 2026-11-18: 30-38 min per job, under half of the 6-hour limit
   workflow_dispatch:
-  push:
-    branches: [claude/guards-nightly]   # one measured run before merging; removed after the measurement
 
 permissions:
   contents: read
@@ -60,6 +60,16 @@ jobs:
           node tools/test/online/tfull.js 18977 "$GAMES" 4 150 > "$RUNNER_TEMP/tfull.log" 2>&1 || true
           grep -E 'FAIL|TFULL' "$RUNNER_TEMP/tfull.log" | head -40
           grep -q 'TFULL OK' "$RUNNER_TEMP/tfull.log"
+      - name: Keep the failing runs' details
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/smoke.json
+            ${{ runner.temp }}/smoke.log
+            ${{ runner.temp }}/tfull.log
+          retention-days: 14
       - name: Duration
         if: always()
         env:
