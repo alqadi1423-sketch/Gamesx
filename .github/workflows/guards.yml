@@ -1,0 +1,44 @@
+name: Guards
+
+# Checks every rule in docs/rules.md that a machine can check, on every pull request and every push to main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guards-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo:
+    name: repo rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Pick the commit to compare with
+        id: base
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          base="${PR_BASE:-$PUSH_BEFORE}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base=""; fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$PR_TITLE" | sed '/^$/d' > "$RUNNER_TEMP/titles.txt"
+      - name: Repository rules
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+        run: |
+          if [ -n "$BASE" ]; then node tools/guards/check-repo.js --base="$BASE" --titles-file="$RUNNER_TEMP/titles.txt"; else node tools/guards/check-repo.js; fi
