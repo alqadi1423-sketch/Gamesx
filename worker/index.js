@@ -14,6 +14,11 @@ const ROOM_KEEP = 12 * 3600 * 1000;
 // Without this a phone that lost its signal or changed networks stays in the room (a ghost) until Cloudflare's TCP gives up,
 // and ghosts fill the room's 16 places. The app pings after 5 s of quiet (older ones every 20 s)
 const SILENT = 45000, SWEEP = 20000;
+// guessing room codes: a source (its address) may fail to join FAIL_MAX times in FAIL_WINDOW; after that every join it
+// tries is answered 'noroom' until the window ends. Only failed joins (a code nobody opened) count, so a player who
+// mistypes a code once or twice never comes near it. The count lives in one shared object (GATE) for every code, in
+// memory only for the window: the address is never stored or logged.
+const FAIL_MAX = 20, FAIL_WINDOW = 10 * 60 * 1000, GATE = 'gate';
 
 export class Room {
   constructor(ctx, env) {
@@ -48,21 +53,28 @@ export class Room {
     return !!o && Date.now() - o.at < ROOM_KEEP;
   }
 
-  refuse(t, code) {
-    const [c, s] = Object.values(new WebSocketPair());
-    s.accept(); s.send(JSON.stringify({ t })); s.close(code, t);
-    return new Response(null, { status: 101, webSocket: c });
+  refuse(t, code) { return refuse(t, code); }
+
+  // the shared counter of failed joins (only the object named GATE gets these paths; rooms are reached by /ws/ only)
+  gate(u) {
+    const now = Date.now(), ip = u.searchParams.get('ip') || ''; const f = this.fails || (this.fails = new Map());
+    for (const [k, v] of f) if (now - v.t0 >= FAIL_WINDOW) f.delete(k);
+    let e = f.get(ip);
+    if (u.pathname === '/gate/fail' && ip) { if (!e) f.set(ip, e = { t0: now, n: 0 }); e.n++; }
+    return new Response(JSON.stringify({ blocked: !!e && e.n >= FAIL_MAX }), { headers: { 'content-type': 'application/json' } });
   }
 
   async fetch(req) {
-    const q = new URL(req.url || 'http://x/').searchParams;
+    const u = new URL(typeof req === 'string' ? req : (req.url || 'http://x/'));
+    if (u.pathname.startsWith('/gate/')) return this.gate(u);
+    const q = u.searchParams;
     if (q.get('c') === '1') {
       // a new room's code is already in use: the app picks another code
       if (this.ctx.getWebSockets().length || await this.isOpen()) return this.refuse('taken', 4009);
       await this.ctx.storage.put('open', { at: Date.now() });
     } else if (q.get('j') === '1') { if (!await this.isOpen()) return this.refuse('noroom', 4004); }
-    // an older app says neither: it opens the room as before
-    else if (!await this.isOpen()) await this.ctx.storage.put('open', { at: Date.now() });
+    // every app says which it is (?c=1 to open, ?j=1 to join or come back); a request that says neither is refused
+    else return this.refuse('noroom', 4004);
     if (this.alive().length >= 16) {
       // a browser can't read an HTTP error on a WebSocket upgrade, so accept it, say why, and close
       const [c, s] = Object.values(new WebSocketPair());
@@ -126,6 +138,13 @@ export class Room {
   }
 }
 
+// a browser cannot read an HTTP error on a WebSocket upgrade: accept it, say why, and close
+function refuse(t, code) {
+  const [c, s] = Object.values(new WebSocketPair());
+  s.accept(); s.send(JSON.stringify({ t })); s.close(code, t);
+  return new Response(null, { status: 101, webSocket: c, headers: { 'x-room': t } });
+}
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -133,7 +152,14 @@ export default {
       const m = url.pathname.match(ROOM_PATH);
       if (!m) return new Response('no such room', { status: 404 });
       if (req.headers.get('Upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
-      return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(req);
+      const room = env.ROOMS.get(env.ROOMS.idFromName(m[1]));
+      if (url.searchParams.get('j') !== '1') return room.fetch(req);
+      // a join: a source over the limit of failed joins is answered 'noroom' whatever the code; a failed join counts
+      const ip = req.headers.get('CF-Connecting-IP') || '', gate = env.ROOMS.get(env.ROOMS.idFromName(GATE)), q = encodeURIComponent(ip);
+      try { if ((await (await gate.fetch('https://gate/gate/check?ip=' + q)).json()).blocked) return refuse('noroom', 4004); } catch {}
+      const r = await room.fetch(req);
+      if (r.headers && r.headers.get && r.headers.get('x-room') === 'noroom') { try { await gate.fetch('https://gate/gate/fail?ip=' + q); } catch {} }
+      return r;
     }
     if (url.pathname === '/version.json') {
       // the Android app asks this from its own pages, so it needs to be readable from any origin
