@@ -1010,7 +1010,17 @@ const shapeW=r=>`<svg viewBox="0 0 40 40">${SHP[r]('#fff')}</svg>`;
 // a player's kid (kit-hara.js): the kid they picked, else the kid of their colour, always in their colour (KH.pface; o.mood, o.hat)
 const kface=(r,o)=>typeof KH!=='undefined'&&isRole(r)?KH.pface(r,o):shapeW(r);
 
-const SERVER='https://gamesx.alqadi1423.workers.dev';
+// the server, for the Android app (its pages come from the phone). The account's workers.dev name moves from alqadi1423 to alaabna
+// (docs/decisions.md, 2026-11-18). The old address is asked first, so the app never talks to the new one before it is ours; once the
+// old one stops answering, the new one is used. An answer counts only if it points to our own release page
+const SERVERS=['https://gamesx.alqadi1423.workers.dev','https://gamesx.alaabna.workers.dev'];
+let SERVER=SERVERS[0],serverAsk=null;
+function findServer(){if(serverAsk)return serverAsk;let i=0;
+  const next=()=>i>=SERVERS.length?Promise.resolve(null):fetch(SERVERS[i]+'/version.json',{cache:'no-store'})
+    .then(r=>{if(!r.ok)throw 0;return r.json();})
+    .then(j=>{if(!j||!/^https:\/\/github\.com\/alqadi1423-sketch\/gamesx\//i.test(String(j.apk||'')))throw 0;SERVER=SERVERS[i];return j;})
+    .catch(()=>{i++;return next();});
+  return serverAsk=next().finally(()=>{serverAsk=null;});}
 const isApp=()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
 function appSetup(){
   let A=Capacitor.Plugins&&Capacitor.Plugins.App;try{if(!A&&Capacitor.registerPlugin)A=Capacitor.registerPlugin('App');}catch(e){}
@@ -1019,7 +1029,7 @@ function appSetup(){
   if(A)A.addListener('backButton',()=>backAction(()=>A.exitApp()));
   // tell the player when a newer app build is out
   const el=document.querySelector('script[src*="core.js"]');const mine=+((el&&/v=(\d+)/.exec(el.src)||[])[1]||0);
-  fetch(SERVER+'/version.json',{cache:'no-store'}).then(r=>r.json()).then(j=>{if(j&&+j.v>mine&&j.apk){S.update=j;if(S.mode===null)render();}}).catch(()=>{});
+  findServer().then(j=>{if(j&&+j.v>mine&&j.apk){S.update=j;if(S.mode===null)render();}}).catch(()=>{});
 }
 function infoScreen(){
   const mq=q=>{try{return matchMedia(q).matches?'نعم':'لا';}catch(e){return '?';}};

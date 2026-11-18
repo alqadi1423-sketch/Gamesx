@@ -10,12 +10,13 @@ window.WSROOM={
   // opts.create: this phone opens a new room (the server refuses a code already in use: 'taken');
   // opts.need: joining someone's room, which must already be open (the server refuses a code nobody opened: 'noroom')
   room(){return {join:(name,opts={})=>new Promise((ok,no)=>{
-    const base=WSROOM.app()?'wss://gamesx.alqadi1423.workers.dev/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
+    // in the app the address is SERVER (core.js), looked up again while the room cannot be reached
+    const base=()=>WSROOM.app()?SERVER.replace(/^https:/,'wss:')+'/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
     // once in, coming back after a cut is joining a room that is open: the one who made it must not ask to make it again
     // (the server answers a second ?c=1 with 'taken', which would put the room's own maker out of it)
     // (and not as a newcomer either: a room that was emptied meanwhile, by a deploy or everyone's signal dropping at once, would
     // answer 'noroom' and put everyone out of their own game)
-    const url=()=>base+(opened?'':opts.create?'?c=1':opts.need?'?j=1':'');
+    const url=()=>base()+(opened?'':opts.create?'?c=1':opts.need?'?j=1':'');
     /* a socket can die without either side being told (a phone that changed networks, slept, or lost signal): it stays open
        and nothing comes through. A room that has said nothing for QUIET is asked (ping) and must answer within PONG_MS; back
        in the app (screen on, back from another app, back online) it is asked at once and must answer within WAKE_MS. One
@@ -35,6 +36,7 @@ window.WSROOM={
     // the socket is gone: tell the engine once, then try again after about 1.5 s, 3 s, 6 s … up to 8 s on screen (30 s in the
     // background). A socket found dead (fast) is replaced at once: the network is there, only that socket is not
     const retry=(full,fast)=>{drop();clearTimeout(probeT);probing=0;if(closed)return;
+      if(WSROOM.app()&&tries>0&&typeof findServer==='function')findServer();
       if(!opened){stop();no(new Error(full?'full':'ws'));return;}
       if(up||full){up=false;tell(full?'full':'lost');}
       clearTimeout(again);const cap=document.hidden?30000:8000,t=fast?150:Math.min(cap,1500*2**Math.min(tries++,5))*(.8+Math.random()*.4);
