@@ -31,13 +31,15 @@
   --tap:44px;
   color-scheme:light;
 }
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0F1720;--surface:#1A2633;--surface-2:#223142;--line:#2C3D50;--ink:#E7EEF6;--mut:#96A9BE;--e1:0 1px 0 #0A1016,0 2px 8px rgba(0,0,0,.35);--e2:0 1px 0 #0A1016,0 10px 26px rgba(0,0,0,.5);color-scheme:dark}
+ :root:not([data-theme=light]) .btn.primary{background:#E7EEF6;color:#0F1720} :root:not([data-theme=light]) .chip.on{background:#E7EEF6;color:#0F1720}}
 :root[data-theme=dark]{
   --bg:#0F1720; --surface:#1A2633; --surface-2:#223142; --line:#2C3D50; --ink:#E7EEF6; --mut:#96A9BE;
   --e1:0 1px 0 #0A1016,0 2px 8px rgba(0,0,0,.35); --e2:0 1px 0 #0A1016,0 10px 26px rgba(0,0,0,.5); color-scheme:dark;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Baloo Bhaijaan 2',system-ui,sans-serif;font-size:var(--fs-body);line-height:1.5}
-main{max-width:560px;margin-inline:auto;padding:var(--s5) var(--s4) 64px}
+main{max-width:560px;margin-inline:auto;padding-block:var(--s5) 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 h1{font-size:var(--fs-display);margin:0;line-height:1.2}
 h2{font-size:var(--fs-title);margin:var(--s6) 0 var(--s2);display:flex;gap:var(--s2);align-items:center}
 h2 span{font-size:var(--fs-small);color:var(--mut);font-weight:600}
@@ -67,6 +69,13 @@ p.lead{color:var(--mut);margin:var(--s1) 0 0}
 .btn.text{background:none;color:var(--blue);padding:0 var(--s2)}
 .btn.danger{background:none;color:var(--bad);box-shadow:inset 0 0 0 1.5px var(--bad)}
 .btn.pressed{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.btn:focus-visible,.seg button:focus-visible,.toggle:focus-visible,.chip:focus-visible,.pcard:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.chip{cursor:pointer;border:0;font:inherit;color:inherit}
+.pcard{cursor:pointer;transition:transform var(--t-move) var(--ease),opacity var(--t-move)}
+.zone .pcard.in{animation:cin var(--t-move) var(--ease)}@keyframes cin{from{transform:translateY(40px);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.toastwrap{position:fixed;inset-inline:0;bottom:calc(24px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none;z-index:9}
 .btn:disabled{opacity:.45;box-shadow:none;cursor:default}
 .btn.icon{width:var(--tap);padding:0;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1);color:var(--ink);font-size:20px}
 .row{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center}
@@ -172,14 +181,15 @@ p.lead{color:var(--mut);margin:var(--s1) 0 0}
 
   <h2>٤. الإعدادات المضبوطة</h2>
   <div class="box">
-    <div class="set"><label>عدد اللاعبين<small>البلوت: ٤ فقط</small></label><div class="stepper"><button disabled>−</button><b>٤</b><button disabled>+</button></div></div>
+    <div class="set"><label>عدد اللاعبين<small id="pmsg">لعبة من ٢ إلى ٨</small></label><div class="stepper"><button id="pm" aria-label="أقل">−</button><b id="pn">٤</b><button id="pp" aria-label="أكثر">+</button></div></div>
+    <div class="set"><label>جرّب لعبة ثابتة العدد<small>البلوت ٤ فقط: العدّاد يتقفل</small></label><button class="toggle" id="fixed" aria-label="البلوت"></button></div>
     <div class="set"><label>نهاية المباراة</label><div class="seg" style="width:200px"><button class="on">١٥٢</button><button>١٠٠</button><button>جولة</button></div></div>
     <div class="set"><label>مستوى البوت</label><div class="seg" style="width:200px"><button>سهل</button><button class="on">وسط</button><button>صعب</button></div></div>
     <div class="set"><label>وقت الدور<small>يلعب البوت عن الغايب</small></label><div class="seg" style="width:200px"><button>بدون</button><button class="on">٣٠ث</button><button>دقيقة</button></div></div>
     <div class="set"><label>الأصوات</label><button class="toggle on" aria-label="الأصوات"></button></div>
   </div>
   <p class="note">كل لعبة تعرّف إعداداتها من قائمة ثابتة، بقيم مسموحة وقيمة افتراضية. الإعداد اللي ما يناسب اللعبة ما يطلع أبد.</p>
-  <div class="row" style="margin-top:var(--s2)"><span class="chip on">الكل</span><span class="chip">ورق</span><span class="chip">لوحة</span><span class="chip">جماعية</span><span class="chip">★ المفضلة</span></div>
+  <div class="row" style="margin-top:var(--s2)"><button class="chip on">الكل</button><button class="chip">ورق</button><button class="chip">لوحة</button><button class="chip">جماعية</button><button class="chip">★ المفضلة</button></div>
 
   <h2>٥. اللاعب والحالة</h2>
   <div class="grid g2" id="badges"></div>
@@ -207,18 +217,17 @@ p.lead{color:var(--mut);margin:var(--s1) 0 0}
     <div class="zone"><div class="trick">
       <span></span><div class="pcard"><span class="ix">Q<i>♠</i></span><span class="pip">♠</span></div><span></span>
       <div class="pcard r"><span class="ix">J<i>♥</i></span><span class="pip">♥</span></div><span></span><div class="pcard"><span class="ix">9<i>♠</i></span><span class="pip">♠</span></div>
-      <span></span><span></span><span></span></div></div>
+      <span></span><span id="mine"></span><span></span></div></div>
     <div class="dock"><div class="hand">
       <div class="pcard"><span class="ix">A<i>♠</i></span><span class="pip">♠</span></div><div class="pcard r sel"><span class="ix">10<i>♦</i></span><span class="pip">♦</span></div><div class="pcard r"><span class="ix">K<i>♥</i></span><span class="pip">♥</span></div><div class="pcard off"><span class="ix">7<i>♣</i></span><span class="pip">♣</span></div><div class="pcard off"><span class="ix">8<i>♣</i></span><span class="pip">♣</span></div>
-    </div><p class="hint" style="margin:0">اضغط الورقة مرة ثانية عشان تلعبها</p></div>
+    </div><p class="hint" id="hhint" style="margin:0">اضغط ورقة تختارها، واضغطها مرة ثانية تلعبها</p></div>
     <div class="chatbar"><button class="btn icon" aria-label="محادثة">💬</button><button class="btn icon" aria-label="رد سريع">😄</button><span class="note" style="margin-inline-start:auto">شريط المحادثة ثابت ولا يغطي اللعب</span></div>
   </div>
   <p class="note">الإطار العام: الهيدر، ثم صف اللاعبين، ثم الحالة، ثم منطقة اللعب، ثم يدك وأزرارك، ثم شريط المحادثة. الشاشة ثابتة بدون تمرير. واللعبة اللي طريقتها مختلفة تحجز منطقتها بتصميم خاص.</p>
 
   <h2>٨. الرسائل والنوافذ</h2>
   <div class="grid">
-    <div><span class="toast">انسخ رمز الغرفة ✓</span></div>
-    <div class="sheet"><h5>تنسحب؟</h5><p class="note" style="margin:0 0 var(--s3)">اللعب يكمل للباقين، وتلعب معهم الجولة الجاية.</p><div class="grid g2"><button class="btn danger">إيه، انسحب</button><button class="btn second">لا، بكمل</button></div></div>
+    <div class="row"><button class="btn second" id="copy">انسخ رمز الغرفة</button><button class="btn danger" id="ff">انسحب</button></div><div class="sheet" id="ffsheet" hidden><h5>تنسحب؟</h5><p class="note" style="margin:0 0 var(--s3)">اللعب يكمل للباقين، وتلعب معهم الجولة الجاية.</p><div class="grid g2"><button class="btn danger" id="ffyes">إيه، انسحب</button><button class="btn second" id="ffno">لا، بكمل</button></div></div>
   </div>
 
   <h2>٩. الحركة</h2>
@@ -229,6 +238,7 @@ p.lead{color:var(--mut);margin:var(--s1) 0 0}
     <tr><td>الحد الأعلى لأي حركة</td><td>450ms</td></tr>
   </table><p class="note" style="margin-bottom:0">نحرّك الموضع والشفافية بس. وفي الوضع الخفيف تنطفي الحركات، وما فيه شي يعتمد على إن حركة تخلص.</p></div>
 </main>
+<div class="toastwrap"><span class="toast" id="toast" hidden></span></div>
 <script src="../public/js/kit-hara.js"></script>
 <script>
 // sample content only (the page is a static proposal); the cast comes from the app's own kit
@@ -242,6 +252,21 @@ const pr=[[0,'أنت','٥ ورق','turn'],[1,'سعود','٥ ورق',''],[2,'نو
 document.getElementById('prow').innerHTML=pr.map(([i,n,s,c])=>`<div class="pl ${c}" style="--c:${P[i][0]}"><span class="av">${face(i,34)}</span><div class="nm">${n}</div><div class="sc">${s}</div></div>`).join('');
 const set=t=>{document.documentElement.dataset.theme=t;tl.classList.toggle('on',t==='light');td.classList.toggle('on',t==='dark');};
 tl.onclick=()=>set('light');td.onclick=()=>set('dark');if(location.hash==='#dark')set('dark');
+const dark=()=>document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+if(!document.documentElement.dataset.theme){tl.classList.toggle('on',!dark());td.classList.toggle('on',dark());}
+const $=q=>document.querySelector(q),$$=q=>[...document.querySelectorAll(q)],AR=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+let tt;const toast=t=>{const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(tt);tt=setTimeout(()=>e.hidden=true,1800);};
+$$('.seg').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||g.contains(tl))return;g.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));}));
+$$('.row .chip').forEach(c=>c.addEventListener('click',()=>{$$('.row .chip').forEach(x=>x.classList.toggle('on',x===c));}));
+$$('.toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+let n=4;const upd=()=>{const f=$('#fixed').classList.contains('on');if(f)n=4;$('#pn').textContent=AR(n);$('#pm').disabled=f||n<=2;$('#pp').disabled=f||n>=8;$('#pmsg').textContent=f?'البلوت: ٤ فقط':'لعبة من ٢ إلى ٨';};
+$('#pm').onclick=()=>{n--;upd();};$('#pp').onclick=()=>{n++;upd();};$('#fixed').addEventListener('click',upd);upd();
+$$('.hand .pcard').forEach(c=>{c.tabIndex=0;c.addEventListener('click',()=>{
+  if(c.classList.contains('off')){toast('هذي الورقة ما تنلعب الحين');return;}
+  if(!c.classList.contains('sel')){$$('.hand .pcard').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('#hhint').textContent='اضغطها مرة ثانية عشان تلعبها';return;}
+  const m=$('#mine');m.textContent='';const k=c.cloneNode(true);k.classList.remove('sel');k.classList.add('in');m.appendChild(k);c.parentNode.removeChild(c);$('#hhint').textContent='لعبت ورقتك ✓';});});
+$('#copy').onclick=()=>{try{navigator.clipboard&&navigator.clipboard.writeText('K7M2QX').catch(()=>{});}catch(e){}toast('انسخ رمز الغرفة ✓');};
+$('#ff').onclick=()=>{$('#ffsheet').hidden=false;};$('#ffno').onclick=()=>{$('#ffsheet').hidden=true;};$('#ffyes').onclick=()=>{$('#ffsheet').hidden=true;toast('انسحبت، اللعب يكمل للباقين');};
 </script>
 </body>
 </html>
