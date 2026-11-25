@@ -419,11 +419,12 @@ function statusHTML(d,G,ctx){try{
     if(oth.length)s+=`<br><span class="gone">🤖 يلعب عنه البوت: ${oth.map(r=>nm(d,d.pl.indexOf(r))).join('، ')}</span>`;}
   return s;}catch(e){console.error(e);return '';}
 }
-/* the status card always has the same height: one quiet line for what just happened, one line for what to do now */
+/* the status card always has the same height: one quiet line for what just happened, one line for what to do now,
+   and for the equal-rounds games a small row of who has moved this round (erLine, a part that starts <div class="st-er") */
 function statusBox(html){
-  const parts=String(html).split(/<br\s*\/?>/);const sub=[],main=[];
-  for(const p of parts){const t=p.trim();if(!t)continue;if(/^<small>[\s\S]*<\/small>$/.test(t)&&!/<small>[\s\S]*<small>/.test(t))sub.push(t.slice(7,-8));else main.push(t);}
-  return `<div class="st-sub">${sub.join(' • ')}</div><div class="st-main">${main.join(' ')}</div>`;
+  const parts=String(html).split(/<br\s*\/?>/);const sub=[],main=[],row=[];
+  for(const p of parts){const t=p.trim();if(!t)continue;if(t.startsWith('<div class="st-er"'))row.push(t);else if(/^<small>[\s\S]*<\/small>$/.test(t)&&!/<small>[\s\S]*<small>/.test(t))sub.push(t.slice(7,-8));else main.push(t);}
+  return `<div class="st-sub">${sub.join(' • ')}</div><div class="st-main">${main.join(' ')}</div>${row.join('')}`;
 }
 /* the match ends on the round that leaves one player alone at the top with the target or more (a tie at the top plays on).
    The winner is kept in that round's state (d.mw), so every device shows it on that result only, and the next round starts a new match */

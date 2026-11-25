@@ -22,8 +22,14 @@ const erTime=(G,d,last)=>erMove(G,d,d.turn,'x',{last:`${nm(d,d.turn)} خلص و�
 const erMv=(d,s)=>{const k=erOf(d).k[s];return k==null||k==='x'||k==='h'?null:k;};
 // what seat `seat` may see of the round: its own move, and of the others only that they moved
 const erHide=(d,seat)=>d.win!=null||!d.er?d:{...d,er:{...d.er,k:d.er.k.map((k,s)=>s===seat||k==null?k:'h')}};
-// the line under the status: the round, and who has moved in it
-const erLine=d=>{const e=erOf(d);return `<small>الجولة ${e.r}${e.k.some(k=>k!=null)?` • لعبوا: ${d.pl.map((_,s)=>e.k[s]!=null?nm(d,s):'').filter(Boolean).join('، ')}`:''} • النتيجة آخر الجولة</small>`;};
+// the round's own row under the status (core statusBox keeps it apart, so the status line stays short): the round, and one
+// chip per player still in, in seat order like the players bar, filled with a tick once they have moved. Names fit up to three
+// players; with more the colours (the same as the bar) tell who is who, and the row's label reads them all out.
+// sub: the status already has its quiet line (the last move); when not, that line says how the round goes
+const erLine=(d,sub=!!d.last)=>{const e=erOf(d),n=d.pl.length,mv=s=>e.k[s]!=null,on=d.pl.map((_,s)=>s).filter(s=>d.out[s]!=='1'),who=on.filter(mv).map(s=>nm(d,s));
+  const chips=on.map(s=>`<span class="st-erp${mv(s)?' on':''}" style="--c:${col(d,s)}"><i></i>${n<=3?`<b>${nm(d,s)}</b>`:''}</span>`).join('');
+  return (sub?'':'<small>كل واحد يلعب مرة، والنتيجة آخر الجولة</small><br>')+
+    `<div class="st-er" role="note" aria-label="الجولة ${e.r}، ${who.length?'لعبوا: '+who.join('، '):'ما أحد لعب بعد'}"><span>الجولة ${e.r}</span>${chips}</div>`;};
 
 /* ---------- guess the word ---------- */
 const WORDS={
@@ -109,7 +115,9 @@ GAMES.num={name:'خمّن الرقم',cat:'mind',lbc:'#6B4FA0',
   icon:iconE('#8C6CC4','🔢'),
   init:n=>({sec:1+rnd(NUMV?30:100),lo:1,hi:NUMV?30:100,vr:NUMV,nb:0,ps:'0'.repeat(n),last:''}),
   hide:{all:['sec']},mask:(d,seat)=>d.win!=null?d:erHide({...d,sec:maskVal(d.sec)},seat),
-  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+`<br><small>${d.vr?'💣 القنبلة':'الرقم السري'} بين ${d.lo} و ${d.hi}${d.vr?' • اللي يقولها يطلع':''}</small>`+(d.vr||d.win!=null?'':'<br>'+erLine(d)),
+  status:(d,ctx)=>(d.last?`<small>${d.last}</small><br>`:'')+turnTxt(d,ctx)+(d.vr||d.win!=null?`<br><small>${d.vr?'💣 القنبلة':'الرقم السري'} بين ${d.lo} و ${d.hi}${d.vr?' • اللي يقولها يطلع':''}</small>`:
+    // equal rounds: the range goes on the turn line, so the quiet line keeps the last move whole above the round's row
+    ` <small>• الرقم بين ${d.lo} و ${d.hi}</small><br>`+erLine(d)),
   // classic: equal rounds (erMove); the bomb keeps its own turns
   onSkip:(nd,d)=>nd.vr?nd:erSkip(GAMES.num,nd,d),
   onTimeout:d=>d.vr?{...d,turn:nextSeat(d,d.turn)}:erTime(GAMES.num,d),
@@ -190,7 +198,7 @@ GAMES.mm={name:'كسر الشفرة',cat:'mind',lbc:'#2D4763',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#3F5D80"/>${[0,1,2].map(r=>[0,1,2,3].map(c=>`<circle cx="${20+c*17}" cy="${28+r*22}" r="7" fill="${MMC[(r*2+c*3)%6]}" stroke="#fff" stroke-width="2"/>`).join('')+`<circle cx="88" cy="${24+r*22}" r="3" fill="#fff"/><circle cx="88" cy="${33+r*22}" r="3" fill="#1d2f44"/>`).join('')}</svg>`,
   init:()=>({code:Array(4).fill(0).map(()=>rnd(6)).join(''),h:[],last:''}),
   hide:{all:['code']},net:{local:['add','clr']},mask:(d,seat)=>d.win!=null?d:erHide({...d,code:maskVal(d.code)},seat),
-  status:(d,ctx)=>{const x=d.h[d.h.length-1];let t='';if(x){const [b,w]=mmFb(d,x);t=`<small>${nm(d,x.s)}: ${b} بمكانها و${w} بغير مكانها</small><br>`;}return t+turnTxt(d,ctx)+(d.win!=null?'':'<br>'+erLine(d));},
+  status:(d,ctx)=>{const x=d.h[d.h.length-1];let t='';if(x){const [b,w]=mmFb(d,x);t=`<small>${nm(d,x.s)}: ${b} بمكانها و${w} بغير مكانها</small><br>`;}return t+turnTxt(d,ctx)+(d.win!=null?'':'<br>'+erLine(d,!!x));},
   // equal rounds: a try shows its pins when the round ends; whoever breaks the code in that round wins (two share it)
   onSkip:(nd,d)=>erSkip(GAMES.mm,nd,d),
   onTimeout:d=>erTime(GAMES.mm,d),
