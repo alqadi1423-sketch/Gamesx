@@ -29,7 +29,7 @@ html.lite .kh-banner,html.lite .kh-card{animation:none}
 @keyframes kh-peek{from{transform:translateY(80%)}}
 /* the status card: the kid whose turn it is (or the game's host) stands at its end (it comes first in the card: no :has) */
 .kh-st{position:absolute;left:4px;bottom:0;width:56px;height:64px;pointer-events:none}
-.kh-st~.st-sub,.kh-st~.st-main{margin-left:56px;max-width:calc(100% - 56px)}
+.kh-st~.st-sub,.kh-st~.st-main,.kh-st~.st-er{margin-left:56px;max-width:calc(100% - 56px)}
 .kh-st~.tbar{left:62px}
 .status.pend .kh-st{opacity:.35}
 /* «دورك!»: your kid waves from the banner */
