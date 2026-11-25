@@ -587,7 +587,7 @@ svg.tvb{width:min(100%,460px);display:block;border-radius:12px;box-shadow:0 6px 
 .btk .card{width:42px;height:60px;font-size:17px;box-shadow:0 3px 8px rgba(0,0,0,.3)}
 .btk.b{transform:translate(-50%,-6%)}.btk.t{transform:translate(-50%,-94%)}.btk.r{transform:translate(8%,-50%)}.btk.l{transform:translate(-108%,-50%)}
 .btk.old{opacity:.55}
-.bopts{gap:8px}.bopts .btn{min-height:46px;padding:0 18px}.btn.bsuit{font-size:26px;background:#fff;color:#2D4763}.btn.bsuit.rs{color:#D43C33}
+.bopts{gap:8px}.bopts .btn{min-height:46px;padding:0 18px}.btn.bsuit{font-size:26px;background:#fff;color:#2D4763}.btn.bsuit.rs{color:#D43C33}.btn.bsuit small{font-size:15px;font-weight:700;margin-inline-start:6px}
 .bhand{display:flex;justify-content:center;margin:10px 0 0;padding:0 18px}
 .bhand .bcard{margin:0 -9px;transition:transform .12s}
 .bhand button.bcard{transform:translateY(-8px)}.bhand button.bcard:active{transform:translateY(-14px)}

@@ -260,7 +260,7 @@ GAMES.c_spades=c2TeamGame({deal:c2spDeal,G:{name:'سبيتة',lbc:'#24324A',
     const L=c2spLegal(d,d.ah);return c2spPlay(d,L[rnd(L.length)]);},
   points:d=>d.pl.map((_,s)=>`${d.sc[s%2]}`),
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
-    if(d.ph==='bid')return s+`${who}: كم لمّة تطلب؟`;if(d.ph==='play')return s+who+(d.brk?'':' <small>• الأسباتي ما انكسر</small>');return s+'انتهت الجولة';},
+    if(d.ph==='bid')return s+`${who}: كم لمّة تطلب؟`;if(d.ph==='play')return s+who+(d.brk?'':' <small>• السبيت ما انكسر</small>');return s+'انتهت الجولة';},
   render(d,ctx){return c2Frame(d,ctx,{
     head:(d,me)=>c2Head(d,me,`${c2Su('s')} <small>زيادات ${(d.bags||[0,0])[me%2]}</small>`),
     info:(d,k)=>d.bids[k]<0?'':`<b class="c2bid">${d.ph==='play'?`${d.tw[k]}/`:''}${d.bids[k]===0?'نِل':d.bids[k]}</b>`,
@@ -278,7 +278,7 @@ GAMES.c_spades=c2TeamGame({deal:c2spDeal,G:{name:'سبيتة',lbc:'#24324A',
     if(d.ph==='sum'||d.ctl[d.ah]!==d.turn)return;
     if(a==='bid'&&d.ph==='bid'){if(!(i>=0&&i<=13))return;act(c2spBid(d,i));return;}
     if(a==='card'&&d.ph==='play'){const c=cardsOf(d.hands[d.ah])[i];if(!c||!c2spLegal(d,d.ah).includes(c))return;act(c2spPlay(d,c));}}}});
-HELP.c_spades='أربع أيادي: كل اثنين متقابلين فريق، والأسباتي ♠ دايم هو الحكم. كل يد تاخذ 13 ورقة، وكل واحد يطلب كم لمّة بياخذ (من 0 إلى 13)، وطلب الفريق مجموع طلبات اللاعبين. الصفر اسمه «نِل»: إذا ما أخذ صاحبه ولا لمّة ياخذ فريقه 100، وإذا أخذ ولو وحدة ينخصم 100. لازم تنزل من النوع الأول، وإذا ما عندك تقدر تقطع بالأسباتي. ما تبدأ بالأسباتي لين ينكسر (ينزل أسباتي على نوع ثاني) إلا إذا ما عندك غيره. إذا جاب الفريق طلبه ياخذ 10 عن كل لمّة طلبها، وكل لمّة زيادة بنقطة، وكل 10 زيادات تنخصم 100. وإذا ما جابه ينخصم 10 عن كل لمّة طلبها. أول فريق يوصل 500 يفوز، واللي ينزل إلى ‎-200 يخسر. لاعبين اثنين: كل واحد يلعب يدين فريقه. ثلاثة: اللي لحاله يلعب يدين فريقه. من 5 لاعبين: أعضاء الفريق يتناوبون على أياديه.';
+HELP.c_spades='أربع أيادي: كل اثنين متقابلين فريق، والسبيت ♠ دايم هو الحكم. كل يد تاخذ 13 ورقة، وكل واحد يطلب كم لمّة بياخذ (من 0 إلى 13)، وطلب الفريق مجموع طلبات اللاعبين. الصفر اسمه «نِل»: إذا ما أخذ صاحبه ولا لمّة ياخذ فريقه 100، وإذا أخذ ولو وحدة ينخصم 100. لازم تنزل من النوع الأول، وإذا ما عندك تقدر تقطع بالسبيت. ما تبدأ بالسبيت لين ينكسر (ينزل سبيت على نوع ثاني) إلا إذا ما عندك غيره. إذا جاب الفريق طلبه ياخذ 10 عن كل لمّة طلبها، وكل لمّة زيادة بنقطة، وكل 10 زيادات تنخصم 100. وإذا ما جابه ينخصم 10 عن كل لمّة طلبها. أول فريق يوصل 500 يفوز، واللي ينزل إلى ‎-200 يخسر. لاعبين اثنين: كل واحد يلعب يدين فريقه. ثلاثة: اللي لحاله يلعب يدين فريقه. من 5 لاعبين: أعضاء الفريق يتناوبون على أياديه.';
 GAMES.c_spades.bot=(d,s,lv)=>{if(d.ph==='sum')return c2NextTeam(d,c2spDeal);const h=d.ah,H=cardsOf(d.hands[h]);
   if(d.ph==='bid'){const e=c2Est(H,'s')+c2Lv(lv)*.7;const hiS=H.some(c=>c[1]==='s'&&c2r(c)>=10);
     if(lv>=2&&e<.7&&!hiS&&H.filter(c=>c[1]==='s').length<=3&&d.bids[(h+2)%4]!==0)return c2spBid(d,0);return c2spBid(d,Math.max(1,Math.min(13,Math.round(e))));}
@@ -445,9 +445,9 @@ GAMES.c_hearts=c2IndGame({name:'القلوب',lbc:'#B23A5A',
   winText:d=>d.win!=null?`فاز ${d.wt!=null&&d.team?'فريق '+c2TeamName(d,d.wt):(d.wins||[d.win]).map(s=>nm(d,s)).join(' و')} بأقل نقاط`:null,
   onTimeout(d){if(d.ph==='sum')return c2htNext(d);if(d.ph==='pass')return c2htPass(d,cardsOf(d.hands[d.ah]).slice(-3));const L=c2htLegal(d,d.ah);return c2htPlay(d,L[rnd(L.length)]);},
   status(d,ctx){const me=!ctx.local&&d.turn===ctx.v;let s=d.last?`<small>${d.last}</small><br>`:'';const who=me?'<b class="yt">دورك</b>':`دور ${nameTag(d,d.turn)}`;
-    if(d.ph==='pass')return s+`${who}: اختر 3 أوراق (${c2htDir(d.H,d.off)})`;if(d.ph==='play')return s+who+(!d.tlog.length&&!d.tk?' <small>• ابدأ بأصغر سباتي</small>':'');return s+'انتهت الجولة';},
+    if(d.ph==='pass')return s+`${who}: اختر 3 أوراق (${c2htDir(d.H,d.off)})`;if(d.ph==='play')return s+who+(!d.tlog.length&&!d.tk?' <small>• ابدأ بأصغر شريا</small>':'');return s+'انتهت الجولة';},
   render(d,ctx){return c2Frame(d,ctx,{
-    head:(d,me)=>c2HeadMid(`${c2Su('h')} <small>${d.ph==='pass'?c2htDir(d.H,d.off):d.brk?'القلوب انكسرت':'القلوب مقفلة'}</small>`),
+    head:(d,me)=>c2HeadMid(`${c2Su('h')} <small>${d.ph==='pass'?c2htDir(d.H,d.off):d.brk?'الهاص انكسر':'الهاص مقفول'}</small>`),
     info:(d,k)=>d.ph==='sum'?'':`${d.ps[k]&&d.ph==='pass'?'<small>✓</small>':''}<b class="c2pt ${d.pts[k]?'bad':''}">${d.pts[k]}</b>`,
     panel(d,ctx,me){if(d.ph!=='pass')return '';const n=c2Sel(d).length;return `<p class="lbl c2lb">اختر 3 أوراق تمرّرها (${c2htDir(d.H,d.off)})</p><div class="row bopts"><button class="btn green" data-ga="pass" ${n===3?'':'disabled'}>مرّر (${n}/3)</button></div>`;},
     canCard:d=>d.ph==='play'||d.ph==='pass',legal:(d,h)=>d.ph==='pass'?cardsOf(d.hands[h]):c2htLegal(d,h),sel:d=>d.ph==='pass'?c2Sel(d).map(c=>cardsOf(d.hands[d.ah]).indexOf(c)):null,
@@ -459,7 +459,7 @@ GAMES.c_hearts=c2IndGame({name:'القلوب',lbc:'#B23A5A',
     if(a==='card'&&d.ph==='pass'){const c=cardsOf(d.hands[h])[i];if(c)c2Toggle(d,c,3);return;}
     if(a==='pass'&&d.ph==='pass'){const cs=c2Sel(d);if(cs.length!==3)return;S.sel=[];act(c2htPass(d,cs));return;}
     if(a==='card'&&d.ph==='play'){const c=cardsOf(d.hands[h])[i];if(!c||!c2htLegal(d,h).includes(c))return;act(c2htPlay(d,c));}}});
-HELP.c_hearts='الهدف تتجنب النقاط: كل ورقة قلب (كبة) بنقطة، وبنت الأسباتي Q♠ بـ13 نقطة. الورق يتوزع كله بالتساوي (مع 3 لاعبين وأكثر من 4 تنشال كم ورقة ديناري وسباتي صغيرة). قبل كل جولة تختار 3 أوراق تمرّرها: مرة لليمين ومرة لليسار ومرة للي قدامك (مع 4 أيادي)، وجولة بدون تمرير. اللي معه أصغر سباتي يبدأ فيه، وفي أول لمّة ما تنرمى قلوب ولا بنت الأسباتي. لازم تنزل من النوع الأول، وإذا ما عندك ترمي اللي تبي. ما تبدأ بالقلوب لين ينرمى قلب (إلا إذا ما عندك غيرها). أعلى ورقة من النوع الأول تاخذ اللمّة ونقاطها. اللي ياخذ كل الـ26 نقطة «يصيد القمر»: ياخذ صفر والباقين كل واحد 26. لما يوصل أحد 100 تخلص اللعبة ويفوز صاحب أقل نقاط. لاعبين اثنين: كل واحد يلعب يدين متقابلة ونقاطهم تنجمع.';
+HELP.c_hearts='الهدف تتجنب النقاط: كل ورقة هاص بنقطة، وبنت السبيت Q♠ بـ13 نقطة. الورق يتوزع كله بالتساوي (مع 3 لاعبين وأكثر من 4 تنشال كم ورقة ديمن وشريا صغيرة). قبل كل جولة تختار 3 أوراق تمرّرها: مرة لليمين ومرة لليسار ومرة للي قدامك (مع 4 أيادي)، وجولة بدون تمرير. اللي معه أصغر شريا يبدأ فيه، وفي أول لمّة ما ينرمى هاص ولا بنت السبيت. لازم تنزل من النوع الأول، وإذا ما عندك ترمي اللي تبي. ما تبدأ بالهاص لين ينرمى هاص (إلا إذا ما عندك غيره). أعلى ورقة من النوع الأول تاخذ اللمّة ونقاطها. اللي ياخذ كل الـ26 نقطة «يصيد القمر»: ياخذ صفر والباقين كل واحد 26. لما يوصل أحد 100 تخلص اللعبة ويفوز صاحب أقل نقاط. لاعبين اثنين: كل واحد يلعب يدين متقابلة ونقاطهم تنجمع.';
 GAMES.c_hearts.bot=(d,s,lv)=>{if(d.ph==='sum')return c2htNext(d);const h=d.ah,H=cardsOf(d.hands[h]);
   if(d.ph==='pass'){// the queen and the big spades, high hearts, and what empties a short suit
     const sp=H.filter(c=>c[1]==='s').length;const cost=c=>(c==='Qs'?60:0)+((c==='As'||c==='Ks')&&!H.includes('Qs')&&sp<4?40:0)+(c[1]==='h'?10+c2r(c)*2:0)+c2r(c)*2+(H.filter(x=>x[1]===c[1]).length<=2&&c[1]!=='s'?15:0)+(lv===1?Math.random()*40:0);
@@ -470,13 +470,13 @@ GAMES.c_hearts.botDelay=(d,s,lv)=>d.ph==='sum'?7000:650+rnd(600);
 
 /* =================================================================
    تركس: four hands, four kingdoms of five deals. The kingdom's owner (first the holder of 7♥) deals and chooses, once each,
-   one of: ملك الكبة (K♥ -75), البنات (each queen -25), الديناري (each diamond -10), اللطش (each trick -15) and تركس
+   one of: ملك الهاص (K♥ -75), البنات (each queen -25), الديمن (each diamond -10), اللطش (each trick -15) and تركس
    (lay out from the jacks up and down; out first +200, then 150, 100, 50). In the king and queens the holder may double
    the card: its taker loses double and the holder gains the single value (taking one's own: -double and the trick's leader
    gains, unless the holder led it). Hearts may not be led in the king deal before only hearts remain.
    4 players alone (or 2 teams of 2 with teams on); other counts play as two teams of opposite hands.
    ================================================================= */
-const C2TX_K=['K','Q','D','L','T'],TX_N={K:'ملك الكبة',Q:'البنات',D:'الديناري',L:'اللطش',T:'تركس'};
+const C2TX_K=['K','Q','D','L','T'],TX_N={K:'ملك الهاص',Q:'البنات',D:'الديمن',L:'اللطش',T:'تركس'};
 const c2txPen=(k,c)=>k==='K'?(c==='Kh'?75:0):k==='Q'?(c[0]==='Q'?25:0):k==='D'?(c[1]==='d'?10:0):0;
 function c2txDeal(d){const dk=shuffle(c2Deck()),hands=[0,1,2,3].map(h=>c2Sort(dk.slice(h*13,h*13+13).join('')));
   let ow=d.ow;if(ow==null||ow<0)ow=hands.findIndex(x=>cardsOf(x).includes('7h'));
@@ -559,7 +559,7 @@ GAMES.c_trix=c2IndGame({name:'تركس',lbc:'#5B3A8C',teams:'native',teamsOk:z=>
     if(a==='dok'&&d.ph==='dbl'){const cs=c2Sel(d);S.sel=[];act(c2txDbl(d,cs));return;}
     if(a==='card'&&d.ph==='trix'){const c=cardsOf(d.hands[h])[i];if(!c||!c2txCan(d,c))return;act(c2txTPlay(d,c));return;}
     if(a==='card'&&d.ph==='play'){const c=cardsOf(d.hands[h])[i];if(!c||!c2txLegal(d,h).includes(c))return;act(c2txPlay(d,c));}}});
-HELP.c_trix='أربع أيادي، كل يد 13 ورقة. اللعبة 4 ممالك، وكل مملكة 5 جولات: صاحب المملكة (أول واحد اللي عنده 7 كبة، وبعده اللي على يمينه) يختار كل جولة لعبة ما لعبها قبل: ملك الكبة (اللي ياخذ الشايب ♥ ينخصم منه 75)، البنات (كل بنت ‎-25)، الديناري (كل ورقة ديناري ‎-10)، اللطش (كل لمّة ‎-15)، والتركس. في الألعاب الأربع الأولى صاحب المملكة يبدأ، ولازم تنزل من النوع الأول، وأعلى ورقة منه تاخذ اللمّة. في ملك الكبة ما تبدأ بالكبة إلا إذا ما عندك غيرها، والجولة تخلص أول ما ينوكل الشايب (والبنات أول ما تنوكل الأربع، والديناري أول ما تخلص الديناري). في ملك الكبة والبنات تقدر «تكبّر» ورقتك قبل اللعب: اللي ياخذها تنخصم منه ضعف وأنت تاخذ قيمتها (ولو أخذتها أنت تنخصم ضعف وياخذ قيمتها اللي بدأ اللمّة، إلا إذا أنت اللي بديت فيها). التركس: تبدأ الصفوف من الولد (J) وتكمل فوق وتحت بالترتيب، ولو ما عندك ورقة تنفع تمرّر. أول من يخلص ورقه ياخذ 200، والثاني 150، والثالث 100، والأخير 50. بعد 20 جولة يفوز صاحب أعلى مجموع. مع 4 لاعبين كل واحد لحاله (أو فريقين لو شغلتوا الفرق)، ومع غيرها يلعبون فريقين: كل اثنين متقابلين فريق ونقاطهم تنجمع.';
+HELP.c_trix='أربع أيادي، كل يد 13 ورقة. اللعبة 4 ممالك، وكل مملكة 5 جولات: صاحب المملكة (أول واحد اللي عنده 7 هاص، وبعده اللي على يمينه) يختار كل جولة لعبة ما لعبها قبل: ملك الهاص (اللي ياخذ الشايب ♥ ينخصم منه 75)، البنات (كل بنت ‎-25)، الديمن (كل ورقة ديمن ‎-10)، اللطش (كل لمّة ‎-15)، والتركس. في الألعاب الأربع الأولى صاحب المملكة يبدأ، ولازم تنزل من النوع الأول، وأعلى ورقة منه تاخذ اللمّة. في ملك الهاص ما تبدأ بالهاص إلا إذا ما عندك غيره، والجولة تخلص أول ما ينوكل الشايب (والبنات أول ما تنوكل الأربع، والديمن أول ما يخلص الديمن). في ملك الهاص والبنات تقدر «تكبّر» ورقتك قبل اللعب: اللي ياخذها تنخصم منه ضعف وأنت تاخذ قيمتها (ولو أخذتها أنت تنخصم ضعف وياخذ قيمتها اللي بدأ اللمّة، إلا إذا أنت اللي بديت فيها). التركس: تبدأ الصفوف من الولد (J) وتكمل فوق وتحت بالترتيب، ولو ما عندك ورقة تنفع تمرّر. أول من يخلص ورقه ياخذ 200، والثاني 150، والثالث 100، والأخير 50. بعد 20 جولة يفوز صاحب أعلى مجموع. مع 4 لاعبين كل واحد لحاله (أو فريقين لو شغلتوا الفرق)، ومع غيرها يلعبون فريقين: كل اثنين متقابلين فريق ونقاطهم تنجمع.';
 GAMES.c_trix.bot=(d,s,lv)=>{if(d.ph==='sum')return c2txNext(d);const h=d.ah,H=cardsOf(d.hands[h]);
   const by=x=>H.filter(c=>c[1]===x);
   if(d.ph==='pick'){const l=c2txLeft(d);if(lv===1)return c2txPick(d,l[rnd(l.length)]);
