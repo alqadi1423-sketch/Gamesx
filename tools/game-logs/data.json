@@ -251,6 +251,15 @@
    "gs_land",
    "gs_food",
    "gs_job"
+  ],
+  "w-thread-core": [
+   "w_thread"
+  ],
+  "w-thread-data": [
+   "w_thread"
+  ],
+  "n-thread": [
+   "w_thread"
   ]
  }
 }

@@ -16,6 +16,10 @@ const step = (p, opts) => p.evaluate((opts) => {
       if (isSimul(G, d)) { if (!hasPicked(d, s)) { botClick(G, d, s, 2, true); return 'hbotpick'; } }
       else if (d.turn === s) { let nd = G.bot ? G.bot(d, s, 2) : undefined; if (nd === undefined) nd = botClick(G, d, s, 2, false); if (nd && nd !== d) { act(nd); return 'hbot'; } } }
     if (S.st.g === 'cats' && S.st.d.ph === 'write') for (const el of app.querySelectorAll('.cform input[data-draft]')) if (!catOkL(el.value, S.st.d.L, +el.dataset.draft.split('_')[2]) && Math.random() < .6) { const k = +el.dataset.draft.split('_')[2]; const ws = catWords(k, S.st.d.L); el.value = ws.length ? ws[Math.floor(Math.random() * ws.length)] : 'x'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    // «طرف الخيط»: the clue-giver often gives a clue the check accepts (from what its own view shows), a picked tile is often confirmed
+    if (S.st.g === 'w_thread') { const wi = app.querySelector('.wth-in');
+      if (wi && Math.random() < .6) { wi.value = WT.clueBot(S.st.d, Math.random).w; wi.dispatchEvent(new Event('input', { bubbles: true })); const sb = app.querySelector('.wth-send'); if (sb && !sb.disabled) { sb.click(); return 'wth-clue'; } }
+      const pk = app.querySelector('.wth-pk.wth-can'); if (pk && Math.random() < .7) { pk.click(); return 'wth-confirm'; } }
     const inputs = [...app.querySelectorAll('.board input[data-draft], .board textarea[data-draft]')];
     for (const el of inputs) { if (el.type === 'range') { const mn = +el.min || 0, mx = +el.max || 10; el.value = mn + Math.floor(Math.random() * (mx - mn + 1)); el.dispatchEvent(new Event('input', { bubbles: true })); continue; }
       if (!el.value) { const W = ['كتاب', 'باب', 'قلم', 'شمس', 'بحر', 'جمل']; el.value = W[Math.floor(Math.random() * W.length)]; el.dispatchEvent(new Event('input', { bubbles: true })); } }
@@ -77,6 +81,11 @@ const leakCheck = async (A, NH, g) => {
       t.pl.forEach((r, s) => { if (s === seat) return; const x = v.priv[r]; if (x && x.gq) fail(g, p.label, 'sees guesses of', s); }); }
     if (g === 'cats' && t.ph === 'write') t.pl.forEach((r, s) => { if (s === seat) return; const x = v.priv[r]; if (x && x.ca && Array.isArray(x.ca.a) && x.ca.a.some(w => w && w !== '·')) fail(g, p.label, 'sees answers of', s, JSON.stringify(x.ca.a)); });
     if (g === 'wires') { if (v.d.bomb !== -1) fail(g, p.label, 'sees the bomb wire'); t.kn.forEach((k, s) => { if (s !== seat && v.d.kn[s] && v.d.kn[s].some(x => x !== -1)) fail(g, p.label, 'sees safe wires of', s); }); }
+    // «طرف الخيط»: the secret map reaches the clue-givers only (duo: each player their own side), never a guesser
+    if (g === 'w_thread' && Array.isArray(t.k)) { const k = v.d.k || [], hidden = x => typeof x === 'string' && /^\?+$/.test(x);
+      if (t.md === 'duo') { if (!hidden(k[1 - seat])) fail(g, p.label, 'sees the other side of the duo map'); if (k[seat] !== t.k[seat]) fail(g, p.label, 'misses its own side of the map'); }
+      else if (t.cg.includes(seat)) { if (k[0] !== t.k[0]) fail(g, p.label, 'clue-giver misses the map'); }
+      else if (!hidden(k[0])) fail(g, p.label, 'guesser sees the map'); }
     if (['trivia', 'islam', 'rps'].includes(g)) t.pl.forEach((r, s) => { if (s === seat) return; const x = v.priv[r]; if (x && x.pick != null && x.pick !== 1) fail(g, p.label, 'sees pick of', s); });
   }
   return n; };
@@ -94,6 +103,7 @@ const frameCheck = async (P, A, g) => { let n = 0;
       if (g === 'tele' && (d.ph === 'draw' || d.ph === 'pick') && (d.w !== -1 && d.w != null || (d.ch || []).some(x => x !== -1))) fail(g, 'host frame shows the word');
       if (g === 'luck' && [...d.box].some((c, i) => d.op[i] === '.' && c !== '?')) fail(g, 'host frame shows boxes');
       if (g === 'hilo' && d.dk.length !== (d.p + 1) * 2) fail(g, 'host frame shows deck');
+      if (g === 'w_thread' && Array.isArray(d.k) && d.k.some(x => /[^?]/.test(x))) fail(g, 'host frame shows the map');
       if (f.pp) for (const r in f.pp) { const x = f.pp[r]; if (!x || x === '@') continue;
         if (x.pick != null && x.pick !== 1 && x.pick !== '~' && (x.rd == null || x.rd === d.rd)) fail(g, 'host frame pp shows pick', r, JSON.stringify(x.pick).slice(0, 40));
         if (x.gq) fail(g, 'host frame pp shows guesses', r);
