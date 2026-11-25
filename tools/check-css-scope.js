@@ -40,6 +40,7 @@ const OWNERS = {
   'n-puzzle2.css': ['n-puzzle2', 'n-puzzle2b', 'n-puzzle2c'], 'n-quiz2.css': ['n-quiz2', 'n-quiz2b', 'n-quiz2c'],
   'n-speed2.css': ['n-speed2', 'n-speed2b'], 'n-sport2.css': ['n-sport2', 'n-sport2b'], 'n-taqiya.css': ['n-taqiya'],
   'n-tiles2.css': ['n-tiles2', 'n-tiles2b'], 'n-words2.css': ['n-words2', 'n-words2b'],
+  'n-thread.css': ['w-thread', 'w-thread-core', 'w-thread-data'],
 };
 // shared components: [home stylesheet, classes]. Any game may call them; outside the home sheet they may only be styled
 // together with a class of the styling group (.k2rack .card), never on their own.
