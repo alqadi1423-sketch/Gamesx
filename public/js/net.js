@@ -109,7 +109,11 @@ async function reseal(){const k=S.hostK;
 // a tap in a secret game: tried here first on this phone's view; what needs the hidden state is played by the host
 function netClick(G,a,i){
   if(S.pend)return;const d=S.st.d,ctx=mkCtx(),net=G.net||{};
-  if((net.local||[]).includes(a)){G.click(a,i,d,ctx);return;}
+  // a local tap (selection, typing) stays here, unless it turns out to make a move: that one goes to the host like any tap
+  if((net.local||[]).includes(a)){const u0=uiSnap(G),c0=NET_CAP;NET_CAP={v:undefined,pv:null};let mv=false;
+    let pv=null;try{G.click(a,i,d,ctx);}finally{mv=NET_CAP.v!==undefined;pv=NET_CAP.pv;NET_CAP=c0;}
+    if(mv){uiLoad(G,u0);if(queueIntent({t:'ck',base:S.st.s,gid:d.gid,a:String(a).slice(0,20),i:Number.isFinite(i)?i:null,ui:u0}))render();return;}
+    if(pv)setPriv(pv.role,pv.p);return;}
   const ui0=uiSnap(G),buf=[],tt=window.toast,cap0=NET_CAP;window.toast=t=>buf.push(t);NET_CAP={v:undefined,pv:null};let threw=false;
   try{G.click(a,i,d,ctx);}catch(e){threw=true;}finally{window.toast=tt;}
   const cap=NET_CAP;NET_CAP=cap0;const same=jsEq(ui0,uiSnap(G));

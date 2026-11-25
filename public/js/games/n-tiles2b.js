@@ -1,5 +1,5 @@
 'use strict';
-/* n-tiles2b: السرعة، اللقطة، الحرب الكبرى، سوليتير السباق، بشتي، الأزواج الصاعدة، ورق الحظ. Uses the k2 helpers of n-tiles2.js.
+/* n-tiles2b: السرعة، اللقطة، الحرب الكبرى، سوليتير السباق، بشتي، رمي ٥٠٠، ورق الحظ. Uses the k2 helpers of n-tiles2.js.
    The slap and speed games run in rounds everybody plays at once: each phone times its own tap, the host puts the taps in
    order of those times and resolves them (G.resolve), and a round no one taps closes on the host's clock (G.host). */
 
@@ -366,7 +366,7 @@ GAMES.k_pishti.bot=(d,s,lv)=>{if(d.ph==='sum')return k2piNext(d);const H=cardsOf
 GAMES.k_pishti.botDelay=(d,s,lv)=>d.ph==='sum'?6000:800+rnd(600);
 
 /* =================================================================
-   الأزواج الصاعدة (Rummy 500; pagat.com). One pack with two jokers (two packs and four jokers from 5 players); 13 cards
+   رمي ٥٠٠ (Rummy 500; pagat.com). One pack with two jokers (two packs and four jokers from 5 players); 13 cards
    each for two players, 7 for more. The discards lie spread out: draw the stock, or take any discard together with every
    card above it, but then the deepest card you took must go into a meld this turn (taking only the top card, you may not
    throw it back). Meld sets (3-4 of a rank, all suits different) and runs (3+ of a suit in order, ace low or high, not
@@ -422,7 +422,7 @@ const k2rmCanUse=(d,H,c)=>k2rmFind(H,d.pl.length>4).some(m=>m.includes(c))||d.me
 const k2rmFree=(d,s)=>!d.must||!k2rmCanUse(d,cardsOf(d.hands[s]),d.must);
 const k2rmMini=(f,j)=>j==='1'?`<div class="card mini jk k2rmj"><b>★</b><i>${f[0]==='T'?'10':f[0]}</i></div>`:miniCard(f);
 const k2rmCard=c=>k2rmJ(c)?(typeof hCard==='function'?hCard(c):'<div class="card jk"></div>'):cardHTML(c);
-GAMES.k_r500={name:'الأزواج الصاعدة',cat:'cards',lbc:'#5A3E8E',teams:'none',
+GAMES.k_r500={name:'رمي ٥٠٠',cat:'cards',lbc:'#5A3E8E',teams:'none',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#6B4CA6"/>${[0,1,2].map(k=>`<g transform="translate(${12+k*15} ${18+k*8})"><rect width="26" height="36" rx="4" fill="#fff" stroke="#DCE3EC"/><text x="13" y="24" font-size="15" font-weight="900" text-anchor="middle" fill="#2D4763">${5+k}</text></g>`).join('')}<path d="M66 64l14-24 8 5" stroke="#FFE07A" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="18" y="74" width="64" height="16" rx="8" fill="#F0B429"/><text x="50" y="86.5" font-size="12" font-weight="900" text-anchor="middle" fill="#3D2A63">500</text></svg>`,
   init:n=>({dl:n-1,hands:Array(n).fill(''),dk:'',disc:'',mel:[],mp:Array(n).fill(0),sc:Array(n).fill(0),ph:'draw',must:'',tk:'',lm:-1,sum:null,last:''}),
   start:d=>k2rmDeal(d),
@@ -460,7 +460,7 @@ GAMES.k_r500={name:'الأزواج الصاعدة',cat:'cards',lbc:'#5A3E8E',tea
       if(i===0){if(!k2rmMeld(cs,d.pl.length>4))return;S.sel=[];act(k2rmPut(d,cs));return;}
       if(i===1){if(cs.length!==1||cs[0]===d.tk||!k2rmFree(d,s))return;S.sel=[];act(k2rmDisc(d,cs[0]));return;}
       if(i>=10){if(cs.length!==1||!d.mel[i-10])return;S.sel=[];act(k2rmOff(d,cs[0],i-10));}}}};
-HELP.k_r500='رمي 500: كوتشينة مع جوكرين (ومن 5 لاعبين وفوق كوتشينتين و4 جواكر). لو كنتوا اثنين كل واحد 13 ورقة، وأكثر 7. المرمي يكون مفروش وتشوفه كله: في دورك اسحب من الكومة، أو خذ أي ورقة من المرمي مع كل اللي فوقها، بس لازم تنزّل أعمق ورقة أخذتها بملف بنفس الدور (ولو أخذت آخر ورقة بس ما ترجع ترميها). الملفات: 3 أو 4 من نفس الرقم بأنواع مختلفة، أو 3 وفوق من نفس النوع بالتسلسل (الإكة تحت أو فوق بس ما تلف)، والجوكر يصير أي ورقة. تقدر تزيد على ملفات أي أحد والنقاط لك. بعدها ارمِ ورقة. اللي يخلّص ورقه (بملف أو برمية) تخلص الجولة، وكذلك لو خلصت الكومة ومحد يبي المرمي. الملفات تنحسب لك: من 2 لين 9 برقمها، 10 والصور 10، الإكة 15 (و1 في إكة 2 3)، الجوكر 15، واللي بيدك ينقص منك. أول من يوصل 500 يفوز.';
+HELP.k_r500='رمي ٥٠٠: كوتشينة مع جوكرين (ومن 5 لاعبين وفوق كوتشينتين و4 جواكر). لو كنتوا اثنين كل واحد 13 ورقة، وأكثر 7. المرمي يكون مفروش وتشوفه كله: في دورك اسحب من الكومة، أو خذ أي ورقة من المرمي مع كل اللي فوقها، بس لازم تنزّل أعمق ورقة أخذتها بملف بنفس الدور (ولو أخذت آخر ورقة بس ما ترجع ترميها). الملفات: 3 أو 4 من نفس الرقم بأنواع مختلفة، أو 3 وفوق من نفس النوع بالتسلسل (الإكة تحت أو فوق بس ما تلف)، والجوكر يصير أي ورقة. تقدر تزيد على ملفات أي أحد والنقاط لك. بعدها ارمِ ورقة. اللي يخلّص ورقه (بملف أو برمية) تخلص الجولة، وكذلك لو خلصت الكومة ومحد يبي المرمي. الملفات تنحسب لك: من 2 لين 9 برقمها، 10 والصور 10، الإكة 15 (و1 في إكة 2 3)، الجوكر 15، واللي بيدك ينقص منك. أول من يوصل 500 يفوز.';
 // the bot: melds every set and run it holds (jokers fill the gaps), lays off what fits, takes from the discards when the
 // deepest card it needs makes a meld and the cards it picks up are worth it, and throws the card it can least use
 // (hard: never one the next player could lay off)
