@@ -134,9 +134,13 @@ const frameCheck = async (P, A, g) => { let n = 0;
         if (!moved) { if (++idle > 40) break; await L.sleep(250); } else idle = 0;
       }
       await L.sleep(1200);
-      const ii = await Promise.all(P.map(p => p.evaluate(() => ({ s: S.st.s, gid: S.st.d && S.st.d.gid, win: S.st.d && S.st.d.win, q: S.outQ.length }))));
-      const conv = ii.every(x => x.s === ii[0].s && x.gid === ii[0].gid);
-      if (!conv) fail(g, 'not converged', JSON.stringify(ii));
+      // converged = every phone reaches the host's state. A real-time game (taqiya's walk) moves on every 200 ms on the host,
+      // so a snapshot of all phones at one instant can catch the others one frame behind while that frame is on its way:
+      // take the host's state, then every phone must reach it (same round, same or later step) within 3 s.
+      const snap = () => Promise.all(P.map(p => p.evaluate(() => ({ s: S.st.s, gid: S.st.d && S.st.d.gid, win: S.st.d && S.st.d.win, q: S.outQ.length }))));
+      let ii = await snap(); const h0 = ii[0]; let conv = false;
+      for (let w = 0; w < 30 && !conv; w++) { conv = ii.every(x => x.gid === ii[0].gid && x.s >= h0.s) && ii.slice(1).every(x => x.gid === h0.gid || x.s > h0.s); if (!conv) { await L.sleep(100); ii = await snap(); } }
+      if (!conv) fail(g, 'not converged', JSON.stringify({ host: h0, now: ii }));
       checks += await viewCheck(A, NH, g);
       const errs = []; for (const p of P) errs.push(...p.pageErrors.splice(0).map(e => p.label + ': ' + e));
       if (errs.length) fail(g, 'page errors', JSON.stringify(errs.slice(0, 4)).slice(0, 600));
