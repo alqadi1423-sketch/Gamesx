@@ -11,9 +11,9 @@
  "public/js/games/n-jakaro-ui.js :: DEF.innerHTML=`<svg width=\"0\" height=\"0\"><defs>",
  "public/js/games/n-jakaro-ui.js :: const el=document.createElementNS('http://www.w3.org/2000/svg','g');el.id='jkb'+B;el.innerHTML=v;host.appendChild(el);DB[B]=1;}",
  "public/js/games/speed.js :: const s=GAMES.typing.s(S.st.d);const x=b.querySelector('.ty-s'),p=b.querySelector('.ty-pr i');if(x)x.innerHTML=tyHTML(s,t.value);if(p)p.style.width=tyPct(s,t.va",
- "public/js/kit-hara.js :: d.innerHTML=`<svg width=\"0\" height=\"0\"><defs>${Object.keys(SIT).map(k=>g('sit-'+k,SIT[k])).join('')}${Object.keys(CAPS).map(k=>g('cap-'+k,CAPS[k])).join('')}${g",
+ "public/js/kit-hara.js :: d.innerHTML=`<svg width=\"0\" height=\"0\"><defs>${Object.keys(CAPS).map(k=>g('cap-'+k,CAPS[k])).join('')}${g('sleepcat',SLEEPCAT)}</defs></svg>`;document.body.appe",
  "public/js/kit-hara.js :: d.innerHTML=`<svg width=\"0\" height=\"0\"><defs><linearGradient id=\"kh-beam\"><stop offset=\"0\" stop-color=\"#FFF1B8\" stop-opacity=\".85\"/><stop offset=\"1\" stop-color=",
- "public/js/kit-hara.js :: try{el.insertAdjacentHTML('beforeend',`<g id=\"kh-${id}\">${PART[id]}</g>`);}catch(e){}}",
+ "public/js/kit-hara.js :: try{el.insertAdjacentHTML('beforeend',mk());}catch(e){}}",
  "public/js/net.js :: TPL.innerHTML=h;const els=[...TPL.content.querySelectorAll('[data-ga]')].filter(e=>!e.hasAttribute('disabled')&&(!only||only.includes(e.dataset.ga)));TPL.innerH",
  "public/js/views.js :: TPL.innerHTML=h;const el=[...TPL.content.querySelectorAll('[data-ga]')].find(e=>e.dataset.ga===a&&(i==null?e.dataset.i==null:+e.dataset.i===i));TPL.innerHTML=''"
 ]

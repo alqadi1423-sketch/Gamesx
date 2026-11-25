@@ -12,11 +12,11 @@ window.WSROOM={
   room(){return {join:(name,opts={})=>new Promise((ok,no)=>{
     // in the app the address is SERVER (core.js), looked up again while the room cannot be reached
     const base=()=>WSROOM.app()?SERVER.replace(/^https:/,'wss:')+'/ws/'+name:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+name;
-    // once in, coming back after a cut is joining a room that is open: the one who made it must not ask to make it again
-    // (the server answers a second ?c=1 with 'taken', which would put the room's own maker out of it)
-    // (and not as a newcomer either: a room that was emptied meanwhile, by a deploy or everyone's signal dropping at once, would
-    // answer 'noroom' and put everyone out of their own game)
-    const url=()=>base()+(opened?'':opts.create?'?c=1':opts.need?'?j=1':'');
+    // the server refuses a request that says neither: ?c=1 opens a new room, ?j=1 joins one that is open.
+    // Coming back after a cut (or after a reload) is ?j=1: the one who made the room must not ask to make it again (a second
+    // ?c=1 is answered 'taken'). A room stays open on the server for 12 hours after its last player leaves, so its own
+    // players still find it after a deploy or after everyone's signal dropped at once.
+    const url=()=>base()+(!opened&&opts.create?'?c=1':'?j=1');
     /* a socket can die without either side being told (a phone that changed networks, slept, or lost signal): it stays open
        and nothing comes through. A room that has said nothing for QUIET is asked (ping) and must answer within PONG_MS; back
        in the app (screen on, back from another app, back online) it is asked at once and must answer within WAKE_MS. One

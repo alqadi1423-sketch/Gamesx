@@ -4,6 +4,9 @@
 //   2. a message over the size limit is dropped, and a phone over the rate limit is cut off
 //   3. joining a code nobody opened is refused, and malformed room paths are refused
 //   4. nothing a player sends (chat included) is written to the logs
+//   5. failed joins from one source are counted across every code (one shared counter), and past the limit that source is
+//      refused; joining an open room is untouched; the source's address is never stored
+//   6. a request that says neither ?c=1 nor ?j=1 is refused
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -16,10 +19,13 @@ class FakeWS {
 }
 globalThis.WebSocketPair = function () { const a = new FakeWS(), b = new FakeWS(); a.peerSide = b; b.peerSide = a; return { 0: a, 1: b }; };
 globalThis.WebSocketRequestResponsePair = function (q, r) { this.q = q; this.r = r; };
-globalThis.Response = class { constructor(body, init = {}) { this.status = init.status || 200; this.webSocket = init.webSocket; } };
+globalThis.Response = class { constructor(body, init = {}) { this.status = init.status || 200; this.webSocket = init.webSocket; this.body = body;
+  const h = new Map(Object.entries(init.headers || {}).map(([k, v]) => [k.toLowerCase(), v])); this.headers = { get: k => h.get(String(k).toLowerCase()) ?? null }; }
+  async json() { return JSON.parse(this.body); } };
 function makeCtx() {
   const socks = [], store = new Map(); let alarm = null;
   return { socks, getWebSockets: () => socks.filter(w => !w.closed), acceptWebSocket: w => socks.push(w), setWebSocketAutoResponse() {}, getWebSocketAutoResponseTimestamp: () => null,
+    storageDump: () => store.entries(),
     storage: { get: async k => store.get(k), put: async (k, v) => { store.set(k, v); }, deleteAll: async () => store.clear(), getAlarm: async () => alarm, setAlarm: async t => { alarm = t; } } };
 }
 
@@ -31,8 +37,8 @@ const { Room, default: worker } = await import(pathToFileURL(copy).href);
 const say = (...a) => console._log(...a);
 
 const rooms = new Map(); const env = { ROOMS: { idFromName: n => n, get: n => { if (!rooms.has(n)) rooms.set(n, new Room(makeCtx(), {})); return rooms.get(n); } } };
-const req = (p, extra = {}) => ({ url: 'https://x' + p, headers: { get: h => (h === 'Upgrade' ? (extra.upgrade ?? 'websocket') : null) } });
-async function join(code, q = '') { const r = await worker.fetch(req(`/ws/g-${code}${q}`), env); const client = r.webSocket, server = client && client.peerSide; return { r, client, server, room: rooms.get('g-' + code) }; }
+const req = (p, extra = {}) => ({ url: 'https://x' + p, headers: { get: h => (h === 'Upgrade' ? (extra.upgrade ?? 'websocket') : h === 'CF-Connecting-IP' ? (extra.ip ?? '198.51.100.1') : null) } });
+async function join(code, q = '', ip) { const r = await worker.fetch(req(`/ws/g-${code}${q}`, ip ? { ip } : {}), env); const client = r.webSocket, server = client && client.peerSide; return { r, client, server, room: rooms.get('g-' + code) }; }
 
 const fails = [];
 const check = (name, ok, why) => { if (!ok) fails.push(`${name}: ${why}`); say(`${ok ? '✓' : '✗'} ${name}`); };
@@ -64,6 +70,21 @@ const check = (name, ok, why) => { if (!ok) fails.push(`${name}: ${why}`); say(`
   await r1.room.webSocketClose(r1.server); await r1.room.alarm();
   const src = fs.readFileSync(copy, 'utf8').replace(/\/\/[^\n]*/g, '');
   check('nothing a player sends is written to the logs', !logged.some(l => l.includes(chat)) && !/\bconsole\.\w+\s*\(/.test(src), `logged=${logged.length} console in source=${/\bconsole\./.test(src)}`); }
+
+// 5. guessing: failed joins from one source count across codes, past the limit the source is refused
+{ const host = await join('real1', '?c=1', '203.0.113.9');
+  const IP = '192.0.2.77'; const tell = j => (j.client ? j.client.peerSide.out.concat(j.client.out) : []).some(s => s.includes('noroom'));
+  const before = await join('real1', '?j=1', IP); const okBefore = !tell(before) && before.server && !before.server.closed;
+  let refusedUnknown = 0; for (let i = 0; i < 20; i++) if (tell(await join('zz' + String(i).padStart(3, '0'), '?j=1', IP))) refusedUnknown++;
+  const after = await join('real1', '?j=1', IP); const blocked = tell(after);
+  const other = await join('real1', '?j=1', '198.51.100.200'); const otherOk = !tell(other) && other.server && !other.server.closed;
+  const stored = [...rooms.values()].some(r => [...(r.ctx.storageDump ? r.ctx.storageDump() : [])].some(v => JSON.stringify(v).includes(IP)));
+  check('a source that failed 20 joins on different codes is refused', refusedUnknown === 20 && blocked, `unknown refused=${refusedUnknown} then real room refused=${blocked}`);
+  check('joining an open room is untouched by the limit', okBefore && otherOk, `before=${okBefore} other source=${otherOk}`);
+  check('the source address is never stored or logged', !stored && !logged.some(l => l.includes(IP)), `stored=${stored}`); }
+// 6. a request that says neither ?c=1 nor ?j=1
+{ const j = await join('noflag'); const told = j.client && j.client.peerSide.out.concat(j.client.out).some(s => s.includes('noroom'));
+  check('a request with neither ?c=1 nor ?j=1 is refused', told && !(j.room.ctx.socks.length), `told=${told}`); }
 
 fs.rmSync(tmp, { recursive: true, force: true });
 if (fails.length) { say(`${fails.length} failed`); for (const f of fails) say('  ' + f); process.exit(1); }
