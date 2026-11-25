@@ -316,6 +316,7 @@ function b2hmThink(d,lv){const k=d.sd,goal=b2hmGoal(d,k),c=String(k);const ms=b2
   let best=ms[0],bv=-Infinity,budget=3000;for(const m of ms.slice(0,12)){const b=b2m9Set(d.b,m.f,m.t,c);let nx=-Infinity;
     for(const m2 of b2hmMoves(b,k,goal)){if(budget--<=0)break;const v=b2hmVal(b2m9Set(b,m2.f,m2.t,c),k,goal);if(v>nx)nx=v;}
     const v=m.v*.4+(nx===-Infinity?m.v:nx)*.6;if(v>bv){bv=v;best=m;}}return best;}
+// marbles 9.3 across on a 10 grid (easy to tap on a phone), holes keep the same ratio to them (r 2.3)
 const B2HMXY=B2HMP.map(([q,r])=>[72+(q+r/2)*10,83+r*8.66]);
 const B2HMBG={};
 function b2hmBg(d){const key=d.K+':'+d.pl.map((_,s)=>col(d,s)).join();if(B2HMBG[key])return B2HMBG[key];
@@ -325,7 +326,7 @@ function b2hmBg(d){const key=d.K+':'+d.pl.map((_,s)=>col(d,s)).join();if(B2HMBG[
   B2HMCOR[d.K].forEach((c,k)=>{const fill=b2hmCol(d,k);for(const t of [c,(c+3)%6]){const T=B2HMTR[t],cor=T.filter(i=>B2HMNB[i].filter(n=>T.includes(n)).length<=2).map(i=>B2HMXY[i]);
       const cx=cor.reduce((a,p)=>a+p[0],0)/3,cy=cor.reduce((a,p)=>a+p[1],0)/3;
       g+=`<polygon points="${cor.map(([x,y])=>`${(cx+(x-cx)*1.5).toFixed(1)},${(cy+(y-cy)*1.5).toFixed(1)}`).join(' ')}" fill="${fill}" opacity="${t===c?.3:.17}" stroke="${fill}" stroke-width="5" stroke-linejoin="round"/>`;}});
-  g+=`<g class="b2hh">${B2HMXY.map(([x,y])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.1"/>`).join('')}</g>`;
+  g+=`<g class="b2hh">${B2HMXY.map(([x,y])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.3"/>`).join('')}</g>`;
   return B2HMBG[key]=`<svg viewBox="0 0 144 166" aria-hidden="true">${g}</svg>`;}
 GAMES.b_halma={teams:'none',name:'القفز',cat:'board',lbc:'#3F7FBF',
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#4A8FD4"/><polygon points="50,6 88,72 12,72" fill="#F1DDB2"/><polygon points="50,94 12,28 88,28" fill="#F1DDB2"/>${[[50,16,'#E5483F'],[45,25,'#E5483F'],[55,25,'#E5483F'],[50,84,'#3FAE5C'],[45,75,'#3FAE5C'],[55,75,'#3FAE5C'],[20,33,'#EDB02F'],[80,67,'#9C7BD6'],[30,50,'#9C7BD6'],[62,45,'#E5483F']].map(([x,y,c])=>`<circle cx="${x}" cy="${y}" r="4.6" fill="${c}" stroke="rgba(0,0,0,.25)" stroke-width="1"/>`).join('')}</svg>`,
@@ -342,7 +343,7 @@ GAMES.b_halma={teams:'none',name:'القفز',cat:'board',lbc:'#3F7FBF',
     if(my){for(let i=0;i<121;i++)if(d.b[i]===c&&b2hmDests(d.b,i,k,goal).size)mv.add(i);if(P)to=b2hmDests(d.b,P.f,k,goal);}
     const L=d.lm||[];const pts=B2HMXY.map(([x,y],i)=>{const v=d.b[i];const tap=my&&(mv.has(i)||to.has(i));
       return {q:i,x,y,i:tap?i:null,c:b2Cls(d,i,{sel:P?P.f:-1,to:new Set(to.keys()),mv:P?null:mv}),p:v!=='.'?`<i class="b2-stone hm" style="--c:${b2hmCol(d,+v)}"></i>`:''};});
-    return b2Board('b2hm bd-b2',144,166,8.4,b2hmBg(d),pts,false,my)+(my&&!mv.size?'<div class="row chact"><button class="btn" data-ga="skip">ما عندي حركة، مرّر</button></div>':'');},
+    return b2Board('b2hm bd-b2',144,166,9.3,b2hmBg(d),pts,false,my)+(my&&!mv.size?'<div class="row chact"><button class="btn" data-ga="skip">ما عندي حركة، مرّر</button></div>':'');},
   after:d=>b2Fly('hm',d),
   click(a,i,d,ctx){if(!ctx.my)return;const k=d.sd,goal=b2hmGoal(d,k),P=b2Sel(d);if(a==='skip'){if(!b2hmMoves(d.b,k,goal).length)act(b2hmDo(d,null));return;}if(a!=='pt')return;
     if(P){const ds=b2hmDests(d.b,P.f,k,goal);if(ds.has(i)){S.b2=null;act(b2hmDo(d,{f:P.f,t:i,p:ds.get(i)}));return;}}
