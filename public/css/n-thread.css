@@ -1,0 +1,99 @@
+/* «طرف الخيط» (js/games/w-thread.js): every rule is scoped to wth- classes that no other file writes.
+   The approved mockup (docs/research/word-teams.md, design system tokens): paper tiles on a 5x5 grid, the clue-giver's map
+   as a coloured edge and a corner sign on each tile (colour is never the only sign), the uncovered tile in its side's
+   colour. Motion is transform and opacity only, once; html.lite and reduced motion drop it. */
+.wth{--tile:#FFFDF8;--edge:#E6DCC8;--by:#C9D3DE;--by-ink:#4F6378;--sc:#1E2A38;--sc-ink:#F0B429;--sc-edge:#1E2A38;--wg:#2F9E55;width:100%;display:flex;flex-direction:column;gap:8px;padding-bottom:6px}
+@media (prefers-color-scheme:dark){.wth{--tile:#26313E;--edge:#34404E;--by:#3A4A5C;--by-ink:#B8C6D6;--sc:#05080C;--sc-edge:#F0B429}}
+/* the two sides */
+.wth-teams{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wth-teams.wth-one{grid-template-columns:1fr}
+.wth-tm{display:flex;align-items:center;gap:6px;min-width:0;padding:6px 8px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1);border-inline-start:5px solid var(--c)}
+.wth-tm.wth-on{box-shadow:0 0 0 2.5px var(--c),var(--e2)}
+.wth-em{font-size:20px;line-height:1;flex:none}
+.wth-tmx{min-width:0;flex:1}
+.wth-nm{display:block;font-size:14px;font-weight:800;line-height:1.15;color:var(--ink)}
+.wth-sim{display:block;font-size:11px;color:var(--mut);line-height:1.2}
+.wth-kids{display:flex;flex-wrap:wrap;margin-top:2px}
+.wth-kd{position:relative;width:24px;height:24px;margin-inline-end:-4px;border-radius:50%;box-shadow:0 0 0 2px var(--surface);background:var(--surface);flex:none}
+.wth-kd .khi,.wth-kd svg:not(.wth-nbi){width:24px;height:24px;display:block}
+.wth-kd.wth-gone{opacity:.35}
+.wth-kd .wth-nbi{position:absolute;inset-block-start:-6px;inset-inline-end:-6px;width:14px;height:14px}
+.wth-cnt{margin-inline-start:auto;font-size:22px;font-weight:800;line-height:1;color:var(--c);text-align:center;font-variant-numeric:tabular-nums;flex:none}
+.wth-cnt small{display:block;font-size:10px;font-weight:600;color:var(--mut)}
+.wth-tk{display:flex;gap:4px;margin-top:4px}
+.wth-tk u{width:11px;height:11px;border-radius:50%;background:var(--line);text-decoration:none}
+.wth-tk u.on{background:var(--gold)}
+/* the clue on the status line */
+.wth-clue{display:inline-flex;align-items:baseline;gap:6px;vertical-align:middle}
+.wth-clue b{font-size:22px;font-weight:800;color:var(--ink)}
+.wth-clue i{font-style:normal;background:var(--c);color:#fff;border-radius:999px;min-width:28px;padding:0 8px;text-align:center;font-weight:800;font-size:16px}
+.wth-gl{color:var(--mut)}
+/* the board */
+.wth-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.wth-t{position:relative;aspect-ratio:1/.8;min-width:0;padding:2px;border-radius:var(--r-s);background:var(--tile);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--edge),0 3px 0 var(--edge);font-weight:700;font-size:clamp(12px,3.7vw,16px);line-height:1.1;display:grid;place-items:center;overflow:hidden;transition:transform var(--t2) var(--ease),box-shadow var(--t2) var(--ease)}
+.wth-t:disabled{cursor:default}
+.wth-w{max-width:100%;overflow-wrap:anywhere;text-align:center}
+.wth-t.wth-can:active{transform:translateY(2px)}
+.wth-t.wth-pk{transform:translateY(-5px);box-shadow:0 0 0 3px var(--sel),0 8px 14px rgba(0,0,0,.18)}
+.wth-pf{position:absolute;inset-block-start:2px;inset-inline-start:2px;width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 2px #fff;background:#fff;overflow:hidden}
+.wth-pf .khi,.wth-pf svg{width:18px;height:18px;display:block}
+/* uncovered */
+.wth-t.wth-r{box-shadow:none}
+.wth-c-0{background:var(--wa);color:#fff}.wth-c-1{background:var(--wb);color:#fff}
+.wth-md-coop .wth-c-1{background:#7D8CA3}
+.wth-c-n{background:var(--by);color:var(--by-ink)}.wth-c-x{background:var(--sc);color:var(--sc-ink)}.wth-c-g{background:var(--wg);color:#fff}
+.wth-r .wth-w{opacity:.9}
+.wth-ic{position:absolute;inset-block-start:1px;inset-inline-end:2px;font-size:10px;font-style:normal;line-height:1.2}
+/* the map, for the clue-giver (and duo: each player's own side) */
+.wth-mk{position:absolute;inset-block-end:1px;inset-inline-start:3px;font-size:11px;font-style:normal;line-height:1.2}
+.wth-h-0{box-shadow:inset 0 0 0 2.5px var(--wa);box-shadow:inset 0 0 0 2.5px var(--wa),inset 0 -12px 0 color-mix(in srgb,var(--wa) 22%,transparent)}
+.wth-h-1{box-shadow:inset 0 0 0 2.5px var(--wb);box-shadow:inset 0 0 0 2.5px var(--wb),inset 0 -12px 0 color-mix(in srgb,var(--wb) 22%,transparent)}
+.wth-md-coop .wth-h-1{box-shadow:inset 0 0 0 2.5px #7D8CA3}
+.wth-h-g{box-shadow:inset 0 0 0 2.5px var(--wg);box-shadow:inset 0 0 0 2.5px var(--wg),inset 0 -12px 0 color-mix(in srgb,var(--wg) 22%,transparent)}
+.wth-h-n{box-shadow:inset 0 0 0 1.5px var(--by)}
+.wth-h-x{box-shadow:inset 0 0 0 3px var(--sc-edge)}
+.wth-key .wth-r{opacity:.42}
+/* the round is over: the whole map shows, the tiles nobody found are paler */
+.wth-t.wth-e{opacity:.62}
+.wth-e.wth-h-0{background:var(--wa);color:#fff}.wth-e.wth-h-1{background:var(--wb);color:#fff}.wth-e.wth-h-n{background:var(--by);color:var(--by-ink)}.wth-e.wth-h-x{background:var(--sc);color:var(--sc-ink);opacity:1}.wth-e.wth-h-g{background:var(--wg);color:#fff}
+.wth-md-coop .wth-e.wth-h-1{background:#7D8CA3}
+/* duo: a «جار» seen from one side or both */
+.wth-m-a::after,.wth-m-b::after,.wth-m-c::after{content:'';position:absolute;inset-block-start:4px;width:9px;height:9px;border-radius:50%;background:var(--by-ink);opacity:.8}
+.wth-m-a::after{inset-inline-start:4px}.wth-m-b::after{inset-inline-end:4px}
+.wth-m-c{opacity:.45}.wth-m-c::after{inset-inline-start:4px;box-shadow:12px 0 0 var(--by-ink)}
+/* a tile that just turned over */
+.wth-new{animation:wth-flip var(--t3) var(--ease) 1}
+@keyframes wth-flip{from{transform:scale(.86) rotateX(70deg);opacity:.4}to{transform:none;opacity:1}}
+/* legend */
+.wth-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--mut)}
+.wth-leg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-inline-end:4px;background:var(--c)}
+.wth-leg .wth-ln i{background:var(--by)}.wth-leg .wth-lx i{background:var(--sc)}
+/* the dock under the board */
+.wth-dock{display:flex;flex-direction:column;gap:8px}
+.wth-hint{margin:0;text-align:center;font-size:14px;color:var(--mut)}
+.wth-stop,.wth-send{min-height:46px;border-radius:var(--r-m);font-weight:800;font-size:17px;padding:0 16px}
+.wth-stop{background:var(--surface-2);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.wth-send{background:var(--navy);color:#fff;box-shadow:var(--lip);min-height:50px;font-size:18px}
+.wth-stop:disabled,.wth-send:disabled{opacity:.45;box-shadow:none}
+.wth-send:active:not(:disabled),.wth-stop:active:not(:disabled){transform:translateY(3px)}
+@media (prefers-color-scheme:dark){.wth-send{background:#E7EEF6;color:#111923}}
+.wth-form{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--e2)}
+.wth-lab{font-weight:800;font-size:15px}
+.wth-row{display:flex;gap:8px;align-items:stretch}
+.wth-row .wth-send{flex:none;min-width:96px}
+.wth-in{min-height:50px;width:100%;min-width:0;flex:1;border:0;border-radius:var(--r-m);box-shadow:inset 0 0 0 1.5px var(--line);background:var(--surface-2);color:var(--ink);font:inherit;font-size:22px;font-weight:800;padding:0 12px}
+.wth-in:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+.wth-chk{min-height:20px;font-size:13px;font-weight:700;color:var(--mut)}
+.wth-chk.ok{color:var(--ok)}.wth-chk.no{color:var(--bad)}
+.wth-nums{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.wth-n{min-height:44px;border-radius:var(--r-s);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);font-weight:800;font-size:18px;color:var(--ink)}
+.wth-n.on{background:var(--wa);color:#fff;box-shadow:none}
+.wth-wait{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--e1);border-inline-start:6px solid var(--c)}
+.wth-wait p{margin:0;font-size:16px;color:var(--ink)}.wth-wait small{display:block;color:var(--mut);font-size:13px}
+.wth-kid{width:54px;height:80px;flex:none}
+.wth-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wth-stats div{padding:8px;border-radius:var(--r-m);background:var(--surface);box-shadow:var(--e1);font-size:13px;color:var(--mut);text-align:center}
+.wth-stats b{display:block;color:var(--ink);font-size:17px}
+html.lite .wth-new{animation:none}
+html.lite .wth-t{transition:none}
+@media (prefers-reduced-motion:reduce){.wth-new{animation:none}.wth-t{transition:none}}
