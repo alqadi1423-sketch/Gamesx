@@ -102,7 +102,10 @@ function scanHistory(D, src) {
       cur.games.add(m[1]);
       cur.born[m[1]] = (cur.born[m[1]] || 0) + (line[0] === '+' ? 1 : -1); // more added than removed: the game was born here
     }
-    for (const m of line.matchAll(/HELP\.([A-Za-z0-9_]+)\s*=(?!=)/g)) if (ids.has(m[1])) cur.games.add(m[1]);
+    for (const m of line.matchAll(/HELP\.([A-Za-z0-9_]+)\s*=(?!=)/g)) if (ids.has(m[1])) {
+      cur.games.add(m[1]);
+      if (line[0] === '+') (cur.help = cur.help || new Set()).add(m[1]); // rules written: the birth of a game made by a factory (no GAMES.<id>= line)
+    }
     if (/(^|\/)help\.js$/.test(file)) {
       const m = /^[+-]\s*([A-Za-z0-9_]+)\s*:\s*['"`]/.exec(line);
       if (m && ids.has(m[1])) cur.games.add(m[1]);
@@ -122,6 +125,16 @@ function scanHistory(D, src) {
     for (const id of meta.games || []) if (ids.has(id)) c.games.add(id);
     for (const [id, name] of names) if (c.subj.includes(`«${name}»`) || c.subj.includes(`(${id})`)) c.games.add(id);
     if (meta.skip || /^Bump version/i.test(c.subj)) c.games.clear();
+  }
+  // a game made by a factory (gsMake: GAMES[id]=…) is born where its rules first appear; a commit older than that touched
+  // only its family's file, before the game existed, so it is not the game's
+  const hasBorn = new Set(commits.flatMap(c => Object.keys(c.born).filter(id => c.born[id] > 0)));
+  for (const id of ids) {
+    if (hasBorn.has(id)) continue;
+    let k = -1; commits.forEach((c, i) => { if (c.help && c.help.has(id) && !(COMMITS[c.h] || {}).skip) k = i; });
+    if (k < 0) continue;
+    commits[k].born[id] = 1;
+    for (const c of commits.slice(k + 1)) c.games.delete(id);
   }
   commits.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0); // newest first, stable inside a day (git order)
   const byGame = {};

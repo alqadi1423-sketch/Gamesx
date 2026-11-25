@@ -250,7 +250,9 @@
    "gs_country",
    "gs_land",
    "gs_food",
-   "gs_job"
+   "gs_job",
+   "gs_city",
+   "gs_fruit"
   ],
   "w-thread-core": [
    "w_thread"
