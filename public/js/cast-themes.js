@@ -61,7 +61,7 @@ const CASTX=(()=>{
     prov:{o:'thobe',a:'book',ho:'thobe',ha:'book',w:'مثل في محله!'},w_poem:{o:'thobe',a:'book',ho:'thobe',ha:'book',w:'بيت يسوى!'},
     w_cross:{a:'pencil'},w_thread:{a:null,pp:'think',ha:'wth-note',hp:'think',w:'لقيتوا طرف الخيط!'},w_crypt:{a:'lens'},w_grid:{a:'lens'},w_hive:{a:'letter'},scr:{a:'letter'},
     // mind
-    guess:{hat:'bulb'},gs_animal:{hat:'bulb'},gs_country:{a:'flag',ha:'flag'},gs_land:{a:'flag',ha:'flag'},gs_job:{hat:'bulb',w:'عرفت المهنة!'},
+    guess:{hat:'bulb'},gs_animal:{hat:'bulb'},gs_country:{a:'flag',ha:'flag'},gs_land:{a:'flag',ha:'flag'},gs_job:{hat:'bulb',w:'عرفت المهنة!'},gs_city:{a:'flag',ha:'flag',w:'عرفت المدينة!'},gs_fruit:{hat:'bulb',w:'عرفت الصنف!'},
     gs_food:{o:'apron',hat:'chefhat',a:'spoon',ho:'apron',hh:'chefhat',ha:'spoon',hp:'stand',w:'عرفت الطبخة!'},num:{hat:'bulb'},mm:{a:'lens'},wires:{a:'lens',w:'فكّيت القنبلة!'},treasure:{a:'lens',ha:'coin',w:'لقيت الكنز!'},
     nim:paper,c31:paper,g_sim:paper,g_lines:paper,g_notakto:paper,g_swallow:paper,g_hacken:paper,
     // puzzles
