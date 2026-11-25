@@ -1,8 +1,10 @@
 // Usage: node tools/test/online/tfull.js <port> <game,game,...> [players=3] [maxSteps=250] [teams=0]
 //   Prints one line per game and ends with TFULL OK or TFULL FAILURES n. Starts its own relay.mjs on <port>, with 20-60 ms latency.
+//   BOT=1 (env): bot-driven run instead of random taps (see botStep): maxSteps is then the number of moves allowed.
 // Full online play: NP pages, each game to its end with random taps (host sometimes plays bot moves), checks views and convergence.
 const L = require('./lib');
 const port = +process.argv[2]; const TEAMS = +(process.argv[6] || 0); const GAMES_ = process.argv[3].split(','); const NP = +(process.argv[4] || 3); const MAXS = +(process.argv[5] || 250);
+const BOT = process.env.BOT === '1';
 const fails = []; const fail = (...a) => { fails.push(a.join(' ')); console.log('FAIL', ...a); };
 const step = (p, opts) => p.evaluate((opts) => {
   try { if (S.mode !== 'online' || !S.st.g || !S.st.d || S.st.d.win != null) return null;
@@ -43,6 +45,65 @@ const step = (p, opts) => p.evaluate((opts) => {
     const e = pool[Math.floor(Math.random() * pool.length)];
     if (typeof e.click === 'function') e.click(); else e.dispatchEvent(new MouseEvent('click', { bubbles: true })); return e.dataset.ga;
   } catch (e) { return 'ERR ' + e.message; } }, opts);
+/* BOT=1: every move is the game's own bot (level 2) choosing on the HOST's whole state for the seat that may move; the host
+   then finds the taps on that seat's own buttons (its view, its phone's UI) that make exactly that move (sandboxClick on the
+   whole state), and the seat's own phone taps them, so the move goes through the normal client path (ck/pv/nd intents).
+   A move no short run of taps makes (a whole turn in one: draw, lay down, discard) is played by the host for the seat, as
+   its own bots play; the summary counts both (phoneTaps, hostPlayed) */
+// the roles that may move now (simultaneous rounds: every alive seat that has not picked; monopoly: the one a trade waits on)
+const botActors = A => A.evaluate(() => { const d = S.st.d, G = GAMES[S.st.g]; if (!d || !G) return { roles: [] }; if (d.win != null) return { win: d.win };
+  const roles = [];
+  for (let s = 0; s < d.pl.length; s++) { if (d.out[s] === '1') continue; let my = false;
+    try { my = ctxFor(viewOf(G, d, s), s, seatPriv(G, d, s)).my; } catch (e) { }
+    if (S.st.g === 'mono' && d.offer && d.offer.to === s) { roles.unshift(d.pl[s]); continue; }
+    if (my) roles.push(d.pl[s]); }
+  return { s: S.st.s, roles }; });
+// on the host: the bot's move for `role`, and the shortest taps from the phone's UI `ui` that make it (no bot: any tap that moves)
+const botPlan = (A, role, ui) => A.evaluate(({ role, ui }) => { const G = GAMES[S.st.g], d = S.st.d, s = d.pl.indexOf(role), sim = isSimul(G, d);
+  let want, pick, hasPick = false, err = null;
+  try { if (sim) { if (G.botPick) { pick = asSeat(G, d, s, {}, () => G.botPick(d, s, 2)); if (pick == null) pick = NOPICK; hasPick = true; } }
+    else { want = asSeat(G, d, s, {}, () => G.bot ? G.bot(d, s, 2) : undefined); if (want === d) return { s: S.st.s, wait: true }; if (want) want = teamFix(want); } }
+  catch (e) { err = 'bot: ' + e.message; want = undefined; }
+  const v = viewOf(G, d, s), pv = seatPriv(G, d, s), avoid = ['gone', 'undo'];
+  const btns = u => asSeat(G, v, s, u, () => { let h = ''; try { const c = ctxFor(v, s, pv); h = G.render(v, c) + (G.status ? '<i>' + G.status(v, c) + '</i>' : ''); } catch (e) { return []; }
+    TPL.innerHTML = h; const seen = new Set(), r = [];
+    for (const e of TPL.content.querySelectorAll('[data-ga]')) { if (e.hasAttribute('disabled') || avoid.includes(e.dataset.ga)) continue; const b = { a: e.dataset.ga, i: e.dataset.i != null ? +e.dataset.i : null }, k = b.a + ':' + b.i; if (!seen.has(k)) { seen.add(k); r.push(b); } }
+    TPL.innerHTML = ''; return r; });
+  const score = R => { const mine = !!(R.pv && R.pv.role === role), moved = R.v !== undefined && !!R.v && R.v !== d;
+    if (hasPick) return mine && jsEq(R.pv.p.pick, pick) ? 1e6 : mine && R.pv.p.pick != null || moved ? 1 + Math.random() * .5 : -1;
+    if (!moved) return mine ? .5 : -1; if (!want) return 1 + Math.random() * .5; if (jsEq(R.v, want)) return 1e6;
+    return 1 + Object.keys(want).filter(q => jsEq(R.v[q], want[q])).length + Math.random() * .5; };
+  let best = null, evals = 0; const seenUi = new Set();
+  const rec = (u, path, depth) => { const k = JSON.stringify(u); if (seenUi.has(k) || evals > 600) return; seenUi.add(k); const next = [];
+    for (const b of btns(u)) { if (evals++ > 600) break; const R = sandboxClick(G, d, s, b.a, b.i, u), sc = score(R), p = [...path, b];
+      if (sc > 0) { if (!best || sc > best.sc || sc === best.sc && p.length < best.path.length) best = { sc, path: p }; if (sc >= 1e6) return; }
+      else if (R.u && Object.keys(R.u).length) { const nu = { ...u }; for (const q in R.u) { if (R.u[q] === null) delete nu[q]; else nu[q] = R.u[q]; } next.push({ u: nu, p }); } }
+    if (depth < 4) for (const n of next) { rec(n.u, n.p, depth + 1); if (best && best.sc >= 1e6) return; } };
+  rec(ui || {}, [], 1);
+  // a bot move no taps make at once (a whole turn: draw, lay down, discard): the host plays it for the seat, as its own bots do
+  if (!(best && best.sc >= 1e6) && (hasPick || want)) { const s0 = S.st.s; S.inIntent = true;
+    try { if (hasPick) simulPick(d, s, pick); else act(want); } finally { S.inIntent = false; } return { s: s0, host: true, err }; }
+  return { s: S.st.s, path: best ? best.path : null, want: want === undefined && !hasPick ? 'none' : 'bot', err }; }, { role, ui });
+// one tap on this phone's own screen, as a player makes it
+const tapOn = (p, b) => p.evaluate(({ a, i }) => { if (S.modal || S.showResult) { S.modal = null; S.showResult = false; render(); }
+  const el = [...app.querySelectorAll('[data-ga]')].find(e => e.dataset.ga === a && (i == null ? e.dataset.i == null : +e.dataset.i === i) && !e.disabled && !e.hasAttribute('disabled'));
+  if (!el) return 'nobtn ' + a + ':' + i; el.click(); return 'ok'; }, b);
+const phoneState = p => p.evaluate(() => ({ s: S.st.s, q: S.outQ.length, pend: !!S.pend, ui: uiSnap(GAMES[S.st.g]) }));
+// one bot move: 'moved', 'wait' (nobody can move now / the bot waits) or a reason it could not be made
+async function botStep(A, P, st) {
+  const ac = await botActors(A); if (ac.win != null || !ac.roles.length) return ac.win != null ? 'win' : 'wait';
+  const role = ac.roles[st.k++ % ac.roles.length], p = P.find(x => x.role === role); if (!p) return 'no page for role ' + role;
+  // the phone must be on the host's board with nothing waiting to be sent
+  let ps; for (let t = 0; t < 40; t++) { ps = await phoneState(p); if (p === A || ps.s === ac.s && !ps.q && !ps.pend) break; await L.sleep(100); }
+  if (p !== A && (ps.s !== ac.s || ps.q || ps.pend)) return 'phone behind';
+  const pl = await botPlan(A, role, ps.ui); if (pl.err) st.botErr.push(pl.err); if (pl.s !== ac.s) return 'host moved';
+  if (pl.wait) return 'wait'; if (pl.host) { st.host++; return 'moved'; } if (!pl.path) return 'no tap moves ' + p.label;
+  if (pl.want === 'none') st.nobot++; st.taps++;
+  for (const b of pl.path) { const r = await tapOn(p, b); if (r !== 'ok') return r + ' on ' + p.label; await L.sleep(30); }
+  // a pick in a simultaneous round changes no board until every seat has picked: the host holding it is enough
+  const took = () => A.evaluate(([s0, role]) => { const d = S.st.d, G = GAMES[S.st.g]; return S.st.s !== s0 || !!d && isSimul(G, d) && hasPicked(d, d.pl.indexOf(role)); }, [ac.s, role]);
+  for (let t = 0; t < 40; t++) { if (await took()) return 'moved'; await L.sleep(100); }
+  return 'host did not take the move of ' + p.label + ' ' + JSON.stringify(pl.path); }
 // a part that changes without a new state (typing, drawing) reaches the others with the next publish: a mismatch counts only if it stays
 const viewCheck = async (A, NH, g) => { const got = []; const n = await viewCheck1(A, NH, g, got); if (!got.length) return n;
   await L.sleep(1500); const again = []; await viewCheck1(A, NH, g, again); const keys = new Set(again.map(x => x.k));
@@ -122,9 +183,19 @@ const frameCheck = async (P, A, g) => { let n = 0;
       const t0 = Date.now();
       await L.pickGame(A, g); await L.sleep(700);
       const gmin = await A.evaluate(() => S.st.g); if (gmin !== g) { summary[g] = 'not started (minP?)'; console.log(g, 'not started'); continue; }
-      let moves = 0, end = null, checks = 0, idle = 0, errsIn = [], leaks = 0;
+      let moves = 0, end = null, checks = 0, idle = 0, errsIn = [], leaks = 0, botInfo = null;
       for (const p of P) await p.evaluate(() => { window.__sent.length = 0; });
-      for (let k = 0; k < MAXS; k++) {
+      if (BOT) { const st = { k: 0, taps: 0, host: 0, nobot: 0, botErr: [], why: {} }; let k = 0;
+        for (const p of P) p.role = await p.evaluate(() => S.me);
+        for (; k < MAXS * 3 && moves < MAXS; k++) {
+          let r; try { r = await botStep(A, P, st); } catch (e) { r = 'ERR ' + String(e.message).slice(0, 200); }
+          if (r === 'moved') { moves++; idle = 0; } else if (r !== 'win') { st.why[r] = (st.why[r] || 0) + 1; if (/^ERR/.test(r)) errsIn.push(r); if (++idle > 40) break; await L.sleep(r === 'wait' ? 300 : 150); }
+          if (k % 8 === 7) checks += await viewCheck(A, NH, g);
+          if (k % 3 === 0) leaks += await leakCheck(A, NH, g);
+          const w = await A.evaluate(() => S.st.d && S.st.d.win); if (w != null) { end = w; break; }
+          if (k % 100 === 99) console.log('  ', g, 'step', k + 1, 'moves', moves, Math.round((Date.now() - t0) / 1000) + 's', JSON.stringify(st.why)); }
+        botInfo = { phoneTaps: st.taps, hostPlayed: st.host, nobot: st.nobot, botErr: st.botErr.slice(0, 3), notMoved: st.why }; }
+      else for (let k = 0; k < MAXS; k++) {
         let moved = 0;
         for (const p of P) { const r = await step(p, { bot: p === A && Math.random() < 0.5 }); if (r && /^ERR/.test(r)) errsIn.push(p.label + ' ' + r); if (r) moved++; }
         moves += moved; await L.sleep(120);
@@ -148,8 +219,9 @@ const frameCheck = async (P, A, g) => { let n = 0;
           if (typeof t0.win === 'number' && t0.teamsG !== 'native') { const team = t0.tm.map((t, s) => t === t0.tm[t0.win] ? s : -1).filter(s => s >= 0); if (JSON.stringify(t0.wins) !== JSON.stringify(team)) fail(g, 'wins is not the whole team', JSON.stringify(t0.wins), JSON.stringify(team)); }
           const sbar = await NH[0].evaluate(() => { if (S.modal) { S.modal = null; } S.showResult = false; S.browse = false; render(); return !!app.querySelector('.tstrip'); }); if (!sbar) fail(g, 'no team strip on a player page'); }
         console.log(g, 'teams', JSON.stringify({ tm: t0.tm, win: t0.win, wins: t0.wins, wt: t0.wt, sc: t0.sc.slice(0, 4) })); }
-      summary[g] = { moves, end, checks, leakChecks: leaks, frames: fl, conv, sec: Math.round((Date.now() - t0) / 1000) };
+      summary[g] = { moves, end, checks, leakChecks: leaks, frames: fl, conv, sec: Math.round((Date.now() - t0) / 1000), ...(botInfo ? { bot: botInfo } : {}) };
       if (end == null) { const st = await A.evaluate(() => ({ turn: S.st.d && S.st.d.turn, ph: S.st.d && S.st.d.ph })).catch(() => null); summary[g].stuckAt = st; }
+      if (BOT && end == null) fail(g, 'bot run did not reach the end', JSON.stringify(summary[g].stuckAt), JSON.stringify(botInfo.notMoved).slice(0, 300));
       console.log(g, JSON.stringify(summary[g]));
     }
     // non-host asks for a new round and (pick:'all') a new game
