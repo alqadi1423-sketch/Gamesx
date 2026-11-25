@@ -11,6 +11,11 @@ const cases = [
   ['rate limit removed', s => s.replace('const RATE_MAX = 120', 'const RATE_MAX = 1e9')],
   ['unopened code accepted', s => s.replace("if (!await this.isOpen()) return this.refuse('noroom', 4004);", '')],
   ['message logged', s => s.replace('let m; try { m = JSON.parse(msg); }', 'console.log(msg); let m; try { m = JSON.parse(msg); }')],
+  ['guess limit removed', s => s.replace('const FAIL_MAX = 20', 'const FAIL_MAX = 1e9')],
+  ['counter kept per room, not shared', s => s.replace("env.ROOMS.idFromName(GATE)", "env.ROOMS.idFromName(m[1])")],
+  ['limit also blocks open rooms for everyone', s => s.replace("return new Response(JSON.stringify({ blocked: !!e && e.n >= FAIL_MAX })", "return new Response(JSON.stringify({ blocked: f.size > 0 && [...f.values()].some(v => v.n >= FAIL_MAX) })")],
+  ['address stored', s => s.replace("if (!e) f.set(ip, e = { t0: now, n: 0 }); e.n++;", "if (!e) f.set(ip, e = { t0: now, n: 0 }); e.n++; this.ctx.storage.put('ip-' + ip, e);")],
+  ['no-flag request accepted', s => s.replace("    else return this.refuse('noroom', 4004);", "    else if (!await this.isOpen()) await this.ctx.storage.put('open', { at: Date.now() });")],
   ['malformed path accepted', s => s.replace('/^\\/ws\\/(g-[a-z0-9]{4,6})$/', '/^\\/ws\\/(.+)$/')] ];
 let fail = 0;
 for (let r = 0; r < N; r++) for (const [name, brk] of cases) {
