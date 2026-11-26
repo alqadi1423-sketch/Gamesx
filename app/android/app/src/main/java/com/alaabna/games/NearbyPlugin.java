@@ -69,6 +69,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NearbyPlugin extends Plugin {
     private static final String SERVICE_ID = "com.alaabna.games.near";
     private static final Strategy STRATEGY = Strategy.P2P_STAR;
+    // the same on both sides; see advertise()
+    private static final int CONN_TYPE = ConnectionType.BALANCED;
     // the JS side cuts bigger messages into pieces; older Play services took at most 32 KB in one BYTES payload
     private static final int MAX_BYTES = 32768;
     private ConnectionsClient client;
@@ -355,10 +357,11 @@ public class NearbyPlugin extends Plugin {
     public void advertise(PluginCall call) {
         if (!gmsOk(call)) return;
         String name = nonEmpty(call.getString("name"), "room");
-        // small game messages only: stay on Bluetooth and never switch the phone's Wi-Fi on or off
+        // BALANCED, not NON_DISRUPTIVE: NON_DISRUPTIVE may not change the radios' state, so with no shared Wi-Fi
+        // the phones found each other but could not open a link. BALANCED changes the radios only when it must.
         AdvertisingOptions opt = new AdvertisingOptions.Builder()
             .setStrategy(STRATEGY)
-            .setConnectionType(ConnectionType.NON_DISRUPTIVE)
+            .setConnectionType(CONN_TYPE)
             .build();
         client.stopAdvertising();
         client.startAdvertising(name, SERVICE_ID, lifeCb, opt)
@@ -401,7 +404,7 @@ public class NearbyPlugin extends Plugin {
             call.reject("no id");
             return;
         }
-        ConnectionOptions opt = new ConnectionOptions.Builder().setConnectionType(ConnectionType.NON_DISRUPTIVE).build();
+        ConnectionOptions opt = new ConnectionOptions.Builder().setConnectionType(CONN_TYPE).build();
         client.requestConnection(name, id, lifeCb, opt)
             .addOnSuccessListener(v -> call.resolve())
             .addOnFailureListener(e -> {
