@@ -93,7 +93,7 @@ GAMES.c_basra={name:'باصرة',cat:'cards',lbc:'#1F7A4D',
     if(v>=0&&d.hands[v]!=null)h+=c2fsHand(d,v,ctx.my&&d.turn===v);return h+'</div>';},
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(c2bsNext(d));return;}
     if(a==='card'&&d.ph==='play'){const c=cardsOf(d.hands[d.turn])[i];if(c)act(c2bsPlay(d,c));}}};
-HELP.c_basra='الباصرة المصرية. كل لاعب ياخذ 4 أوراق وتنحط 4 مكشوفة في الأرض (ما يكون فيها ولد ولا سبعة ديناري)، ولما تخلص الأوراق يتوزع 4 ثانية لين تخلص الكوتشينة. في دورك تنزل ورقة: الرقم ياكل من الأرض كل ورقة بنفس رقمه وكل مجموعة مجموعها رقمه (الإكة بواحد)، والبنت تاكل البنات بس، والشايب ياكل الشياب بس. الولد ياكل كل الأرض، والسبعة الديناري (الكومي) بعد تاكل كل الأرض. إذا كنست الأرض كلها بورقة تصير «باصرة» وتاخذ 10، إلا بالولد، وبالكومي إذا كان في الأرض صورة أو المجموع فوق 10، وبآخر ورقة بالجولة. اللي يبقى في الأرض بالآخر ياخذه آخر واحد أكل. النقاط: أكثر ورق 30 (ولو تعادل تنتقل للجولة الجاية)، كل ولد وكل إكة نقطة، الاثنين السباتي 2، العشرة الديناري 3، وكل باصرة 10. أول من يوصل 101 يفوز. مع 4 لاعبين: كل اثنين متقابلين فريق. ومع 5 لاعبين وأكثر: آخر توزيعة تنقسم واحدة واحدة لين تخلص.';
+HELP.c_basra='الباصرة المصرية. كل لاعب ياخذ 4 أوراق وتنحط 4 مكشوفة في الأرض (ما يكون فيها ولد ولا سبعة ديمن)، ولما تخلص الأوراق يتوزع 4 ثانية لين تخلص الكوتشينة. في دورك تنزل ورقة: الرقم ياكل من الأرض كل ورقة بنفس رقمه وكل مجموعة مجموعها رقمه (الإكة بواحد)، والبنت تاكل البنات بس، والشايب ياكل الشياب بس. الولد ياكل كل الأرض، والسبعة ديمن (الكومي) بعد تاكل كل الأرض. إذا كنست الأرض كلها بورقة تصير «باصرة» وتاخذ 10، إلا بالولد، وبالكومي إذا كان في الأرض صورة أو المجموع فوق 10، وبآخر ورقة بالجولة. اللي يبقى في الأرض بالآخر ياخذه آخر واحد أكل. النقاط: أكثر ورق 30 (ولو تعادل تنتقل للجولة الجاية)، كل ولد وكل إكة نقطة، الاثنين شريا 2، العشرة ديمن 3، وكل باصرة 10. أول من يوصل 101 يفوز. مع 4 لاعبين: كل اثنين متقابلين فريق. ومع 5 لاعبين وأكثر: آخر توزيعة تنقسم واحدة واحدة لين تخلص.';
 // the bot: takes the most (and the richest) it can, aims at basras, keeps the jack and the 7♦ for a full floor, and never leaves
 // a floor the next player can sweep with one card when it can help it
 GAMES.c_basra.bot=(d,s,lv)=>{if(d.ph==='sum')return c2bsNext(d);const H=cardsOf(d.hands[s]),fl=cardsOf(d.fl);
@@ -113,7 +113,7 @@ GAMES.c_basra.botDelay=(d,s,lv)=>d.ph==='sum'?7000:900+rnd(700);
    شكبة (chkobba, the Levant and North Africa scopa): 40 cards (no 8, 9, 10); K 10, J 9, Q 8, ace 1. Three each and four on
    the table (a redeal when three of one value show), then three more each. A card that equals a table card must take one
    (you choose which); else it must take a group that adds up to it (you choose); else it stays. Clearing the table is a
-   chkobba (+1), not with the very last card. Points: most cards (الكارطة) 1, most diamonds (الديناري) 1, most sevens, then
+   chkobba (+1), not with the very last card. Points: most cards (الكارطة) 1, most diamonds (الديمن) 1, most sevens, then
    sixes (البرميلة) 1, the 7♦ (السبعة الحية) 1, each chkobba 1. First to 21 wins.
    ================================================================= */
 const C2SKR='A234567QJK',skVal=c=>({A:1,Q:8,J:9,K:10})[c[0]]||+c[0];
@@ -161,7 +161,7 @@ GAMES.c_shakba={name:'شكبة',cat:'cards',lbc:'#A0522D',
     const opts=pend?c2skOpts(cardsOf(d.fl),pend):[];
     let h=`<div class="c2-root">${c2fsFloor(d,v,{bw:'شكبة! +1',hl:opts.flat()})}${c2fsPiles(d,{bn:'شكبة'})}`;
     if(d.ph==='sum'){const r=d.sum,nmS=i=>i<0?'تعادل':c2fsSideName(d,c2fsSides(d)[i]);h+=`<div class="panel bsum"><h3>نتيجة الجولة</h3>
-      <div class="bsr"><span>الكارطة (أكثر ورق)</span><em>${r.cnt.join(' / ')}</em><b>${nmS(r.kar)}</b></div><div class="bsr"><span>الديناري</span><em></em><b>${nmS(r.din)}</b></div>
+      <div class="bsr"><span>الكارطة (أكثر ورق)</span><em>${r.cnt.join(' / ')}</em><b>${nmS(r.kar)}</b></div><div class="bsr"><span>الديمن</span><em></em><b>${nmS(r.din)}</b></div>
       <div class="bsr"><span>البرميلة (السبعات)</span><em></em><b>${nmS(r.bar)}</b></div><div class="bsr"><span>السبعة الحية 7♦</span><em></em><b>${nmS(r.hay)}</b></div>
       ${c2fsSides(d).map((t,i)=>`<div class="bsr tot"><span>${c2fsSideName(d,t)}</span><em>+${r.add[i]}</em><b>${d.sc[i]}</b></div>`).join('')}
       ${ctx.my&&d.win==null?'<button class="big green" data-ga="next">الجولة التالية</button>':''}</div>`;return h+'</div>';}
@@ -170,7 +170,7 @@ GAMES.c_shakba={name:'شكبة',cat:'cards',lbc:'#A0522D',
   click(a,i,d,ctx){if(!ctx.my)return;if(a==='next'&&d.ph==='sum'){act(c2skNext(d));return;}if(d.ph!=='play')return;
     if(a==='card'){const c=cardsOf(d.hands[d.turn])[i];if(!c)return;const o=c2skOpts(cardsOf(d.fl),c);if(o.length>1){S.sel=[c2skSelKey(d),c];render();return;}S.sel=[];act(c2skPlay(d,c,o[0]||null));return;}
     if(a==='take'){const c=Array.isArray(S.sel)&&S.sel[0]===c2skSelKey(d)?S.sel[1]:null;S.sel=[];if(!c||i<0||!cardsOf(d.hands[d.turn]).includes(c)){render();return;}const o=c2skOpts(cardsOf(d.fl),c)[i];if(!o){render();return;}act(c2skPlay(d,c,o));}}};
-HELP.c_shakba='الشكبة لعبة صيد مثل السكوبا، بـ40 ورقة (بدون 8 و9 و10): الشايب بـ10، الولد بـ9، البنت بـ8، والإكة بواحد. كل لاعب ياخذ 3 أوراق وتنحط 4 مكشوفة في الأرض، ولما تخلص يتوزع 3 ثانية لين تخلص الكوتشينة. في دورك تنزل ورقة: إذا في الأرض ورقة بنفس قيمتها لازم تاكلها (وتختار أي وحدة لو فيه أكثر)، وإذا ما فيه وفيه مجموعة مجموعها نفس قيمتها لازم تاكلها (وتختار المجموعة)، وإذا لا تبقى ورقتك في الأرض. إذا كنست الأرض كلها تصير «شكبة» ونقطة، إلا بآخر ورقة في الجولة. اللي يبقى في الأرض بالآخر ياخذه آخر واحد أكل. النقاط بآخر كل جولة: الكارطة (أكثر ورق) نقطة، الديناري (أكثر ديناري) نقطة، البرميلة (أكثر سبعات، ولو تعادلتوا أكثر ستات) نقطة، السبعة الحية (7 الديناري) نقطة، وكل شكبة نقطة. أول من يوصل 21 يفوز. مع 4 لاعبين: كل اثنين متقابلين فريق. ومع 5 لاعبين وأكثر: آخر توزيعة تنقسم واحدة واحدة لين تخلص.';
+HELP.c_shakba='الشكبة لعبة صيد مثل السكوبا، بـ40 ورقة (بدون 8 و9 و10): الشايب بـ10، الولد بـ9، البنت بـ8، والإكة بواحد. كل لاعب ياخذ 3 أوراق وتنحط 4 مكشوفة في الأرض، ولما تخلص يتوزع 3 ثانية لين تخلص الكوتشينة. في دورك تنزل ورقة: إذا في الأرض ورقة بنفس قيمتها لازم تاكلها (وتختار أي وحدة لو فيه أكثر)، وإذا ما فيه وفيه مجموعة مجموعها نفس قيمتها لازم تاكلها (وتختار المجموعة)، وإذا لا تبقى ورقتك في الأرض. إذا كنست الأرض كلها تصير «شكبة» ونقطة، إلا بآخر ورقة في الجولة. اللي يبقى في الأرض بالآخر ياخذه آخر واحد أكل. النقاط بآخر كل جولة: الكارطة (أكثر ورق) نقطة، الديمن (أكثر ديمن) نقطة، البرميلة (أكثر سبعات، ولو تعادلتوا أكثر ستات) نقطة، السبعة الحية (7 ديمن) نقطة، وكل شكبة نقطة. أول من يوصل 21 يفوز. مع 4 لاعبين: كل اثنين متقابلين فريق. ومع 5 لاعبين وأكثر: آخر توزيعة تنقسم واحدة واحدة لين تخلص.';
 GAMES.c_shakba.bot=(d,s,lv)=>{if(d.ph==='sum')return c2skNext(d);const H=cardsOf(d.hands[s]),fl=cardsOf(d.fl);
   const val=c=>1+(c[1]==='d'?1.2:0)+(c[0]==='7'?2:c[0]==='6'?1:0)+(c==='7d'?5:0);
   let best=null,bv=-1e9;const last=!d.dk.length&&d.hands.every((h,k)=>k===s||!h.length)&&H.length===1;
@@ -459,7 +459,7 @@ GAMES.c_pres={name:'الرئيس والوزير',cat:'cards',lbc:'#9C7A1E',
     if(a==='give'&&d.ph==='swap'){const cs=c2shSel(d,c2prKeyT);if(cs.length!==d.sw[0].k)return;S.sel=[];act(c2prGive(d,cs));return;}
     if(a==='pass'&&d.ph==='play'&&d.tc){S.sel=[];act(c2prPass(d));return;}
     if(a==='play'&&d.ph==='play'){const cs=c2shSel(d,c2prKeyT);if(!c2prOk(d,cs))return;S.sel=[];act(c2prPlay(d,cs));}}};
-HELP.c_pres='الورق كله يتوزع. الترتيب من الأصغر: 3، 4 … الشايب، الإكة، وأكبر ورقة الاثنين. في أول جولة يبدأ اللي معه 3 سباتي. اللي يبدأ ينزّل ورقة وحدة أو أكثر من نفس الرقم (لين 4)، واللي بعده لازم ينزّل نفس العدد من رقم أعلى أو يقول باس (وما يرجع لهالمّة). لما الكل يقول باس، آخر واحد نزّل يبدأ لمّة جديدة. ترتيب الخلاص يحدد الألقاب: الأول الرئيس، الثاني الوزير، والأخير الشعب. من الجولة الثانية: الشعب يعطي الرئيس أفضل ورقتين عنده والرئيس يرجّع له ورقتين يختارها، ونائب الشعب يعطي الوزير أفضل ورقة والوزير يرجّع له ورقة (مع 4 لاعبين وأكثر). والشعب يبدأ اللعب. كل جولة تاخذ نقاط حسب ترتيبك (الأول أكثر)، وبعد 5 جولات يفوز صاحب أكثر نقاط.';
+HELP.c_pres='الورق كله يتوزع. الترتيب من الأصغر: 3، 4 … الشايب، الإكة، وأكبر ورقة الاثنين. في أول جولة يبدأ اللي معه 3 شريا. اللي يبدأ ينزّل ورقة وحدة أو أكثر من نفس الرقم (لين 4)، واللي بعده لازم ينزّل نفس العدد من رقم أعلى أو يقول باس (وما يرجع لهالمّة). لما الكل يقول باس، آخر واحد نزّل يبدأ لمّة جديدة. ترتيب الخلاص يحدد الألقاب: الأول الرئيس، الثاني الوزير، والأخير الشعب. من الجولة الثانية: الشعب يعطي الرئيس أفضل ورقتين عنده والرئيس يرجّع له ورقتين يختارها، ونائب الشعب يعطي الوزير أفضل ورقة والوزير يرجّع له ورقة (مع 4 لاعبين وأكثر). والشعب يبدأ اللعب. كل جولة تاخذ نقاط حسب ترتيبك (الأول أكثر)، وبعد 5 جولات يفوز صاحب أكثر نقاط.';
 // the bot: leads its lowest set, beats with the smallest set that does not break a bigger one, keeps 2s and aces for the end,
 // and gives back its lowest cards
 GAMES.c_pres.bot=(d,s,lv)=>{if(d.ph==='sum')return c2prNextR(d);const H=cardsOf(d.hands[s]);
