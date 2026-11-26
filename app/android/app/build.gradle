@@ -14,6 +14,15 @@ android {
         versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger())
         versionName "1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // the test build of a pull request (-PtestApp) installs next to the real app, under its own name, so trying it never
+        // touches the app players use
+        if (project.hasProperty('testApp')) {
+            applicationIdSuffix ".test"
+            versionNameSuffix "-test"
+            manifestPlaceholders = [appLabel: "ألعابنا تجربة"]
+        } else {
+            manifestPlaceholders = [appLabel: "@string/app_name"]
+        }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61

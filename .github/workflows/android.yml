@@ -7,13 +7,19 @@ on:
       - 'public/**'
       - 'app/**'
       - '.github/workflows/android.yml'
+  # a pull request that changes the app gets a test build («ألعابنا تجربة», release app-test) to try on phones before merging
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'public/js/transport-near.js'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
 
 # each job asks only for what it needs: the build (npm and Gradle code) never holds a token that can write
 permissions: {}
 
 concurrency:
-  group: android-app
+  group: android-app-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -66,7 +72,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace ${{ github.event_name == 'pull_request' && '-PtestApp' || '' }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -77,6 +83,7 @@ jobs:
 
   publish:
     needs: apk
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # never cut short halfway through swapping the APK
     concurrency:
@@ -114,3 +121,35 @@ jobs:
           gh release edit app-latest --notes "$NOTES"
           # point the release tag at this build so the page and its source match the APK
           gh api -X PATCH "repos/$GH_REPO/git/refs/tags/app-latest" -f sha="$GITHUB_SHA" -F force=true --silent
+
+  # the test build of a pull request from this repository: its own release (app-test, marked pre-release), never app-latest
+  publish-test:
+    needs: apk
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: android-publish-test
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk
+
+      - name: Publish the test APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          NOTES: "نسخة تجربة من طلب الدمج رقم ${{ github.event.pull_request.number }} (بناء ${{ github.run_number }}). تنثبّت جنب التطبيق الأصلي باسم «ألعابنا تجربة» وما تمسّه. نزّل alaabna-test.apk وثبّته."
+        run: |
+          set -e
+          mv app-release.apk alaabna-test.apk
+          if ! gh api "repos/$GH_REPO/releases/tags/app-test" --silent 2>/dev/null; then
+            gh release create app-test alaabna-test.apk --target "$SHA" --title "تطبيق ألعابنا (تجربة)" --notes "$NOTES" --prerelease --latest=false
+            exit 0
+          fi
+          gh release upload app-test alaabna-test.apk --clobber
+          gh release edit app-test --notes "$NOTES" --prerelease --latest=false
+          gh api -X PATCH "repos/$GH_REPO/git/refs/tags/app-test" -f sha="$SHA" -F force=true --silent

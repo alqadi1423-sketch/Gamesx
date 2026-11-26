@@ -1,12 +1,22 @@
 'use strict';
-/* Rooms between phones close to each other, inside the Android app only (Bluetooth or direct Wi-Fi, no internet).
+/* Rooms between phones close to each other, inside the Android app only (no internet).
+   Two native sides answer the same calls: BtRoom (plain Bluetooth, no Wi-Fi and no Google services; the one used)
+   and Nearby (Google Nearby Connections, may switch Wi-Fi on; kept as a way back: localStorage.nearvia='gms').
    One phone is the hub of the room and relays messages, like the Cloudflare room does online.
    It offers the same calls the engine uses: join -> presence / onPeers / leave. */
 window.NEARROOM={
   native:()=>!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()),
+  via:null,_p:null,   // 'bt' or 'gms', and its native plugin, chosen once
   // plain pages have no bundler, so the native plugin is registered here by name
-  P(){const C=window.Capacitor;if(!C)return null;if(C.Plugins&&C.Plugins.Nearby)return C.Plugins.Nearby;return C.registerPlugin?C.registerPlugin('Nearby'):null;},
-  available(){if(!this.native())return false;const C=window.Capacitor;return C.isPluginAvailable?C.isPluginAvailable('Nearby'):!!this.P();},
+  P(){if(this._p)return this._p;const C=window.Capacitor;if(!C)return null;
+    let gms=false;try{gms=localStorage.getItem('nearvia')==='gms';}catch(e){}
+    const has=n=>C.isPluginAvailable?C.isPluginAvailable(n):!!(C.Plugins&&C.Plugins[n]);
+    const n=!gms&&has('BtRoom')?'BtRoom':'Nearby';this.via=n==='BtRoom'?'bt':'gms';
+    this._p=(C.Plugins&&C.Plugins[n])||(C.registerPlugin?C.registerPlugin(n):null);return this._p;},
+  available(){if(!this.native())return false;const C=window.Capacitor;return C.isPluginAvailable?C.isPluginAvailable('BtRoom')||C.isPluginAvailable('Nearby'):!!this.P();},
+  // the hub on plain Bluetooth: Android lets other phones find it for a while only; hidden says it no longer can
+  hosting:false,hidden:false,onVis:null,
+  async show(){try{const r=await this.P().show();this.hidden=!(r&&r.visible);this.note('show '+!this.hidden);}catch(e){this.note('show error '+this.errText(e));}try{this.onVis&&this.onVis();}catch(e){}},
   found:{},          // endpoint id -> {code, host}
   // a short log for us (not shown to players): what the radio did, kept in memory only
   log:[],onLog:null,logOn:false,
@@ -15,7 +25,7 @@ window.NEARROOM={
   note(t){const d=new Date(),z=n=>String(n).padStart(2,'0');this.log.push(z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds())+' '+t);if(this.log.length>60)this.log.shift();this.onLog&&this.onLog();},
   // listens once for every native event, only to write the log above
   async watch(){if(this.logOn)return;this.logOn=true;const P=this.P();
-    const ev={found:e=>'found '+e.id+' "'+e.name+'"',lost:e=>'lost '+e.id,initiated:e=>'initiated '+e.id+' "'+e.name+'"',connected:e=>'connected '+e.id,failed:e=>'failed '+e.id+' '+(e.msg||e.code),disconnected:e=>'disconnected '+e.id};
+    const ev={found:e=>'found '+e.id+' "'+e.name+'"',lost:e=>'lost '+e.id,initiated:e=>'initiated '+e.id+' "'+e.name+'"',connected:e=>'connected '+e.id,failed:e=>'failed '+e.id+' '+(e.msg||e.code),disconnected:e=>'disconnected '+e.id,visible:e=>'visible '+!!e.on};
     for(const k in ev){try{await P.addListener(k,e=>this.note(ev[k](e||{})));}catch(x){this.note('listen '+k+' error '+this.errText(x));}}},
   scanning:false,onList:null,joinHook:null,
   // native listeners: the room list's (scan) and the open room's (room), so a failed try leaves the list working
@@ -23,7 +33,7 @@ window.NEARROOM={
   parse(name){const m=/^A1\|([A-Z0-9]{4,6})\|(.*)$/.exec(name||'');return m?{code:m[1],host:m[2]}:null;},
   // the native side answers "8034 MISSING_PERMISSION_…" style text, which core.js nearErr turns into a short Arabic hint
   errText(e){return String((e&&(e.message||e.errorMessage))||e||'');},
-  async status(){try{const r=await this.P().status();this.note('sdk '+r.sdk+' gms '+r.gms+' loc '+r.loc+' bt '+r.bt+' perm '+r.perm);return r;}catch(e){this.note('status error '+this.errText(e));return {fail:this.errText(e)};}},
+  async status(){try{const r=await this.P().status();this.note(this.via+' sdk '+r.sdk+' gms '+r.gms+' loc '+r.loc+' bt '+r.bt+' perm '+r.perm);return r;}catch(e){this.note('status error '+this.errText(e));return {fail:this.errText(e)};}},
   settings(which){try{this.P().settings({which}).catch(()=>{});}catch(e){}},
   async perms(){try{const r=await this.P().ensure();this.note('permission '+(r&&r.granted));return !!(r&&r.granted);}catch(e){this.lastErr=this.errText(e);this.note('permission error '+this.lastErr);return false;}},
   async on(ev,fn,set){const h=await this.P().addListener(ev,fn);this.subs[set||'room'].push(h);return h;},
@@ -41,7 +51,7 @@ window.NEARROOM={
     this.note('discovering');return {ok:true};},
   // look again from a clean list (after a try that did not get in, or after a cut): Nearby reports every room again
   async rescan(){if(!this.scanning)return;this.found={};this.changed();try{await this.P().discover();this.note('discovering again');}catch(e){this.note('discover error '+this.errText(e));}},
-  async stopAll(){this.scanning=false;this.onList=null;this.joinHook=null;this.found={};await this.off('room');await this.off('scan');try{await this.P().stop();}catch(e){}},
+  async stopAll(){this.scanning=false;this.onList=null;this.joinHook=null;this.found={};this.hosting=false;this.hidden=false;await this.off('room');await this.off('scan');try{await this.P().stop();}catch(e){}},
 
   /* ---- messages: JSON text, cut into pieces when bigger than one native message ----
      a piece is "\u0001<id>|<i>|<n>|<text>" (no JSON escaping, so the size is known); pieces of one message go out in order */
@@ -82,9 +92,11 @@ window.NEARROOM={
       send(others(id),{t:'join',peer:id});b.emit();});
     await this.on('message',e=>{if(!conns.has(e.id))return;const m=this.inp(e);if(!m||m.t!=='p')return;const p=m.p&&typeof m.p==='object'?m.p:{};b.peers()[e.id]=p;send(others(e.id),{t:'p',peer:e.id,p});b.emit();});
     await this.on('disconnected',e=>{if(!conns.has(e.id))return;conns.delete(e.id);delete b.peers()[e.id];send([...conns],{t:'leave',peer:e.id});b.emit();});
+    await this.on('visible',e=>{if(!this.hosting)return;this.hidden=!(e&&e.on);try{this.onVis&&this.onVis();}catch(x){}});
     await this.watch();
-    try{await N.advertise({name:'A1|'+code+'|'+(name||'').slice(0,14)});}
+    let r;try{r=await N.advertise({name:'A1|'+code+'|'+(name||'').slice(0,14)});}
     catch(e){this.note('advertise error '+this.errText(e));await this.stopAll();if(list)this.scan(list);throw new Error(this.errText(e));}
+    this.hosting=true;this.hidden=!!(r&&r.visible===false);
     this.note('advertising '+code);
     return {name:code,near:true,
       presence:async patch=>{b.setMine(patch);send([...conns],{t:'p',peer:'H',p:b.mine()});b.emit();},
@@ -97,7 +109,7 @@ window.NEARROOM={
     if(!await this.perms())throw new Error(this.lastErr||'perm');
     await this.off('room');this.joinHook=null;
     const b=this.base(),N=this.P(),nm=(name||'').slice(0,14)||'player';
-    let host=null,opened=false,closed=false,retry=null,lostAt=0,tryAt=0,live=false,why='',wait=null,lookAt=0,tries=0;
+    let host=null,opened=false,closed=false,retry=null,lostAt=0,tryAt=0,live=false,why='',wait=null,lookAt=0,tries=0,before={};
     const send=o=>{if(host&&live)this.out([host],o);};
     const api={name:code,near:true,max:30000,
       presence:async patch=>{b.setMine(patch);send({t:'p',p:b.mine()});b.emit();},
@@ -118,20 +130,23 @@ window.NEARROOM={
     const lookAgain=()=>{if(retry||closed)return;lostAt=Date.now();lookAt=0;retry=setInterval(()=>{if(closed||live){clearInterval(retry);retry=null;return;}
       if(Date.now()-lostAt>60000){clearInterval(retry);retry=null;this.note('room gone');closed=true;this.joinHook=null;b.fail('gone');return;}
       if(host&&Date.now()-tryAt>15000)host=null;if(host)return;
-      const f=where();if(f)join(f);else if(Date.now()-lookAt>12000){lookAt=Date.now();this.rescan();}},4000);};
+      // plain Bluetooth keeps the room's address, so the room is tried straight away, even before it is found again
+      const f=where()||(this.via==='bt'?id:null);if(f)join(f);else if(Date.now()-lookAt>12000){lookAt=Date.now();this.rescan();}},4000);};
     // ends a try that never opened the room, leaving the list of rooms working
     const giveUp=async()=>{closed=true;clearTimeout(wait);this.joinHook=null;b.close();await this.off('room');
       if(host)try{await N.disconnect({id:host});}catch(e){}host=null;this.rescan();};
     return await new Promise(async(ok,no)=>{
       await this.on('message',e=>{if(closed||e.id!==host)return;const m=this.inp(e);if(!m)return;
-        if(m.t==='hello'){this.note('hello, in the room');live=true;clearInterval(retry);retry=null;N.stopDiscovery().catch(()=>{});b.me.id=m.peer;const p={};(m.peers||[]).forEach(k=>{p[k]={};});b.setPeers(p);send({t:'p',p:b.mine()});if(!opened){opened=true;clearTimeout(wait);ok(api);}else b.fail('back');b.emit();}
+        if(m.t==='hello'){this.note('hello, in the room');live=true;clearInterval(retry);retry=null;N.stopDiscovery().catch(()=>{});b.me.id=m.peer;// back after a cut: the phones still in the room keep what they last said until their fresh word comes (right after
+          // this hello), so the engine never sees an empty room host for a moment and takes the room over
+          const p={};(m.peers||[]).forEach(k=>{p[k]=before[k]||{};});before={};b.setPeers(p);send({t:'p',p:b.mine()});if(!opened){opened=true;clearTimeout(wait);ok(api);}else b.fail('back');b.emit();}
         else if(m.t==='bye'){closed=true;clearInterval(retry);this.joinHook=null;b.fail('bye');}
         else if(m.t==='join'){b.peers()[m.peer]=b.peers()[m.peer]||{};send({t:'p',p:b.mine()});b.emit();}
         else if(m.t==='p'){b.peers()[m.peer]=m.p&&typeof m.p==='object'?m.p:{};b.emit();}
         else if(m.t==='leave'){delete b.peers()[m.peer];b.emit();}});
       await this.on('disconnected',e=>{if(closed||e.id!==host)return;host=null;const was=live;live=false;
         if(!opened){soon();return;}
-        b.setPeers({});b.emit();if(was)b.fail('lost');this.rescan();lookAgain();});
+        before=b.peers();b.setPeers({});b.emit();if(was)b.fail('lost');this.rescan();lookAgain();});
       await this.on('failed',e=>{if(closed||e.id!==host)return;why=e.msg||String(e.code||'');host=null;if(!opened)soon();});
       await this.watch();
       join(id);

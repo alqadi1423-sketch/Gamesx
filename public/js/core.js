@@ -545,6 +545,8 @@ function nearErr(m){m=String(m||'');
   let t='ما قدرت أشغّل الغرف القريبة.';
   if(m==='perm'||/PERMISSION/i.test(m))t='الجوال ما أعطى التطبيق صلاحية الأجهزة القريبة أو الموقع.';
   else if(m==='timeout')t='ما رد صاحب الغرفة. قرّبوا من بعض وجرّب مرة ثانية.';
+  else if(/DISCOVERABLE_REFUSED/.test(m))t='لازم توافق إن جوالك يظهر للأجهزة القريبة، عشان يلقون غرفتك.';
+  else if(/NO_BLUETOOTH/.test(m))t='هذا الجوال ما فيه بلوتوث.';
   else if(/LOCATION/i.test(m))t='شغّل الموقع في الجوال.';
   else if(/BLUETOOTH|RADIO/i.test(m))t='شغّل البلوتوث وجرّب مرة ثانية.';
   else if(/API_UNAVAILABLE|SERVICE_MISSING|not implemented/i.test(m))t='هذا الجوال ما فيه خدمات Google اللي يحتاجها اللعب القريب.';
@@ -562,7 +564,7 @@ async function nearCheck(){
 async function startNear(){
   if(S.mode==='near'&&NEARROOM.scanning)await NEARROOM.stopAll();
   S.mode='near';S.roomErr=null;S.nearList=[];S.nearScan=false;S.nearDiag=[];
-  NEARROOM.onLog=()=>{if(S.mode==='near')render();};render();
+  NEARROOM.onLog=()=>{if(S.mode==='near')render();};NEARROOM.onVis=()=>{if(S.mode==='online'&&S.via==='near')render();};render();
   const D=await nearCheck();if(S.mode!=='near')return;
   const r=await NEARROOM.scan(list=>{S.nearList=list;if(S.mode==='near')render();});
   if(S.mode!=='near')return;
@@ -587,6 +589,8 @@ function roomBar(full){try{
   let s=`<div class="roombar"><div class="rb-code"><small>${near?'📶 غرفة قريبة':'رمز الغرفة'}${cfg().lock?' 🔒':''}</small><b class="code">${escH(S.code)}</b></div>${near?'':'<button class="rbb" data-a="copy" aria-label="نسخ الرمز">نسخ</button>'}<div class="rb-av">${av}</div><button class="rbb" data-a="m-settings" aria-label="الإعدادات">⚙️</button></div>`;
   // the connection is down, or nobody else is in this room (most likely a mistyped code): say it where everyone looks
   if(S.needUpd)s+='<p class="updb" role="status">حدّث التطبيق عشان تلعب في هالغرفة</p>';
+  // the room's phone on plain Bluetooth: Android hides it after a while, the ones already in stay; new players need it shown again
+  if(full&&near&&window.NEARROOM&&NEARROOM.hosting&&NEARROOM.hidden)s+='<div class="panel ndiag"><div class="nd"><p>الجوالات الجديدة ما تشوف غرفتك الحين. اللي داخلين ما يتأثرون.</p><button class="btn" data-a="nshow">خلّ غرفتك تظهر</button></div></div>';
   if(S.offline)s+=`<p class="err" role="status">${S.offline==='full'?'الغرفة مليانة، نحاول ندخل مرة ثانية…':'انقطع الاتصال، نحاول نرجع…'}</p>`;
   else if(S.roomEmpty&&pl.length<2)s+=`<div class="panel"><p class="err">ما لقينا أحد في هذي الغرفة، تأكد من الرمز</p><div class="acts"><button class="btn" data-a="recode">عدّل الرمز</button><button class="btn navy" data-a="leave">اطلع</button></div></div>`;
   if(full){const me=S.pending?'<p class="note">جاري اختيار لونك…</p>':S.me==null?'<p class="note">تتفرج الحين</p>':'';
@@ -893,6 +897,7 @@ function shellAct(t){const i=t.dataset.i!=null?+t.dataset.i:null;
     case 'near':startNear();break;
     case 'nearoff':toast('متوفر في تطبيق ألعابنا');break;
     case 'nset':NEARROOM.settings(t.dataset.w);break;
+    case 'nshow':NEARROOM.show();break;
     case 'ncreate':{const c=genCode();enterRoom(c,true,null,NEARROOM.room('host',{code:c,name:S.myName}));break;}
     case 'njoin':{const f=(S.nearList||[])[i];if(f)enterRoom(f.code,false,null,NEARROOM.room('join',{id:f.id,code:f.code,name:S.myName}));break;}
     case 'local':S.mode='local';S.me=null;S.st={g:null,s:0,d:null,sc:Array(MAXP).fill(0),cfg:{...CFG0,...localTeams()}};S.priv=Array(MAXP).fill(null);S.seen=null;S.browse=false;render();break;
