@@ -11,7 +11,7 @@ const BSEQ='AKQJT987';                       // order for projects
 const BSUN='ATKQJ987';                      // strength without trumps: A 10 K Q J 9 8 7
 const BTR='J9ATKQ87';                       // trump strength
 const BPT={A:11,T:10,K:4,Q:3,J:2,9:0,8:0,7:0},BPTT={J:20,9:14,A:11,T:10,K:4,Q:3,8:0,7:0};
-const BSN={s:'♠',h:'♥',d:'♦',c:'♣'},BSA={s:'شريا',h:'هاص',d:'ديمن',c:'سبيت'};
+const BSN={s:'♠',h:'♥',d:'♦',c:'♣'},BSA={s:'سبيت',h:'هاص',d:'ديمن',c:'شريا'};
 const bTeam=h=>h%2;
 // small card: rank over suit, readable even when cards overlap
 const miniCard=c=>`<div class="card mini ${'hd'.includes(c[1])?'red':'blk'}"><b>${c[0]==='T'?'10':c[0]}</b>${suitSVG(c[1])}</div>`;
@@ -39,7 +39,7 @@ function bBidOpts(d){const b=d.bd,pos=b.ord[b.i],ace=d.pub[0]==='A';
   if(b.r===1){if(!b.best)return ['pass','hokm','sun',...(pos>=2&&!ace?['ashkal']:[])];return ['pass','sun',...(pos>=2&&!ace?['ashkal']:[])];}
   if(!b.best)return ['pass','hokm2','sun'];return ['pass','sun'];}
 const BOPT={pass:'بس',hokm:'حكم',hokm2:'حكم ثاني',sun:'صن',ashkal:'أشكل'};
-function bBid(d,o,suit){const b={...d.bd},pos=b.ord[b.i],h=bOrd(d)[pos];const say=`${bName(d,h)}: ${o==='hokm2'?'حكم '+BSN[suit]:BOPT[o]}`;
+function bBid(d,o,suit){const b={...d.bd},pos=b.ord[b.i],h=bOrd(d)[pos];const say=`${bName(d,h)}: ${o==='hokm2'?'حكم '+BSA[suit]+' '+BSN[suit]:BOPT[o]}`;
   const fin=best=>bFinish({...d,last:say},best);
   if(b.st==='over'){if(o==='sun')return fin({t:'s',pos});b.i++;if(b.i>=b.ord.length)return fin(b.best);return {...d,bd:b,turn:d.ctl[bOrd(d)[b.ord[b.i]]],last:say};}
   if(o==='sun'||o==='ashkal'){const best={t:o==='sun'?'s':'a',pos};
@@ -63,7 +63,7 @@ function bFinish(d,best){const ord=bOrd(d),bh=ord[best.pos];const decl=best.t===
   for(let h=0;h<4;h++)hands[h]=bSort(hands[h],best.t==='h'?best.suit:null);
   const md=best.t==='h'?'h':'s';
   let nd={...d,hands,rest:'',md,tr:best.t==='h'?best.suit:null,decl,bt:best.t,ph:'play',tl:ord[0],tk:''};
-  nd.last=`${bName(d,bh)} اشترى ${best.t==='h'?'حكم '+BSN[best.suit]:best.t==='a'?'أشكل لخويه':'صن'}`;
+  nd.last=`${bName(d,bh)} اشترى ${best.t==='h'?'حكم '+BSA[best.suit]+' '+BSN[best.suit]:best.t==='a'?'أشكل لخويه':'صن'}`;
   // doubling: Hokm always, Sun only when one team is over 100 and the other under
   const t=bTeam(decl),o=1-t;const sunOk=(d.sc[t]>100&&d.sc[o]<100)||(d.sc[o]>100&&d.sc[t]<100);
   if(md==='h'||sunOk){const opp=ord.filter(h=>bTeam(h)===o);nd={...nd,ph:'dbl',dq:{lv:1,ask:opp,i:0},turn:d.ctl[opp[0]]};}
@@ -222,7 +222,7 @@ GAMES.baloot={teams:'native',teamsOk:z=>z.length===2&&Math.abs(z[0]-z[1])<=1,nam
     // actions
     const my=ctx.my;
     if(d.ph==='bid'&&my){const o=bBidOpts(d);
-      if(S.blSuit===bSuitKey(d))h+=`<p class="lbl" style="text-align:center">اختر الحكم</p><div class="row bopts">${'shdc'.split('').filter(x=>x!==d.pub[1]).map(x=>`<button class="btn ${'hd'.includes(x)?'rs':''} bsuit" data-ga="suit" data-i="${'shdc'.indexOf(x)}">${BSN[x]}</button>`).join('')}<button class="btn" data-ga="suit" data-i="-1">رجوع</button></div>`;
+      if(S.blSuit===bSuitKey(d))h+=`<p class="lbl" style="text-align:center">اختر الحكم</p><div class="row bopts">${'shdc'.split('').filter(x=>x!==d.pub[1]).map(x=>`<button class="btn ${'hd'.includes(x)?'rs':''} bsuit" data-ga="suit" data-i="${'shdc'.indexOf(x)}">${BSN[x]}<small>${BSA[x]}</small></button>`).join('')}<button class="btn" data-ga="suit" data-i="-1">رجوع</button></div>`;
       else h+=`<div class="row bopts">${o.map(x=>`<button class="btn ${x==='pass'?'':x==='sun'?'navy':'green'}" data-ga="bid" data-i="${['pass','hokm','sun','ashkal','hokm2'].indexOf(x)}">${BOPT[x]}</button>`).join('')}</div>`;}
     if(d.ph==='dbl'&&my)h+=`<div class="row bopts">${bDblOpts(d).map(x=>`<button class="btn ${x==='no'?'':'red'}" data-ga="dbl" data-i="${['dbl','dblL','dblO','three','fourL','fourO','gahwa','no'].indexOf(x)}">${BDN[x]}</button>`).join('')}</div>`;
     if(d.ph==='sum'){const r=d.sum;h+=`<div class="panel bsum"><h3>${r.kab!=null?`كبوت لفريق ${bTeamName(d,r.kab)}! 🔥`:`الصكة لفريق ${bTeamName(d,r.win)}`}</h3>
