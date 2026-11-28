@@ -29,6 +29,24 @@
 @media (prefers-color-scheme:dark){.r2m-tr{background:#3A4B5E}.r2m-nd::before{background:#fff;box-shadow:0 0 0 1.5px #111923}.r2m-nd::after{border-top-color:#fff}}
 .r2go{display:flex;width:100%;max-width:420px;margin:4px auto 0;min-height:54px;font-size:20px;border-radius:18px}
 
+/* ---------- the fixed screen (.r2fit): the root fills the board, the scene (.r2sc) takes the room the controls leave and
+   keeps its shape there (container units: --ar is the scene's width/height, --mx its widest, --sw the room its side
+   columns take), the controls stay compact and the whole stays centred when the phone is tall.
+   .r2mid puts a scene between two side columns of buttons (left/right as on the screen) ---------- */
+.r2-root.r2fit{height:100%;min-height:0;gap:6px;justify-content:center;container-type:size}
+.r2fit>*{flex:none}
+.r2fit>.r2sc,.r2fit>.r2mid,.r2fit>.bw-mid{flex:0 1 calc(min(100cqw - var(--sw,0px),var(--mx,460px)) / var(--ar,1));min-height:96px}
+.r2fit .r2sc{container-type:size;display:flex;align-items:center;justify-content:center;min-width:0}
+.r2-root .r2sc>svg{flex:none;margin:0;width:min(100cqw,calc(100cqh * var(--ar,1)),var(--mx,460px))}
+.r2fit .r2mid,.r2fit .bw-mid{direction:ltr;display:flex;gap:6px;align-items:stretch}
+.r2mid>.r2sc,.bw-mid>.r2sc{flex:1 1 0}
+.r2side{flex:none;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.r2side .btn{min-height:44px;min-width:58px;padding:0 8px;font-size:15px}
+.r2fit .r2lbl{margin:0;font-size:14px}
+.r2fit .r2m{height:42px;padding-top:15px;margin-top:0}
+.r2fit .r2go{min-height:46px;margin-top:0;font-size:19px}
+@media (min-height:760px){.r2fit .r2go{min-height:52px}.r2-root.r2fit{gap:8px}}
+
 /* ---------- penalties ---------- */
 .pn-sheet{background:var(--surface);border-radius:var(--r-m);box-shadow:var(--e1);padding:6px 10px;display:grid;gap:2px}
 .pn-row{display:grid;grid-template-columns:minmax(0,1fr) auto 26px;align-items:center;gap:8px;font-size:13.5px}
@@ -58,6 +76,8 @@
 .dt-turn span{flex:1;display:grid;place-items:center;background:var(--surface);border-radius:var(--r-s);font-weight:800;color:var(--mut);box-shadow:var(--e1);font-size:15px}
 .dt-turn span.on{color:var(--ink);box-shadow:inset 0 0 0 2px var(--gold)}
 .r2-root .dt-svg{background:#3B2A22;border-radius:50%;width:min(100%,340px);margin:0 auto}
+.r2dt{--ar:1;--mx:340px}
+.r2fit .dt-big b{font-size:26px}
 .dt-svg:not(.can) .dt-s{pointer-events:none}
 .dt-svg.can .dt-s{cursor:pointer}
 .dt-svg.can .dt-s:active{opacity:.7}
@@ -69,6 +89,12 @@
 
 /* ---------- bowling ---------- */
 .r2-root .bw-svg{width:min(58%,220px);margin:0 auto;border-radius:var(--r-m)}
+.r2bw{--ar:.56;--mx:220px;--sw:188px}
+.bw-side{flex:0 0 88px;display:flex;flex-direction:column;justify-content:center;gap:6px;direction:rtl}
+.bw-side .r2row{gap:6px}
+.bw-side .r2row .btn{flex:1;padding:0;min-width:0}
+.bw-side .segs{flex-direction:column;flex-wrap:nowrap}
+.bw-side .seg{padding:6px 4px;font-size:13.5px;min-height:38px}
 .bw-pin.dn{opacity:.4}
 .bw-sheet{display:grid;gap:3px;background:var(--surface);border-radius:var(--r-m);padding:6px;box-shadow:var(--e1);direction:ltr}
 .bw-row{display:grid;grid-template-columns:52px repeat(9,minmax(0,1fr)) minmax(0,1.4fr);gap:2px;align-items:stretch;font-size:11px}
@@ -82,6 +108,7 @@
 
 /* ---------- mini golf ---------- */
 .r2-root .gl-svg{width:min(100%,300px);margin:0 auto;touch-action:manipulation}
+.r2gl{--ar:.783;--mx:300px;--sw:128px}
 .gl-svg.can{cursor:crosshair}
 .gl-card{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(var(--h),minmax(0,1fr)) minmax(0,1fr);gap:2px 3px;background:var(--surface);border-radius:var(--r-m);padding:6px 8px;box-shadow:var(--e1);font-size:13px;align-items:center}
 .gl-card b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -107,6 +134,8 @@
 
 /* ---------- archery ---------- */
 .r2-root .ar-svg{width:min(100%,320px);margin:0 auto}
+.r2ar{--ar:1.008;--mx:320px;--sw:128px}
+.r2ar .r2lbl .sm{padding:2px 10px;font-size:15px}
 .ar-wt{font-size:12px;font-weight:800;fill:#1B4F72}
 .ar-tab{display:grid;grid-template-columns:minmax(0,1.8fr) repeat(4,minmax(0,1fr)) minmax(0,1.1fr) minmax(0,.8fr);gap:2px 3px;background:var(--surface);border-radius:var(--r-m);padding:6px 8px;box-shadow:var(--e1);font-size:13px;align-items:center}
 .ar-tab b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -146,6 +175,7 @@
 
 /* ---------- falconry ---------- */
 .fc-st{font-size:11px;font-weight:800;fill:#5A3A22}
+.r2fc{--ar:2}
 .fc-prey{font-size:16px}
 .fc-bag{display:flex;justify-content:space-between;gap:8px;background:var(--surface);border-radius:var(--r-m);padding:6px 12px;box-shadow:var(--e1);font-size:14px;color:var(--mut);font-weight:700}
 .fc-bag b{color:var(--ink);font-size:17px}
@@ -178,6 +208,13 @@
 
 /* ---------- show jumping ---------- */
 .sj-n{font-size:12px;font-weight:800;fill:#2D4763}
+.r2sj{--ar:2.143}
+.r2fit .sj-tab{grid-template-columns:repeat(auto-fit,minmax(96px,1fr))}
+.r2fit .sj-tab span{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:4px;align-items:baseline;padding:2px 7px 4px}
+.r2fit .sj-tab small{grid-column:1/-1}
+.r2fit .sj-course i{width:28px;height:28px}
+.r2sj .r2seg .seg{flex:1 1 0;padding:6px 2px;font-size:13px;white-space:nowrap}
+.r2sj .r2seg{flex-wrap:nowrap}
 .sj-tag{font-size:20px;font-weight:800;fill:#fff;paint-order:stroke;stroke:#2D4763;stroke-width:4px}
 .sj-tag.ok{fill:#7CE19B}.sj-tag.no{fill:#FFB4AC}
 .sj-down{transform:translate(0,30px) rotate(8deg);transform-box:fill-box;transform-origin:center}
@@ -195,6 +232,7 @@
 
 /* ---------- hopscotch ---------- */
 .r2-root .hs-svg{width:min(52%,200px);margin:0 auto;border-radius:var(--r-m)}
+.r2hs{--ar:.533;--mx:200px}
 .hs-sq text{font-size:15px;font-weight:800;fill:#fff;paint-order:stroke;stroke:#7D8994;stroke-width:2px}
 .hs-sq .hs-h{font-size:10px;stroke:none}
 .hs-sq.done rect,.hs-sq.done path{fill:rgba(255,255,255,.28)}
