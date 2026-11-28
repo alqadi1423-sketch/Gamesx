@@ -481,7 +481,7 @@ function render(){
   const screen=S.mode+'|'+(S.mode==='online'||S.mode==='local'?(S.st.g&&!S.browse&&S.st.d?'g:'+S.st.g:'grid'):'');
   // a new screen slides in once (style.css #app.scr-in); later patches of the same screen do not animate
   // a new screen starts as a plain page: a fixed-screen game (G.fit) sets it again
-  if(screen!==S.lastScreen)app.classList.remove('gfit');
+  if(screen!==S.lastScreen&&!/\|g:/.test(screen))app.classList.remove('gfit','gframe');
   if(screen!==S.lastScreen){S.lastScreen=screen;app.innerHTML='';S.lastHtml=null;window.scrollTo(0,0);app.dataset.s=S.mode==null?'home':/\|g:/.test(screen)?'game':S.mode==='online'||S.mode==='local'?'grid':S.mode;app.classList.add('scr-in');clearTimeout(S.scrT);S.scrT=setTimeout(()=>app.classList.remove('scr-in'),300);if(app.dataset.s==='grid')gridWarm();}
   // the chat stays at the newest line unless its reader scrolled up (then a "new messages" button shows)
   const mb0=app.querySelector('.msgs'),atBot=!mb0||mb0.scrollHeight-mb0.scrollTop-mb0.clientHeight<60;
@@ -734,12 +734,13 @@ function renderGame(){
   // the status card takes the colour of whoever plays now (or of the winner)
   const acc=cover?null:d.win==null?(isSimul(G,d)?null:col(d,d.turn)):typeof d.win==='number'?col(d,d.win):null;
   const fv=favGames().includes(g);
-  /* G.fit: a game drawn for one fixed screen (no scrolling): it shows its own players and status, the page takes the
-     phone's height and the board fills what is left (#app.gfit in style.css). Each game opts in for itself */
-  const fit=!!G.fit&&!cover;app.classList.toggle('gfit',fit);
-  // fixed screen online: the room code is a small chip in the top bar (tap to copy) instead of a bar of its own
-  const chip=fit&&S.mode==='online'?(S.via==='near'?`<span class="gcode" aria-label="غرفة قريبة">📶</span>`:`<button class="gcode ltr" data-a="copy" aria-label="نسخ رمز الغرفة ${escH(S.code)}">${escH(S.code)}</button>`):'';
-  OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`${chip}<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button><button class="ib" data-a="m-settings" aria-label="إعدادات اللعبة">⚙️</button>`,true)}${roomBar(false,fit)}${fit?'':scoreBar(sc,d)}
+  /* the frame of every game (#app.gframe in style.css, the owner's rule: one fixed screen, the general design the same in
+     every game): the page takes the phone's height, the bars are compact, the room code is a chip in the top bar, and the
+     board fills what is left. G.fit: the game also shows its own players and status (no strip, no status card) */
+  const fit=!!G.fit&&!cover;app.classList.add('gframe');app.classList.toggle('gfit',fit);
+  // the room code is a small chip in the top bar (tap to copy) instead of a bar of its own
+  const chip=S.mode==='online'?(S.via==='near'?`<span class="gcode" aria-label="غرفة قريبة">📶</span>`:`<button class="gcode ltr" data-a="copy" aria-label="نسخ رمز الغرفة ${escH(S.code)}">${escH(S.code)}</button>`):'';
+  OUT=`${topBar(G.name,S.mode==='online'?'browse':'grid',`${chip}<button class="ib fvb ${fv?'on':''}" data-a="fav" data-g="${g}" aria-label="${fv?'شيلها من المفضلة':'أضفها للمفضلة'}" aria-pressed="${fv}">${ICO_STAR}</button><button class="ib" data-a="m-help" aria-label="القواعد">؟</button><button class="ib" data-a="m-settings" aria-label="إعدادات اللعبة">⚙️</button>`,true)}${roomBar(false,true)}${fit?'':scoreBar(sc,d)}
   ${fit?'':`<div class="status ${cover?'nil':''} ${acc?'acc':''} ${d.win!=null?'over':''} ${ctx.my&&!cover&&S.mode==='online'?'mine':''} ${S.pend?'pend':''}"${acc?` style="--c:${acc}"`:''}>${cover||typeof CASTX==='undefined'?'':CASTX.status(g,d,ctx)}${cover?'':statusBox(statusHTML(d,G,ctx))}<div class="tbar" style="${left==null?'display:none':''}"><i style="width:${left==null?0:left/cfg().timer*100}%"></i></div></div>`}<div class="board ${enter?'enter':''} ${S.pend?'wait':''}">${body}</div>
   ${S.mode==='online'?fabs():''}
   ${d.win!=null&&S.showResult&&!cover?resultHTML(d,G,ctx):''}`;
