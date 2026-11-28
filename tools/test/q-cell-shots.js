@@ -1,13 +1,18 @@
 // node tools/test/q-cell-shots.js <port> <outdir> : screens of «تحدي الخلية» on one phone and online (for the owner and the log)
 const L = require('./online/lib'); const path = require('path');
-const port = +process.argv[2], OUT = process.argv[3];
+const port = +process.argv[2], OUT = process.argv[3], VW = +(process.argv[4] || 390), VH = +(process.argv[5] || 844);
+let over = 0;
 (async () => {
   const srv = await L.startServer(port); const b = await L.newBrowser();
-  const shot = async (p, name) => { await p.evaluate(() => { S.modal = null; S.showResult = false; render(); }); await L.sleep(350); await p.screenshot({ path: path.join(OUT, name + '.png') }); };
+  const shot = async (p, name) => { await p.evaluate(() => { S.modal = null; S.showResult = false; render(); }); await L.sleep(350);
+    // one fixed screen: nothing may need scrolling
+    const sc = await p.evaluate(() => ({ h: document.scrollingElement.scrollHeight, v: innerHeight, w: document.scrollingElement.scrollWidth, vw: innerWidth }));
+    if (sc.h > sc.v + 1 || sc.w > sc.vw + 1) { over++; console.log('SCROLL', name, JSON.stringify(sc)); }
+    await p.screenshot({ path: path.join(OUT, name + '.png') }); };
   const fill = (p, k) => p.evaluate(k => { let d = S.st.d; const r = Math.random; for (let j = 0; j < k && d.ph === 'pick'; j++) { const free = [...d.o].map((c, i) => c === '.' ? i : -1).filter(i => i >= 0); const c = free[(j * 7) % free.length];
     d = QC.choose({ ...d, gm: 'host' }, -1, c, r, Date.now()); d = QC.judge(d, j % 3 === 2 ? 1 : j % 2, r, Date.now()); d = { ...d, gm: S.st.d.gm }; } act(d); }, k);
   for (const dark of [false, true]) {
-    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: dark ? 'dark' : 'light' });
+    const ctx = await b.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 2, colorScheme: dark ? 'dark' : 'light' });
     const p = await ctx.newPage(); await p.goto(`http://localhost:${port}/`); await p.waitForFunction(() => typeof S === 'object' && typeof GAMES === 'object' && GAMES.q_cell);
     await p.click('[data-a=local]'); await p.click('[data-a=inc]'); await p.click('[data-a=inc]');
     await p.evaluate(() => setGame('q_cell')); await L.sleep(500); const sx = dark ? '-dark' : '';
@@ -26,7 +31,7 @@ const port = +process.argv[2], OUT = process.argv[3];
     await ctx.close(); }
   // online: a host and a guest, buzz then answer
   const A = await L.newPlayer(b, port, 'سلمان', 'A'); const code = await L.createRoom(A); const G = await L.newPlayer(b, port, 'نورة', 'B'); await L.joinRoom(G, code);
-  for (const p of [A, G]) await p.setViewportSize({ width: 390, height: 844 });
+  for (const p of [A, G]) await p.setViewportSize({ width: VW, height: VH });
   await L.sleep(800); await L.pickGame(A, 'q_cell'); await L.sleep(900); await shot(G, 'online-set');
   await A.evaluate(() => { act(QC.begin(S.st.d, Math.random)); }); await L.sleep(600);
   await A.evaluate(() => { let d = S.st.d; const r = Math.random; for (let j = 0; j < 5; j++) { const free = [...d.o].map((c, i) => c === '.' ? i : -1).filter(i => i >= 0); d = QC.choose({ ...d, gm: 'host' }, -1, free[(j * 5) % free.length], r, Date.now()); d = QC.judge(d, j % 2, r, Date.now()); d = { ...d, gm: 'buzz' }; } act(d); }); await L.sleep(700);
@@ -39,5 +44,5 @@ const port = +process.argv[2], OUT = process.argv[3];
   await A.evaluate(() => { let d = S.st.d; d = QC.tick({ ...d, q: { ...d.q, dl: 1 } }, Math.random, Date.now()); act({ ...d, am: 'type' }); }); await L.sleep(500);
   await A.evaluate(() => { const d = S.st.d; const s = d.sx.indexOf(d.sd); const c = [...d.o].indexOf('.'); act(QC.choose(d, s, c, Math.random, Date.now())); }); await L.sleep(700);
   await G.click('[data-ga="bz"]'); await L.sleep(800); await G.fill('.qc-in', 'الرياض'); await shot(G, 'online-typed');
-  await b.close(); srv.kill(); console.log('shots done');
+  await b.close(); srv.kill(); console.log(over ? 'SHOTS SCROLL ' + over : 'shots done, no scrolling');
 })().catch(e => { console.error(e); process.exit(1); });

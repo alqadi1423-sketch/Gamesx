@@ -21,7 +21,7 @@ const QCU={
   sec:ms=>Math.max(0,Math.ceil(ms/1000)),
 };
 // the board: hexagons placed in % of a box of the board's own shape, the two edges of each side drawn around it
-function qcBoard(d,me,ctx){const n=d.n,w=100/(n+.5),h=w*2/Math.sqrt(3),H=(n-1)*.75*h+h,fin=d.win!=null;
+function qcBoard(d,me,ctx,under){const n=d.n,w=100/(n+.5),h=w*2/Math.sqrt(3),H=(n-1)*.75*h+h,fin=d.win!=null;
   const canPick=!fin&&d.ph==='pick'&&!QCU.bot(d,d.turn)&&(S.mode==='local'?true:QC.canPick(d,me));
   const hl=new Set(d.hl||[]),cur=d.q?d.q.c:-1,last=d.lg?d.lg.c:-1;
   let cells='';
@@ -29,13 +29,17 @@ function qcBoard(d,me,ctx){const n=d.n,w=100/(n+.5),h=w*2/Math.sqrt(3),H=(n-1)*.
     const cls=['qc-c',o==='.'?'qc-f':'qc-o'+o];const tap=canPick&&o==='.';if(tap)cls.push('qc-tap');if(i===cur)cls.push('qc-cur');if(hl.has(i))cls.push('qc-hl');if(i===last&&o!=='.')cls.push('qc-new');
     const L=QC.disp(d.L[i]||'');
     cells+=`<button class="${cls.join(' ')}" style="left:${left.toFixed(3)}%;top:${top.toFixed(3)}%;width:${w.toFixed(3)}%;height:${(h/H*100).toFixed(3)}%" data-ga="c" data-i="${i}" ${tap?'':'disabled'} aria-label="${escH('حرف '+(QC.NAME[d.L[i]]||L)+(o==='.'?'':'، '+QCU.tn(d,+o)))}"><span>${escH(L)}</span></button>`;}
-  return `<div class="qc-bd" style="--ca:${QCU.col(d,0)};--cb:${QCU.col(d,1)}"><i class="qc-e qc-et"></i><i class="qc-e qc-eb"></i><i class="qc-e qc-el"></i><i class="qc-e qc-er"></i><div class="qc-gr" style="aspect-ratio:${(100).toFixed(2)}/${H.toFixed(2)}">${cells}</div></div>`;}
-// the two sides: rounds won, players, which edges they join
-function qcTeams(d){const card=side=>{const on=d.win==null&&(d.ph==='pick'?d.sd===side:d.ph==='ans'&&d.q&&d.q.at===side);
-    const kids=QC.sideSeats(d,side).map(s=>`<span class="qc-kd${QC.alive(d,s)?'':' qc-gone'}" title="${escH(nm(d,s))}">${kface(d.pl[s])}</span>`).join('');
+  // the board takes the room the screen leaves (.qc-bw is a size container): as wide as fits, and as high as fits
+  const bd=`<div class="qc-bd" style="--ca:${QCU.col(d,0)};--cb:${QCU.col(d,1)};--r:${(100/H).toFixed(4)};--n:${n}"><i class="qc-e qc-et"></i><i class="qc-e qc-eb"></i><i class="qc-e qc-el"></i><i class="qc-e qc-er"></i><div class="qc-gr" style="aspect-ratio:100/${H.toFixed(2)}">${cells}</div></div>`;
+  // between questions the line under the board sits right under it, the two centred together in the space left
+  return under!=null?`<div class="qc-bw qc-wd"><div class="qc-stk">${bd}<div class="qc-dock">${under}</div></div></div>`:`<div class="qc-bw">${bd}</div>`;}
+// one row on top: side 0, the session's name and round, side 1 (each side: its sign, name, edges and rounds won; the
+// players' faces show when it is that side's turn would be noise here, the room shows them in its settings)
+function qcTeams(d,hn){const card=side=>{const on=d.win==null&&(d.ph==='pick'?d.sd===side:d.ph==='ans'&&d.q&&d.q.at===side);
+    const who=QC.sideSeats(d,side).map(s=>nm(d,s)).join('، ');
     const dots=[...Array(QC.ROUNDS).keys()].map(j=>`<u class="${j<d.rw[side]?'on':''}"></u>`).join('');
-    return `<div class="qc-tm${on?' qc-on':''}" style="--c:${QCU.col(d,side)}"><span class="qc-em" aria-hidden="true">${QCU.te(d,side)}</span><div class="qc-tmx"><b>${escH(QCU.tn(d,side))}</b><small>${side===0?'↕ يوصّل فوق بتحت':'↔ يوصّل يمين بيسار'}</small><div class="qc-kids">${kids}</div></div><span class="qc-rw" aria-label="كسب ${d.rw[side]} جولات">${dots}</span></div>`;};
-  return `<div class="qc-teams">${card(0)}${card(1)}</div>`;}
+    return `<div class="qc-tm${on?' qc-on':''}" style="--c:${QCU.col(d,side)}" title="${escH(who)}"><span class="qc-em" aria-hidden="true">${QCU.te(d,side)}</span><b>${escH(QCU.tn(d,side))}</b><i class="qc-dir" aria-label="${side===0?'يوصّل فوق بتحت':'يوصّل يمين بيسار'}">${side===0?'↕':'↔'}</i><span class="qc-rw" aria-label="كسب ${d.rw[side]} من ${QC.ROUNDS}">${dots}</span></div>`;};
+  return `<div class="qc-teams">${card(0)}<div class="qc-mid"><b>🐝 خلية ${escH(hn)}</b><small>الجولة ${d.rn}</small></div>${card(1)}</div>`;}
 // the question card: letter, question, clock
 function qcQ(d,extra){const q=d.q,left=q.dl?q.dl-Date.now():0;
   return `<div class="qc-q"><div class="qc-ql"><span class="qc-lt">${escH(QC.disp(q.L))}</span><small>الجواب يبدأ بحرف ${escH(QC.NAME[q.L]||'')}</small>${q.dl?`<b class="qc-tk" data-until="${q.dl}">${QCU.sec(left)}</b>`:''}</div><p class="qc-qt">${escH(q.t)}</p>${extra||''}</div>`;}
@@ -62,7 +66,7 @@ function qcDock(d,me,ctx){const fin=d.win!=null,local=S.mode==='local',seat=QCU.
     const t=d.gm==='host'?`خلّ ${QCU.te(d,d.sd)} ${escH(QCU.tn(d,d.sd))} يختارون حرف، واضغطه`:QCU.bot(d,d.turn)?`${QCU.te(d,d.sd)} ${escH(QCU.tn(d,d.sd))} يختارون حرف…`:mine?`${local?QCU.te(d,d.sd)+' '+escH(QCU.tn(d,d.sd))+': ':''}اختاروا حرف`:`${QCU.te(d,d.sd)} ${escH(QCU.tn(d,d.sd))} يختارون حرف…`;
     return `${qcLast(d)}<p class="qc-hint" style="--c:${QCU.col(d,d.sd)}">${t}</p>`;}
   const q=d.q;if(!q)return '';
-  if(d.gm==='host')return qcQ(d,`<p class="qc-ans">الجواب: <b>${escH(q.a)}</b></p><div class="qc-pr"><button class="btn" style="background:${QCU.col(d,0)}" data-ga="pr" data-i="0">${QCU.te(d,0)} ${escH(QCU.tn(d,0))} جاوبوا صح</button><button class="btn" style="background:${QCU.col(d,1)}" data-ga="pr" data-i="1">${QCU.te(d,1)} ${escH(QCU.tn(d,1))} جاوبوا صح</button><div class="qc-pr2"><button class="btn soft" data-ga="pr" data-i="2">ما أحد عرفها</button><button class="btn soft" data-ga="nq">سؤال ثاني</button></div></div>`);
+  if(d.gm==='host')return qcQ(d,`<p class="qc-ans">الجواب: <b>${escH(q.a)}</b></p><div class="qc-pr"><button class="btn" style="background:${QCU.col(d,0)}" data-ga="pr" data-i="0" aria-label="${escH(QCU.tn(d,0))} جاوبوا صح">✓ ${QCU.te(d,0)} ${escH(QCU.tn(d,0))}</button><button class="btn" style="background:${QCU.col(d,1)}" data-ga="pr" data-i="1" aria-label="${escH(QCU.tn(d,1))} جاوبوا صح">✓ ${QCU.te(d,1)} ${escH(QCU.tn(d,1))}</button><div class="qc-pr2"><button class="btn soft" data-ga="pr" data-i="2">ما أحد عرفها</button><button class="btn soft" data-ga="nq">سؤال ثاني</button></div></div>`);
   if(d.ph==='q'){const can=QC.canBuzz(d,me)&&!local;
     return qcQ(d)+(can?`<button class="qc-bz" style="--c:${QCU.col(d,QCU.side(d,me))}" data-ga="bz">🔔 أعرفها!</button><p class="qc-note">أول واحد يضغط يجاوب، وإذا غلط تروح الفرصة للفريق الثاني</p>`:`<p class="qc-note">أول واحد يضغط «أعرفها!» يجاوب</p>`);}
   // ph 'ans'
@@ -71,7 +75,7 @@ function qcDock(d,me,ctx){const fin=d.win!=null,local=S.mode==='local',seat=QCU.
   const who=q.by>=0?`<p class="qc-who" style="--c:${QCU.col(d,at)}">${can?'<b class="yt">جاوب!</b>':`${nameTag(d,q.by)} يجاوب…`}</p>`:`<p class="qc-who" style="--c:${QCU.col(d,at)}">${can?`<b class="yt">${local?QCU.te(d,at)+' '+escH(QCU.tn(d,at))+': ':''}جاوبوا!</b>`:`${QCU.te(d,at)} ${escH(QCU.tn(d,at))} يجاوبون…`}</p>`;
   return qcQ(d,mi+who+qcAns(d,can));}
 
-GAMES.q_cell={name:'تحدي الخلية',cat:'quiz',lbc:'#B7791F',minP:2,maxP:8,noTimer:true,
+GAMES.q_cell={name:'تحدي الخلية',cat:'quiz',lbc:'#B7791F',minP:2,maxP:8,noTimer:true,fit:true,
   teams:'native',teamsOk:z=>z.length===2&&z.every(x=>x>=1),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#FFF4DA"/><rect x="10" y="8" width="80" height="7" rx="3.5" fill="#E5483F"/><rect x="10" y="85" width="80" height="7" rx="3.5" fill="#E5483F"/><rect x="4" y="18" width="7" height="64" rx="3.5" fill="#2F80ED"/><rect x="89" y="18" width="7" height="64" rx="3.5" fill="#2F80ED"/>${[[30,32,'#E5483F','ح'],[54,32,'#fff','ر'],[42,52,'#E5483F','ف'],[66,52,'#2F80ED','خ'],[30,72,'#fff','ل'],[54,72,'#E5483F','ي']].map(([x,y,c,t])=>`<path d="M${x} ${y-12}l10.4 6v12l-10.4 6l-10.4-6v-12z" fill="${c}" stroke="#B7791F" stroke-width="1.6"/><text x="${x}" y="${y+4.5}" font-size="13" font-weight="800" text-anchor="middle" fill="${c==='#fff'?'#2D4763':'#fff'}" font-family="sans-serif">${t}</text>`).join('')}</svg>`,
   init:()=>({}),
@@ -89,11 +93,11 @@ GAMES.q_cell={name:'تحدي الخلية',cat:'quiz',lbc:'#B7791F',minP:2,maxP:
     if(d.ph==='ans'&&d.q){if(d.gm==='host')return 'اقرأ السؤال بصوت عالي';const at=d.q.at;return d.q.by>=0?(d.q.by===me?'<b class="yt">دورك تجاوب</b>':`${nameTag(d,d.q.by)} يجاوب`):`${QCU.te(d,at)} ${escH(QCU.tn(d,at))} يجاوبون`;}
     return '';},
   render(d,ctx){const me=QCU.me(d,ctx);const hn=nm(d,Math.min(Math.max(0,d.hs||0),d.pl.length-1));
-    const head=`<div class="qc-head"><span>🐝 خلية ${escH(hn)}</span><small>الجولة ${d.rn} • أول فريق يكسب ${QC.ROUNDS===2?'جولتين':QC.ROUNDS+' جولات'} يفوز</small></div>`;
-    const board=d.ph==='set'?'':qcBoard(d,me,ctx);
-    // while a question is on, it comes first and the board shrinks under it
+    // one fixed screen (fit): the board fills what the question and the bars leave, so nothing needs scrolling
     const asking=d.win==null&&(d.ph==='q'||d.ph==='ans');
-    return asking?`<div class="qc qc-asking">${head}${qcTeams(d)}${qcDock(d,me,ctx)}${board}</div>`:`<div class="qc">${head}${qcTeams(d)}${board}${qcDock(d,me,ctx)}</div>`;},
+    const dock=qcDock(d,me,ctx);
+    if(d.ph==='set')return `<div class="qc">${qcTeams(d,hn)}<div class="qc-dock">${dock}</div></div>`;
+    return asking?`<div class="qc qc-asking">${qcTeams(d,hn)}${qcBoard(d,me,ctx)}<div class="qc-dock">${dock}</div></div>`:`<div class="qc">${qcTeams(d,hn)}${qcBoard(d,me,ctx,dock)}</div>`;},
   click(a,i,d,ctx){const seat=QCU.seat(d,ctx),now=Date.now(),rnd=Math.random;let nd=d;
     if(a==='so'){const m={4:['n',4],5:['n',5],10:['gm','turn'],11:['gm','host'],20:['am','opt'],21:['am','type']}[i];if(m)nd=QC.setOpt(d,m[0],m[1]);}
     else if(a==='go')nd=QC.begin(d,rnd);
