@@ -1,0 +1,92 @@
+/* «تحدي الخلية» (q_cell): every class is qc-* (js/games/q-cell.js). One fixed screen (G.fit): the game fills the
+   height the bars leave, and the board takes whatever the question and the teams do not need. */
+.qc{display:flex;flex-direction:column;gap:6px;flex:1;min-height:0;width:100%;max-width:460px;margin:0 auto}
+/* the top row: side 0 · the session · side 1 */
+.qc-teams{flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px}
+.qc-tm{display:flex;align-items:center;gap:4px;height:38px;padding:0 8px;border-radius:12px;background:var(--card);box-shadow:var(--e1);border-bottom:4px solid var(--c);min-width:0}
+.qc-tm.qc-on{box-shadow:0 0 0 2.5px var(--sel),var(--e1)}
+.qc-hx{width:15px;height:17px;flex:none;color:var(--c)}
+.qc-tm b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.qc-dir{display:inline-flex;align-items:center;color:var(--c);flex:none}
+.qc-ar{height:13px;width:auto}
+.qc-bell{width:26px;height:26px;margin-inline-end:8px}
+.qc-rw{display:flex;gap:3px;margin-inline-start:auto;flex:none}
+.qc-rw u{display:block;width:9px;height:9px;border-radius:50%;border:2px solid var(--c);text-decoration:none}
+.qc-rw u.on{background:var(--c)}
+.qc-mid{display:flex;flex-direction:column;align-items:center;line-height:1.15;max-width:110px;min-width:0}
+@media (max-width:380px){.qc-dir{display:none}.qc-mid{max-width:92px}.qc-tm{padding:0 6px}.qc-tm b{font-size:13.5px}}
+.qc-mid b{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.qc-mid small{font-size:11.5px;font-weight:700;color:var(--mut)}
+/* the board: as big as the space left allows, keeping its shape; the edges of side 0 (top, bottom) and side 1 around it */
+.qc-bw{flex:1;min-height:60px;container-type:size;display:grid;place-items:center}
+.qc-bd{position:relative;padding:12px 14px;width:100%;width:min(100cqw,calc((100cqh - 24px) * var(--r) + 28px));transition:opacity var(--t2)}
+.qc-wd .qc-bd{width:min(100cqw,calc((100cqh - 24px - 104px) * var(--r) + 28px))}
+.qc-stk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%}
+.qc-stk .qc-dock{width:100%;min-height:96px}
+.qc-e{position:absolute;border-radius:6px}
+.qc-et,.qc-eb{inset-inline:20px;height:7px;background:var(--ca)}
+.qc-et{top:0}.qc-eb{bottom:0}
+.qc-el,.qc-er{top:18px;bottom:18px;width:7px;background:var(--cb)}
+.qc-el{inset-inline-start:0}.qc-er{inset-inline-end:0}
+.qc-gr{position:relative;width:100%;container-type:inline-size}
+.qc-c{position:absolute;padding:0;border:0;margin:0;background:var(--line);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);font-family:inherit;cursor:default}
+.qc-c span{position:absolute;inset:3%;display:grid;place-items:center;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:var(--card);color:var(--ink);font-weight:800;font-size:16px;font-size:calc(100cqw / (var(--n) + .5) * .44)}
+.qc-o0 span{background:var(--ca);color:#fff}
+.qc-o1 span{background:var(--cb);color:#fff}
+.qc-tap{cursor:pointer}
+.qc-tap span{background:var(--surface-2)}
+.qc-tap:active span{background:var(--sel)}
+.qc-c:disabled{opacity:1}
+.qc-cur{background:#C99A00}
+.qc-cur span{background:var(--sel);color:#2D4763}
+.qc-hl{background:var(--gold)}
+.qc-hl span{animation:qc-pulse 1s var(--ease) infinite alternate}
+.qc-new span{animation:qc-pop .5s var(--spring)}
+@keyframes qc-pulse{to{filter:brightness(1.18)}}
+@keyframes qc-pop{from{transform:scale(.6)}to{transform:scale(1)}}
+/* while a question is on, the board steps back (it is also smaller: the question takes the room) */
+.qc-asking .qc-bd{opacity:.6}
+/* the dock under the board: the question, the choices, the hints */
+.qc-dock{flex:none;display:flex;flex-direction:column;gap:6px}
+.qc-q{padding:10px 12px;border-radius:18px;background:var(--card);box-shadow:var(--e2);display:flex;flex-direction:column;gap:6px}
+.qc-ql{display:flex;align-items:center;gap:8px}
+.qc-lt{width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center;font-size:24px;font-weight:800;color:#fff;background:var(--navy)}
+.qc-ql small{flex:1;color:var(--mut);font-weight:700;font-size:13px}
+.qc-tk{min-width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#2D4763;font-size:17px;font-weight:800}
+.qc-qt{margin:0;font-size:18.5px;font-weight:800;line-height:1.45}
+.qc-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qc-op{min-height:48px;padding:4px 8px;border-radius:14px;border:0;background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:17px;font-weight:800;box-shadow:0 3px 0 var(--line);cursor:pointer}
+.qc-op:disabled{cursor:default}
+.qc-op.qc-x{opacity:.4;text-decoration:line-through}
+.qc-type{display:flex;gap:6px}
+.qc-in{flex:1;min-width:0;min-height:48px;border-radius:14px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:18px;font-weight:700;padding:0 12px}
+.qc-send{min-height:48px;padding:0 16px;border-radius:14px;border:0;background:var(--ok);color:#fff;font-family:inherit;font-size:17px;font-weight:800}
+.qc-bz{display:flex;align-items:center;justify-content:center;width:100%;min-height:72px;border-radius:24px;border:0;background:var(--c);color:#fff;font-family:inherit;font-size:26px;font-weight:800;box-shadow:0 5px 0 rgba(0,0,0,.22);cursor:pointer}
+.qc-bz:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.22)}
+.qc-note{margin:0;text-align:center;color:var(--mut);font-weight:700;font-size:13px}
+.qc-who{margin:0;font-weight:800;font-size:16px;color:var(--c)}
+.qc-miss{margin:0;padding:4px 10px;border-radius:12px;background:var(--surface-2);font-weight:700;font-size:13.5px}
+.qc-ans{margin:0;padding:8px 12px;border-radius:14px;background:#EAF7EE;color:#1f7a41;font-size:18px;font-weight:700}
+.qc-pr{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qc-pr .btn{width:100%;min-height:48px;font-size:15.5px;padding:0 8px}
+.qc-pr2{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qc-last{margin:0;padding:6px 10px;border-radius:12px;background:var(--card);box-shadow:var(--e1);border-inline-start:5px solid var(--c);font-weight:700;font-size:14px;text-align:center}
+.qc-hint{margin:0;text-align:center;font-weight:800;font-size:17px;color:var(--c)}
+.qc-rend{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:16px;background:var(--card);box-shadow:var(--e2);border-inline-start:5px solid var(--c)}
+.qc-rend b{font-size:17px}
+/* the choices before the first cell */
+.qc-set{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:var(--card);box-shadow:var(--e2)}
+.qc-sr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qc-sr span{min-width:86px;font-weight:800}
+.qc-ch{flex:1;min-height:46px;border-radius:14px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:16px;font-weight:800;cursor:pointer}
+.qc-ch.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.qc-go{width:100%}
+/* short screens: less air, smaller words */
+@media (max-height:700px){
+  .qc-qt{font-size:16.5px}.qc-op{min-height:42px;font-size:15.5px}.qc-bz{min-height:58px;font-size:22px}
+  .qc-lt{width:34px;height:34px;font-size:20px}.qc-tk{min-width:32px;height:32px;font-size:15px}.qc-note{display:none}
+}
+@media (prefers-color-scheme:dark){
+  .qc-ans{background:#173726;color:#8BE0A8}
+  .qc-cur span{color:#2D4763}
+}

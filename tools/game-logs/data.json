@@ -262,6 +262,18 @@
   ],
   "n-thread": [
    "w_thread"
+  ],
+  "q-cell": [
+   "q_cell"
+  ],
+  "q-cell-core": [
+   "q_cell"
+  ],
+  "q-cell-data": [
+   "q_cell"
+  ],
+  "n-cell": [
+   "q_cell"
   ]
  }
 }

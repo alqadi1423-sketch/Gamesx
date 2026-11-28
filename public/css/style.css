@@ -944,6 +944,15 @@ input.code::placeholder{color:var(--mut);opacity:.6}
 /* the bar takes its own room: the page, a game's own bottom buttons and the notes sit above it */
 body.rxon{--rxh:calc(62px + env(safe-area-inset-bottom))}
 body.rxon #app{padding-bottom:calc(28px + var(--rxh))}
+/* a game drawn for one fixed screen (G.fit): the page is the phone's height, the game fills what the bars leave */
+#app.gfit{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0;overflow:hidden;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+body.rxon #app.gfit{padding-bottom:calc(6px + var(--rxh))}
+#app.gfit>.top{flex:none;margin-bottom:6px;min-height:38px;gap:6px}
+#app.gfit>.top .ib{width:38px;height:38px;font-size:17px;border-radius:12px}
+#app.gfit>.top h1{font-size:19px}
+#app.gfit .gcode{flex:none;height:32px;padding:0 9px;border-radius:10px;border:0;background:var(--surface);box-shadow:var(--e1);color:var(--ink);font:800 14px/32px monospace;letter-spacing:1.5px;font-family:inherit}
+#app.gfit>.roombar{flex:none;margin-bottom:6px;min-height:46px;padding-block:4px}
+#app.gfit>.board{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch}
 body.rxon .hd-dock,body.rxon .tq-dock{bottom:var(--rxh)}
 body.rxon .toast{bottom:calc(14px + var(--rxh))}
 body.rxon .chatpop{top:auto;bottom:calc(8px + var(--rxh));left:max(14px,calc(50% - 256px));transform:none;animation:popup .22s var(--ease)}
