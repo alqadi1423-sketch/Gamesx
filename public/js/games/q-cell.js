@@ -7,6 +7,10 @@
      One phone (gm turn or host) and against bots (turn): nothing to hide, no pass-the-phone cover (no viewer).
    The session is «خلية <name>»: the room's host online, the first player on one phone. Classes are qc-* (css/n-cell.css).
    ===================================================================================================== */
+// the big bank, one file a letter, loaded once in the background on the phone that runs the game (the others never need it)
+const QCB={on:false,got:0,
+  load(){if(QCB.on||typeof fetch!=='function')return;QCB.on=true;const el=document.querySelector('script[src*="q-cell.js"]'),v=(el&&/v=(\d+)/.exec(el.src)||[])[1]||'0';
+    QC.LETTERS.forEach((L,i)=>fetch(`data/qcell/${i}.txt?v=${v}`).then(r=>r.ok?r.text():'').then(t=>{QCB.got+=QC.add(t);}).catch(()=>{}));}};
 const QCU={
   side:(d,s)=>Number.isInteger(s)&&s>=0&&s<d.pl.length?d.sx[s]:-1,
   team:(d,side)=>TEAMS[d.tc[side]]||TEAMS[side],
@@ -85,7 +89,7 @@ GAMES.q_cell={name:'تحدي الخلية',cat:'quiz',lbc:'#B7791F',minP:2,maxP:
   teams:'native',teamsOk:z=>z.length===2&&z.every(x=>x>=1),
   icon:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#FFF4DA"/><rect x="10" y="8" width="80" height="7" rx="3.5" fill="#E5483F"/><rect x="10" y="85" width="80" height="7" rx="3.5" fill="#E5483F"/><rect x="4" y="18" width="7" height="64" rx="3.5" fill="#2F80ED"/><rect x="89" y="18" width="7" height="64" rx="3.5" fill="#2F80ED"/>${[[30,32,'#E5483F','ح'],[54,32,'#fff','ر'],[42,52,'#E5483F','ف'],[66,52,'#2F80ED','خ'],[30,72,'#fff','ل'],[54,72,'#E5483F','ي']].map(([x,y,c,t])=>`<path d="M${x} ${y-12}l10.4 6v12l-10.4 6l-10.4-6v-12z" fill="${c}" stroke="#B7791F" stroke-width="1.6"/><text x="${x}" y="${y+4.5}" font-size="13" font-weight="800" text-anchor="middle" fill="${c==='#fff'?'#2D4763':'#fff'}" font-family="sans-serif">${t}</text>`).join('')}</svg>`,
   init:()=>({}),
-  start(d){const bots={};if(S.mode==='local'&&S.bots)d.pl.forEach((r,s)=>{if(S.bots[r])bots[s]=true;});
+  start(d){QCB.load();const bots={};if(S.mode==='local'&&S.bots)d.pl.forEach((r,s)=>{if(S.bots[r])bots[s]=true;});
     const host=S.mode==='online'?Math.max(0,d.pl.indexOf(S.me)):Math.max(0,d.pl.findIndex((_,s)=>!bots[s]));
     return QC.setup(d,{md:S.mode==='online'?'buzz':'turn',bots,host,rnd:Math.random});},
   // the answer of the question still open stays on the host's phone
@@ -116,7 +120,7 @@ GAMES.q_cell={name:'تحدي الخلية',cat:'quiz',lbc:'#B7791F',minP:2,maxP:
     else if(a==='nx')nd=QC.next(d,rnd);
     if(nd!==d)act(nd);},
   // the clocks: run by the phone (one phone) or the room's host
-  host:d=>{const nd=QC.tick(d,Math.random,Date.now());return nd===d?null:nd;},
+  host:d=>{QCB.load();const nd=QC.tick(d,Math.random,Date.now());return nd===d?null:nd;},
   onSkip:nd=>QC.onLeave(nd),
   bot(d,s,lv){if(d.win!=null)return undefined;const rnd=Math.random,now=Date.now();
     if(d.ph==='set')return QC.begin(d,rnd);

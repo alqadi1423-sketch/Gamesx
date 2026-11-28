@@ -23,12 +23,15 @@ const QC=(()=>{
   const ROUNDS=2;   // rounds to win the match
 
   /* ---------- the question bank: «letter|question|answer|wrong|wrong|wrong|variants» per line ---------- */
-  let BANK=null;
-  function bank(){if(BANK)return BANK;BANK=[];const src=typeof QC_BANK==='string'?QC_BANK:'';
-    for(const line of src.split('\n')){const f=line.trim().split('|');if(f.length<7||!f[0])continue;
-      BANK.push({L:f[0].trim(),t:f[1].trim(),a:f[2].trim(),w:[f[3].trim(),f[4].trim(),f[5].trim()],v:f[6].split('/').map(x=>x.trim()).filter(Boolean)});}
-    return BANK;}
-  const byLetter=L=>{const B=bank(),out=[];for(let k=0;k<B.length;k++)if(B[k].L===L)out.push(k);return out;};
+  // the built-in questions (q-cell-data.js), then the big bank: one text file a letter (public/data/qcell/<index>.txt),
+  // loaded in the background by the phone that runs the game (add). A question already in the bank is not added twice
+  let BANK=null,IDX=null;const SEEN=new Set();
+  function parse(text){const out=[];for(const line of String(text||'').split('\n')){const f=line.trim().split('|');if(f.length<7||!f[0])continue;
+    const q={L:f[0].trim(),t:f[1].trim(),a:f[2].trim(),w:[f[3].trim(),f[4].trim(),f[5].trim()],v:f[6].split('/').map(x=>x.trim()).filter(Boolean)};
+    if(!LETTERS.includes(q.L)||!q.t||!q.a||q.w.some(x=>!x)||SEEN.has(q.t))continue;SEEN.add(q.t);out.push(q);}return out;}
+  function bank(){if(!BANK){BANK=parse(typeof QC_BANK==='string'?QC_BANK:'');IDX=null;}return BANK;}
+  function add(text){const B=bank(),n=B.length;for(const q of parse(text))B.push(q);if(B.length!==n)IDX=null;return B.length-n;}
+  const byLetter=L=>{const B=bank();if(!IDX){IDX={};for(let k=0;k<B.length;k++)(IDX[B[k].L]=IDX[B[k].L]||[]).push(k);}return IDX[L]||[];};
 
   /* ---------- Arabic text: the first letter, and a typed answer against the right one ---------- */
   const DIAC=/[ً-ٰٟـ]/g;
@@ -177,7 +180,7 @@ const QC=(()=>{
   function botAnswer(d,lv,rnd){const q=d.q;const ok=rnd()<ACC[Math.max(1,Math.min(3,lv))];if(ok&&q.A>=0)return q.A;
     const wr=[0,1,2,3].filter(j=>j!==q.A&&!q.x.includes(j));return wr.length?wr[Math.floor(rnd()*wr.length)]:q.A;}
 
-  return {LETTERS,NAME,T,ROUNDS,disp,bank,byLetter,norm,key,first,typedOk,nb,path,need,letters,setup,setOpt,begin,choose,buzz,answer,judge,another,tick,next,
+  return {LETTERS,NAME,T,ROUNDS,disp,bank,add,byLetter,norm,key,first,typedOk,nb,path,need,letters,setup,setOpt,begin,choose,buzz,answer,judge,another,tick,next,
     onLeave,mask,canAnswer,canBuzz,canPick,sideSeats,sideAlive,seatOf,botCell,botAnswer,alive};
 })();
 if(typeof module!=='undefined')module.exports=QC;

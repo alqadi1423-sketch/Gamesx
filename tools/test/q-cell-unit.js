@@ -2,6 +2,10 @@
 'use strict';
 global.QC_BANK = require('../../public/js/games/q-cell-data.js');
 const QC = require('../../public/js/games/q-cell-core.js');
+// the big bank: every letter file, as the game loads it
+{ const fs = require('fs'), dir = require('path').join(__dirname, '../../public/data/qcell'); let n = 0;
+  if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir).filter(f => /^\d+\.txt$/.test(f))) n += QC.add(fs.readFileSync(require('path').join(dir, f), 'utf8'));
+  console.log('big bank', n, 'questions'); }
 let fails = 0; const ok = (c, ...m) => { if (!c) { fails++; console.log('FAIL', ...m); } };
 let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
 const eng = n => ({ pl: [...Array(n).keys()], out: '0'.repeat(n), st: 0, gid: 1, turn: 0, win: null });
