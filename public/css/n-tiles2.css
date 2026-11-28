@@ -210,6 +210,21 @@ button.k2pile .k2t{box-shadow:0 0 0 3px var(--sel);border-radius:6px}
 .k2sphc .bcard.dim .card::after{content:'';position:absolute;inset:0;border-radius:inherit;background:rgba(18,30,48,.24)}
 .k2spto{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:6px}
 .k2spto .btn{min-height:40px;font-size:15px;padding:0 14px}
+/* the fixed screen: the felt keeps a compact size, the hands share what is left and their cards shrink to fit it
+   (--nh hands, each needs about 44px besides its cards); the pile buttons sit small at the end of the hand's name line */
+.k2sp{height:100%;display:flex;flex-direction:column;container-type:size}
+.k2sp>*{flex:none}
+.k2sp>.k2seats{margin-bottom:6px}
+.k2sp>.k2spt{margin-bottom:6px;padding:6px 10px}
+.k2sp .k2spr{position:absolute;inset-inline-end:12px;bottom:6px;margin:0;font-size:11.5px}
+.k2spt .k2spm{--cwb:min(62px,calc(100cqh * .1))}
+.k2sphs{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:6px;container-type:size}
+.k2sphs>.k2sph{margin:0;padding:4px 8px 6px}
+.k2sphs .k2sphn{min-height:24px}
+.k2sphs .k2sphc{--cw:max(22px,min(56px,15vw,calc(((100cqh + 6px) / var(--nh,1) - 6px - 46px) / 1.4)))}
+.k2sphn .k2spto{display:flex;gap:4px;margin:0;margin-inline-start:auto}
+.k2sphn .k2spto .btn{min-height:24px;padding:0 9px;font-size:12.5px;border-radius:9px}
+.k2sphn em+.k2spto{margin-inline-start:6px}
 
 /* ---------- سوليتير السباق ---------- */
 .k2klt{padding:8px 6px 10px;--cw:min(48px,calc((100vw - 64px)/7))}

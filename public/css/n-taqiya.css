@@ -1,6 +1,9 @@
 /* «طاق طاق طاقية» v2 (taqiya): the circle in the courtyard, felt. Uses css/kit-hara.css. Transform/opacity only, finite. */
-.tq-root{position:relative;width:calc(100% + 8px);margin:0 -4px;color:#F4F6FA;font-weight:700;padding-bottom:180px}
-.tq-root.r-run{padding-bottom:250px}.tq-root.ph-res,.tq-root.ph-end{padding-bottom:70px}
+.tq-root{position:relative;width:calc(100% + 8px);margin:0 -4px;color:#F4F6FA;font-weight:700}
+/* one fixed screen: the root fills the board, the stage takes what the HUD and the dock leave, and the courtyard keeps its
+   shape inside it (container units) */
+.tq-root{height:100%;display:flex;flex-direction:column;justify-content:center;container-type:size}
+.tq-root>*{flex:none}
 /* HUD */
 .tq-hud{display:flex;align-items:center;gap:5px;padding:6px 8px;border-radius:16px 16px 0 0;background:#16223A;box-shadow:inset 0 -1px 0 rgba(255,255,255,.08);overflow:hidden}
 .tq-c{display:flex;align-items:center;gap:4px;height:28px;padding:0 9px;border-radius:12px;background:#0E1626;font-size:13px;font-weight:800;white-space:nowrap;flex:none}
@@ -9,6 +12,12 @@
 .tq-who{margin-inline-start:auto;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}.tq-run{background:#EC6158;margin-inline-start:auto}
 /* the stage: the courtyard from above, or from my place */
 .tq-stage{position:relative;background:#2B3852;border-radius:0 0 16px 16px;overflow:hidden}
+.tq-root>.tq-stage{flex:0 1 calc(100cqw * 440 / 360);min-height:120px;container-type:size;display:flex;align-items:center;justify-content:center}
+.tq-stage>.tq-map,.tq-stage>.tq-fp{flex:none;width:min(100cqw,calc(100cqh * 360 / 440))}
+.tq-stage>.tq-map.short{width:min(100cqw,calc(100cqh * 360 / 340))}
+.tq-stage>.tq-fp{width:min(100cqw,calc(100cqh * 360 / 500))}
+.tq-root>.tq-stage:has(>.tq-map.short){flex-basis:calc(100cqw * 340 / 360)}
+.tq-root>.tq-stage:has(>.tq-fp){flex-basis:calc(100cqw * 500 / 360)}
 .tq-map,.tq-fp{position:relative;width:100%;aspect-ratio:360/440;background-size:100% 100%;background-color:#594634;touch-action:pan-y}
 .tq-map.short{aspect-ratio:360/340;background-size:100% 129.4%;background-position:0 100%}
 .tq-map.short>svg{top:-29.4%;height:129.4%}
@@ -42,10 +51,9 @@ html.lite .tq-w,html.lite .tq-fw,html.lite .tq-sh{transition:none}
 .tq-chant em{font-style:normal;font-size:13px}
 .r-sit .tq-chant{top:36px}
 .tq-pull{position:absolute;top:0;left:50%;transform:translateX(-50%);padding:3px 16px 5px;border-radius:0 0 16px 16px;background:rgba(10,16,28,.88);box-shadow:inset 0 -2px 0 #FFD84D;color:#FFD84D;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer}
-/* the dock stays reachable on short phones */
-.tq-dock{position:fixed;z-index:5;left:50%;bottom:0;transform:translateX(-50%);width:min(540px,100%);padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 8px)}
+/* the dock: under the stage, in the screen */
+.tq-dock{padding:8px 4px 0}
 .tq-dock .big{margin:0}.tq-dock:empty{display:none}
-.ph-res .tq-dock{position:static;transform:none;width:auto;padding:10px 0 4px;background:none}
 .tq-wait{text-align:center;color:var(--mut);font-size:15px;margin:6px 0}
 .tq-two{display:flex;gap:8px;align-items:stretch}
 .tq-hint{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:18px;background:var(--surface);color:var(--ink);box-shadow:var(--e1)}
@@ -60,7 +68,7 @@ html.lite .tq-w,html.lite .tq-fw,html.lite .tq-sh{transition:none}
 .tq-bar{height:12px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin-top:6px}.tq-bar i{display:block;height:100%;background:#3FAE5C;transform-origin:right;transform:scaleX(0)}
 /* the chase: the pad, circles with the finger */
 .tq-runw{display:flex;gap:10px;align-items:center}
-.tq-pad{flex:none;width:190px;height:190px;touch-action:none;border-radius:50%;cursor:grab}
+.tq-pad{flex:none;width:min(190px,34vh);height:min(190px,34vh);touch-action:none;border-radius:50%;cursor:grab}
 .tq-pad svg{width:100%;height:100%;display:block}
 .tq-pr{fill:#1C2733;stroke:#FFD84D;stroke-width:3.5}.tq-pi{fill:none;stroke:#2E3E50;stroke-width:2;stroke-dasharray:3 6}
 .tq-ptr{fill:none;stroke:#FFD84D;stroke-width:6;stroke-linecap:round;opacity:.85}
@@ -71,7 +79,7 @@ html.lite .tq-w,html.lite .tq-fw,html.lite .tq-sh{transition:none}
 .tq-spd,.tq-gap{font-size:14px;font-weight:800}.tq-spd em{font-style:normal;color:#C98F1A;font-size:20px;direction:ltr;display:inline-block;min-width:50px}
 .tq-cheer{background:#9C7BD6;min-height:54px;font-size:19px}
 /* the end */
-.tq-rows{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;margin-top:10px}
+.tq-rows{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;margin-top:8px}
 .tq-row{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:13px;background:var(--surface);color:var(--ink);box-shadow:var(--e1);border-inline-start:5px solid var(--c)}
 .tq-row>svg{flex:none}.tq-row span{flex:1;min-width:0}.tq-row b{display:block;font-size:15px;color:var(--ink)}
 .tq-row i{font-style:normal;width:30px;text-align:center;font-size:17px;font-weight:800;color:#C98F1A}.tq-row.won{box-shadow:var(--e1),inset 0 0 0 2px #F0B429}

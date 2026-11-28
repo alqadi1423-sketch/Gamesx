@@ -187,11 +187,12 @@ GAMES.k_speed={name:'السرعة',cat:'cards',lbc:'#1F6FB2',teams:'none',
       return `<div class="k2spp" ${lp?`style="--c:${col(d,lp.s)}"`:''}><span class="k2spc ${lp?'lp':''}" data-k="m${j}-${p.length}">${cardHTML(p.slice(-2),true)}</span><small>${cardsOf(p).length}</small></div>`;}).join('')}</div>
       <span class="k2spr">الاحتياط ${d.res.length/2}</span></div>`;
     if(d.win!=null)return h+'</div>';
+    // the hands share the room the felt leaves (their cards shrink to it); the pile buttons sit in the hand's name line
+    if(T.length)h+=`<div class="k2sphs" style="--nh:${T.length}">`;
     for(const s of T){const H=cardsOf(d.hands[s]),pk=hasPicked(d,s),sel=Array.isArray(S.k2sps)&&S.k2sps[0]===d.gid+':'+d.rd+':'+s?S.k2sps[1]:-1;
-      h+=`<div class="k2sph ${pk?'done':''}" style="--c:${col(d,s)}"><div class="k2sphn"><b>${nm(d,s)}</b><small>بكومتك ${d.dk[s].length/2}</small>${pk?'<em>✓ لعبت</em>':!H.some(c=>d.mid.some(p=>k2spAdj(c,p.slice(-2))))?'<em class="no">ما عندك لعب، انتظر</em>':''}</div><div class="k2sphc">${H.map((c,i)=>{const fit=d.mid.some(p=>k2spAdj(c,p.slice(-2)));
-        return !pk&&fit?`<button class="bcard ${sel===i?'sel':''}" data-ga="card" data-i="${s*10+i}">${cardHTML(c)}</button>`:`<span class="bcard ${pk?'':'dim'}">${cardHTML(c)}</span>`;}).join('')}</div>
-        ${sel>=0&&!pk?`<div class="k2spto">${d.mid.map((p,j)=>k2spAdj(H[sel],p.slice(-2))?`<button class="btn navy" data-ga="to" data-i="${s*10+j}">على ${k2Lab(p.slice(-2))}</button>`:'').join('')}</div>`:''}</div>`;}
-    if(!T.length)h+='<p class="note">تتفرج</p>';return h+'</div>';},
+      h+=`<div class="k2sph ${pk?'done':''}" style="--c:${col(d,s)}"><div class="k2sphn"><b>${nm(d,s)}</b><small>بكومتك ${d.dk[s].length/2}</small>${pk?'<em>✓ لعبت</em>':!H.some(c=>d.mid.some(p=>k2spAdj(c,p.slice(-2))))?'<em class="no">ما عندك لعب، انتظر</em>':''}${sel>=0&&!pk?`<span class="k2spto">${d.mid.map((p,j)=>k2spAdj(H[sel],p.slice(-2))?`<button class="btn navy" data-ga="to" data-i="${s*10+j}">على ${k2Lab(p.slice(-2))}</button>`:'').join('')}</span>`:''}</div><div class="k2sphc">${H.map((c,i)=>{const fit=d.mid.some(p=>k2spAdj(c,p.slice(-2)));
+        return !pk&&fit?`<button class="bcard ${sel===i?'sel':''}" data-ga="card" data-i="${s*10+i}">${cardHTML(c)}</button>`:`<span class="bcard ${pk?'':'dim'}">${cardHTML(c)}</span>`;}).join('')}</div></div>`;}
+    if(T.length)h+='</div>';else h+='<p class="note">تتفرج</p>';return h+'</div>';},
   click(a,i,d,ctx){if(d.win!=null||!Number.isInteger(i))return;const s=k2TapSeat(d,ctx,Math.floor(i/10)),k=i%10;if(s<0||d.out[s]==='1'||hasPicked(d,s))return;const H=cardsOf(d.hands[s]);
     if(a==='card'){const c=H[k];if(!c)return;const ps=d.mid.map((p,j)=>k2spAdj(c,p.slice(-2))?j:-1).filter(j=>j>=0);if(!ps.length)return;
       if(ps.length===1){S.k2sps=null;simulPick(d,s,{c,p:ps[0],ms:k2Ms(d)});render();return;}S.k2sps=[d.gid+':'+d.rd+':'+s,k];render();return;}

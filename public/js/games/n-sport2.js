@@ -219,10 +219,10 @@ GAMES.r_darts={name:'السهام',cat:'sport',lbc:'#8E3B2F',
   winExtra:d=>'الباقي: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.rem[s]}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,a=r2Dr('da',0,80,1),key=d.gid+':'+(d.sid||0),sv=r2Stopped(key);
     const [ax,ay]=dtAimPt(a),r=d.rem[t],plan=r<=170?dtPlan(r):null;
-    let s=`<div class="r2-root r2dt"><div class="dt-top"><div class="dt-big" style="--c:${col(d,t)}"><small>باقي ${nm(d,t)}</small><b>${r}</b></div><div class="dt-turn">${[0,1,2].map(k=>{const x=d.dar[k];return `<span class="${x?'on':''}">${x?x[3]:'—'}</span>`;}).join('')}</div></div>`;
-    s+=`<svg class="dt-svg ${my?'can':''}" viewBox="-205 -205 410 410" data-k="dts"><circle r="204" fill="#3B2A22"/><circle r="200" fill="#1E2328"/>${r2DtBoard()}
+    let s=`<div class="r2-root r2fit r2dt"><div class="dt-top"><div class="dt-big" style="--c:${col(d,t)}"><small>باقي ${nm(d,t)}</small><b>${r}</b></div><div class="dt-turn">${[0,1,2].map(k=>{const x=d.dar[k];return `<span class="${x?'on':''}">${x?x[3]:'—'}</span>`;}).join('')}</div></div>`;
+    s+=`<div class="r2sc"><svg class="dt-svg ${my?'can':''}" viewBox="-205 -205 410 410" data-k="dts"><circle r="204" fill="#3B2A22"/><circle r="200" fill="#1E2328"/>${r2DtBoard()}
       ${d.dar.map((x,k)=>`<g class="dt-dart ${k===d.dar.length-1?'last':''}" data-k="dd${d.sid}-${k}" style="transform:translate(${x[0]}px,${x[1]}px)"><circle r="5" fill="#fff" stroke="#111" stroke-width="2"/><path d="M0 0l22-22" stroke="#F0B429" stroke-width="4"/><path d="M18-26l12-4-4 12z" fill="${col(d,t)}"/></g>`).join('')}
-      ${my?`<g class="dt-aim" style="transform:translate(${ax.toFixed(1)}px,${ay.toFixed(1)}px)"><circle r="13" fill="none" stroke="#FFD84D" stroke-width="3"/><path d="M-20 0h12M8 0h12M0-20v12M0 8v12" stroke="#FFD84D" stroke-width="3"/></g>`:''}</svg>`;
+      ${my?`<g class="dt-aim" style="transform:translate(${ax.toFixed(1)}px,${ay.toFixed(1)}px)"><circle r="13" fill="none" stroke="#FFD84D" stroke-width="3"/><path d="M-20 0h12M8 0h12M0-20v12M0 8v12" stroke="#FFD84D" stroke-width="3"/></g>`:''}</svg></div>`;
     if(my){const m=r2mPar(key,1150);
       s+=`<p class="r2lbl">🎯 تصوّب على: <b>${dtAimTx(a)}</b>${plan!=null&&plan!==a?` <button class="sm" data-ga="aim" data-i="${plan}">اقتراح: ${dtAimTx(plan)}</button>`:''}</p>
         ${r2Meter(key,m,[[0,1000,'z0'],[330,670,'z1'],[430,570,'z2']],sv==null,sv,'ثبات اليد: وقّف المؤشر في النص')}
@@ -306,20 +306,18 @@ GAMES.r_bowl={name:'البولينج',cat:'sport',lbc:'#5B3FA0',
     // pins: the rack as it stood for the last ball, the ones it knocked shown lying down, the others standing
     const showPn=L&&L.pn&&!(my&&d.pn==='1111111111'&&L.pn!==d.pn)?L.pn:d.pn,fall=showPn===(L&&L.pn)?L.down:'0000000000';
     const pin=(k,dn)=>`<g class="bw-pin ${dn?'dn':''}" style="transform:translate(${X(BW_X[k])}px,${PY(k)}px)${dn?` rotate(${BW_X[k]<0?-70:70}deg)`:''}"><ellipse cx="0" cy="2.4" rx="4.6" ry="2.2" fill="rgba(0,0,0,.18)"/><circle r="4.4" fill="#fff" stroke="#C9D3DE" stroke-width=".8"/><circle r="2.5" fill="none" stroke="#E5534B" stroke-width="1.1"/></g>`;
-    let s=`<div class="r2-root r2bw"><svg class="bw-svg" viewBox="0 0 140 250" data-k="bws" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="bwl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D9A86A"/><stop offset=".5" stop-color="#EBCB95"/><stop offset="1" stop-color="#D9A86A"/></linearGradient></defs>
+    let s=`<div class="r2-root r2fit r2bw"><div class="bw-mid">${my?`<div class="bw-side"><span class="r2lbl">التصويب</span><div class="r2row"><button class="btn soft" data-ga="ba" data-i="${a-1}" ${a>0?'':'disabled'}>◀</button><button class="btn soft" data-ga="ba" data-i="${a+1}" ${a<16?'':'disabled'}>▶</button></div></div>`:''}<div class="r2sc"><svg class="bw-svg" viewBox="0 0 140 250" data-k="bws" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="bwl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D9A86A"/><stop offset=".5" stop-color="#EBCB95"/><stop offset="1" stop-color="#D9A86A"/></linearGradient></defs>
       <rect width="140" height="250" fill="#2B2440"/><rect x="21" y="8" width="98" height="242" fill="#3E3557"/><rect x="21" y="8" width="9" height="242" fill="#575073"/><rect x="110" y="8" width="9" height="242" fill="#575073"/>
       <rect x="30" y="8" width="80" height="242" fill="url(#bwl)"/>${[...Array(9)].map((_,k)=>`<path d="M${38+k*8} 8V250" stroke="#B9874E" stroke-width=".5" opacity=".6"/>`).join('')}
       <rect x="30" y="8" width="80" height="16" fill="#1E1A2E" opacity=".5"/>${[-3,-2,-1,0,1,2,3].map(x=>`<path d="M${X(x)} 168l-2.4 5h4.8z" fill="#5B3FA0" opacity=".75"/>`).join('')}<path d="M30 222h80" stroke="#8B2E2E" stroke-width="1.4"/>
       ${my?`<path class="bw-line" d="M${X((a-8)/2)} 222V40" stroke="#FFD84D" stroke-width="1.6" stroke-dasharray="4 3"/><path d="M${X((a-8)/2)} 228l-4 7h8z" fill="#FFD84D"/>`:''}
       ${[...Array(10).keys()].filter(k=>showPn[k]==='1'&&fall[k]!=='1').map(k=>pin(k,false)).join('')}${[...Array(10).keys()].filter(k=>fall[k]==='1').map(k=>pin(k,true)).join('')}
-      ${L&&showPn===L.pn?`<g class="bw-ball" style="transform:translate(${r2Clamp(X(L.e),26,114)}px,${L.gut?100:26}px)"><circle r="6.2" fill="#2F80ED"/><circle cx="-1.6" cy="-2" r="1" fill="#173F78"/><circle cx="1.4" cy="-2.3" r="1" fill="#173F78"/><circle cx="0" cy=".4" r="1" fill="#173F78"/></g>`:''}</svg>`;
+      ${L&&showPn===L.pn?`<g class="bw-ball" style="transform:translate(${r2Clamp(X(L.e),26,114)}px,${L.gut?100:26}px)"><circle r="6.2" fill="#2F80ED"/><circle cx="-1.6" cy="-2" r="1" fill="#173F78"/><circle cx="1.4" cy="-2.3" r="1" fill="#173F78"/><circle cx="0" cy=".4" r="1" fill="#173F78"/></g>`:''}</svg></div>${my?`<div class="bw-side">${r2Seg('bs',BW_SP,sp,true)}</div>`:''}</div>`;
     // the score sheet (one row per bowler, ten frames, the running totals): kept under the controls so the throw never needs a scroll
     let sh=`<div class="bw-sheet">${d.pl.map((_,i)=>{const F=bwFrames(d.rolls[i]),C=bwCum(d.rolls[i]);
       return `<div class="bw-row ${i===t&&d.win==null?'on':''}" style="--c:${col(d,i)}"><b>${nm(d,i)}</b>${[...Array(10).keys()].map(f=>{const x=F[f]||[],m=bwMarks(x,f);return `<span class="${f===9?'ten':''}"><i>${[0,1,2].slice(0,f===9?3:2).map(j=>`<u>${m[j]||''}</u>`).join('')}</i><em>${C[f]!=null?C[f]:''}</em></span>`;}).join('')}</div>`;}).join('')}</div>`;
     if(my){const m=r2mPar(key,1100);
-      s+=`<div class="r2row"><button class="btn soft" data-ga="ba" data-i="${a-1}" ${a>0?'':'disabled'}>◀</button><span class="r2lbl">التصويب</span><button class="btn soft" data-ga="ba" data-i="${a+1}" ${a<16?'':'disabled'}>▶</button></div>
-        ${r2Seg('bs',BW_SP,sp,true)}
-        ${r2Meter(key,m,[[0,1000,'z0'],[300,700,'z1'],[410,590,'z2']],sv==null,sv,'الإطلاق: وقّف المؤشر في النص')}
+      s+=`${r2Meter(key,m,[[0,1000,'z0'],[300,700,'z1'],[410,590,'z2']],sv==null,sv,'الإطلاق: وقّف المؤشر في النص')}
         ${r2Stop(key,'roll','🎳 ارمِ الكرة',sv==null)}`;}
     return s+sh+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;
@@ -397,7 +395,9 @@ GAMES.r_golf={name:'الغولف الصغير',cat:'sport',lbc:'#3E9D4A',
   status:(d,ctx)=>r2Stat(d,ctx,`<small>الحفرة ${d.hl+1} من ${d.H}${d.win==null?` • الضربة ${(d.sk[d.turn]||0)+1}`:''}</small><br>`),
   winExtra:d=>'الضربات: '+d.pl.map((r,s)=>`${nm(d,s)} ${d.sc[s].reduce((p,q)=>p+q,0)}`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,c=glHole(d.gid,d.hl),key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),a=glA(d,t),L=d.lx;
-    let s=`<div class="r2-root r2gl"><svg class="gl-svg ${my?'can':''}" viewBox="-4 -4 108 138" data-k="gls${d.hl}" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="glg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63C77F"/><stop offset="1" stop-color="#47A862"/></linearGradient><pattern id="glw" width="8" height="5" patternUnits="userSpaceOnUse"><path d="M0 3q2-2 4 0t4 0" stroke="#fff" stroke-width=".5" fill="none" opacity=".5"/></pattern></defs>
+    // the aim arrows sit at the sides of the course (left: turn left, right: turn right)
+    const gs=k=>`<div class="r2side">${(k?[[2,'2 ⟳'],[10,'10 ⟳']]:[[-10,'⟲ 10'],[-2,'⟲ 2']]).map(([q,tx])=>`<button class="btn soft" data-ga="ga" data-i="${(a+q+360)%360}">${tx}</button>`).join('')}</div>`;
+    let s=`<div class="r2-root r2fit r2gl"><div class="r2mid">${my?gs(0):''}<div class="r2sc"><svg class="gl-svg ${my?'can':''}" viewBox="-4 -4 108 138" data-k="gls${d.hl}" data-key="${L?d.gid+L.id:''}"><defs><linearGradient id="glg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63C77F"/><stop offset="1" stop-color="#47A862"/></linearGradient><pattern id="glw" width="8" height="5" patternUnits="userSpaceOnUse"><path d="M0 3q2-2 4 0t4 0" stroke="#fff" stroke-width=".5" fill="none" opacity=".5"/></pattern></defs>
       <rect x="-4" y="-4" width="108" height="138" rx="5" fill="#8A5A2B"/><rect x="-2" y="-2" width="104" height="134" rx="4" fill="#A8743F"/><rect width="100" height="130" fill="url(#glg)"/>${[0,1,2,3,4,5,6].map(k=>`<rect y="${k*20}" width="100" height="10" fill="#fff" opacity=".05"/>`).join('')}
       ${c.SA.map(r=>`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" rx="5" fill="#E9D7A6" stroke="#D2BA7F" stroke-width=".6"/>`).join('')}
       ${c.WA.map(r=>`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="#3C8DCB"/><rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="url(#glw)"/>`).join('')}
@@ -406,12 +406,12 @@ GAMES.r_golf={name:'الغولف الصغير',cat:'sport',lbc:'#3E9D4A',
       <circle cx="${c.cup[0]}" cy="${c.cup[1]}" r="2.6" fill="#173A1E"/><path d="M${c.cup[0]} ${c.cup[1]}V${c.cup[1]-13}" stroke="#fff" stroke-width=".9"/><path d="M${c.cup[0]} ${c.cup[1]-13}l8 2.6-8 2.6z" fill="#EC6158"/>
       ${my?`<path class="gl-aim" d="M${d.bx[t]} ${d.by[t]}l${(Math.sin(a*Math.PI/180)*26).toFixed(1)} ${(-Math.cos(a*Math.PI/180)*26).toFixed(1)}" stroke="#fff" stroke-width="1" stroke-dasharray="2.4 2" stroke-linecap="round"/>`:''}
       ${d.pl.map((_,i)=>{const done=d.hin[i]==='1';if(d.hin[i]==='x'||(done&&!(L&&L.s===i)))return '';
-        return `<g class="gl-ball ${i===t&&d.win==null?'on':''} ${L&&L.s===i?'mv':''}" style="transform:translate(${done?c.cup[0]:d.bx[i]}px,${done?c.cup[1]:d.by[i]}px)">${i===t&&d.win==null?'<circle r="3.6" fill="none" stroke="#FFD84D" stroke-width=".8"/>':''}<circle r="${GL_BR}" fill="#fff" stroke="${col(d,i)}" stroke-width="1"/></g>`;}).join('')}</svg>`;
+        return `<g class="gl-ball ${i===t&&d.win==null?'on':''} ${L&&L.s===i?'mv':''}" style="transform:translate(${done?c.cup[0]:d.bx[i]}px,${done?c.cup[1]:d.by[i]}px)">${i===t&&d.win==null?'<circle r="3.6" fill="none" stroke="#FFD84D" stroke-width=".8"/>':''}<circle r="${GL_BR}" fill="#fff" stroke="${col(d,i)}" stroke-width="1"/></g>`;}).join('')}</svg></div>${my?gs(1):''}</div>`;
     // the score card sits under the controls so the shot never needs a scroll
     const card=`<div class="gl-card" style="--h:${d.H}"><span></span>${[...Array(d.H).keys()].map(h=>`<span class="hd ${h===d.hl?'on':''}">${h+1}</span>`).join('')}<span class="hd">∑</span>
       ${d.pl.map((_,i)=>`<b style="color:${col(d,i)}">${nm(d,i)}</b>${[...Array(d.H).keys()].map(h=>`<span class="${h===d.hl?'on':''}">${d.sc[i][h]!=null?d.sc[i][h]:h===d.hl&&d.sk[i]?`<i>${d.sk[i]}</i>`:''}</span>`).join('')}<span><b>${d.sc[i].reduce((p,q)=>p+q,0)}</b></span>`).join('')}</div>`;
     if(my){const m=r2mPar(key,1500);
-      s+=`<p class="r2lbl">اضغط على الملعب عشان تصوّب، أو عدّل بالأسهم</p><div class="r2row">${[[-10,'⟲ 10'],[-2,'⟲ 2'],[2,'2 ⟳'],[10,'10 ⟳']].map(([k,tx])=>`<button class="btn soft" data-ga="ga" data-i="${(a+k+360)%360}">${tx}</button>`).join('')}</div>
+      s+=`<p class="r2lbl">اضغط على الملعب عشان تصوّب، أو عدّل بالأسهم</p>
         ${r2Meter(key,m,[[0,1000,'zl'],[0,250,'z2'],[250,550,'z1'],[550,1000,'z0']],sv==null,sv,'القوة: وقّف المؤشر على القوة اللي تبيها')}
         ${r2Stop(key,'hit','⛳ اضرب',sv==null)}`;}
     return s+card+'</div>';},
@@ -528,18 +528,18 @@ GAMES.r_arch={name:'الرماية بالقوس',cat:'sport',lbc:'#B23A48',
   winExtra:d=>d.pl.map((r,s)=>`${nm(d,s)} ${arTot(d.ar[s])} (X ${arX(d.ar[s])})`).join('، '),
   render(d,ctx){const t=d.turn,my=ctx.my&&d.win==null,key=d.gid+':'+(d.sid||0),sv=r2Stopped(key),ax=r2Dr('ax',-60,60,0),end=Math.floor(Math.min(d.rn,AR_N-1)/3);
     const RC=['#fff','#fff','#1E2328','#1E2328','#3B8FD9','#3B8FD9','#E5534B','#E5534B','#F2C230','#F2C230'],w=d.w;
-    let s=`<div class="r2-root r2ar"><svg class="ar-svg" viewBox="-120 -112 240 238" data-k="ars"><defs><linearGradient id="arsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CC9EE"/><stop offset="1" stop-color="#D7EEF9"/></linearGradient></defs>
+    let s=`<div class="r2-root r2fit r2ar"><div class="r2mid">${my?`<div class="r2side"><button class="btn soft" data-ga="ax" data-i="${ax-9}" ${ax>-60?'':'disabled'}>◀◀</button><button class="btn soft" data-ga="ax" data-i="${ax-3}" ${ax>-60?'':'disabled'}>◀</button></div>`:''}<div class="r2sc"><svg class="ar-svg" viewBox="-120 -112 240 238" data-k="ars"><defs><linearGradient id="arsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CC9EE"/><stop offset="1" stop-color="#D7EEF9"/></linearGradient></defs>
       <rect x="-120" y="-112" width="240" height="238" fill="url(#arsk)"/><path d="M-120 40q40-18 80-6t80-4 80 2V126h-240z" fill="#7DBE62"/><path d="M-120 70q60-12 120 0t120-4V126h-240z" fill="#69AD52"/>
       <path d="M-74 100l14-60M74 100l-14-60" stroke="#8A5A2B" stroke-width="5"/><rect x="-106" y="-106" width="212" height="212" rx="10" fill="#D8C49A"/>
       ${RC.map((c,k)=>`<circle r="${100-k*10}" fill="${c}" stroke="${k<2?'#C9D3DE':k<4?'#fff':'rgba(0,0,0,.25)'}" stroke-width=".7"/>`).join('')}<circle r="5" fill="none" stroke="rgba(0,0,0,.3)" stroke-width=".6"/><path d="M-3 0h6M0-3v6" stroke="#1E2328" stroke-width=".8"/>
       ${d.pl.map((_,i)=>d.ar[i].slice(end*3,end*3+3).map((b,k)=>`<g class="ar-hit ${i===d.lxS&&k===d.ar[i].length-1-end*3?'last':''}" data-k="ah${i}-${end}-${k}" style="transform:translate(${r2Clamp(b[0],-115,115)}px,${r2Clamp(b[1],-108,120)}px)"><circle r="3.4" fill="${col(d,i)}" stroke="#fff" stroke-width="1.2"/></g>`).join('')).join('')}
       ${my?`<g class="ar-aim" style="transform:translateX(${ax}px)"><circle r="9" fill="none" stroke="#1E2328" stroke-width="1.6"/><path d="M-15 0h10M5 0h10M0-15v10M0 5v10" stroke="#1E2328" stroke-width="1.6"/></g>`:''}
       <g transform="translate(-112 -100)"><rect width="66" height="22" rx="11" fill="rgba(255,255,255,.88)"/><text x="33" y="15.5" text-anchor="middle" class="ar-wt">💨 ${w===0?'هادي':(w>0?'→ ':'← ')+Math.abs(w)}</text></g>
-      <g transform="translate(96 -98)"><path d="M0 0v34" stroke="#555" stroke-width="2"/><path d="M0 2l${w*3.4||1} ${3+Math.abs(w)*.4}l${-(w*3.4||1)} ${3+Math.abs(w)*.4}z" fill="#EC6158"/></g></svg>`;
+      <g transform="translate(96 -98)"><path d="M0 0v34" stroke="#555" stroke-width="2"/><path d="M0 2l${w*3.4||1} ${3+Math.abs(w)*.4}l${-(w*3.4||1)} ${3+Math.abs(w)*.4}z" fill="#EC6158"/></g></svg></div>${my?`<div class="r2side"><button class="btn soft" data-ga="ax" data-i="${ax+3}" ${ax<60?'':'disabled'}>▶</button><button class="btn soft" data-ga="ax" data-i="${ax+9}" ${ax<60?'':'disabled'}>▶▶</button></div>`:''}</div>`;
     const tab=`<div class="ar-tab"><span></span>${[1,2,3,4].map(e=>`<span class="hd ${e-1===end?'on':''}">${e}</span>`).join('')}<span class="hd">∑</span><span class="hd">X</span>
       ${d.pl.map((_,i)=>`<b style="color:${col(d,i)}">${nm(d,i)}</b>${[0,1,2,3].map(e=>{const q=d.ar[i].slice(e*3,e*3+3);return `<span class="${e===end?'on':''}">${q.length?arTot(q):''}</span>`;}).join('')}<span><b>${arTot(d.ar[i])}</b></span><span>${arX(d.ar[i])}</span>`).join('')}</div>`;
     if(my){const m=r2mPar(key,1100);
-      s+=`<p class="r2lbl">صوّب عكس الريح (${w===0?'ما فيه ريح':w>0?'الريح تدفع لليمين':'الريح تدفع لليسار'})</p><div class="r2row"><button class="btn soft" data-ga="ax" data-i="${ax-9}" ${ax>-60?'':'disabled'}>◀◀</button><button class="btn soft" data-ga="ax" data-i="${ax-3}" ${ax>-60?'':'disabled'}>◀</button><button class="btn soft" data-ga="ax" data-i="0">⊙</button><button class="btn soft" data-ga="ax" data-i="${ax+3}" ${ax<60?'':'disabled'}>▶</button><button class="btn soft" data-ga="ax" data-i="${ax+9}" ${ax<60?'':'disabled'}>▶▶</button></div>
+      s+=`<p class="r2lbl">صوّب عكس الريح (${w===0?'ما فيه ريح':w>0?'الريح تدفع لليمين':'الريح تدفع لليسار'}) <button class="sm" data-ga="ax" data-i="0">⊙</button></p>
         ${r2Meter(key,m,[[0,1000,'z0'],[320,680,'z1'],[430,570,'z2']],sv==null,sv,'ثبات القوس: وقّف المؤشر في النص')}${r2Stop(key,'shot','🏹 أطلق',sv==null)}`;}
     return s+tab+'</div>';},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;

@@ -111,6 +111,8 @@
 .d2-blr.zero .d2-blp{color:#C2392F}
 .d2-blr:active:not(:disabled){transform:scale(.98)}
 .d2-blt{display:flex;justify-content:space-between;gap:6px;padding:8px 4px 0;font-size:13px;font-weight:700}
+/* a short phone: the sheet tightens so the whole turn stays on one screen */
+@media (max-height:700px){.d2-bl{margin-top:6px;padding-block:4px 6px}.d2-blr{min-height:32px}.d2-blt{padding-top:5px}}
 
 /* bunco: each side's race to 21 */
 .d2-bu{display:flex;flex-direction:column;gap:6px;max-width:440px;margin:12px auto 0}

@@ -290,10 +290,9 @@ GAMES.camel={name:'سباق الهجن',cat:'cards',lbc:'#B8860B',
         return wm&&v==='0'?`<button class="${cls} can" style="--c:${CML[c][0]}" data-ga="whip" data-i="${c}" aria-label="${CML[c][1]}">🐪</button>`:`<span class="${cls}" style="--c:${CML[c][0]}">${v==='0'?'?':v}</span>`;}).join('')}
       <button class="btn red" data-ga="roll" ${my&&!wm?'':'disabled'}>🎲 هز الهرم <small>+1 🪙</small></button></div>`;
     if(wOk)s+=`<div class="acts cwhip"><button class="btn ${wm?'red':'navy'}" data-ga="wm">${wm?'اختر الهجين اللي تبي تسوقه… (إلغاء)':'🪃 عصا الهجّان: سوق هجين تختاره (مرة بالسباق)'}</button></div>`;
-    s+=`<p class="lbl" style="text-align:center;margin:8px 0 4px">راهن على مين يتصدر الشوط</p><div class="cbets">${[0,1,2,3,4].map(c=>{const t=d.tk[c];const v=CTILES[t];const pos=rk.indexOf(c)+1;
-      return `<button class="cbet" style="--c:${CML[c][0]}" data-ga="bet" data-i="${c}" ${my&&v?'':'disabled'}>${chip(c,1)}<b>${v?v:'—'}</b><small>${pos===1?'الأول':pos===2?'الثاني':'المركز '+pos}</small></button>`;}).join('')}</div>`;
-    const mine=d.bt.filter(b=>b[0]===(ctx.local?d.turn:ctx.v));
-    if(d.bt.length)s+=`<div class="cmine">${d.bt.map(([x,c,v])=>`<span style="--c:${col(d,x)}">${nm(d,x)} ${chip(c)} ${v}</span>`).join('')}</div>`;
+    s+=`<p class="lbl clbl">راهن على مين يتصدر الشوط</p><div class="cbets">${[0,1,2,3,4].map(c=>{const t=d.tk[c];const v=CTILES[t];const pos=rk.indexOf(c)+1;
+      return `<button class="cbet" style="--c:${CML[c][0]}" data-ga="bet" data-i="${c}" ${my&&v?'':'disabled'}>${chip(c,1)}<b>${v?v:'—'}</b><small>${pos===1?'الأول':pos===2?'الثاني':'المركز '+pos}</small><span class="cbt">${d.bt.filter(b=>b[1]===c).map(([x,,v])=>`<i style="--c:${col(d,x)}" title="${nm(d,x).replace(/<[^>]+>/g,'')}">${v}</i>`).join('')}</span></button>`;}).join('')}</div>`;
+    // the bets of this leg sit on the cards (one chip per bet, in the colour of whoever made it), so the screen never grows
     return s;},
   click(a,i,d,ctx){if(!ctx.my||d.win!=null)return;const t=d.turn;
     if(a==='wm'){if((d.wp||'')[t]!=='1')return;const k=d.gid+':'+d.mvn;S.cmW=S.cmW===k?null:k;render();return;}
