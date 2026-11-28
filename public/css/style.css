@@ -944,15 +944,34 @@ input.code::placeholder{color:var(--mut);opacity:.6}
 /* the bar takes its own room: the page, a game's own bottom buttons and the notes sit above it */
 body.rxon{--rxh:calc(62px + env(safe-area-inset-bottom))}
 body.rxon #app{padding-bottom:calc(28px + var(--rxh))}
-/* a game drawn for one fixed screen (G.fit): the page is the phone's height, the game fills what the bars leave */
-#app.gfit{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0;overflow:hidden;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
-body.rxon #app.gfit{padding-bottom:calc(6px + var(--rxh))}
-#app.gfit>.top{flex:none;margin-bottom:6px;min-height:38px;gap:6px}
-#app.gfit>.top .ib{width:38px;height:38px;font-size:17px;border-radius:12px}
-#app.gfit>.top h1{font-size:19px}
-#app.gfit .gcode{flex:none;height:32px;padding:0 9px;border-radius:10px;border:0;background:var(--surface);box-shadow:var(--e1);color:var(--ink);font:800 14px/32px monospace;letter-spacing:1.5px;font-family:inherit}
-#app.gfit>.roombar{flex:none;margin-bottom:6px;min-height:46px;padding-block:4px}
-#app.gfit>.board{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch}
+/* the frame of every game (#app.gframe): one fixed screen, the page is the phone's height, compact bars, and the game
+   fills what they leave (a game not yet drawn for it scrolls inside its own area only) */
+#app.gframe{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0;overflow:hidden;padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+body.rxon #app.gframe{padding-bottom:calc(6px + var(--rxh))}
+#app.gframe>.top{flex:none;margin-bottom:6px;min-height:38px;gap:6px}
+#app.gframe>.top .ib{width:38px;height:38px;font-size:17px;border-radius:12px}
+#app.gframe>.top h1{font-size:19px}
+#app.gframe>.err,#app.gframe>.updb,#app.gframe>.panel{flex:none;margin-block:0 6px}
+#app.gframe>.players{flex:none;padding-top:11px;margin-top:-8px;margin-bottom:0}
+#app.gframe .pt{height:40px;gap:6px;padding:0 8px}
+#app.gframe .pt i{width:26px;height:26px}
+#app.gframe .pt i svg{width:15px;height:15px}
+#app.gframe .pt span{font-size:13px}
+#app.gframe .pt em{font-size:11.5px}
+#app.gframe .players.four .pt,#app.gframe .players.many .pt{height:56px;padding-top:6px}
+#app.gframe .players.many .pt{flex:1 1 0}
+#app.gframe .players.four .pt i,#app.gframe .players.many .pt i{width:22px;height:22px}
+#app.gframe>.tstrip{flex:none;margin-bottom:4px}
+#app.gframe>.status{flex:none;height:46px;margin-bottom:6px;padding-block:2px 4px}
+#app.gframe>.status .st-main{font-size:15.5px;-webkit-line-clamp:1}
+#app.gframe>.status .st-sub{font-size:11.5px}
+#app.gframe>.status .yt,#app.gframe>.status .w{font-size:16.5px}
+#app.gframe>.status:has(.gone){height:auto;min-height:46px}
+#app.gframe>.status .kh-st{width:40px;height:46px}
+#app.gframe>.status .kh-st~.st-sub,#app.gframe>.status .kh-st~.st-main,#app.gframe>.status .kh-st~.st-er{margin-inline-end:40px;max-width:calc(100% - 40px)}
+#app.gframe>.board{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#app.gframe .gcode{flex:none;height:32px;padding:0 9px;border-radius:10px;border:0;background:var(--surface);box-shadow:var(--e1);color:var(--ink);font:800 14px/32px monospace;letter-spacing:1.5px;font-family:inherit}
+#app.gfit>.board{display:flex;flex-direction:column;align-items:stretch;overflow:hidden}
 body.rxon .hd-dock,body.rxon .tq-dock{bottom:var(--rxh)}
 body.rxon .toast{bottom:calc(14px + var(--rxh))}
 body.rxon .chatpop{top:auto;bottom:calc(8px + var(--rxh));left:max(14px,calc(50% - 256px));transform:none;animation:popup .22s var(--ease)}
