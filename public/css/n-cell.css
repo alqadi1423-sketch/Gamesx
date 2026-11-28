@@ -1,0 +1,83 @@
+/* «تحدي الخلية» (q_cell): every class is qc-* (js/games/q-cell.js) */
+.qc{display:flex;flex-direction:column;gap:10px;width:100%;max-width:460px;margin:0 auto}
+.qc-head{display:flex;flex-direction:column;align-items:center;gap:0}
+.qc-head span{font-size:22px;font-weight:800;color:var(--ink)}
+.qc-head small{font-size:13px;font-weight:700;color:var(--mut)}
+.qc-teams{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qc-tm{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:16px;background:var(--card);box-shadow:var(--e1);border-inline-start:6px solid var(--c);min-width:0}
+.qc-tm.qc-on{box-shadow:0 0 0 3px var(--sel),var(--e1)}
+.qc-em{font-size:22px}
+.qc-tmx{display:flex;flex-direction:column;min-width:0;flex:1}
+.qc-tmx b{font-size:16px;line-height:1.2}
+.qc-tmx small{font-size:11.5px;color:var(--mut);font-weight:700;white-space:nowrap}
+.qc-kids{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
+.qc-kd{width:22px;height:22px;display:inline-grid}
+.qc-kd svg{width:100%;height:100%}
+.qc-gone{opacity:.35}
+.qc-rw{display:flex;flex-direction:column;gap:4px}
+.qc-rw u{display:block;width:12px;height:12px;border-radius:50%;border:2px solid var(--c);text-decoration:none}
+.qc-rw u.on{background:var(--c)}
+/* the board: the edges of side 0 (top, bottom) and side 1 (left, right) around the cells */
+.qc-bd{position:relative;padding:14px 16px;transition:opacity var(--t2)}
+.qc-e{position:absolute;border-radius:6px}
+.qc-et,.qc-eb{inset-inline:22px;height:8px;background:var(--ca)}
+.qc-et{top:0}.qc-eb{bottom:0}
+.qc-el,.qc-er{top:20px;bottom:20px;width:8px;background:var(--cb)}
+.qc-el{inset-inline-start:0}.qc-er{inset-inline-end:0}
+.qc-gr{position:relative;width:100%}
+.qc-c{position:absolute;padding:0;border:0;margin:0;background:var(--line);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);font-family:inherit;cursor:default}
+.qc-c span{position:absolute;inset:3%;display:grid;place-items:center;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:var(--card);color:var(--ink);font-weight:800;font-size:clamp(17px,6.2vw,30px)}
+.qc-o0 span{background:var(--ca);color:#fff}
+.qc-o1 span{background:var(--cb);color:#fff}
+.qc-tap{cursor:pointer}
+.qc-tap span{background:var(--surface-2)}
+.qc-tap:active span{background:var(--sel)}
+.qc-c:disabled{opacity:1}
+.qc-cur{background:#C99A00}
+.qc-cur span{background:var(--sel);color:#2D4763}
+.qc-hl{background:var(--gold)}
+.qc-hl span{animation:qc-pulse 1s var(--ease) infinite alternate}
+.qc-new span{animation:qc-pop .5s var(--spring)}
+@keyframes qc-pulse{to{filter:brightness(1.18)}}
+@keyframes qc-pop{from{transform:scale(.6)}to{transform:scale(1)}}
+/* while a question is on, the board steps back */
+.qc-asking .qc-bd{opacity:.6;max-width:240px;margin:0 auto;width:100%;padding:10px 12px}
+.qc-asking .qc-c span{font-size:clamp(13px,4vw,19px)}
+/* the question */
+.qc-q{padding:14px;border-radius:20px;background:var(--card);box-shadow:var(--e2);display:flex;flex-direction:column;gap:8px}
+.qc-ql{display:flex;align-items:center;gap:10px}
+.qc-lt{width:52px;height:52px;flex:none;border-radius:14px;display:grid;place-items:center;font-size:30px;font-weight:800;color:#fff;background:var(--navy)}
+.qc-ql small{flex:1;color:var(--mut);font-weight:700;font-size:14px}
+.qc-tk{min-width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#2D4763;font-size:20px;font-weight:800}
+.qc-qt{margin:0;font-size:21px;font-weight:800;line-height:1.5}
+.qc-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qc-op{min-height:56px;padding:6px 8px;border-radius:16px;border:0;background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:18px;font-weight:800;box-shadow:0 3px 0 var(--line);cursor:pointer}
+.qc-op:disabled{cursor:default}
+.qc-op.qc-x{opacity:.4;text-decoration:line-through}
+.qc-type{display:flex;gap:8px}
+.qc-in{flex:1;min-width:0;min-height:52px;border-radius:14px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:19px;font-weight:700;padding:0 12px}
+.qc-send{min-height:52px;padding:0 18px;border-radius:14px;border:0;background:var(--ok);color:#fff;font-family:inherit;font-size:18px;font-weight:800}
+.qc-bz{display:flex;align-items:center;justify-content:center;width:100%;min-height:84px;border-radius:26px;border:0;background:var(--c);color:#fff;font-family:inherit;font-size:28px;font-weight:800;box-shadow:0 6px 0 rgba(0,0,0,.22);cursor:pointer}
+.qc-bz:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
+.qc-note{margin:0;text-align:center;color:var(--mut);font-weight:700;font-size:14px}
+.qc-who{margin:0;font-weight:800;font-size:17px;color:var(--c)}
+.qc-miss{margin:0;padding:6px 10px;border-radius:12px;background:var(--surface-2);font-weight:700;font-size:14px}
+.qc-ans{margin:0;padding:10px 12px;border-radius:14px;background:#EAF7EE;color:#1f7a41;font-size:19px;font-weight:700}
+.qc-pr{display:grid;gap:8px}
+.qc-pr .btn{width:100%;min-height:52px;font-size:17px}
+.qc-pr2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qc-last{margin:0;padding:8px 12px;border-radius:14px;background:var(--card);box-shadow:var(--e1);border-inline-start:5px solid var(--c);font-weight:700;font-size:15px;text-align:center}
+.qc-hint{margin:0;text-align:center;font-weight:800;font-size:18px;color:var(--c)}
+.qc-rend{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px;border-radius:18px;background:var(--card);box-shadow:var(--e2);border-top:5px solid var(--c)}
+.qc-rend b{font-size:20px}
+/* the choices before the first cell */
+.qc-set{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:var(--card);box-shadow:var(--e2)}
+.qc-sr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qc-sr span{min-width:86px;font-weight:800}
+.qc-ch{flex:1;min-height:46px;border-radius:14px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:16px;font-weight:800;cursor:pointer}
+.qc-ch.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.qc-go{width:100%}
+@media (prefers-color-scheme:dark){
+  .qc-ans{background:#173726;color:#8BE0A8}
+  .qc-cur span{color:#2D4763}
+}
